@@ -277,6 +277,10 @@ body {
     width: 250px;
 }
 
+.search-input:focus {
+    outline: none;
+}
+
 .search-input::placeholder {
     color: var(--gray);
 }
