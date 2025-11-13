@@ -1,0 +1,589 @@
+/* Windows XP Style */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Tahoma', 'Segoe UI', Arial, sans-serif;
+    /* ЧЕТКИЙ фон Windows XP "Bliss" - настоящее изображение */
+    background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0ic2t5IiB4MT0iMCUiIHkxPSIwJSIgeDI9IjAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzVhOWJkNTtzdG9wLW9wYWNpdHk6MSIgLz48c3RvcCBvZmZzZXQ9IjQwJSIgc3R5bGU9InN0b3AtY29sb3I6Izg1YmRlYTtzdG9wLW9wYWNpdHk6MSIgLz48c3RvcCBvZmZzZXQ9IjYwJSIgc3R5bGU9InN0b3AtY29sb3I6I2I4ZDhmODtzdG9wLW9wYWNpdHk6MSIgLz48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0iZ3Jhc3MiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojYzhlNmEwO3N0b3Atb3BhY2l0eToxIiAvPjxzdG9wIG9mZnNldD0iMzAlIiBzdHlsZT0ic3RvcC1jb2xvcjojOTBjODUwO3N0b3Atb3BhY2l0eToxIiAvPjxzdG9wIG9mZnNldD0iNzAlIiBzdHlsZT0ic3RvcC1jb2xvcjojNmJhODQwO3N0b3Atb3BhY2l0eToxIiAvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6IzVhOTAzMDtzdG9wLW9wYWNpdHk6MSIgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSI1NDAiIGZpbGw9InVybCgjc2t5KSIvPjxlbGxpcHNlIGN4PSIzMDAiIGN5PSIxNTAiIHJ4PSIyMDAiIHJ5PSI4MCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjcpIi8+PGVsbGlwc2UgY3g9IjEwMDAiIGN5PSIxMjAiIHJ4PSIxODAiIHJ5PSI3MCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjYpIi8+PGVsbGlwc2UgY3g9IjE1MDAiIGN5PSIxODAiIHJ4PSIyMjAiIHJ5PSI5MCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjY1KSIvPjxlbGxpcHNlIGN4PSI2MDAiIGN5PSIyMDAiIHJ4PSIxNjAiIHJ5PSI2MCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjUpIi8+PHBhdGggZD0iTSAwIDQ1MCBRIDQ4MCA0MDAgOTYwIDQ2MCBRIDE0NDAgNDIwIDE5MjAgNDgwIEwgMTkyMCAxMDgwIEwgMCAxMDgwIFoiIGZpbGw9InVybCgjZ3Jhc3MpIi8+PC9zdmc+') center center no-repeat;
+    background-size: cover;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Убираем все псевдоэлементы */
+body::before,
+body::after {
+    content: none;
+}
+
+/* Desktop Background */
+.desktop {
+    width: 100%;
+    height: calc(100vh - 40px);
+    position: relative;
+    padding: 20px;
+    overflow: auto;
+    z-index: 1;
+}
+
+/* Прозрачная сетка при перетаскивании */
+.desktop-grid {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.25) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.25) 1px, transparent 1px);
+    background-size: 100px 120px;
+    background-position: 0 0;
+    z-index: 500;
+}
+
+/* Показываем сетку при перетаскивании */
+.desktop.dragging-active .desktop-grid {
+    opacity: 1;
+}
+
+/* Desktop Icons */
+.desktop-icons {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.desktop-icon {
+    width: 100px;
+    text-align: center;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 2px;
+    transition: background 0.1s, transform 0.15s;
+    user-select: none;
+    position: absolute;
+    touch-action: none;
+}
+
+/* Курсор для незаблокированных иконок */
+.desktop-icon:not(.locked):not(.dragging) {
+    cursor: grab;
+}
+
+/* Заблокированные иконки - обычный pointer (можно кликать) */
+.desktop-icon.locked {
+    cursor: pointer !important;
+}
+
+/* Режим перетаскивания - ЯВНАЯ ВИЗУАЛИЗАЦИЯ */
+.desktop-icon.dragging {
+    opacity: 0.8;
+    transform: scale(1.05);
+    z-index: 1000;
+    cursor: grabbing !important;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+    animation: draggingPulse 0.6s ease-in-out infinite;
+}
+
+/* Анимация пульсации при перетаскивании */
+@keyframes draggingPulse {
+    0%, 100% {
+        transform: scale(1.05);
+    }
+    50% {
+        transform: scale(1.08);
+    }
+}
+
+.desktop-icon.selected {
+    background: rgba(49, 106, 197, 0.3);
+    border: 1px dotted #fff;
+}
+
+.desktop-icon:hover:not(.dragging) {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.desktop-icon:active:not(.dragging) {
+    background: rgba(49, 106, 197, 0.4);
+}
+
+.icon-image {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 8px;
+    background: linear-gradient(135deg, #e8f4ff 0%, #b8d8f8 50%, #88b8e8 100%);
+    border: 1px solid #4a7ba7;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    box-shadow: 
+        inset 1px 1px 0 rgba(255, 255, 255, 0.8),
+        inset -1px -1px 0 rgba(0, 0, 0, 0.2),
+        2px 2px 4px rgba(0, 0, 0, 0.4);
+    position: relative;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+/* Усиленный 3D эффект при перетаскивании */
+.desktop-icon.dragging .icon-image {
+    box-shadow: 
+        inset 2px 2px 0 rgba(255, 255, 255, 0.9),
+        inset -2px -2px 0 rgba(0, 0, 0, 0.3),
+        0 15px 40px rgba(0, 0, 0, 0.5),
+        0 0 0 3px rgba(255, 255, 255, 0.3);
+    border: 2px solid #2563eb;
+}
+
+/* 3D эффект как в Windows XP */
+.icon-image::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 50%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, transparent 100%);
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+.icon-image::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    right: 1px;
+    bottom: 1px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+.icon-label {
+    color: #ffffff;
+    font-size: 11px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    word-wrap: break-word;
+    line-height: 1.2;
+}
+
+/* Context Menu (Контекстное меню) */
+.context-menu {
+    position: fixed;
+    background: #f0f0f0;
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+    min-width: 180px;
+    z-index: 10000;
+    display: none;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+}
+
+.context-menu.show {
+    display: block;
+}
+
+.context-menu-item {
+    padding: 6px 24px 6px 32px;
+    cursor: pointer;
+    position: relative;
+    background: #f0f0f0;
+    color: #000;
+}
+
+.context-menu-item:hover:not(.disabled) {
+    background: #316ac5;
+    color: #fff;
+}
+
+.context-menu-item.disabled {
+    color: #999;
+    cursor: not-allowed;
+}
+
+.context-menu-item-icon {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+}
+
+.context-menu-separator {
+    height: 1px;
+    background: linear-gradient(90deg, #fff 0%, #808080 50%, #fff 100%);
+    margin: 2px 0;
+}
+
+/* Taskbar (Панель задач) */
+.taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(180deg, #245edb 0%, #1941a5 100%);
+    border-top: 2px solid #5a8ab8;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+/* Start Button (Кнопка Пуск) */
+.start-button {
+    height: 36px;
+    margin-left: 2px;
+    padding: 0 20px 0 8px;
+    background: linear-gradient(180deg, #3dcc54 0%, #1ea52e 100%);
+    border: 1px solid #0d6b1d;
+    border-radius: 0 8px 8px 0;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.4),
+                2px 2px 3px rgba(0, 0, 0, 0.3);
+    transition: all 0.1s;
+}
+
+.start-button:hover {
+    background: linear-gradient(180deg, #4ee565 0%, #2db93f 100%);
+}
+
+.start-button:active {
+    background: linear-gradient(180deg, #2db93f 0%, #1ea52e 100%);
+    box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.start-icon {
+    width: 24px;
+    height: 24px;
+    background: radial-gradient(circle, #ff6b6b 0%, #cc0000 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+/* Quick Launch Area */
+.quick-launch {
+    height: 36px;
+    margin-left: 8px;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+/* System Tray */
+.system-tray {
+    margin-left: auto;
+    height: 36px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(180deg, #2563eb 0%, #1e40af 100%);
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 11px;
+}
+
+.system-tray-icon {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.clock {
+    padding: 4px 8px;
+    font-family: 'Tahoma', sans-serif;
+    font-weight: normal;
+}
+
+/* Start Menu (Меню Пуск) */
+.start-menu {
+    position: fixed;
+    bottom: 42px;
+    left: 2px;
+    width: 380px;
+    background: linear-gradient(90deg, #2563eb 0, #2563eb 60px, #ffffff 60px);
+    border: 2px solid #003c74;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 3px -3px 8px rgba(0, 0, 0, 0.4);
+    display: none;
+    z-index: 999;
+}
+
+.start-menu.show {
+    display: block;
+}
+
+.start-menu-header {
+    height: 60px;
+    background: linear-gradient(90deg, #2563eb 0, #2563eb 60px, #5d8dd3 60px, #5d8dd3 100%);
+    padding: 10px 20px 10px 70px;
+    color: white;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    align-items: center;
+}
+
+.start-menu-user {
+    font-size: 16px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.start-menu-content {
+    background: white;
+    padding: 8px 0;
+}
+
+.start-menu-item {
+    padding: 8px 20px 8px 70px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    transition: background 0.1s;
+}
+
+.start-menu-item:hover {
+    background: linear-gradient(90deg, #e8f0ff 0, #e8f0ff 60px, #c7deff 60px);
+}
+
+.start-menu-item-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.start-menu-separator {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0, transparent 60px, #ccc 60px);
+    margin: 4px 0;
+}
+
+.start-menu-footer {
+    padding: 8px 20px 8px 70px;
+    background: #d3e4f7;
+    border-top: 1px solid #afc7e3;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.start-menu-footer-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 11px;
+    border-radius: 4px;
+    transition: background 0.1s;
+    white-space: nowrap;
+}
+
+.start-menu-footer-item:hover {
+    background: #c2d8f0;
+}
+
+/* Utilities */
+.hidden {
+    display: none !important;
+}
+
+/* Scrollbar XP Style */
+::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f0f0f0;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #ddd 0%, #bbb 100%);
+    border: 1px solid #999;
+}
+
+::-webkit-scrollbar-button {
+    background: #ddd;
+    border: 1px solid #999;
+}
+
+/* XP Button Style */
+.xp-button {
+    background: linear-gradient(180deg, #ece9d8 0%, #d4cdb6 100%);
+    border: 1px solid #003c74;
+    padding: 6px 16px;
+    cursor: pointer;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    border-radius: 3px;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.1s;
+}
+
+.xp-button:hover {
+    background: linear-gradient(180deg, #f5f2e8 0%, #dcd6c0 100%);
+}
+
+.xp-button:active {
+    background: linear-gradient(180deg, #d4cdb6 0%, #c8c0a8 100%);
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.xp-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Красный ярлык "О разработке" */
+.desktop-icon[data-id="about"] .icon-image {
+    background: linear-gradient(180deg, #ff4444 0%, #cc0000 100%);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.desktop-icon[data-id="about"] .icon-image i {
+    color: white !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.desktop-icon[data-id="about"] .icon-label {
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    font-weight: bold;
+}
+
+/* Modal Window Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: linear-gradient(180deg, #ece9d8 0%, #d4d0c8 100%);
+    border: 2px solid #0054e3;
+    border-radius: 8px;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+    width: 90%;
+    max-width: 500px;
+    animation: modalFadeIn 0.2s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    background: linear-gradient(180deg, #0054e3 0%, #0041b3 100%);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.modal-title {
+    flex: 1;
+}
+
+.modal-close {
+    background: linear-gradient(180deg, #ff6b6b 0%, #ff4444 100%);
+    border: 1px solid #cc0000;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background: linear-gradient(180deg, #ff8888 0%, #ff6666 100%);
+    transform: scale(1.1);
+}
+
+.modal-close:active {
+    background: linear-gradient(180deg, #ff4444 0%, #cc0000 100%);
+    transform: scale(0.95);
+}
+
+.modal-body {
+    padding: 20px;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.modal-body p {
+    margin-bottom: 12px;
+}
+
+.modal-body strong {
+    color: #0054e3;
+}
+
+.modal-body a {
+    color: #0054e3;
+    text-decoration: underline;
+    word-wrap: break-word;
+    transition: color 0.2s;
+}
+
+.modal-body a:hover {
+    color: #ff4444;
+}

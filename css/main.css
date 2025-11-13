@@ -1,0 +1,298 @@
+/* SimpleAIAdminka - Windows XP Style */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Tahoma', 'Segoe UI', Arial, sans-serif;
+    background: #ece9d8;
+    min-height: 100vh;
+    padding: 24px;
+    color: #000;
+    line-height: 1.5;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+}
+
+/* Верхняя навигация */
+.top-nav {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 100;
+}
+
+.btn-documentation {
+    background: linear-gradient(180deg, #6fa4e8 0%, #2b6ec5 100%);
+    color: white;
+    border: 1px solid #003c74;
+    padding: 6px 16px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    font-family: 'Tahoma', sans-serif;
+    cursor: pointer;
+    transition: all 0.1s;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.3);
+    white-space: nowrap;
+}
+
+.btn-documentation:hover {
+    background: linear-gradient(180deg, #85b5f0 0%, #4080d0 100%);
+}
+
+.btn-documentation:active {
+    background: linear-gradient(180deg, #2b6ec5 0%, #1a5aad 100%);
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+h1 {
+    color: #003c74;
+    margin-bottom: 8px;
+    font-weight: bold;
+    font-size: 1.5rem;
+    letter-spacing: 0;
+}
+
+.container > p {
+    color: #666;
+    margin-bottom: 24px;
+    font-size: 11px;
+    font-weight: normal;
+}
+
+.modules {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+    text-align: left;
+}
+
+.module {
+    background: white;
+    padding: 16px;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.1s;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+}
+
+.module:hover {
+    background: #f5f5f5;
+    border-color: #fafafa #606060 #606060 #fafafa;
+}
+
+.module.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.module.disabled:hover {
+    background: white;
+    border-color: #fff #808080 #808080 #fff;
+}
+
+.module h2 {
+    color: #003c74;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 0;
+}
+
+.module p {
+    color: #666;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+/* Общие компоненты */
+.section {
+    background: #f0f0f0;
+    padding: 20px;
+    margin-bottom: 16px;
+    border-radius: 0;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+}
+
+.section h2 {
+    color: #003c74;
+    margin-bottom: 12px;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #bbb;
+}
+
+.btn {
+    background: linear-gradient(180deg, #ece9d8 0%, #d4cdb6 100%);
+    border: 1px solid #003c74;
+    padding: 6px 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin: 4px 4px 4px 0;
+    font-size: 11px;
+    font-weight: normal;
+    font-family: 'Tahoma', sans-serif;
+    letter-spacing: 0;
+    transition: all 0.1s;
+    color: #000;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, #f5f2e8 0%, #dcd6c0 100%);
+}
+
+.btn:active:not(:disabled) {
+    background: linear-gradient(180deg, #d4cdb6 0%, #c8c0a8 100%);
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.btn-primary { 
+    background: linear-gradient(180deg, #6fa4e8 0%, #2b6ec5 100%);
+    color: white;
+    font-weight: bold;
+    border-color: #003c74;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(180deg, #85b5f0 0%, #4080d0 100%);
+}
+
+.btn-primary:active:not(:disabled) {
+    background: linear-gradient(180deg, #2b6ec5 0%, #1a5aad 100%);
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.btn-secondary {
+    background: linear-gradient(180deg, #ddd 0%, #bbb 100%);
+    color: #333;
+    border-color: #003c74;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: linear-gradient(180deg, #eee 0%, #ccc 100%);
+}
+
+.btn-secondary:active:not(:disabled) {
+    background: linear-gradient(180deg, #bbb 0%, #999 100%);
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.btn-success { 
+    background: linear-gradient(180deg, #7dc579 0%, #4a9e46 100%);
+    color: white;
+    font-weight: bold;
+    border-color: #2d6b2a;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn-success:hover:not(:disabled) {
+    background: linear-gradient(180deg, #8fd08b 0%, #5ab156 100%);
+}
+
+.btn-success:active:not(:disabled) {
+    background: linear-gradient(180deg, #4a9e46 0%, #3a7e36 100%);
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.btn:disabled { 
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Логи - Windows XP Style */
+.logs-section {
+    background: #f0f0f0;
+    border-radius: 0;
+    margin-bottom: 16px;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+    overflow: hidden;
+}
+
+.logs-toggle {
+    width: 100%;
+    background: linear-gradient(180deg, #d4d0c8 0%, #b0aca0 100%);
+    border: none;
+    border-bottom: 1px solid #999;
+    padding: 8px 12px;
+    text-align: left;
+    cursor: pointer;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.1s;
+}
+
+.logs-toggle:hover {
+    background: linear-gradient(180deg, #e0dcd0 0%, #c0bcb0 100%);
+}
+
+.logs-toggle-icon {
+    transition: transform 0.2s;
+    color: #000;
+    font-size: 14px;
+}
+
+.logs-toggle.expanded .logs-toggle-icon {
+    transform: rotate(180deg);
+}
+
+.logs-content {
+    display: none;
+    padding: 12px;
+}
+
+.logs-content.show {
+    display: block;
+}
+
+#logs {
+    background: #000;
+    color: #0f0;
+    padding: 8px;
+    height: 200px;
+    overflow-y: auto;
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    border: 2px inset #808080;
+    white-space: pre-wrap;
+}
+
+/* Скроллбар Windows XP */
+::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f0f0f0;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #ddd 0%, #bbb 100%);
+    border: 1px solid #999;
+}
+
+::-webkit-scrollbar-button {
+    background: #ddd;
+    border: 1px solid #999;
+    height: 16px;
+    width: 16px;
+}

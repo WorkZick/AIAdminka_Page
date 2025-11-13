@@ -1,0 +1,172 @@
+/* Excel Reports - Windows XP Style */
+
+/* Navigation */
+.button-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+/* Улучшение стилей кнопок в группе */
+.button-group .btn {
+    margin: 0; /* Убираем стандартные отступы */
+}
+
+/* Кнопка выбора файлов в стиле XP */
+.btn.btn-file-select {
+    background: linear-gradient(180deg, #ece9d8 0%, #d4cdb6 100%);
+    border: 1px solid #003c74;
+    padding: 6px 16px;
+    cursor: pointer;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    border-radius: 3px;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.1s;
+    margin-bottom: 12px;
+    color: #000;
+}
+
+.btn.btn-file-select:hover {
+    background: linear-gradient(180deg, #f5f2e8 0%, #dcd6c0 100%);
+}
+
+.btn.btn-file-select:active {
+    background: linear-gradient(180deg, #d4cdb6 0%, #c8c0a8 100%);
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Template Cards */
+#templatesContainer {
+    display: grid;
+    gap: 12px;
+}
+
+.template-card {
+    background: white;
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.1s;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.template-card:hover {
+    background: #f5f5f5;
+    border-color: #fafafa #606060 #606060 #fafafa;
+}
+
+.template-card.selected {
+    background: #e0e7f5;
+    border: 2px solid #0055e5;
+    box-shadow: inset 1px 1px 2px rgba(0, 85, 229, 0.2);
+}
+
+.template-card h3 {
+    color: #003c74;
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.template-card p {
+    color: #666;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+/* File Lists */
+#step1Files > div:first-child,
+#step2Files > div:first-child {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+#step1Files > div:not(:first-child),
+#step2Files > div:not(:first-child) {
+    background: white;
+    padding: 6px 10px;
+    margin: 4px 0;
+    border: 1px solid #999;
+    border-radius: 2px;
+    font-size: 11px;
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Logs Section */
+.logs-section {
+    background: #f0f0f0;
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+    margin-bottom: 16px;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.logs-toggle {
+    width: 100%;
+    background: linear-gradient(180deg, #d4d0c8 0%, #b0aca0 100%);
+    border: none;
+    border-bottom: 1px solid #999;
+    padding: 8px 12px;
+    text-align: left;
+    cursor: pointer;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logs-toggle:hover {
+    background: linear-gradient(180deg, #e0dcd0 0%, #c0bcb0 100%);
+}
+
+.logs-toggle-icon {
+    transition: transform 0.2s;
+}
+
+.logs-toggle.expanded .logs-toggle-icon {
+    transform: rotate(180deg);
+}
+
+.logs-content {
+    display: none;
+    padding: 12px;
+}
+
+.logs-content.show {
+    display: block;
+}
+
+#logs {
+    background: #000;
+    color: #0f0;
+    padding: 8px;
+    height: 200px;
+    overflow-y: auto;
+    font-family: 'Courier New', 'Consolas', monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    border: 2px inset #808080;
+    white-space: pre-wrap;
+}
+
+/* Progress indicators */
+.processing-indicator {
+    display: none;
+    padding: 12px;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 3px;
+    margin: 12px 0;
+    font-size: 11px;
+}
+
+.processing-indicator.show {
+    display: block;
+}

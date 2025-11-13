@@ -1,0 +1,549 @@
+/* Documentation - Windows XP Style */
+
+.doc-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(180deg, #ece9d8 0%, #d4cdb6 100%);
+    border: 1px solid #003c74;
+    color: #000;
+    text-decoration: none;
+    font-size: 11px;
+    border-radius: 3px;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.1s;
+}
+
+.back-link:hover {
+    background: linear-gradient(180deg, #f5f2e8 0%, #dcd6c0 100%);
+}
+
+.btn-export-pdf {
+    padding: 6px 12px;
+    background: linear-gradient(180deg, #6fa4e8 0%, #2b6ec5 100%);
+    color: white;
+    border: 1px solid #003c74;
+    font-size: 11px;
+    font-weight: bold;
+    border-radius: 3px;
+    cursor: pointer;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.3);
+    transition: all 0.1s;
+}
+
+.btn-export-pdf:hover {
+    background: linear-gradient(180deg, #85b5f0 0%, #4080d0 100%);
+}
+
+.btn-export-pdf:active {
+    background: linear-gradient(180deg, #2b6ec5 0%, #1a5aad 100%);
+}
+
+.documentation-content {
+    background: white;
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+    padding: 24px;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.doc-header {
+    border-bottom: 2px solid #0055e5;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+}
+
+.doc-header h1 {
+    color: #003c74;
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.doc-subtitle {
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.doc-meta {
+    color: #999;
+    font-size: 10px;
+}
+
+.doc-meta span {
+    margin: 0 4px;
+}
+
+/* Table of Contents */
+.toc {
+    background: #f0f0f0;
+    border: 1px solid #bbb;
+    padding: 16px;
+    margin-bottom: 24px;
+    border-radius: 3px;
+}
+
+.toc h2 {
+    color: #003c74;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+
+.toc ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.toc li {
+    margin: 6px 0;
+}
+
+.toc a {
+    color: #0055e5;
+    text-decoration: none;
+    font-size: 11px;
+    padding: 4px 8px;
+    display: block;
+    border-radius: 2px;
+    transition: background 0.1s;
+}
+
+.toc a:hover {
+    background: #e8f0ff;
+    text-decoration: underline;
+}
+
+.toc a.active {
+    background: #316ac5;
+    color: white;
+    font-weight: bold;
+}
+
+/* Sections */
+.doc-section {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #ddd;
+}
+
+.doc-section:last-child {
+    border-bottom: none;
+}
+
+.doc-section h2 {
+    color: #003c74;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #bbb;
+}
+
+.doc-section h3 {
+    color: #0055e5;
+    font-size: 14px;
+    font-weight: bold;
+    margin: 16px 0 12px 0;
+}
+
+.doc-section h4 {
+    color: #333;
+    font-size: 12px;
+    font-weight: bold;
+    margin: 12px 0 8px 0;
+}
+
+.doc-section p {
+    font-size: 11px;
+    line-height: 1.6;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+.doc-section ul,
+.doc-section ol {
+    font-size: 11px;
+    line-height: 1.6;
+    color: #333;
+    margin: 8px 0 12px 20px;
+}
+
+.doc-section li {
+    margin: 4px 0;
+}
+
+.doc-section strong {
+    color: #003c74;
+    font-weight: bold;
+}
+
+/* Special boxes */
+.advantages {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.advantage {
+    background: #f0f0f0;
+    border: 1px solid #bbb;
+    padding: 12px;
+    border-radius: 3px;
+}
+
+.advantage h4 {
+    color: #0055e5;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.advantage p {
+    font-size: 10px;
+    margin: 0;
+}
+
+.how-to {
+    margin: 16px 0;
+}
+
+.step {
+    background: #f0f0f0;
+    border-left: 3px solid #0055e5;
+    padding: 12px;
+    margin: 12px 0;
+    border-radius: 2px;
+}
+
+.step h4 {
+    color: #003c74;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.step p {
+    font-size: 10px;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.troubleshooting-item {
+    background: #fff9e6;
+    border: 1px solid #ffc107;
+    padding: 12px;
+    margin: 12px 0;
+    border-radius: 3px;
+}
+
+.troubleshooting-item h4 {
+    color: #c58f1d;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.troubleshooting-item p {
+    font-size: 10px;
+    margin: 4px 0;
+}
+
+.troubleshooting-item ul {
+    margin: 4px 0 4px 16px;
+    font-size: 10px;
+}
+
+.warning {
+    background: #ffe6e6;
+    border: 2px solid #dc2626;
+    padding: 12px;
+    margin: 16px 0;
+    border-radius: 3px;
+}
+
+.warning h4 {
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.warning p {
+    font-size: 10px;
+    margin: 0;
+}
+
+/* Code blocks */
+code {
+    background: #f0f0f0;
+    border: 1px solid #bbb;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: #c7254e;
+}
+
+pre {
+    background: #f0f0f0;
+    border: 1px solid #bbb;
+    padding: 12px;
+    border-radius: 3px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+
+pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #333;
+}
+
+/* Changelog Modal */
+.changelog-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.changelog-dialog {
+    background: #f0f0f0;
+    border: 3px solid;
+    border-color: #0055e5 #003db4 #003db4 #0055e5;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 85vh;
+    overflow: hidden;
+    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+}
+
+.changelog-header {
+    background: linear-gradient(180deg, #0997ff 0%, #0053ee 50%, #0050ee 50%, #003db4 100%);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.changelog-header h2 {
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    margin: 0;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.changelog-close {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #003c74;
+    background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 2px;
+}
+
+.changelog-close:hover {
+    filter: brightness(1.1);
+}
+
+.changelog-body {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.changelog-timeline {
+    position: relative;
+}
+
+.changelog-item {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.changelog-item:last-child {
+    margin-bottom: 0;
+}
+
+.changelog-marker {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.changelog-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #0055e5;
+    border: 3px solid #f0f0f0;
+    box-shadow: 0 0 0 2px #0055e5;
+}
+
+.changelog-item.latest .changelog-dot {
+    background: #4caf50;
+    box-shadow: 0 0 0 2px #4caf50;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.changelog-line {
+    position: absolute;
+    left: 7px;
+    top: 16px;
+    width: 2px;
+    height: calc(100% + 24px);
+    background: #bbb;
+}
+
+.changelog-content {
+    flex: 1;
+    background: white;
+    border: 1px solid #bbb;
+    padding: 12px;
+    border-radius: 3px;
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.changelog-version {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.version-number {
+    font-size: 14px;
+    font-weight: bold;
+    color: #003c74;
+}
+
+.version-badge {
+    background: #4caf50;
+    color: white;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 2px;
+    text-transform: uppercase;
+}
+
+.changelog-date {
+    font-size: 10px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.changelog-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+    margin: 0 0 12px 0;
+}
+
+.changelog-category {
+    margin-bottom: 12px;
+}
+
+.changelog-category:last-child {
+    margin-bottom: 0;
+}
+
+.changelog-category h4 {
+    font-size: 11px;
+    font-weight: bold;
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.changelog-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.changelog-list li {
+    font-size: 10px;
+    color: #333;
+    padding: 4px 0 4px 16px;
+    position: relative;
+}
+
+.changelog-list li::before {
+    content: '•';
+    position: absolute;
+    left: 4px;
+    color: #666;
+}
+
+/* Button for changelog */
+.btn-changelog {
+    padding: 6px 12px;
+    background: linear-gradient(180deg, #f5c542 0%, #e0a020 100%);
+    color: #000;
+    border: 1px solid #c58f1d;
+    font-size: 11px;
+    font-weight: bold;
+    border-radius: 3px;
+    cursor: pointer;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.3);
+    transition: all 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-changelog:hover {
+    background: linear-gradient(180deg, #ffd75c 0%, #f0b030 100%);
+}
+
+.btn-changelog:active {
+    background: linear-gradient(180deg, #e0a020 0%, #c58f1d 100%);
+}

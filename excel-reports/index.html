@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel отчеты - Windows XP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/xp-module.css">
+    <link rel="stylesheet" href="css/excel-reports.css">
+    <script src="https://unpkg.com/lucide@0.548.0/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="../index.html">← Главная</a>
+        </nav>
+        
+        <header style="margin-bottom: 32px;">
+            <h1><i data-lucide="file-spreadsheet"></i> Excel отчеты</h1>
+        </header>
+        
+        <!-- Шаг 1: Выбор шаблона -->
+        <div class="section" id="templateSection">
+            <h2>1. Выберите шаблон</h2>
+            <div id="templatesContainer"></div>
+            <button id="confirmTemplateBtn" class="btn btn-primary" disabled>Продолжить</button>
+        </div>
+
+        <!-- Шаг 2: Загрузка файлов (шаг 1) -->
+        <div class="section hidden" id="step1Section">
+            <h2>2. <span id="step1Title"></span></h2>
+            <input type="file" id="step1Input" multiple accept=".xlsx" style="display:none;">
+            <button class="btn btn-secondary btn-file-select" onclick="document.getElementById('step1Input').click()">
+                <i data-lucide="folder-open"></i> Выбрать файлы
+            </button>
+            <div id="step1Files"></div>
+            <div class="button-group">
+                <button id="step1BackBtn" class="btn btn-primary">← Назад</button>
+                <button id="step1NextBtn" class="btn btn-primary" disabled>Далее →</button>
+            </div>
+        </div>
+
+        <!-- Шаг 3: Загрузка файлов (шаг 2) -->
+        <div class="section hidden" id="step2Section">
+            <h2>3. <span id="step2Title"></span></h2>
+            <input type="file" id="step2Input" multiple accept=".xlsx" style="display:none;">
+            <button class="btn btn-secondary btn-file-select" onclick="document.getElementById('step2Input').click()">
+                <i data-lucide="folder-open"></i> Выбрать файлы
+            </button>
+            <div id="step2Files"></div>
+            <div class="button-group">
+                <button id="step2BackBtn" class="btn btn-primary">← Назад</button>
+                <button id="step2NextBtn" class="btn btn-primary" disabled>Далее →</button>
+            </div>
+        </div>
+
+        <!-- Шаг 4: Обработка -->
+        <div class="section hidden" id="processSection">
+            <h2 id="processStepTitle">4. Обработка</h2>
+            <div class="button-group">
+                <button id="processBackBtn" class="btn btn-primary">← Назад</button>
+                <button id="processBtn" class="btn btn-primary"><i data-lucide="play"></i> Обработать файлы</button>
+            </div>
+            <div style="margin-top: 12px;">
+                <button id="exportBtn" class="btn btn-success" disabled><i data-lucide="download"></i> Скачать результат</button>
+                <button id="resetBtn" class="btn btn-secondary"><i data-lucide="rotate-ccw"></i> Начать заново</button>
+            </div>
+        </div>
+
+        <!-- Логи -->
+        <div class="logs-section">
+            <button class="logs-toggle" id="logsToggle">
+                <span><i data-lucide="info"></i> Логи отладки</span>
+                <span class="logs-toggle-icon"><i data-lucide="chevron-down"></i></span>
+            </button>
+            <div class="logs-content" id="logsContent">
+                <div id="logs"></div>
+                <div style="margin-top: 16px;">
+                    <button id="clearLogsBtn" class="btn btn-secondary">Очистить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Загрузка отдельных шаблонов -->
+    <script src="templates/deposits-withdrawals.js"></script>
+    <script src="templates/merge-files.js"></script>
+    <script src="templates/registrations.js"></script>
+    
+    <!-- Загрузчик шаблонов (объединяет все в TEMPLATES) -->
+    <script src="templates/templates-loader.js"></script>
+    
+    <!-- Основные скрипты приложения -->
+    <script src="js/logger.js"></script>
+    <script src="js/excel-reports.js"></script>
+    <script>
+        // Инициализируем Lucide иконки
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>

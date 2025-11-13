@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Информация о команде - Windows XP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/xp-module.css">
+    <link rel="stylesheet" href="css/team-info-modern.css?v=13">
+    <script src="https://unpkg.com/lucide@0.548.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="../index.html">← Главная</a>
+            
+            <div class="nav-right">
+                <!-- Кнопка добавления сотрудника в правый верхний угол -->
+                <button class="btn btn-add-employee" onclick="teamInfo.showAddModal()" title="Добавить нового сотрудника">
+                    <i data-lucide="user-plus"></i> Добавить сотрудника
+                </button>
+                
+                <div class="export-controls">
+                    <div class="export-dropdown">
+                        <button class="btn btn-success" onclick="teamInfo.toggleExportMenu()" id="exportMenuBtn"><i data-lucide="download"></i> Экспорт <i data-lucide="chevron-down"></i></button>
+                        <div class="export-menu" id="exportMenu">
+                            <button class="export-option" onclick="teamInfo.exportJSON()">
+                                <i data-lucide="file-json"></i> JSON файл
+                                <span class="export-desc">Для резервной копии</span>
+                            </button>
+                            <button class="export-option" onclick="teamInfo.exportAllText()">
+                                <i data-lucide="file-text"></i> Все в TXT
+                                <span class="export-desc">Читаемый формат</span>
+                            </button>
+                            <button class="export-option" onclick="teamInfo.showSelectiveExport()">
+                                <i data-lucide="check-square"></i> Выборочно
+                                <span class="export-desc">Выбрать записи</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="btn btn-warning" onclick="teamInfo.showImportDialog()" title="Загрузить данные из файла"><i data-lucide="upload"></i> Импорт</button>
+                </div>
+            </div>
+        </nav>
+        
+        <header>
+            <h1><i data-lucide="users"></i> Команда</h1>
+            <p>Профессионалы, которые создают будущее</p>
+        </header>
+        
+        <!-- Основной контент - только карточки команды -->
+        <div class="main-content">
+            <div class="team-grid" id="teamGrid">
+                <!-- Динамически заполняется JavaScript -->
+            </div>
+        </div>
+
+        <!-- Модальное окно добавления/редактирования сотрудника -->
+        <div id="employeeModal" class="modal">
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Добавить нового сотрудника</h2>
+                    <button class="modal-close" onclick="teamInfo.closeEmployeeModal()"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <form id="employeeForm">
+                        <div class="form-group">
+                            <label for="fullNameInput">ФИО</label>
+                            <input type="text" id="fullNameInput" placeholder="Например: Иван Иванович Петров" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="positionInput">Должность</label>
+                            <input type="text" id="positionInput" placeholder="Например: Frontend Developer" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="gradeSelect">Грейд</label>
+                            <select id="gradeSelect" style="width: 100%; padding: 4px 6px; border: 1px solid #7f9db9; border-radius: 2px; font-family: 'Tahoma', sans-serif; font-size: 11px; background: white;">
+                                <option value="Junior">Junior</option>
+                                <option value="Middle" selected>Middle</option>
+                                <option value="Senior">Senior</option>
+                                <option value="Lead">Lead</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Предзаполненные поля -->
+                        <div class="custom-fields-section">
+                            <div class="custom-fields-header">
+                                <label>Обязательная информация</label>
+                            </div>
+                            <div class="custom-fields-container">
+                                <div class="custom-field-predefined">
+                                    <label>Логин УРС</label>
+                                    <input type="text" id="loginUrsInput" placeholder="Логин УРС">
+                                </div>
+                                <div class="custom-field-predefined">
+                                    <label>Reddy</label>
+                                    <input type="text" id="reddyInput" placeholder="Reddy">
+                                </div>
+                                <div class="custom-field-predefined">
+                                    <label>Корп. e-mail</label>
+                                    <input type="text" id="corpEmailInput" placeholder="example@company.com">
+                                </div>
+                                <div class="custom-field-predefined">
+                                    <label>Корп. Telegram</label>
+                                    <input type="text" id="corpTelegramInput" placeholder="@username">
+                                </div>
+                                <div class="custom-field-predefined">
+                                    <label>Корп. телефон</label>
+                                    <input type="text" id="corpPhoneInput" placeholder="+7 (xxx) xxx-xx-xx">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Кастомные поля -->
+                        <div class="custom-fields-section">
+                            <div class="custom-fields-header">
+                                <label>Дополнительные поля</label>
+                                <button type="button" class="btn btn-secondary btn-small" onclick="teamInfo.addCustomField()" title="Добавить поле">+ Добавить поле</button>
+                            </div>
+                            <div id="customFields" class="custom-fields-container">
+                                <!-- Динамически заполняется JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="commentInput">Комментарий</label>
+                            <textarea id="commentInput" placeholder="Дополнительные заметки, комментарии и информация"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="teamInfo.closeEmployeeModal()">Отмена</button>
+                    <button class="btn btn-primary" onclick="teamInfo.saveEmployee()" id="saveEmployeeBtn">Добавить сотрудника</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно выбора типа копирования -->
+        <div id="copyModal" class="modal">
+            <div class="modal-dialog" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2>Копировать сотрудника</h2>
+                    <button class="modal-close" onclick="teamInfo.closeCopyDialog()"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 16px; color: #49454f;">Выберите способ копирования:</p>
+                    <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="teamInfo.copyEmployee(true)">
+                        <i data-lucide="copy"></i> Копировать с данными
+                    </button>
+                    <button class="btn btn-secondary" style="width: 100%;" onclick="teamInfo.copyEmployee(false)">
+                        <i data-lucide="file-plus"></i> Копировать структуру (без данных)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно импорта -->
+        <div id="importModal" class="export-modal">
+            <div class="export-dialog">
+                <h2 style="margin-bottom: 16px;">Импорт данных из файла</h2>
+                <div style="margin-bottom: 16px;">
+                    <p style="color: #79747e; font-size: 0.875rem; margin-bottom: 12px;">Выберите JSON файл с данными Team Info для импорта:</p>
+                    <input type="file" id="importFileInput" accept=".json" style="margin-bottom: 12px;">
+                    <div id="importPreview" style="display: none; padding: 8px; background: #f7f2fa; border-radius: 6px; margin-bottom: 12px; font-size: 0.875rem;"></div>
+                </div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="teamInfo.closeImportDialog()">Отмена</button>
+                    <button class="btn btn-primary" onclick="teamInfo.importData()" id="importBtn" disabled>Импортировать</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно экспорта -->
+        <div id="exportModal" class="export-modal">
+            <div class="export-dialog">
+                <h2 style="margin-bottom: 16px;">Выборочный экспорт</h2>
+                <div style="margin-bottom: 16px;">
+                    <p style="color: #79747e; font-size: 0.875rem; margin-bottom: 12px;">Выберите записи для экспорта:</p>
+                    <div id="exportItems">
+                        <!-- Динамически заполняется -->
+                    </div>
+                </div>
+                
+                <!-- Выбор формата экспорта -->
+                <div style="margin-bottom: 16px; padding: 12px; background: #f7f2fa; border-radius: 6px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #49454f;">Формат экспорта:</label>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <label class="format-option">
+                            <input type="radio" name="exportFormat" value="txt" checked>
+                            <span class="format-label">
+                                ▤ TXT файл
+                                <small>Читаемый формат</small>
+                            </span>
+                        </label>
+                        <label class="format-option">
+                            <input type="radio" name="exportFormat" value="json">
+                            <span class="format-label">
+                                ▤ JSON файл
+                                <small>Для резервной копии</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" onclick="exportManager.closeModal()">Отмена</button>
+                    <button class="btn btn-primary" onclick="exportManager.selectAll(true)">Выбрать все</button>
+                    <button class="btn btn-secondary" onclick="exportManager.selectAll(false)">Снять все</button>
+                    <button class="btn btn-success" onclick="exportManager.exportSelected()">Экспортировать</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Глобальная обработка ошибок для диагностики
+    window.addEventListener('error', function(e) {
+        console.error('JavaScript Error:', e.error);
+        console.error('Error details:', {
+            message: e.message,
+            filename: e.filename,
+            lineno: e.lineno,
+            colno: e.colno
+        });
+    });
+    
+    window.addEventListener('unhandledrejection', function(e) {
+        console.error('Unhandled Promise Rejection:', e.reason);
+    });
+    </script>
+    
+    <script src="../shared/storage.js"></script>
+    <script src="js/storage.js?v=33"></script>
+    <script src="js/export-manager.js?v=33"></script>
+    <script src="js/team-info.js?v=34"></script>
+    <script>
+        // Инициализируем Lucide иконки
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>

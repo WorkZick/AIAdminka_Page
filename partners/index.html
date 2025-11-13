@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Партнеры - Windows XP</title>
+    <link rel="stylesheet" href="../css/xp-module.css">
+    <link rel="stylesheet" href="css/partners.css">
+    <script src="https://unpkg.com/lucide@0.548.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="../index.html">← Главная</a>
+
+            <div class="nav-right">
+                <button class="btn btn-primary" onclick="partners.showAddModal()" title="Добавить нового партнера">
+                    <i data-lucide="user-plus"></i> Добавить партнера
+                </button>
+            </div>
+        </nav>
+
+        <header>
+            <h1><i data-lucide="handshake"></i> Партнеры</h1>
+            <p>Управление партнерской информацией</p>
+        </header>
+
+        <div class="main-content">
+            <div class="partners-table-container">
+                <table class="partners-table">
+                    <thead>
+                        <tr>
+                            <th>Метод</th>
+                            <th>Субагент</th>
+                            <th>ID Субагента</th>
+                            <th class="actions-column">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="partnersTableBody">
+                        <!-- Динамически заполняется JavaScript -->
+                    </tbody>
+                </table>
+
+                <div id="emptyState" class="empty-state">
+                    <i data-lucide="users"></i>
+                    <p>Партнеры не добавлены</p>
+                    <button class="btn btn-primary" onclick="partners.showAddModal()">
+                        <i data-lucide="plus"></i> Добавить первого партнера
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно добавления/редактирования партнера -->
+        <div id="partnerModal" class="modal">
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Добавить нового партнера</h2>
+                    <button class="modal-close" onclick="partners.closeModal()"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <form id="partnerForm">
+                        <div class="form-group">
+                            <label for="methodInput">Метод</label>
+                            <input type="text" id="methodInput" placeholder="Например: WebMoney" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="subagentInput">Субагент</label>
+                            <input type="text" id="subagentInput" placeholder="Например: ООО «Финанс»" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="subagentIdInput">ID Субагента</label>
+                            <input type="text" id="subagentIdInput" placeholder="Например: 12345" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="partners.closeModal()">Отмена</button>
+                    <button class="btn btn-primary" onclick="partners.savePartner()" id="savePartnerBtn">Добавить партнера</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../shared/storage.js"></script>
+    <script src="js/partners.js"></script>
+    <script>
+        // Инициализируем Lucide иконки
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
