@@ -3,242 +3,461 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Информация о команде - Windows XP</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../css/xp-module.css">
-    <link rel="stylesheet" href="css/team-info-modern.css?v=13">
+    <title>Team Info - AIAdminka</title>
+    <link rel="stylesheet" href="css/team-info.css">
     <script src="https://unpkg.com/lucide@0.548.0/dist/umd/lucide.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <nav>
-            <a href="../index.html">← Главная</a>
-            
-            <div class="nav-right">
-                <!-- Кнопка добавления сотрудника в правый верхний угол -->
-                <button class="btn btn-add-employee" onclick="teamInfo.showAddModal()" title="Добавить нового сотрудника">
-                    <i data-lucide="user-plus"></i> Добавить сотрудника
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button class="back-button" onclick="teamInfo.toggleSidebar()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+
+            <div class="sidebar-menu">
+                <div class="menu-item" onclick="window.location.href='../index.html'">
+                    <span>Главная страница</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../excel-reports/index.html'">
+                    <span>Excel отчеты</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+
+                <div class="menu-item active">
+                    <span>Team Info</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../traffic-calculation/index.html'">
+                    <span>Расчет трафика</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
+                    <span>Документация</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../partners/index.html'">
+                    <span>Партнеры</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                </div>
+
+                <div class="menu-separator"></div>
+            </div>
+
+            <div class="version-info">
+                О разработке<br>
+                Version 0.0.01
+            </div>
+        </aside>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header (top right) -->
+            <header class="global-header">
+                <button class="export-btn" onclick="teamInfo.exportJSON()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Экспорт списка
                 </button>
-                
-                <div class="export-controls">
-                    <div class="export-dropdown">
-                        <button class="btn btn-success" onclick="teamInfo.toggleExportMenu()" id="exportMenuBtn"><i data-lucide="download"></i> Экспорт <i data-lucide="chevron-down"></i></button>
-                        <div class="export-menu" id="exportMenu">
-                            <button class="export-option" onclick="teamInfo.exportJSON()">
-                                <i data-lucide="file-json"></i> JSON файл
-                                <span class="export-desc">Для резервной копии</span>
-                            </button>
-                            <button class="export-option" onclick="teamInfo.exportAllText()">
-                                <i data-lucide="file-text"></i> Все в TXT
-                                <span class="export-desc">Читаемый формат</span>
-                            </button>
-                            <button class="export-option" onclick="teamInfo.showSelectiveExport()">
-                                <i data-lucide="check-square"></i> Выборочно
-                                <span class="export-desc">Выбрать записи</span>
-                            </button>
+
+                <button class="import-btn" onclick="teamInfo.showImportDialog()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Импорт списка
+                </button>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Table section -->
+                <main class="table-section">
+                    <!-- Section header -->
+                    <header class="section-header">
+                        <button class="add-employee-btn" onclick="teamInfo.showAddModal()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                            Добавить сотрудника
+                        </button>
+
+                        <div class="search-box">
+                            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            <input type="text" class="search-input" placeholder="Поиск" id="searchInput" oninput="teamInfo.filterTable()">
                         </div>
+                    </header>
+
+                    <!-- Table -->
+                    <div class="table-container">
+                <table class="employees-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                <div class="sort-header" onclick="teamInfo.sortBy('status')">
+                                    Статус
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M7 12h10m-7 6h4"/></svg>
+                                </div>
+                            </th>
+                            <th>Фото</th>
+                            <th>
+                                <div class="sort-header" onclick="teamInfo.sortBy('name')">
+                                    Ф.И.О.
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M7 12h10m-7 6h4"/></svg>
+                                </div>
+                            </th>
+                            <th>Должность</th>
+                            <th>Логин CRM</th>
+                            <th>Reddy ID</th>
+                            <th>День рождения</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeesTableBody">
+                        <!-- Rows will be generated by JavaScript -->
+                    </tbody>
+                </table>
+
+                <!-- Empty state -->
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <svg class="empty-state-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <div class="empty-state-title">Команда пока пуста</div>
+                    <div class="empty-state-text">Добавьте первого сотрудника, чтобы начать</div>
+                    <button class="btn-primary" onclick="teamInfo.showAddModal()">Добавить сотрудника</button>
+                </div>
+            </div>
+                </main>
+
+                <!-- Right panel (statistics or employee card) -->
+                <aside class="right-panel">
+            <!-- Statistics panel (shown by default) -->
+            <div class="stats-panel" id="statsPanel">
+                <div class="team-name" onclick="teamInfo.editTeamName()">
+                    Vadim team
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                </div>
+
+                <div class="stats-title">Количество сотрудников</div>
+                <div class="stats-count" id="totalCount">21</div>
+                <div class="stats-label">человек</div>
+
+                <div class="stats-breakdown">
+                    <div class="stat-item">
+                        <div class="stat-item-left">
+                            <div class="stat-count" id="workingCount">19</div>
+                            <span class="stat-label-small">человек</span>
+                        </div>
+                        <span class="status-badge green">Работает</span>
                     </div>
-                    <button class="btn btn-warning" onclick="teamInfo.showImportDialog()" title="Загрузить данные из файла"><i data-lucide="upload"></i> Импорт</button>
-                </div>
-            </div>
-        </nav>
-        
-        <header>
-            <h1><i data-lucide="users"></i> Команда</h1>
-            <p>Профессионалы, которые создают будущее</p>
-        </header>
-        
-        <!-- Основной контент - только карточки команды -->
-        <div class="main-content">
-            <div class="team-grid" id="teamGrid">
-                <!-- Динамически заполняется JavaScript -->
-            </div>
-        </div>
 
-        <!-- Модальное окно добавления/редактирования сотрудника -->
-        <div id="employeeModal" class="modal">
-            <div class="modal-dialog">
-                <div class="modal-header">
-                    <h2 id="modalTitle">Добавить нового сотрудника</h2>
-                    <button class="modal-close" onclick="teamInfo.closeEmployeeModal()"><i data-lucide="x"></i></button>
-                </div>
-                <div class="modal-body">
-                    <form id="employeeForm">
-                        <div class="form-group">
-                            <label for="fullNameInput">ФИО</label>
-                            <input type="text" id="fullNameInput" placeholder="Например: Иван Иванович Петров" required>
+                    <div class="stat-item">
+                        <div class="stat-item-left">
+                            <div class="stat-count" id="bonmetCount">0</div>
+                            <span class="stat-label-small">человек</span>
                         </div>
-                        
-                        <div class="form-group">
-                            <label for="positionInput">Должность</label>
-                            <input type="text" id="positionInput" placeholder="Например: Frontend Developer" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="gradeSelect">Грейд</label>
-                            <select id="gradeSelect" style="width: 100%; padding: 4px 6px; border: 1px solid #7f9db9; border-radius: 2px; font-family: 'Tahoma', sans-serif; font-size: 11px; background: white;">
-                                <option value="Junior">Junior</option>
-                                <option value="Middle" selected>Middle</option>
-                                <option value="Senior">Senior</option>
-                                <option value="Lead">Lead</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Предзаполненные поля -->
-                        <div class="custom-fields-section">
-                            <div class="custom-fields-header">
-                                <label>Обязательная информация</label>
-                            </div>
-                            <div class="custom-fields-container">
-                                <div class="custom-field-predefined">
-                                    <label>Логин УРС</label>
-                                    <input type="text" id="loginUrsInput" placeholder="Логин УРС">
-                                </div>
-                                <div class="custom-field-predefined">
-                                    <label>Reddy</label>
-                                    <input type="text" id="reddyInput" placeholder="Reddy">
-                                </div>
-                                <div class="custom-field-predefined">
-                                    <label>Корп. e-mail</label>
-                                    <input type="text" id="corpEmailInput" placeholder="example@company.com">
-                                </div>
-                                <div class="custom-field-predefined">
-                                    <label>Корп. Telegram</label>
-                                    <input type="text" id="corpTelegramInput" placeholder="@username">
-                                </div>
-                                <div class="custom-field-predefined">
-                                    <label>Корп. телефон</label>
-                                    <input type="text" id="corpPhoneInput" placeholder="+7 (xxx) xxx-xx-xx">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Кастомные поля -->
-                        <div class="custom-fields-section">
-                            <div class="custom-fields-header">
-                                <label>Дополнительные поля</label>
-                                <button type="button" class="btn btn-secondary btn-small" onclick="teamInfo.addCustomField()" title="Добавить поле">+ Добавить поле</button>
-                            </div>
-                            <div id="customFields" class="custom-fields-container">
-                                <!-- Динамически заполняется JavaScript -->
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="commentInput">Комментарий</label>
-                            <textarea id="commentInput" placeholder="Дополнительные заметки, комментарии и информация"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="teamInfo.closeEmployeeModal()">Отмена</button>
-                    <button class="btn btn-primary" onclick="teamInfo.saveEmployee()" id="saveEmployeeBtn">Добавить сотрудника</button>
-                </div>
-            </div>
-        </div>
+                        <span class="status-badge purple">Бонмет</span>
+                    </div>
 
-        <!-- Модальное окно выбора типа копирования -->
-        <div id="copyModal" class="modal">
-            <div class="modal-dialog" style="max-width: 400px;">
-                <div class="modal-header">
-                    <h2>Копировать сотрудника</h2>
-                    <button class="modal-close" onclick="teamInfo.closeCopyDialog()"><i data-lucide="x"></i></button>
-                </div>
-                <div class="modal-body">
-                    <p style="margin-bottom: 16px; color: #49454f;">Выберите способ копирования:</p>
-                    <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="teamInfo.copyEmployee(true)">
-                        <i data-lucide="copy"></i> Копировать с данными
-                    </button>
-                    <button class="btn btn-secondary" style="width: 100%;" onclick="teamInfo.copyEmployee(false)">
-                        <i data-lucide="file-plus"></i> Копировать структуру (без данных)
-                    </button>
-                </div>
-            </div>
-        </div>
+                    <div class="stat-item">
+                        <div class="stat-item-left">
+                            <div class="stat-count" id="leaveCount">1</div>
+                            <span class="stat-label-small">человек</span>
+                        </div>
+                        <span class="status-badge yellow">В отпуске</span>
+                    </div>
 
-        <!-- Модальное окно импорта -->
-        <div id="importModal" class="export-modal">
-            <div class="export-dialog">
-                <h2 style="margin-bottom: 16px;">Импорт данных из файла</h2>
-                <div style="margin-bottom: 16px;">
-                    <p style="color: #79747e; font-size: 0.875rem; margin-bottom: 12px;">Выберите JSON файл с данными Team Info для импорта:</p>
-                    <input type="file" id="importFileInput" accept=".json" style="margin-bottom: 12px;">
-                    <div id="importPreview" style="display: none; padding: 8px; background: #f7f2fa; border-radius: 6px; margin-bottom: 12px; font-size: 0.875rem;"></div>
-                </div>
-                <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                    <button class="btn btn-secondary" onclick="teamInfo.closeImportDialog()">Отмена</button>
-                    <button class="btn btn-primary" onclick="teamInfo.importData()" id="importBtn" disabled>Импортировать</button>
-                </div>
-            </div>
-        </div>
+                    <div class="stat-item">
+                        <div class="stat-item-left">
+                            <div class="stat-count" id="onBreakCount">1</div>
+                            <span class="stat-label-small">человек</span>
+                        </div>
+                        <span class="status-badge blue">В команде</span>
+                    </div>
 
-        <!-- Модальное окно экспорта -->
-        <div id="exportModal" class="export-modal">
-            <div class="export-dialog">
-                <h2 style="margin-bottom: 16px;">Выборочный экспорт</h2>
-                <div style="margin-bottom: 16px;">
-                    <p style="color: #79747e; font-size: 0.875rem; margin-bottom: 12px;">Выберите записи для экспорта:</p>
-                    <div id="exportItems">
-                        <!-- Динамически заполняется -->
+                    <div class="stat-item">
+                        <div class="stat-item-left">
+                            <div class="stat-count" id="firedCount">2</div>
+                            <span class="stat-label-small">человек</span>
+                        </div>
+                        <span class="status-badge red">Уволен</span>
                     </div>
                 </div>
-                
-                <!-- Выбор формата экспорта -->
-                <div style="margin-bottom: 16px; padding: 12px; background: #f7f2fa; border-radius: 6px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #49454f;">Формат экспорта:</label>
-                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        <label class="format-option">
-                            <input type="radio" name="exportFormat" value="txt" checked>
-                            <span class="format-label">
-                                ▤ TXT файл
-                                <small>Читаемый формат</small>
-                            </span>
-                        </label>
-                        <label class="format-option">
-                            <input type="radio" name="exportFormat" value="json">
-                            <span class="format-label">
-                                ▤ JSON файл
-                                <small>Для резервной копии</small>
-                            </span>
-                        </label>
+            </div>
+
+            <!-- Employee card (shown when employee selected) -->
+            <div class="employee-card" id="employeeCard" style="display: none;">
+                <div class="card-header">
+                    <div class="card-avatar">
+                        <img id="cardAvatar" src="" alt="" style="display: none;">
+                    </div>
+                    <div class="card-info-section">
+                        <div class="card-name" id="cardName">Пантюков Вадим Алексеевич</div>
+                        <div class="card-position" id="cardPosition">Дизайнер</div>
+                        <select class="card-status-select" id="cardStatusSelect" onchange="teamInfo.updateStatus()">
+                            <option value="Работает">Работает</option>
+                            <option value="В отпуске">В отпуске</option>
+                            <option value="В команде">В команде</option>
+                            <option value="Уволен">Уволен</option>
+                            <option value="Бонмет">Бонмет</option>
+                        </select>
                     </div>
                 </div>
-                
-                <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
-                    <button class="btn btn-secondary" onclick="exportManager.closeModal()">Отмена</button>
-                    <button class="btn btn-primary" onclick="exportManager.selectAll(true)">Выбрать все</button>
-                    <button class="btn btn-secondary" onclick="exportManager.selectAll(false)">Снять все</button>
-                    <button class="btn btn-success" onclick="exportManager.exportSelected()">Экспортировать</button>
+
+                <div class="card-body" id="cardBody">
+                    <!-- Info will be generated by JavaScript -->
                 </div>
+
+                <div class="card-footer">
+                    <button class="edit-btn" onclick="teamInfo.editFromCard()">Редактировать</button>
+                    <div class="card-footer-divider"></div>
+                    <button class="delete-btn" onclick="teamInfo.deleteFromCard()">Удалить</button>
+                </div>
+            </div>
+
+            <!-- Employee form (for adding/editing) -->
+            <div class="employee-form" id="employeeForm" style="display: none;">
+                <button class="close-card-btn" onclick="teamInfo.closeForm()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+
+                <div class="form-header-section">
+                    <input type="file" id="formAvatarInput" accept="image/*" style="display: none;" onchange="teamInfo.handleAvatarUpload(event)">
+                    <div class="form-avatar" onclick="document.getElementById('formAvatarInput').click()">
+                        <img id="formAvatar" src="" alt="" style="display: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="formAvatarPlaceholder"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    </div>
+                    <div class="form-info-section">
+                        <h3 id="formTitle">Новый сотрудник</h3>
+                        <input type="text" id="formFullName" placeholder="Ф.И.О.">
+                        <input type="text" id="formPosition" placeholder="Должность">
+                        <select id="formStatus">
+                            <option value="Работает">Работает</option>
+                            <option value="В отпуске">В отпуске</option>
+                            <option value="В команде">В команде</option>
+                            <option value="Уволен">Уволен</option>
+                            <option value="Бонмет">Бонмет</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-body">
+                    <div class="form-group-inline">
+                        <label>Reddy ID</label>
+                        <input type="text" id="formReddyId" placeholder="Введите ID">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Рабочий Telegram</label>
+                        <input type="text" id="formCorpTelegram" placeholder="@username">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Личный Telegram</label>
+                        <input type="text" id="formPersonalTelegram" placeholder="@username">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>День рождения</label>
+                        <input type="date" id="formBirthday">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Рабочая почта</label>
+                        <input type="email" id="formCorpEmail" placeholder="example@company.com">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Личная почта</label>
+                        <input type="email" id="formPersonalEmail" placeholder="example@gmail.com">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Рабочий телефон</label>
+                        <input type="tel" id="formCorpPhone" placeholder="+7 (xxx) xxx-xx-xx">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Личный телефон</label>
+                        <input type="tel" id="formPersonalPhone" placeholder="+7 (xxx) xxx-xx-xx">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Офис</label>
+                        <input type="text" id="formOffice" placeholder="Офис">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Начало работы</label>
+                        <input type="date" id="formStartDate">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Компания</label>
+                        <input type="text" id="formCompany" placeholder='ООО "ТУРЕЦ"'>
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Логин CRM</label>
+                        <input type="text" id="formCrmLogin" placeholder="abobus.i">
+                    </div>
+
+                    <div class="form-group-inline vertical">
+                        <label>Примечание</label>
+                        <textarea id="formComment" placeholder="Дополнительная информация..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-footer">
+                    <div class="form-footer-buttons">
+                        <button class="form-btn" onclick="teamInfo.saveFromForm()" id="formSaveBtn">Сохранить</button>
+                        <button class="form-btn" onclick="teamInfo.closeForm()">Отменить</button>
+                    </div>
+                    <div class="form-divider"></div>
+                    <button class="btn-delete" onclick="teamInfo.deleteFromForm()" id="formDeleteBtn" style="display: none;">Удалить</button>
+                </div>
+            </div>
+                </aside>
             </div>
         </div>
     </div>
 
-    <script>
-    // Глобальная обработка ошибок для диагностики
-    window.addEventListener('error', function(e) {
-        console.error('JavaScript Error:', e.error);
-        console.error('Error details:', {
-            message: e.message,
-            filename: e.filename,
-            lineno: e.lineno,
-            colno: e.colno
-        });
-    });
-    
-    window.addEventListener('unhandledrejection', function(e) {
-        console.error('Unhandled Promise Rejection:', e.reason);
-    });
-    </script>
-    
+    <!-- Add/Edit Employee Modal -->
+    <div class="modal" id="employeeModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Добавить сотрудника</h2>
+                <button class="modal-close" onclick="teamInfo.closeEmployeeModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <form id="employeeForm">
+                    <div class="form-group">
+                        <label class="form-label">Ф.И.О.</label>
+                        <input type="text" class="form-input" id="fullNameInput" placeholder="Иванов Иван Иванович" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Должность</label>
+                        <input type="text" class="form-input" id="positionInput" placeholder="Менеджер" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Статус</label>
+                        <select class="form-select" id="statusSelect">
+                            <option value="Работает">Работает</option>
+                            <option value="В отпуске">В отпуске</option>
+                            <option value="В команде">В команде</option>
+                            <option value="Уволен">Уволен</option>
+                            <option value="Бонмет">Бонмет</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ID Reddy</label>
+                        <input type="text" class="form-input" id="reddyInput" placeholder="40182221672">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Рабочий Telegram</label>
+                        <input type="text" class="form-input" id="corpTelegramInput" placeholder="@username">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Личный Telegram</label>
+                        <input type="text" class="form-input" id="personalTelegramInput" placeholder="@username">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">День рождения</label>
+                        <input type="date" class="form-input" id="birthdayInput">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Рабочая почта</label>
+                        <input type="email" class="form-input" id="corpEmailInput" placeholder="example@company.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Личная почта</label>
+                        <input type="email" class="form-input" id="personalEmailInput" placeholder="example@gmail.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Рабочий телефон</label>
+                        <input type="tel" class="form-input" id="corpPhoneInput" placeholder="+7 (xxx) xxx-xx-xx">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Личный телефон</label>
+                        <input type="tel" class="form-input" id="personalPhoneInput" placeholder="+7 (xxx) xxx-xx-xx">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Офис</label>
+                        <input type="text" class="form-input" id="officeInput" placeholder="тут">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Начало работы по Wolan</label>
+                        <input type="date" class="form-input" id="startDateInput">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Название компании</label>
+                        <input type="text" class="form-input" id="companyInput" placeholder='ООО "ТУРЕЦ"'>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Логин CRM</label>
+                        <input type="text" class="form-input" id="crmLoginInput" placeholder="abobus.i">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Примечание</label>
+                        <textarea class="form-textarea" id="commentInput" placeholder="Дополнительная информация..."></textarea>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="teamInfo.closeEmployeeModal()">Отменить</button>
+                <button class="btn-primary" onclick="teamInfo.saveEmployee()" id="saveEmployeeBtn">Добавить сотрудника</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal" id="importModal">
+        <div class="modal-dialog" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Импорт данных</h2>
+                <button class="modal-close" onclick="teamInfo.closeImportDialog()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Выберите JSON файл</label>
+                    <input type="file" class="form-input" id="importFileInput" accept=".json">
+                </div>
+                <div id="importPreview" style="display: none; padding: 12px; background: #f0e8d8; border-radius: 4px; margin-top: 12px; font-size: 13px;"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="teamInfo.closeImportDialog()">Отмена</button>
+                <button class="btn-primary" onclick="teamInfo.importData()" id="importBtn" disabled>Импортировать</button>
+            </div>
+        </div>
+    </div>
+
     <script src="../shared/storage.js"></script>
-    <script src="js/storage.js?v=33"></script>
-    <script src="js/export-manager.js?v=33"></script>
-    <script src="js/team-info.js?v=34"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/export-manager.js"></script>
+    <script src="js/team-info.js"></script>
     <script>
-        // Инициализируем Lucide иконки
+        // Initialize Lucide icons
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }

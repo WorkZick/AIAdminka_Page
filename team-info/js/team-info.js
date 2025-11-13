@@ -1,733 +1,735 @@
-// Простой менеджер команды с модальными окнами и drag & drop
+// Team Info - Modern Interface
 const teamInfo = {
     data: [],
-    fieldCounter: 0,
-    currentEditId: null,
-    currentCopyId: null,
-    draggedItem: null,
-    draggedIndex: null,
-    
+    currentEmployeeId: null,
+    sortField: null,
+    sortDirection: 'asc',
+    teamName: 'Vadim team',
+    sidebarCollapsed: false,
+    formChanged: false,
+    originalFormData: null,
+
     async init() {
         try {
             this.data = await storage.loadData();
-            this.setupEvents();
+            this.loadTeamName();
+            this.loadSidebarState();
             this.render();
+            this.updateStats();
             console.log('✅ Team Info loaded');
         } catch (error) {
             console.error('Init error:', error);
         }
     },
-    
-    setupEvents() {
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.export-dropdown')) {
-                this.closeExportMenu();
-            }
-        });
-        
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) {
-                if (e.target.id === 'copyModal') {
-                    this.closeCopyDialog();
-                } else {
-                    this.closeEmployeeModal();
-                }
-            }
-        });
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const copyModal = document.getElementById('copyModal');
-                if (copyModal && copyModal.classList.contains('active')) {
-                    this.closeCopyDialog();
-                } else {
-                    this.closeEmployeeModal();
-                }
-            }
-        });
-        
-        this.setupDragAndDrop();
+    loadSidebarState() {
+        const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+        this.sidebarCollapsed = collapsed;
+        if (collapsed) {
+            document.getElementById('sidebar').classList.add('collapsed');
+        }
     },
-    
-    setupDragAndDrop() {
-        document.addEventListener('dragstart', (e) => {
-            if (e.target.closest('.drag-handle')) {
-                const card = e.target.closest('.employee-card');
-                const id = parseInt(card.dataset.id);
-                const index = this.data.findIndex(item => item.id === id);
-                
-                this.draggedItem = this.data[index];
-                this.draggedIndex = index;
-                
-                card.classList.add('dragging');
-                document.getElementById('teamGrid').classList.add('dragging');
-                
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/html', card.outerHTML);
-            }
-        });
-        
-        document.addEventListener('dragend', (e) => {
-            if (e.target.closest('.drag-handle')) {
-                const card = e.target.closest('.employee-card');
-                card.classList.remove('dragging');
-                document.getElementById('teamGrid').classList.remove('dragging');
-                
-                document.querySelectorAll('.employee-card').forEach(c => {
-                    c.classList.remove('drag-over');
-                });
-                
-                this.draggedItem = null;
-                this.draggedIndex = null;
-            }
-        });
-        
-        document.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        });
-        
-        document.addEventListener('dragenter', (e) => {
-            e.preventDefault();
-            
-            if (e.target.closest('.employee-card') && this.draggedItem) {
-                const card = e.target.closest('.employee-card');
-                const id = parseInt(card.dataset.id);
-                
-                if (id !== this.draggedItem.id) {
-                    document.querySelectorAll('.employee-card').forEach(c => {
-                        c.classList.remove('drag-over');
-                    });
-                    
-                    card.classList.add('drag-over');
-                }
-            }
-        });
-        
-        document.addEventListener('drop', (e) => {
-            e.preventDefault();
-            
-            if (e.target.closest('.employee-card') && this.draggedItem) {
-                const targetCard = e.target.closest('.employee-card');
-                const targetId = parseInt(targetCard.dataset.id);
-                const targetIndex = this.data.findIndex(item => item.id === targetId);
-                
-                if (targetId !== this.draggedItem.id) {
-                    this.moveItem(this.draggedIndex, targetIndex);
-                }
-                
-                targetCard.classList.remove('drag-over');
-            }
-        });
+
+    toggleSidebar() {
+        this.sidebarCollapsed = !this.sidebarCollapsed;
+        const sidebar = document.getElementById('sidebar');
+
+        if (this.sidebarCollapsed) {
+            sidebar.classList.add('collapsed');
+        } else {
+            sidebar.classList.remove('collapsed');
+        }
+
+        localStorage.setItem('sidebar-collapsed', this.sidebarCollapsed);
     },
-    
-    async moveItem(fromIndex, toIndex) {
-        if (fromIndex === toIndex) return;
-        
-        const [movedItem] = this.data.splice(fromIndex, 1);
-        this.data.splice(toIndex, 0, movedItem);
-        
-        await storage.saveData(this.data);
-        this.render();
+
+    loadTeamName() {
+        const savedName = localStorage.getItem('team-name');
+        if (savedName) {
+            this.teamName = savedName;
+            document.querySelector('.team-name').childNodes[0].textContent = this.teamName + ' ';
+        }
     },
-    
+
+    saveTeamName(name) {
+        this.teamName = name;
+        localStorage.setItem('team-name', name);
+        document.querySelector('.team-name').childNodes[0].textContent = name + ' ';
+    },
+
+    editTeamName() {
+        const newName = prompt('Введите название команды:', this.teamName);
+        if (newName && newName.trim()) {
+            this.saveTeamName(newName.trim());
+        }
+    },
+
     render() {
-        this.renderTeamGrid();
-    },
-    
-    renderTeamGrid() {
-        const container = document.getElementById('teamGrid');
-        
+        const tbody = document.getElementById('employeesTableBody');
+        const emptyState = document.getElementById('emptyState');
+        const table = document.querySelector('.employees-table');
+
         if (this.data.length === 0) {
-            container.innerHTML = `
-                <div class="empty-team">
-                    <h3>👥 Команда пока пуста</h3>
-                    <p>Добавьте первого сотрудника</p>
-                    <button class="btn btn-primary" onclick="teamInfo.showAddModal()">
-                        👤 Добавить сотрудника
-                    </button>
-                </div>
-            `;
+            table.style.display = 'none';
+            emptyState.style.display = 'block';
             return;
         }
-        
-        container.innerHTML = this.data.map((item, index) => {
-            const initials = this.getInitials(item.fullName || item.title || '??');
-            const isExpanded = item.cardExpanded || false;
-            const needsExpansion = this.needsExpansion(item);
-            
-            const predefinedFieldsHtml = this.renderPredefinedFields(item.predefinedFields || {});
-            const customFieldsHtml = isExpanded ? this.renderFields(item.customFields || {}) : '';
-            const commentHtml = isExpanded ? this.renderComment(item.comment) : '';
-            const buttonText = isExpanded ? 'СВЕРНУТЬ' : 'ПОДРОБНЕЕ';
-            
+
+        table.style.display = 'table';
+        emptyState.style.display = 'none';
+
+        tbody.innerHTML = this.data.map(employee => {
+            const statusClass = this.getStatusClass(employee.status || 'Работает');
+            const statusText = employee.status || 'Работает';
+            const reddyId = employee.reddyId || employee.predefinedFields?.['Reddy'] || '';
+            const birthday = employee.birthday ? this.formatDate(employee.birthday) : '';
+            const crmLogin = employee.crmLogin || '';
+            const avatar = employee.avatar || '';
+            const formattedName = this.formatFullNameForTable(employee.fullName || '');
+
             return `
-                <div class="employee-card ${isExpanded ? 'expanded' : ''} ${needsExpansion ? '' : 'short'}" 
-                     data-id="${item.id}" data-index="${index}">
-                    <div class="drag-handle" draggable="true" title="Перетащить для изменения порядка">⋮⋮</div>
-                    <div class="card-actions">
-                        <button class="card-action-btn copy" onclick="teamInfo.showCopyDialog(${item.id})" title="Копировать">📋</button>
-                        <button class="card-action-btn edit" onclick="teamInfo.showEditModal(${item.id})" title="Редактировать">✏️</button>
-                        <button class="card-action-btn delete" onclick="teamInfo.deleteInfo(${item.id})" title="Удалить">🗑️</button>
-                    </div>
-                    <div class="employee-avatar">${initials}</div>
-                    <div class="employee-name">${this.escapeHtml(item.fullName || item.title || '')}</div>
-                    <div class="employee-position">${this.escapeHtml(item.position || '')} <span class="employee-grade">${this.escapeHtml(item.grade || '')}</span></div>
-                    ${predefinedFieldsHtml}
-                    ${customFieldsHtml}
-                    ${commentHtml}
-                    <div class="employee-dates">
-                        <span>Добавлен: ${this.formatDate(item.createdAt)}</span>
-                        ${needsExpansion ? `<button class="btn btn-primary btn-details" onclick="teamInfo.toggleCard(${item.id}, event)">${buttonText}</button>` : ''}
-                    </div>
-                </div>
+                <tr onclick="teamInfo.openCard(${employee.id})" class="${this.currentEmployeeId === employee.id ? 'selected' : ''}">
+                    <td>
+                        <div class="status-cell">
+                            <span class="status-badge ${statusClass}">${this.escapeHtml(statusText)}</span>
+                            <svg class="status-dropdown-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="employee-info">
+                            <div class="employee-avatar">
+                                ${avatar ? `<img src="${avatar}" alt="">` : ''}
+                            </div>
+                        </div>
+                    </td>
+                    <td><div class="employee-name">${formattedName}</div></td>
+                    <td>${this.escapeHtml(employee.position || '')}</td>
+                    <td>${this.escapeHtml(crmLogin)}</td>
+                    <td>${this.escapeHtml(reddyId)}</td>
+                    <td>${birthday}</td>
+                    <td>
+                        <svg class="row-arrow" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </td>
+                </tr>
             `;
         }).join('');
     },
-    
-    needsExpansion(item) {
-        const fieldsCount = item.customFields ? Object.keys(item.customFields).length : 0;
-        const hasComment = item.comment && item.comment.trim().length > 0;
-        return hasComment || fieldsCount > 0;
-    },
-    
-    showAddModal() {
-        this.currentEditId = null;
-        document.getElementById('modalTitle').textContent = 'Добавить нового сотрудника';
-        document.getElementById('saveEmployeeBtn').textContent = 'Добавить сотрудника';
-        
-        document.getElementById('fullNameInput').value = '';
-        document.getElementById('positionInput').value = '';
-        document.getElementById('gradeSelect').value = 'Middle';
-        document.getElementById('loginUrsInput').value = '';
-        document.getElementById('reddyInput').value = '';
-        document.getElementById('corpEmailInput').value = '';
-        document.getElementById('corpTelegramInput').value = '';
-        document.getElementById('corpPhoneInput').value = '';
-        document.getElementById('commentInput').value = '';
-        this.clearFields();
-        
-        document.getElementById('employeeModal').classList.add('active');
-        document.getElementById('fullNameInput').focus();
-    },
-    
-    showEditModal(id) {
-        const item = this.data.find(i => i.id === id);
-        if (!item) return;
-        
-        this.currentEditId = id;
-        document.getElementById('modalTitle').textContent = 'Редактировать сотрудника';
-        document.getElementById('saveEmployeeBtn').textContent = 'Сохранить изменения';
-        
-        document.getElementById('fullNameInput').value = item.fullName || '';
-        document.getElementById('positionInput').value = item.position || '';
-        document.getElementById('gradeSelect').value = item.grade || 'Middle';
-        
-        const predefined = item.predefinedFields || {};
-        document.getElementById('loginUrsInput').value = predefined['Логин УРС'] || '';
-        document.getElementById('reddyInput').value = predefined['Reddy'] || '';
-        document.getElementById('corpEmailInput').value = predefined['Корп. e-mail'] || '';
-        document.getElementById('corpTelegramInput').value = predefined['Корп. Telegram'] || '';
-        document.getElementById('corpPhoneInput').value = predefined['Корп. телефон'] || '';
-        
-        document.getElementById('commentInput').value = item.comment || '';
-        
-        this.clearFields();
-        if (item.customFields) {
-            Object.entries(item.customFields).forEach(([name, fieldData]) => {
-                this.addCustomFieldWithData(name, fieldData);
-            });
-        }
-        
-        document.getElementById('employeeModal').classList.add('active');
-        document.getElementById('fullNameInput').focus();
-    },
-    
-    closeEmployeeModal() {
-        document.getElementById('employeeModal').classList.remove('active');
-        this.currentEditId = null;
-    },
 
-    showCopyDialog(id) {
-        this.currentCopyId = id;
-        document.getElementById('copyModal').classList.add('active');
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
-    },
-
-    closeCopyDialog() {
-        document.getElementById('copyModal').classList.remove('active');
-        this.currentCopyId = null;
-    },
-
-    async copyEmployee(withData) {
-        const item = this.data.find(i => i.id === this.currentCopyId);
-        if (!item) return;
-
-        this.closeCopyDialog();
-
-        const newItem = {
-            id: Date.now(),
-            fullName: withData ? item.fullName : '',
-            position: withData ? item.position : '',
-            grade: withData ? item.grade : 'Middle',
-            predefinedFields: withData ? { ...item.predefinedFields } : {},
-            customFields: {},
-            comment: withData ? item.comment : '',
-            createdAt: new Date().toISOString()
+    getStatusClass(status) {
+        const statusMap = {
+            'Работает': 'green',
+            'В отпуске': 'yellow',
+            'В команде': 'blue',
+            'Уволен': 'red',
+            'Бонмет': 'purple'
         };
+        return statusMap[status] || 'green';
+    },
 
-        if (item.customFields && Object.keys(item.customFields).length > 0) {
-            if (withData) {
-                newItem.customFields = JSON.parse(JSON.stringify(item.customFields));
-            } else {
-                Object.entries(item.customFields).forEach(([name, fieldData]) => {
-                    newItem.customFields[name] = {
-                        type: fieldData.type || 'text',
-                        visible: fieldData.visible !== undefined ? fieldData.visible : true,
-                        values: [{ value: '' }]
-                    };
-                });
-            }
+    formatFullNameForTable(fullName) {
+        if (!fullName) return '';
+
+        const parts = fullName.trim().split(/\s+/);
+        if (parts.length === 0) return '';
+        if (parts.length === 1) return this.escapeHtml(parts[0]);
+        if (parts.length === 2) return this.escapeHtml(parts.join(' '));
+
+        // Фамилия Имя на первой строке, Отчество на второй
+        const lastName = parts[0];
+        const firstName = parts[1];
+        const patronymic = parts.slice(2).join(' ');
+
+        return `${this.escapeHtml(lastName)} ${this.escapeHtml(firstName)}<br>${this.escapeHtml(patronymic)}`;
+    },
+
+    filterTable() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('.employees-table tbody tr');
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(search) ? '' : 'none';
+        });
+    },
+
+    sortBy(field) {
+        if (this.sortField === field) {
+            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.sortField = field;
+            this.sortDirection = 'asc';
         }
 
-        this.data.unshift(newItem);
+        this.data.sort((a, b) => {
+            let aVal, bVal;
+
+            if (field === 'name') {
+                aVal = a.fullName || '';
+                bVal = b.fullName || '';
+            } else if (field === 'status') {
+                aVal = a.status || 'Работает';
+                bVal = b.status || 'Работает';
+            }
+
+            if (this.sortDirection === 'asc') {
+                return aVal.localeCompare(bVal);
+            } else {
+                return bVal.localeCompare(aVal);
+            }
+        });
+
+        this.render();
+    },
+
+    openCard(id) {
+        // Check if form is open and has changes
+        const form = document.getElementById('employeeForm');
+        if (form.style.display === 'flex' && this.formChanged) {
+            const confirmMsg = this.currentEmployeeId
+                ? 'У вас есть несохраненные изменения. Закрыть форму без сохранения?'
+                : 'Вы не завершили добавление сотрудника. Закрыть форму без сохранения?';
+
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            // Close form
+            form.style.display = 'none';
+            this.formChanged = false;
+            this.originalFormData = null;
+        } else if (form.style.display === 'flex') {
+            // No changes, just close
+            form.style.display = 'none';
+            this.formChanged = false;
+            this.originalFormData = null;
+        }
+
+        this.currentEmployeeId = id;
+        const employee = this.data.find(e => e.id === id);
+        if (!employee) return;
+
+        this.render();
+
+        const employeeCard = document.getElementById('employeeCard');
+        const statsPanel = document.getElementById('statsPanel');
+
+        statsPanel.style.display = 'none';
+        employeeCard.style.display = 'flex';
+
+        document.getElementById('cardName').textContent = employee.fullName || '';
+        document.getElementById('cardPosition').textContent = employee.position || '';
+
+        const statusSelect = document.getElementById('cardStatusSelect');
+        statusSelect.value = employee.status || 'Работает';
+
+        const cardAvatar = document.getElementById('cardAvatar');
+        if (employee.avatar) {
+            cardAvatar.src = employee.avatar;
+            cardAvatar.style.display = 'block';
+        } else {
+            cardAvatar.style.display = 'none';
+        }
+
+        const cardBody = document.getElementById('cardBody');
+        cardBody.innerHTML = this.generateCardInfo(employee);
+    },
+
+    async updateStatus() {
+        if (!this.currentEmployeeId) return;
+
+        const employee = this.data.find(e => e.id === this.currentEmployeeId);
+        if (!employee) return;
+
+        const newStatus = document.getElementById('cardStatusSelect').value;
+        employee.status = newStatus;
+        employee.updatedAt = new Date().toISOString();
 
         if (await storage.saveData(this.data)) {
             this.render();
-            alert(withData ? 'Сотрудник скопирован с данными!' : 'Скопирована структура карточки!');
-            this.showEditModal(newItem.id);
+            this.updateStats();
         } else {
-            alert('Ошибка копирования');
+            alert('Ошибка сохранения статуса');
         }
     },
-    
-    async saveEmployee() {
-        const fullName = document.getElementById('fullNameInput').value.trim();
-        const position = document.getElementById('positionInput').value.trim();
-        const grade = document.getElementById('gradeSelect').value;
-        const comment = document.getElementById('commentInput').value.trim();
-        
-        const predefinedFields = {};
-        const loginUrs = document.getElementById('loginUrsInput').value.trim();
-        const reddy = document.getElementById('reddyInput').value.trim();
-        const corpEmail = document.getElementById('corpEmailInput').value.trim();
-        const corpTelegram = document.getElementById('corpTelegramInput').value.trim();
-        const corpPhone = document.getElementById('corpPhoneInput').value.trim();
-        
-        if (loginUrs) predefinedFields['Логин УРС'] = loginUrs;
-        if (reddy) predefinedFields['Reddy'] = reddy;
-        if (corpEmail) predefinedFields['Корп. e-mail'] = corpEmail;
-        if (corpTelegram) predefinedFields['Корп. Telegram'] = corpTelegram;
-        if (corpPhone) predefinedFields['Корп. телефон'] = corpPhone;
-        
-        const customFields = this.getFieldsData();
-        
+
+    generateCardInfo(employee) {
+        const fields = [
+            { label: 'Reddy ID', value: employee.reddyId || employee.predefinedFields?.['Reddy'] || '' },
+            { label: 'Рабочий Telegram', value: employee.corpTelegram || employee.predefinedFields?.['Корп. Telegram'] || '' },
+            { label: 'Личный Telegram', value: employee.personalTelegram || '' },
+            { label: 'День рождения', value: employee.birthday ? this.formatDate(employee.birthday) : '' },
+            { label: 'Рабочая почта', value: employee.corpEmail || employee.predefinedFields?.['Корп. e-mail'] || '' },
+            { label: 'Личная почта', value: employee.personalEmail || '' },
+            { label: 'Рабочий телефон', value: employee.corpPhone || employee.predefinedFields?.['Корп. телефон'] || '' },
+            { label: 'Личный телефон', value: employee.personalPhone || '' },
+            { label: 'Офис', value: employee.office || '' },
+            { label: 'Начало работы', value: employee.startDate ? this.formatDate(employee.startDate) : '' },
+            { label: 'Компания', value: employee.company || '' },
+            { label: 'Логин CRM', value: employee.crmLogin || '' },
+            { label: 'Примечание', value: employee.comment || '' }
+        ];
+
+        let html = '';
+
+        fields.forEach(field => {
+            if (field.value) {
+                html += `
+                    <div class="info-group">
+                        <div class="info-label">${field.label}:</div>
+                        <div class="info-value">${this.escapeHtml(field.value)}</div>
+                    </div>
+                `;
+            }
+        });
+
+        return html;
+    },
+
+    closeCard() {
+        const employeeCard = document.getElementById('employeeCard');
+        const statsPanel = document.getElementById('statsPanel');
+
+        employeeCard.style.display = 'none';
+        statsPanel.style.display = 'flex';
+
+        this.currentEmployeeId = null;
+        this.render();
+    },
+
+    updateStats() {
+        const total = this.data.length;
+        const working = this.data.filter(e => (e.status || 'Работает') === 'Работает').length;
+        const bonmet = this.data.filter(e => e.status === 'Бонмет').length;
+        const leave = this.data.filter(e => e.status === 'В отпуске').length;
+        const onBreak = this.data.filter(e => e.status === 'В команде').length;
+        const fired = this.data.filter(e => e.status === 'Уволен').length;
+
+        document.getElementById('totalCount').textContent = total;
+        document.getElementById('workingCount').textContent = working;
+        document.getElementById('bonmetCount').textContent = bonmet;
+        document.getElementById('leaveCount').textContent = leave;
+        document.getElementById('onBreakCount').textContent = onBreak;
+        document.getElementById('firedCount').textContent = fired;
+    },
+
+    showAddModal() {
+        // Hide stats and card
+        document.getElementById('statsPanel').style.display = 'none';
+        document.getElementById('employeeCard').style.display = 'none';
+
+        // Show form
+        const form = document.getElementById('employeeForm');
+        form.style.display = 'flex';
+
+        // Reset form
+        this.currentEmployeeId = null;
+        this.currentAvatar = null;
+        document.getElementById('formTitle').textContent = 'Новый сотрудник';
+        document.getElementById('formSaveBtn').textContent = 'Сохранить';
+        document.getElementById('formDeleteBtn').style.display = 'none';
+
+        document.getElementById('formFullName').value = '';
+        document.getElementById('formPosition').value = '';
+        document.getElementById('formStatus').value = 'Работает';
+        document.getElementById('formReddyId').value = '';
+        document.getElementById('formCorpTelegram').value = '';
+        document.getElementById('formPersonalTelegram').value = '';
+        document.getElementById('formBirthday').value = '';
+        document.getElementById('formCorpEmail').value = '';
+        document.getElementById('formPersonalEmail').value = '';
+        document.getElementById('formCorpPhone').value = '';
+        document.getElementById('formPersonalPhone').value = '';
+        document.getElementById('formOffice').value = '';
+        document.getElementById('formStartDate').value = '';
+        document.getElementById('formCompany').value = '';
+        document.getElementById('formCrmLogin').value = '';
+        document.getElementById('formComment').value = '';
+
+        // Reset avatar
+        const formAvatar = document.getElementById('formAvatar');
+        formAvatar.style.display = 'none';
+        document.getElementById('formAvatarPlaceholder').style.display = 'block';
+
+        // Reset change tracking
+        this.formChanged = false;
+        this.originalFormData = this.getFormData();
+        this.attachFormChangeListeners();
+
+        document.getElementById('formFullName').focus();
+    },
+
+    handleAvatarUpload(event) {
+        const file = event.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.currentAvatar = e.target.result;
+                const formAvatar = document.getElementById('formAvatar');
+                formAvatar.src = e.target.result;
+                formAvatar.style.display = 'block';
+                document.getElementById('formAvatarPlaceholder').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+    },
+
+    showEditModal(id) {
+        const employee = this.data.find(e => e.id === id);
+        if (!employee) return;
+
+        this.currentEmployeeId = id;
+        document.getElementById('modalTitle').textContent = 'Редактировать сотрудника';
+        document.getElementById('saveEmployeeBtn').textContent = 'Сохранить изменения';
+
+        document.getElementById('fullNameInput').value = employee.fullName || '';
+        document.getElementById('positionInput').value = employee.position || '';
+        document.getElementById('statusSelect').value = employee.status || 'Работает';
+        document.getElementById('reddyInput').value = employee.reddyId || employee.predefinedFields?.['Reddy'] || '';
+        document.getElementById('corpTelegramInput').value = employee.corpTelegram || employee.predefinedFields?.['Корп. Telegram'] || '';
+        document.getElementById('personalTelegramInput').value = employee.personalTelegram || '';
+        document.getElementById('birthdayInput').value = employee.birthday || '';
+        document.getElementById('corpEmailInput').value = employee.corpEmail || employee.predefinedFields?.['Корп. e-mail'] || '';
+        document.getElementById('personalEmailInput').value = employee.personalEmail || '';
+        document.getElementById('corpPhoneInput').value = employee.corpPhone || employee.predefinedFields?.['Корп. телефон'] || '';
+        document.getElementById('personalPhoneInput').value = employee.personalPhone || '';
+        document.getElementById('officeInput').value = employee.office || '';
+        document.getElementById('startDateInput').value = employee.startDate || '';
+        document.getElementById('companyInput').value = employee.company || '';
+        document.getElementById('crmLoginInput').value = employee.crmLogin || '';
+        document.getElementById('commentInput').value = employee.comment || '';
+
+        document.getElementById('employeeModal').classList.add('active');
+        document.getElementById('fullNameInput').focus();
+    },
+
+    editFromCard() {
+        if (this.currentEmployeeId) {
+            this.showEditForm(this.currentEmployeeId);
+        }
+    },
+
+    showEditForm(id) {
+        const employee = this.data.find(e => e.id === id);
+        if (!employee) return;
+
+        // Hide card
+        document.getElementById('employeeCard').style.display = 'none';
+
+        // Show form
+        const form = document.getElementById('employeeForm');
+        form.style.display = 'flex';
+
+        // Fill form with employee data
+        this.currentEmployeeId = id;
+        this.currentAvatar = employee.avatar || null;
+        document.getElementById('formTitle').textContent = 'Редактировать';
+        document.getElementById('formSaveBtn').textContent = 'Сохранить';
+        document.getElementById('formDeleteBtn').style.display = 'block';
+
+        document.getElementById('formFullName').value = employee.fullName || '';
+        document.getElementById('formPosition').value = employee.position || '';
+        document.getElementById('formStatus').value = employee.status || 'Работает';
+        document.getElementById('formReddyId').value = employee.reddyId || employee.predefinedFields?.['Reddy'] || '';
+        document.getElementById('formCorpTelegram').value = employee.corpTelegram || employee.predefinedFields?.['Корп. Telegram'] || '';
+        document.getElementById('formPersonalTelegram').value = employee.personalTelegram || '';
+        document.getElementById('formBirthday').value = employee.birthday || '';
+        document.getElementById('formCorpEmail').value = employee.corpEmail || employee.predefinedFields?.['Корп. e-mail'] || '';
+        document.getElementById('formPersonalEmail').value = employee.personalEmail || '';
+        document.getElementById('formCorpPhone').value = employee.corpPhone || employee.predefinedFields?.['Корп. телефон'] || '';
+        document.getElementById('formPersonalPhone').value = employee.personalPhone || '';
+        document.getElementById('formOffice').value = employee.office || '';
+        document.getElementById('formStartDate').value = employee.startDate || '';
+        document.getElementById('formCompany').value = employee.company || '';
+        document.getElementById('formCrmLogin').value = employee.crmLogin || '';
+        document.getElementById('formComment').value = employee.comment || '';
+
+        // Set avatar
+        const formAvatar = document.getElementById('formAvatar');
+        if (employee.avatar) {
+            formAvatar.src = employee.avatar;
+            formAvatar.style.display = 'block';
+            document.getElementById('formAvatarPlaceholder').style.display = 'none';
+        } else {
+            formAvatar.style.display = 'none';
+            document.getElementById('formAvatarPlaceholder').style.display = 'block';
+        }
+
+        // Reset change tracking
+        this.formChanged = false;
+        this.originalFormData = this.getFormData();
+        this.attachFormChangeListeners();
+    },
+
+    closeForm() {
+        const employeeId = this.currentEmployeeId;
+        document.getElementById('employeeForm').style.display = 'none';
+        this.formChanged = false;
+        this.originalFormData = null;
+
+        if (employeeId) {
+            // Return to employee card
+            this.openCard(employeeId);
+        } else {
+            // Return to stats panel
+            document.getElementById('statsPanel').style.display = 'flex';
+            this.currentEmployeeId = null;
+        }
+        this.render();
+    },
+
+    async saveFromForm() {
+        const fullName = document.getElementById('formFullName').value.trim();
+        const position = document.getElementById('formPosition').value.trim();
+        const status = document.getElementById('formStatus').value;
+        const reddyId = document.getElementById('formReddyId').value.trim();
+        const corpTelegram = document.getElementById('formCorpTelegram').value.trim();
+        const personalTelegram = document.getElementById('formPersonalTelegram').value.trim();
+        const birthday = document.getElementById('formBirthday').value;
+        const corpEmail = document.getElementById('formCorpEmail').value.trim();
+        const personalEmail = document.getElementById('formPersonalEmail').value.trim();
+        const corpPhone = document.getElementById('formCorpPhone').value.trim();
+        const personalPhone = document.getElementById('formPersonalPhone').value.trim();
+        const office = document.getElementById('formOffice').value.trim();
+        const startDate = document.getElementById('formStartDate').value;
+        const company = document.getElementById('formCompany').value.trim();
+        const crmLogin = document.getElementById('formCrmLogin').value.trim();
+        const comment = document.getElementById('formComment').value.trim();
+
         if (!fullName) {
             alert('Введите ФИО');
-            document.getElementById('fullNameInput').focus();
             return;
         }
-        
+
         if (!position) {
             alert('Введите должность');
-            document.getElementById('positionInput').focus();
             return;
         }
-        
-        if (this.currentEditId) {
-            const item = this.data.find(i => i.id === this.currentEditId);
-            if (item) {
-                item.fullName = fullName;
-                item.position = position;
-                item.grade = grade;
-                item.predefinedFields = predefinedFields;
-                item.customFields = customFields;
-                item.comment = comment;
-                item.updatedAt = new Date().toISOString();
-                
+
+        const employeeData = {
+            fullName,
+            position,
+            status,
+            reddyId,
+            corpTelegram,
+            personalTelegram,
+            birthday,
+            corpEmail,
+            personalEmail,
+            corpPhone,
+            personalPhone,
+            office,
+            startDate,
+            company,
+            crmLogin,
+            comment,
+            avatar: this.currentAvatar || '',
+            predefinedFields: {}
+        };
+
+        // Store in predefinedFields for compatibility
+        if (reddyId) employeeData.predefinedFields['Reddy'] = reddyId;
+        if (corpTelegram) employeeData.predefinedFields['Корп. Telegram'] = corpTelegram;
+        if (corpEmail) employeeData.predefinedFields['Корп. e-mail'] = corpEmail;
+        if (corpPhone) employeeData.predefinedFields['Корп. телефон'] = corpPhone;
+
+        if (this.currentEmployeeId) {
+            // Edit existing
+            const employee = this.data.find(e => e.id === this.currentEmployeeId);
+            if (employee) {
+                Object.assign(employee, employeeData);
+                employee.updatedAt = new Date().toISOString();
+
                 if (await storage.saveData(this.data)) {
-                    this.closeEmployeeModal();
+                    const employeeId = this.currentEmployeeId;
+                    document.getElementById('employeeForm').style.display = 'none';
+                    this.formChanged = false;
+                    this.originalFormData = null;
                     this.render();
+                    this.updateStats();
+                    this.openCard(employeeId);
                     alert('Сотрудник обновлен!');
                 } else {
                     alert('Ошибка сохранения');
                 }
             }
         } else {
-            const item = {
-                id: Date.now(),
-                fullName,
-                position,
-                grade,
-                predefinedFields,
-                customFields,
-                comment,
-                createdAt: new Date().toISOString()
-            };
-            
-            this.data.unshift(item);
-            
+            // Add new
+            employeeData.id = Date.now();
+            employeeData.createdAt = new Date().toISOString();
+
+            this.data.unshift(employeeData);
+
             if (await storage.saveData(this.data)) {
-                this.closeEmployeeModal();
+                const newEmployeeId = employeeData.id;
+                document.getElementById('employeeForm').style.display = 'none';
+                this.formChanged = false;
+                this.originalFormData = null;
                 this.render();
+                this.updateStats();
+                this.openCard(newEmployeeId);
                 alert('Сотрудник добавлен!');
             } else {
                 alert('Ошибка сохранения');
             }
         }
     },
-    
-    renderComment(comment) {
-        if (!comment || !comment.trim()) return '';
-        return `<div class="employee-comment">${this.escapeHtml(comment)}</div>`;
-    },
-    
-    getInitials(name) {
-        return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
-    },
-    
-    renderPredefinedFields(fields) {
-        if (!fields || Object.keys(fields).length === 0) return '';
-        
-        const html = Object.entries(fields).map(([name, value]) => {
-            return `<div class="employee-field"><span class="field-label">${this.escapeHtml(name)}</span><span class="field-value" onclick="teamInfo.copyToClipboard(this, '${this.escapeHtml(value)}')" title="Нажмите чтобы скопировать">${this.escapeHtml(value)}</span></div>`;
-        }).join('');
-        
-        return `<div class="employee-info">${html}</div>`;
-    },
-    
-    renderFields(fields) {
-        if (!fields || Object.keys(fields).length === 0) return '';
-        
-        const html = Object.entries(fields).map(([name, data]) => {
-            const fieldType = data.type || 'text';
-            const visible = data.visible !== undefined ? data.visible : true;
-            const values = data.values || [{ value: data.value || data }];
-            
-            const displayValues = values.map(val => this.formatFieldValue(val, fieldType)).join(', ');
-            const fullValue = values.map(val => this.formatFieldValue(val, fieldType)).join(', ');
-            
-            const isEmail = fieldType === 'email';
-            const dataType = isEmail ? 'email' : 'text';
-            
-            const fieldHtml = `<div class="employee-field"><span class="field-label">${this.escapeHtml(name)}</span><span class="field-value ${!visible ? 'field-concealed' : ''}" data-type="${dataType}" ${!visible ? `onclick="teamInfo.revealField(this, event)" data-value="${this.escapeHtml(fullValue)}"` : `onclick="teamInfo.copyToClipboard(this, '${this.escapeHtml(fullValue)}')" title="Нажмите чтобы скопировать"`}>${visible ? this.escapeHtml(displayValues) : 'скрыто'}</span></div>`;
-            
-            return fieldHtml;
-        }).join('');
-        
-        return `<div class="employee-info">${html}</div>`;
-    },
-    
-    formatFieldValue(valueObj, fieldType) {
-        if (typeof valueObj === 'string') {
-            return valueObj;
-        }
-        
-        const value = valueObj.value || '';
-        
-        switch(fieldType) {
-            case 'date':
-                return value;
-            case 'money':
-                return `${value} ${valueObj.currency || 'RUB'}`;
-            case 'number':
-                return value;
-            case 'email':
-                return value;
-            default:
-                return value;
-        }
-    },
-    
-    async copyToClipboard(element, text) {
-        try {
-            await navigator.clipboard.writeText(text);
-            element.classList.add('copied');
-            setTimeout(() => {
-                element.classList.remove('copied');
-            }, 500);
-        } catch (err) {
-            console.error('Ошибка копирования:', err);
-            alert('Ошибка копирования в буфер');
-        }
-    },
-    
-    revealField(element, event) {
-        if (event) {
-            event.stopPropagation();
-        }
-        
-        const value = element.getAttribute('data-value');
-        if (element.classList.contains('revealed')) {
-            element.textContent = 'скрыто';
-            element.classList.remove('revealed');
-        } else {
-            element.textContent = value;
-            element.classList.add('revealed');
-        }
-    },
-    
-    toggleCard(id, event) {
-        if (event) {
-            event.stopPropagation();
-        }
-        
-        const item = this.data.find(i => i.id === id);
-        if (item) {
-            item.cardExpanded = !item.cardExpanded;
-            storage.saveData(this.data);
-            this.render();
-        }
-    },
-    
-    renderValueInput(fieldType, value, currency = 'RUB', index = 0) {
-        const valueStr = typeof value === 'object' ? (value.value || '') : value;
-        const currencyStr = typeof value === 'object' ? (value.currency || currency) : currency;
-        
-        switch(fieldType) {
-            case 'date':
-                return `<input type="date" class="field-value-input" data-value-index="${index}" value="${this.escapeHtml(valueStr)}">`;
-            case 'number':
-                return `<input type="number" class="field-value-input" data-value-index="${index}" placeholder="Число" value="${this.escapeHtml(valueStr)}" oninput="this.value = this.value.replace(/[^0-9.-]/g, '')" pattern="[0-9.-]+" inputmode="numeric">`;
-            case 'money':
-                return `<div class="money-input-group"><input type="number" class="field-value-input money-value" data-value-index="${index}" placeholder="Сумма" value="${this.escapeHtml(valueStr)}" oninput="this.value = this.value.replace(/[^0-9.-]/g, '')" pattern="[0-9.-]+" inputmode="numeric"><select class="field-currency-select" data-value-index="${index}"><option value="RUB" ${currencyStr === 'RUB' ? 'selected' : ''}>RUB</option><option value="EUR" ${currencyStr === 'EUR' ? 'selected' : ''}>EUR</option></select></div>`;
-            case 'email':
-                return `<input type="email" class="field-value-input" data-value-index="${index}" placeholder="email@example.com" value="${this.escapeHtml(valueStr)}">`;
-            default:
-                return `<input type="text" class="field-value-input" data-value-index="${index}" placeholder="Значение" value="${this.escapeHtml(valueStr)}">`;
-        }
-    },
-    
-    updateFieldInputs(fieldDiv, newType) {
-        const valuesContainer = fieldDiv.querySelector('.custom-field-values');
-        const valueItems = valuesContainer.querySelectorAll('.field-value-item');
-        
-        valueItems.forEach((item, index) => {
-            const oldInput = item.querySelector('.field-value-input');
-            const oldValue = oldInput ? oldInput.value : '';
-            const oldCurrency = item.querySelector('.field-currency-select');
-            const currency = oldCurrency ? oldCurrency.value : 'RUB';
-            
-            item.innerHTML = this.renderValueInput(newType, oldValue, currency, index);
-        });
-    },
-    
-    addFieldValue(button) {
-        const fieldDiv = button.closest('.custom-field');
-        const valuesContainer = fieldDiv.querySelector('.custom-field-values');
-        const currentCount = valuesContainer.querySelectorAll('.field-value-item').length;
-        
-        if (currentCount >= 3) {
-            alert('Максимум 3 значения на поле');
-            return;
-        }
-        
-        const fieldType = fieldDiv.querySelector('.custom-field-type').value;
-        const newIndex = currentCount;
-        
-        const valueItem = document.createElement('div');
-        valueItem.className = 'field-value-item';
-        valueItem.dataset.valueIndex = newIndex;
-        valueItem.innerHTML = `
-            ${this.renderValueInput(fieldType, '', 'RUB', newIndex)}
-            <button type="button" class="btn-remove-value" onclick="this.parentElement.remove()" title="Удалить значение">×</button>
-        `;
-        
-        valuesContainer.appendChild(valueItem);
-    },
-    
-    addCustomField() {
-        const container = document.getElementById('customFields');
-        const id = ++this.fieldCounter;
-        
-        const div = document.createElement('div');
-        div.className = 'custom-field';
-        div.innerHTML = `
-            <div class="custom-field-header">
-                <input type="text" class="custom-field-name" placeholder="Название" maxlength="20">
-                <select class="custom-field-type">
-                    <option value="text">Общее</option>
-                    <option value="date">Дата</option>
-                    <option value="number">Числовой</option>
-                    <option value="money">Денежный</option>
-                    <option value="email">E-mail</option>
-                </select>
-            </div>
-            <div class="custom-field-values">
-                <div class="field-value-item" data-value-index="0">
-                    ${this.renderValueInput('text', '', 'RUB', 0)}
-                </div>
-            </div>
-            <div class="custom-field-controls">
-                <button type="button" class="btn-add-value" onclick="teamInfo.addFieldValue(this)" title="Добавить значение (макс. 3)">+ Значение</button>
-                <label class="visibility-checkbox">
-                    <input type="checkbox" checked> Видно
-                </label>
-                <button type="button" class="remove-field-btn" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-        `;
-        
-        container.appendChild(div);
-        
-        const typeSelect = div.querySelector('.custom-field-type');
-        typeSelect.addEventListener('change', (e) => {
-            this.updateFieldInputs(div, e.target.value);
-        });
-        
-        div.querySelector('.custom-field-name').focus();
-    },
-    
-    addCustomFieldWithData(name, fieldData) {
-        const container = document.getElementById('customFields');
-        const id = ++this.fieldCounter;
-        
-        const fieldType = fieldData.type || 'text';
-        const visible = fieldData.visible !== undefined ? fieldData.visible : true;
-        const values = fieldData.values || [{ value: fieldData.value || fieldData }];
-        
-        const div = document.createElement('div');
-        div.className = 'custom-field';
-        div.innerHTML = `
-            <div class="custom-field-header">
-                <input type="text" class="custom-field-name" placeholder="Название" maxlength="20" value="${this.escapeHtml(name)}">
-                <select class="custom-field-type">
-                    <option value="text" ${fieldType === 'text' ? 'selected' : ''}>Общее</option>
-                    <option value="date" ${fieldType === 'date' ? 'selected' : ''}>Дата</option>
-                    <option value="number" ${fieldType === 'number' ? 'selected' : ''}>Числовой</option>
-                    <option value="money" ${fieldType === 'money' ? 'selected' : ''}>Денежный</option>
-                    <option value="email" ${fieldType === 'email' ? 'selected' : ''}>E-mail</option>
-                </select>
-            </div>
-            <div class="custom-field-values">
-                ${values.map((val, index) => {
-                    const valueStr = typeof val === 'object' ? val.value : val;
-                    const currency = typeof val === 'object' ? (val.currency || 'RUB') : 'RUB';
-                    return `<div class="field-value-item" data-value-index="${index}">${this.renderValueInput(fieldType, valueStr, currency, index)}${index > 0 ? '<button type="button" class="btn-remove-value" onclick="this.parentElement.remove()" title="Удалить значение">×</button>' : ''}</div>`;
-                }).join('')}
-            </div>
-            <div class="custom-field-controls">
-                <button type="button" class="btn-add-value" onclick="teamInfo.addFieldValue(this)" title="Добавить значение (макс. 3)">+ Значение</button>
-                <label class="visibility-checkbox">
-                    <input type="checkbox" ${visible ? 'checked' : ''}> Видно
-                </label>
-                <button type="button" class="remove-field-btn" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-        `;
-        
-        container.appendChild(div);
-        
-        const typeSelect = div.querySelector('.custom-field-type');
-        typeSelect.addEventListener('change', (e) => {
-            this.updateFieldInputs(div, e.target.value);
-        });
-    },
-    
-    getFieldsData() {
-        const fields = {};
-        const container = document.getElementById('customFields');
-        
-        container.querySelectorAll('.custom-field').forEach(field => {
-            const name = field.querySelector('.custom-field-name').value.trim();
-            const fieldType = field.querySelector('.custom-field-type').value;
-            const visible = field.querySelector('.visibility-checkbox input').checked;
-            const valueItems = field.querySelectorAll('.field-value-item');
-            
-            if (!name) return;
-            
-            const values = [];
-            let hasValidValue = false;
-            
-            valueItems.forEach(item => {
-                const input = item.querySelector('.field-value-input');
-                if (!input) return;
-                
-                const value = input.value.trim();
-                if (!value) return;
-                
-                if (fieldType === 'email' && value) {
-                    if (!value.includes('@')) {
-                        alert(`Поле "${name}": неверный формат email`);
-                        return;
-                    }
-                }
-                
-                if (fieldType === 'money') {
-                    const currencySelect = item.querySelector('.field-currency-select');
-                    const currency = currencySelect ? currencySelect.value : 'RUB';
-                    values.push({ value, currency });
-                    hasValidValue = true;
-                } else if (fieldType === 'date') {
-                    const date = new Date(value);
-                    if (!isNaN(date)) {
-                        const day = String(date.getDate()).padStart(2, '0');
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const year = date.getFullYear();
-                        values.push({ value: `${day}/${month}/${year}` });
-                        hasValidValue = true;
-                    }
-                } else {
-                    values.push({ value });
-                    hasValidValue = true;
-                }
-            });
-            
-            if (hasValidValue) {
-                fields[name] = {
-                    type: fieldType,
-                    visible,
-                    values
-                };
-            }
-        });
-        
-        return fields;
-    },
-    
-    clearFields() {
-        document.getElementById('customFields').innerHTML = '';
-        this.fieldCounter = 0;
-    },
-    
-    async deleteInfo(id) {
-        const item = this.data.find(i => i.id === id);
-        if (item && confirm(`Удалить "${item.fullName || item.title}"?`)) {
-            this.data = this.data.filter(i => i.id !== id);
-            
+
+    async deleteFromForm() {
+        if (!this.currentEmployeeId) return;
+
+        const employee = this.data.find(e => e.id === this.currentEmployeeId);
+        if (employee && confirm(`Удалить "${employee.fullName}"?`)) {
+            this.data = this.data.filter(e => e.id !== this.currentEmployeeId);
+
             if (await storage.saveData(this.data)) {
+                this.closeForm();
                 this.render();
+                this.updateStats();
                 alert('Сотрудник удален!');
             } else {
                 alert('Ошибка удаления');
             }
         }
     },
-    
-    async exportData() {
+
+    closeEmployeeModal() {
+        document.getElementById('employeeModal').classList.remove('active');
+    },
+
+    async saveEmployee() {
+        const fullName = document.getElementById('fullNameInput').value.trim();
+        const position = document.getElementById('positionInput').value.trim();
+        const status = document.getElementById('statusSelect').value;
+        const reddyId = document.getElementById('reddyInput').value.trim();
+        const corpTelegram = document.getElementById('corpTelegramInput').value.trim();
+        const personalTelegram = document.getElementById('personalTelegramInput').value.trim();
+        const birthday = document.getElementById('birthdayInput').value;
+        const corpEmail = document.getElementById('corpEmailInput').value.trim();
+        const personalEmail = document.getElementById('personalEmailInput').value.trim();
+        const corpPhone = document.getElementById('corpPhoneInput').value.trim();
+        const personalPhone = document.getElementById('personalPhoneInput').value.trim();
+        const office = document.getElementById('officeInput').value.trim();
+        const startDate = document.getElementById('startDateInput').value;
+        const company = document.getElementById('companyInput').value.trim();
+        const crmLogin = document.getElementById('crmLoginInput').value.trim();
+        const comment = document.getElementById('commentInput').value.trim();
+
+        if (!fullName) {
+            alert('Введите ФИО');
+            return;
+        }
+
+        if (!position) {
+            alert('Введите должность');
+            return;
+        }
+
+        const employeeData = {
+            fullName,
+            position,
+            status,
+            reddyId,
+            corpTelegram,
+            personalTelegram,
+            birthday,
+            corpEmail,
+            personalEmail,
+            corpPhone,
+            personalPhone,
+            office,
+            startDate,
+            company,
+            crmLogin,
+            comment,
+            avatar: this.currentAvatar || '',
+            predefinedFields: {}
+        };
+
+        // Store in predefinedFields for compatibility
+        if (reddyId) employeeData.predefinedFields['Reddy'] = reddyId;
+        if (corpTelegram) employeeData.predefinedFields['Корп. Telegram'] = corpTelegram;
+        if (corpEmail) employeeData.predefinedFields['Корп. e-mail'] = corpEmail;
+        if (corpPhone) employeeData.predefinedFields['Корп. телефон'] = corpPhone;
+
+        if (this.currentEmployeeId) {
+            // Edit existing
+            const employee = this.data.find(e => e.id === this.currentEmployeeId);
+            if (employee) {
+                Object.assign(employee, employeeData);
+                employee.updatedAt = new Date().toISOString();
+
+                if (await storage.saveData(this.data)) {
+                    this.closeEmployeeModal();
+                    this.render();
+                    this.updateStats();
+                    if (this.currentEmployeeId && document.getElementById('employeeCard').style.display !== 'none') {
+                        this.openCard(this.currentEmployeeId);
+                    }
+                    alert('Сотрудник обновлен!');
+                } else {
+                    alert('Ошибка сохранения');
+                }
+            }
+        } else {
+            // Add new
+            employeeData.id = Date.now();
+            employeeData.createdAt = new Date().toISOString();
+
+            this.data.unshift(employeeData);
+
+            if (await storage.saveData(this.data)) {
+                this.closeEmployeeModal();
+                this.render();
+                this.updateStats();
+                alert('Сотрудник добавлен!');
+            } else {
+                alert('Ошибка сохранения');
+            }
+        }
+    },
+
+    async deleteFromCard() {
+        if (!this.currentEmployeeId) return;
+
+        const employee = this.data.find(e => e.id === this.currentEmployeeId);
+        if (employee && confirm(`Удалить "${employee.fullName}"?`)) {
+            this.data = this.data.filter(e => e.id !== this.currentEmployeeId);
+
+            if (await storage.saveData(this.data)) {
+                this.closeCard();
+                this.render();
+                this.updateStats();
+                alert('Сотрудник удален!');
+            } else {
+                alert('Ошибка удаления');
+            }
+        }
+    },
+
+    async exportJSON() {
         if (this.data.length === 0) {
             alert('Нет данных для экспорта');
             return;
         }
-        
+
         if (await storage.exportToFile(this.data)) {
             alert(`Экспортировано ${this.data.length} сотрудников!`);
         } else {
             alert('Ошибка экспорта');
         }
     },
-    
+
     showImportDialog() {
         document.getElementById('importModal').classList.add('active');
-        
+
         const fileInput = document.getElementById('importFileInput');
         const preview = document.getElementById('importPreview');
         const importBtn = document.getElementById('importBtn');
-        
+
         fileInput.value = '';
         preview.style.display = 'none';
         importBtn.disabled = true;
-        
+
         fileInput.onchange = async (e) => {
             const file = e.target.files[0];
             if (file && file.type === 'application/json') {
@@ -735,7 +737,7 @@ const teamInfo = {
                     const text = await file.text();
                     const data = JSON.parse(text);
                     const count = (data.data && data.data.length) || (Array.isArray(data) ? data.length : 0);
-                    
+
                     if (count > 0) {
                         preview.innerHTML = `✅ Готов к импорту: ${count} записей`;
                         preview.style.display = 'block';
@@ -751,20 +753,21 @@ const teamInfo = {
             }
         };
     },
-    
+
     closeImportDialog() {
         document.getElementById('importModal').classList.remove('active');
     },
-    
+
     async importData() {
         const file = document.getElementById('importFileInput').files[0];
         if (!file) return;
-        
+
         if (confirm('Заменить всех сотрудников?')) {
             try {
                 this.data = await storage.importFromFile(file);
                 await storage.saveData(this.data);
                 this.render();
+                this.updateStats();
                 this.closeImportDialog();
                 alert(`Импортировано ${this.data.length} сотрудников!`);
             } catch (error) {
@@ -772,91 +775,105 @@ const teamInfo = {
             }
         }
     },
-    
-    toggleExportMenu() {
-        const menu = document.getElementById('exportMenu');
-        const btn = document.getElementById('exportMenuBtn');
-        
-        const isActive = menu.classList.contains('active');
-        menu.classList.toggle('active');
-        
-        const chevron = btn.querySelector('i[data-lucide="chevron-down"], i[data-lucide="chevron-up"]');
-        if (chevron) {
-            chevron.setAttribute('data-lucide', isActive ? 'chevron-down' : 'chevron-up');
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
-    },
-    
-    closeExportMenu() {
-        const menu = document.getElementById('exportMenu');
-        const btn = document.getElementById('exportMenuBtn');
-        
-        menu.classList.remove('active');
-        
-        const chevron = btn.querySelector('i[data-lucide="chevron-down"], i[data-lucide="chevron-up"]');
-        if (chevron) {
-            chevron.setAttribute('data-lucide', 'chevron-down');
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
-    },
-    
-    async exportJSON() {
-        this.closeExportMenu();
-        await this.exportData();
-    },
-    
-    async exportAllText() {
-        this.closeExportMenu();
-        await exportManager.exportAll();
-    },
-    
-    async showSelectiveExport() {
-        this.closeExportMenu();
-        await exportManager.showModal();
-    },
-    
+
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text || '';
         return div.innerHTML;
     },
-    
+
     formatDate(isoString) {
         if (!isoString) return '';
-        return new Date(isoString).toLocaleDateString('ru-RU', {
+        const date = new Date(isoString);
+        return date.toLocaleDateString('ru-RU', {
             day: '2-digit',
-            month: '2-digit'
+            month: '2-digit',
+            year: 'numeric'
         });
     },
-    
-    addInfo() { this.saveEmployee(); },
-    addInfoAsync() { this.saveEmployee(); },
-    editInfo(id) { this.showEditModal(id); },
-    editInfoAsync(id) { this.showEditModal(id); },
-    deleteInfoAsync(id) { this.deleteInfo(id); },
-    removeCustomField(btn) { btn.parentElement.remove(); },
-    
-    switchTab(tab) { 
-        console.log('Tab system removed, showing team grid only');
-        this.render(); 
+
+    getFormData() {
+        return {
+            fullName: document.getElementById('formFullName').value,
+            position: document.getElementById('formPosition').value,
+            status: document.getElementById('formStatus').value,
+            reddyId: document.getElementById('formReddyId').value,
+            corpTelegram: document.getElementById('formCorpTelegram').value,
+            personalTelegram: document.getElementById('formPersonalTelegram').value,
+            birthday: document.getElementById('formBirthday').value,
+            corpEmail: document.getElementById('formCorpEmail').value,
+            personalEmail: document.getElementById('formPersonalEmail').value,
+            corpPhone: document.getElementById('formCorpPhone').value,
+            personalPhone: document.getElementById('formPersonalPhone').value,
+            office: document.getElementById('formOffice').value,
+            startDate: document.getElementById('formStartDate').value,
+            company: document.getElementById('formCompany').value,
+            crmLogin: document.getElementById('formCrmLogin').value,
+            comment: document.getElementById('formComment').value
+        };
     },
-    renderEditList() { 
-        console.log('Edit list removed, using modal windows instead'); 
+
+    attachFormChangeListeners() {
+        const formFields = [
+            'formFullName', 'formPosition', 'formStatus', 'formReddyId',
+            'formCorpTelegram', 'formPersonalTelegram', 'formBirthday',
+            'formCorpEmail', 'formPersonalEmail', 'formCorpPhone',
+            'formPersonalPhone', 'formOffice', 'formStartDate',
+            'formCompany', 'formCrmLogin', 'formComment'
+        ];
+
+        formFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.removeEventListener('input', this.onFormChange.bind(this));
+                field.addEventListener('input', this.onFormChange.bind(this));
+            }
+        });
+    },
+
+    onFormChange() {
+        const currentData = this.getFormData();
+        const hasChanges = JSON.stringify(currentData) !== JSON.stringify(this.originalFormData);
+        this.formChanged = hasChanges;
     }
 };
 
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        exportManager.init();
         await teamInfo.init();
-        console.log('✅ All modules loaded successfully');
+        console.log('✅ Team Info initialized successfully');
     } catch (error) {
         console.error('❌ Loading error:', error);
     }
 });
 
-console.log('✅ Team Info loaded');
+// Close modals on escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (document.getElementById('employeeModal').classList.contains('active')) {
+            teamInfo.closeEmployeeModal();
+        }
+        if (document.getElementById('importModal').classList.contains('active')) {
+            teamInfo.closeImportDialog();
+        }
+        if (document.getElementById('employeeCard').style.display !== 'none') {
+            teamInfo.closeCard();
+        }
+    }
+});
+
+// Close modals on backdrop click
+document.getElementById('employeeModal').addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+        teamInfo.closeEmployeeModal();
+    }
+});
+
+document.getElementById('importModal').addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+        teamInfo.closeImportDialog();
+    }
+});
+
+console.log('✅ Team Info script loaded');

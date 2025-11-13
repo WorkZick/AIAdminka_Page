@@ -1,0 +1,1136 @@
+/* Team Info - Modern Minimalistic Design */
+
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=TT+Firs+Neue:wght@400;700&display=swap');
+
+/* Variables */
+:root {
+    --white: #f2f2f2;
+    --black: #1a1a1a;
+    --gray: #8d8d8d;
+    --bg-white: #f2f2f2;
+    --bg-dark-white: #e8e8e8;
+    --gray-dark: #2e2e2e;
+    --gray-darker: #212121;
+    --bg-black: #1a1a1a;
+    --yellow: #fdbe2f;
+    --border-gray: #c3c3c3;
+
+    /* Status colors */
+    --status-green: #7ccb72;
+    --status-red: #ff8b8b;
+    --status-yellow: #fdbe2f;
+    --status-purple: #c696da;
+    --status-blue: #96b8da;
+
+    /* Highlight */
+    --highlight-yellow: #f0e8d8;
+    --red-delete: #fe0000;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'TT Firs Neue', 'Segoe UI', sans-serif;
+    font-weight: 400;
+    background: #2e2e2e;
+    color: #f2f2f2;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Layout */
+.app-container {
+    display: flex;
+    height: 100vh;
+    background: #2e2e2e;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 230px;
+    background: var(--bg-dark-white);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    transition: width 0.3s ease;
+    margin-right: 10px;
+}
+
+.sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar.collapsed .version-info,
+.sidebar.collapsed .menu-separator {
+    display: none;
+}
+
+.back-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    background: var(--bg-white);
+    border: none;
+    cursor: pointer;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 14px;
+    color: var(--black);
+    font-weight: 400;
+    transition: opacity 0.2s;
+}
+
+.back-button:hover {
+    opacity: 0.7;
+}
+
+.back-button svg {
+    min-width: 20px;
+    min-height: 20px;
+}
+
+.sidebar-menu {
+    flex: 1;
+    padding: 20px 0;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    color: var(--black);
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.2s;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.sidebar.collapsed .menu-item {
+    justify-content: center;
+    padding: 12px;
+}
+
+.menu-item span {
+    text-align: left;
+}
+
+.menu-item svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.sidebar.collapsed .menu-item span {
+    display: none;
+}
+
+.menu-item.active {
+    background: var(--yellow);
+    font-weight: 700;
+}
+
+.menu-item:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.menu-separator {
+    height: 1px;
+    background: #c3c3c3;
+    margin: 10px 20px;
+}
+
+.sidebar.collapsed .menu-separator {
+    margin: 10px;
+}
+
+.version-info {
+    padding: 20px;
+    font-size: 12px;
+    color: var(--gray);
+    line-height: 1.5;
+}
+
+/* Main wrapper */
+.main-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Global header (top right corner) */
+.global-header {
+    position: absolute;
+    top: 20px;
+    right: 40px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 100;
+}
+
+/* Content area */
+.content-area {
+    display: flex;
+    gap: 20px;
+    padding: 80px 20px 20px 40px;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Table section */
+.table-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Section header (над таблицей) */
+.section-header {
+    padding: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.add-employee-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    color: #f2f2f2;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.add-employee-btn:hover {
+    opacity: 0.7;
+}
+
+.add-employee-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.search-box {
+    position: relative;
+}
+
+.search-input {
+    padding: 8px 12px 8px 35px;
+    background: #212121;
+    border: 1px solid var(--border-gray);
+    border-radius: 4px;
+    color: #f2f2f2;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 14px;
+    width: 250px;
+}
+
+.search-input::placeholder {
+    color: var(--gray);
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--gray);
+}
+
+.team-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #f2f2f2;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.team-name svg {
+    width: 16px;
+    height: 16px;
+}
+
+.export-btn, .import-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    color: #f2f2f2;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: opacity 0.2s;
+}
+
+.export-btn:hover, .import-btn:hover {
+    opacity: 0.7;
+}
+
+.export-btn svg, .import-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Table container */
+.table-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+/* Table */
+.employees-table {
+    width: 100%;
+    background: #2e2e2e;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.employees-table thead {
+    position: sticky;
+    top: 0;
+    background: #2e2e2e;
+    z-index: 10;
+}
+
+.employees-table th {
+    padding: 16px 12px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 400;
+    color: #f2f2f2;
+    border-bottom: 1px solid var(--border-gray);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.employees-table th:first-child {
+    padding-left: 40px;
+    width: 140px;
+}
+
+.employees-table th:nth-child(2) {
+    width: 100px;
+}
+
+.employees-table th:nth-child(3) {
+    width: 150px;
+}
+
+.employees-table th:nth-child(4) {
+    width: 150px;
+}
+
+.employees-table th:nth-child(5) {
+    width: 120px;
+}
+
+.employees-table th:nth-child(6) {
+    width: 100px;
+}
+
+.employees-table th:nth-child(7) {
+    width: 180px;
+}
+
+.employees-table th:nth-child(8) {
+    width: 40px;
+}
+
+.sort-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.sort-header svg {
+    width: 12px;
+    height: 12px;
+}
+
+.employees-table tbody tr {
+    border-bottom: 1px solid var(--border-gray);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.employees-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.employees-table tbody tr.selected {
+    background: var(--highlight-yellow);
+}
+
+.employees-table tbody tr.selected td {
+    color: var(--black);
+}
+
+.employees-table td {
+    padding: 16px 12px;
+    font-size: 13px;
+    color: #f2f2f2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.employees-table td:first-child {
+    padding-left: 40px;
+}
+
+/* Employee name */
+.employee-name {
+    white-space: normal;
+    line-height: 1.3;
+}
+
+/* Status cell */
+.status-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dropdown-icon {
+    width: 12px;
+    height: 12px;
+    color: #f2f2f2;
+    opacity: 0.5;
+}
+
+/* Status badge */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.status-badge.green {
+    background: var(--status-green);
+    color: var(--black);
+}
+
+.status-badge.red {
+    background: var(--status-red);
+    color: var(--black);
+}
+
+.status-badge.yellow {
+    background: var(--status-yellow);
+    color: var(--black);
+}
+
+.status-badge.purple {
+    background: var(--status-purple);
+    color: var(--white);
+}
+
+.status-badge.blue {
+    background: var(--status-blue);
+    color: var(--black);
+}
+
+/* Employee avatar in table */
+.employee-info {
+    display: flex;
+    align-items: center;
+}
+
+.employee-avatar {
+    width: 80px;
+    height: 80px;
+    min-width: 80px;
+    min-height: 80px;
+    max-width: 80px;
+    max-height: 80px;
+    border-radius: 4px;
+    background: var(--gray);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.employee-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Row arrow */
+.row-arrow {
+    width: 20px;
+    height: 20px;
+    color: #f2f2f2;
+    opacity: 0.5;
+}
+
+/* Right panel (statistics or employee card) */
+.right-panel {
+    width: 380px;
+    background: var(--white);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Employee card */
+.employee-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Employee form */
+.employee-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.form-header-section {
+    padding: 20px;
+    background: var(--white);
+    display: flex;
+    gap: 16px;
+}
+
+.form-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 4px;
+    background: var(--gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.form-avatar:hover {
+    opacity: 0.8;
+}
+
+.form-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.form-avatar svg {
+    color: var(--white);
+}
+
+.form-info-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-info-section h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--black);
+    margin: 0;
+}
+
+.form-info-section input,
+.form-info-section select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-gray);
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    color: var(--black);
+    background: white;
+}
+
+.form-info-section input:focus,
+.form-info-section select:focus {
+    outline: none;
+    border-color: var(--black);
+}
+
+.form-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 30px;
+}
+
+.form-group-inline {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.form-group-inline label {
+    font-size: 11px;
+    color: var(--gray);
+    text-transform: uppercase;
+    font-weight: 400;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 120px;
+}
+
+.form-group-inline input,
+.form-group-inline select,
+.form-group-inline textarea {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border-gray);
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    color: var(--black);
+    background: white;
+}
+
+.form-group-inline textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.form-group-inline.vertical {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.form-group-inline.vertical label {
+    margin-bottom: 6px;
+}
+
+.form-group-inline input:focus,
+.form-group-inline select:focus,
+.form-group-inline textarea:focus {
+    outline: none;
+    border-color: var(--black);
+}
+
+.form-footer {
+    padding: 16px 20px;
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-footer-buttons {
+    display: flex;
+    gap: 16px;
+}
+
+.form-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    background: transparent;
+    color: var(--black);
+}
+
+.form-btn:hover {
+    opacity: 0.7;
+}
+
+.form-footer button {
+    width: 100%;
+}
+
+.form-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-gray);
+}
+
+.btn-delete {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    background: transparent;
+    color: #fe0000;
+    transition: opacity 0.2s;
+}
+
+.btn-delete:hover {
+    opacity: 0.7;
+}
+
+.card-header {
+    padding: 20px;
+    background: var(--white);
+    display: flex;
+    gap: 16px;
+}
+
+.card-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 4px;
+    background: var(--gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.card-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.card-info-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.card-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--black);
+    line-height: 1.2;
+}
+
+.card-position {
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 4px;
+}
+
+.card-status-select {
+    padding: 4px 8px;
+    border: 1px solid var(--border-gray);
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 11px;
+    color: var(--black);
+    background: white;
+    cursor: pointer;
+    width: fit-content;
+}
+
+.card-status-select:focus {
+    outline: none;
+    border-color: var(--black);
+}
+
+.card-info-row {
+    font-size: 11px;
+    color: var(--gray);
+}
+
+.card-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.info-group {
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.info-label {
+    font-size: 11px;
+    color: var(--gray);
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.info-value {
+    font-size: 12px;
+    color: var(--black);
+    text-align: right;
+    word-break: break-word;
+}
+
+.card-footer {
+    padding: 16px 20px;
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.card-footer-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-gray);
+}
+
+.edit-btn, .delete-btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    background: transparent;
+    width: 100%;
+}
+
+.edit-btn {
+    color: var(--black);
+}
+
+.delete-btn {
+    color: #fe0000;
+}
+
+.edit-btn:hover, .delete-btn:hover {
+    opacity: 0.7;
+}
+
+/* Close button */
+.close-card-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    z-index: 10;
+}
+
+.close-card-btn svg {
+    width: 24px;
+    height: 24px;
+    color: var(--black);
+}
+
+/* Statistics panel */
+.stats-panel {
+    padding: 30px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.stats-panel .team-name {
+    margin-bottom: 30px;
+    color: var(--black);
+    font-size: 16px;
+    font-weight: 700;
+    justify-content: center;
+}
+
+.stats-panel .team-name svg {
+    color: var(--black);
+}
+
+.stats-title {
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--black);
+    margin-bottom: 20px;
+}
+
+.stats-count {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--black);
+    margin-bottom: 8px;
+}
+
+.stats-label {
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 30px;
+}
+
+.stats-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: var(--bg-white);
+    border-radius: 8px;
+}
+
+.stat-item-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stat-count {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--black);
+}
+
+.stat-label-small {
+    font-size: 13px;
+    color: #1a1a1a;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-dialog {
+    background: var(--white);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 20px 30px;
+    border-bottom: 1px solid var(--border-gray);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--black);
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.modal-close svg {
+    width: 24px;
+    height: 24px;
+    color: var(--black);
+}
+
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 30px;
+}
+
+.modal-footer {
+    padding: 20px 30px;
+    border-top: 1px solid var(--border-gray);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Form */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-size: 12px;
+    color: var(--black);
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-gray);
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    color: var(--black);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--black);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Buttons */
+.btn-primary {
+    background: var(--black);
+    color: #ffffff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+    opacity: 0.8;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--black);
+    border: 1px solid var(--border-gray);
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+    background: var(--bg-white);
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 100px 40px;
+}
+
+.empty-state-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    color: var(--gray);
+}
+
+.empty-state-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f2f2f2;
+    margin-bottom: 12px;
+}
+
+.empty-state-text {
+    font-size: 14px;
+    color: var(--gray);
+    margin-bottom: 30px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark-white);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-dark);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 60px;
+    }
+
+    .menu-item span {
+        display: none;
+    }
+
+    .employee-card-panel {
+        width: 100%;
+    }
+
+    .search-input {
+        width: 150px;
+    }
+}
