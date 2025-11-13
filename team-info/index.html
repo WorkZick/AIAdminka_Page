@@ -55,6 +55,16 @@
             </div>
         </aside>
 
+        <script>
+            // Immediately set sidebar state to prevent flashing
+            (function() {
+                const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+                if (collapsed) {
+                    document.getElementById('sidebar').classList.add('collapsed');
+                }
+            })();
+        </script>
+
         <!-- Main wrapper -->
         <div class="main-wrapper">
             <!-- Global header (top right) -->
@@ -131,19 +141,24 @@
                 <aside class="right-panel">
             <!-- Statistics panel (shown by default) -->
             <div class="stats-panel" id="statsPanel">
-                <div class="team-name" onclick="teamInfo.editTeamName()">
-                    Vadim team
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                <div class="stats-header">
+                    <div class="stats-team-header">
+                        <div class="team-name" onclick="teamInfo.editTeamName()">
+                            Vadim team
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="stats-title">Количество сотрудников</div>
-                <div class="stats-count" id="totalCount">21</div>
+                <div class="stats-content">
+                    <div class="stats-title">Количество сотрудников</div>
+                <div class="stats-count" id="totalCount">0</div>
                 <div class="stats-label">человек</div>
 
                 <div class="stats-breakdown">
                     <div class="stat-item">
                         <div class="stat-item-left">
-                            <div class="stat-count" id="workingCount">19</div>
+                            <div class="stat-count" id="workingCount">0</div>
                             <span class="stat-label-small">человек</span>
                         </div>
                         <span class="status-badge green">Работает</span>
@@ -159,7 +174,7 @@
 
                     <div class="stat-item">
                         <div class="stat-item-left">
-                            <div class="stat-count" id="leaveCount">1</div>
+                            <div class="stat-count" id="leaveCount">0</div>
                             <span class="stat-label-small">человек</span>
                         </div>
                         <span class="status-badge yellow">В отпуске</span>
@@ -167,7 +182,7 @@
 
                     <div class="stat-item">
                         <div class="stat-item-left">
-                            <div class="stat-count" id="onBreakCount">1</div>
+                            <div class="stat-count" id="onBreakCount">0</div>
                             <span class="stat-label-small">человек</span>
                         </div>
                         <span class="status-badge blue">В команде</span>
@@ -175,30 +190,36 @@
 
                     <div class="stat-item">
                         <div class="stat-item-left">
-                            <div class="stat-count" id="firedCount">2</div>
+                            <div class="stat-count" id="firedCount">0</div>
                             <span class="stat-label-small">человек</span>
                         </div>
                         <span class="status-badge red">Уволен</span>
                     </div>
+                </div>
                 </div>
             </div>
 
             <!-- Employee card (shown when employee selected) -->
             <div class="employee-card" id="employeeCard" style="display: none;">
                 <div class="card-header">
-                    <div class="card-avatar">
-                        <img id="cardAvatar" src="" alt="" style="display: none;">
+                    <div class="card-team-header">
+                        <div class="card-team-name" id="cardTeamName">Vadim team</div>
                     </div>
-                    <div class="card-info-section">
-                        <div class="card-name" id="cardName">Пантюков Вадим Алексеевич</div>
-                        <div class="card-position" id="cardPosition">Дизайнер</div>
-                        <select class="card-status-select" id="cardStatusSelect" onchange="teamInfo.updateStatus()">
-                            <option value="Работает">Работает</option>
-                            <option value="В отпуске">В отпуске</option>
-                            <option value="В команде">В команде</option>
-                            <option value="Уволен">Уволен</option>
-                            <option value="Бонмет">Бонмет</option>
-                        </select>
+                    <div class="card-employee-info">
+                        <div class="card-avatar">
+                            <img id="cardAvatar" src="" alt="" style="display: none;">
+                        </div>
+                        <div class="card-info-section">
+                            <div class="card-name" id="cardName">Пантюков Вадим Алексеевич</div>
+                            <div class="card-position" id="cardPosition">Дизайнер</div>
+                            <select class="card-status-select" id="cardStatusSelect" onchange="teamInfo.updateStatus()">
+                                <option value="Работает">Работает</option>
+                                <option value="В отпуске">В отпуске</option>
+                                <option value="В команде">В команде</option>
+                                <option value="Уволен">Уволен</option>
+                                <option value="Бонмет">Бонмет</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -215,10 +236,9 @@
 
             <!-- Employee form (for adding/editing) -->
             <div class="employee-form" id="employeeForm" style="display: none;">
-                <button class="close-card-btn" onclick="teamInfo.closeForm()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-                </button>
-
+                <div class="form-team-header">
+                    <div class="form-team-name" id="formTeamName">Vadim team</div>
+                </div>
                 <div class="form-header-section">
                     <input type="file" id="formAvatarInput" accept="image/*" style="display: none;" onchange="teamInfo.handleAvatarUpload(event)">
                     <div class="form-avatar" onclick="document.getElementById('formAvatarInput').click()">
@@ -448,6 +468,32 @@
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="teamInfo.closeImportDialog()">Отмена</button>
                 <button class="btn-primary" onclick="teamInfo.importData()" id="importBtn" disabled>Импортировать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Crop Modal -->
+    <div class="modal" id="cropModal">
+        <div class="modal-dialog" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Редактировать фото</h2>
+                <button class="modal-close" onclick="teamInfo.closeCropModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="modal-body" style="padding: 20px;">
+                <div class="crop-container">
+                    <div class="crop-preview" id="cropPreview">
+                        <img id="cropImage" src="" alt="" draggable="false">
+                    </div>
+                    <div class="crop-hint">Используйте колесико мыши для масштабирования и перетащите изображение для позиционирования</div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="teamInfo.closeCropModal()">Отмена</button>
+                <button class="btn-primary" onclick="teamInfo.applyCrop()">Применить</button>
             </div>
         </div>
     </div>

@@ -8,6 +8,12 @@ const teamInfo = {
     sidebarCollapsed: false,
     formChanged: false,
     originalFormData: null,
+    tempImageData: null,
+    cropSettings: {
+        scale: 1,
+        posX: 0,
+        posY: 0
+    },
 
     async init() {
         try {
@@ -47,14 +53,38 @@ const teamInfo = {
         const savedName = localStorage.getItem('team-name');
         if (savedName) {
             this.teamName = savedName;
-            document.querySelector('.team-name').childNodes[0].textContent = this.teamName + ' ';
+        }
+        // Update all team name displays
+        const teamNameElement = document.querySelector('.team-name');
+        if (teamNameElement) {
+            teamNameElement.childNodes[0].textContent = this.teamName + ' ';
+        }
+        const cardTeamName = document.getElementById('cardTeamName');
+        if (cardTeamName) {
+            cardTeamName.textContent = this.teamName;
+        }
+        const formTeamName = document.getElementById('formTeamName');
+        if (formTeamName) {
+            formTeamName.textContent = this.teamName;
         }
     },
 
     saveTeamName(name) {
         this.teamName = name;
         localStorage.setItem('team-name', name);
-        document.querySelector('.team-name').childNodes[0].textContent = name + ' ';
+        // Update all team name displays
+        const teamNameElement = document.querySelector('.team-name');
+        if (teamNameElement) {
+            teamNameElement.childNodes[0].textContent = name + ' ';
+        }
+        const cardTeamName = document.getElementById('cardTeamName');
+        if (cardTeamName) {
+            cardTeamName.textContent = name;
+        }
+        const formTeamName = document.getElementById('formTeamName');
+        if (formTeamName) {
+            formTeamName.textContent = name;
+        }
     },
 
     editTeamName() {
@@ -216,6 +246,7 @@ const teamInfo = {
         statsPanel.style.display = 'none';
         employeeCard.style.display = 'flex';
 
+        document.getElementById('cardTeamName').textContent = this.teamName;
         document.getElementById('cardName').textContent = employee.fullName || '';
         document.getElementById('cardPosition').textContent = employee.position || '';
 
@@ -275,7 +306,7 @@ const teamInfo = {
             if (field.value) {
                 html += `
                     <div class="info-group">
-                        <div class="info-label">${field.label}:</div>
+                        <div class="info-label">${field.label}</div>
                         <div class="info-value">${this.escapeHtml(field.value)}</div>
                     </div>
                 `;
@@ -324,6 +355,7 @@ const teamInfo = {
         // Reset form
         this.currentEmployeeId = null;
         this.currentAvatar = null;
+        document.getElementById('formTeamName').textContent = this.teamName;
         document.getElementById('formTitle').textContent = 'Новый сотрудник';
         document.getElementById('formSaveBtn').textContent = 'Сохранить';
         document.getElementById('formDeleteBtn').style.display = 'none';
@@ -363,14 +395,191 @@ const teamInfo = {
         if (file && file.type.startsWith('image/')) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                this.currentAvatar = e.target.result;
-                const formAvatar = document.getElementById('formAvatar');
-                formAvatar.src = e.target.result;
-                formAvatar.style.display = 'block';
-                document.getElementById('formAvatarPlaceholder').style.display = 'none';
+                this.showCropModal(e.target.result);
             };
             reader.readAsDataURL(file);
         }
+    },
+
+    showCropModal(imageData) {
+        this.tempImageData = imageData;
+        this.cropSettings = { scale: 1, posX: 0, posY: 0 };
+        this.isDragging = false;
+        this.dragStart = { x: 0, y: 0 };
+
+        const cropImage = document.getElementById('cropImage');
+        const cropPreview = document.getElementById('cropPreview');
+        cropImage.src = imageData;
+
+        cropImage.onload = () => {
+            this.updateCropPreview();
+        };
+
+        // Mouse drag handlers
+        const handleMouseDown = (e) => {
+            this.isDragging = true;
+            this.dragStart = {
+                x: e.clientX - this.cropSettings.posX,
+                y: e.clientY - this.cropSettings.posY
+            };
+            cropPreview.style.cursor = 'grabbing';
+        };
+
+        const handleMouseMove = (e) => {
+            if (!this.isDragging) return;
+
+            this.cropSettings.posX = e.clientX - this.dragStart.x;
+            this.cropSettings.posY = e.clientY - this.dragStart.y;
+            this.updateCropPreview();
+        };
+
+        const handleMouseUp = () => {
+            this.isDragging = false;
+            cropPreview.style.cursor = 'move';
+        };
+
+        // Wheel zoom handler
+        const handleWheel = (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            this.cropSettings.scale = Math.max(0.5, Math.min(3, this.cropSettings.scale + delta));
+            this.updateCropPreview();
+        };
+
+        // Remove old listeners if any
+        cropPreview.onmousedown = null;
+        cropPreview.onmousemove = null;
+        cropPreview.onmouseup = null;
+        cropPreview.onwheel = null;
+
+        // Add new listeners
+        cropPreview.onmousedown = handleMouseDown;
+        document.onmousemove = handleMouseMove;
+        document.onmouseup = handleMouseUp;
+        cropPreview.onwheel = handleWheel;
+
+        document.getElementById('cropModal').classList.add('active');
+    },
+
+    updateCropPreview() {
+        const cropImage = document.getElementById('cropImage');
+        const cropPreview = document.getElementById('cropPreview');
+
+        if (!cropImage.complete) return;
+
+        const scale = this.cropSettings.scale;
+        const translateX = this.cropSettings.posX;
+        const translateY = this.cropSettings.posY;
+
+        // Calculate initial size to cover container (like background-size: cover)
+        const previewWidth = cropPreview.clientWidth;
+        const previewHeight = cropPreview.clientHeight;
+        const imgWidth = cropImage.naturalWidth;
+        const imgHeight = cropImage.naturalHeight;
+
+        const scaleToFit = Math.max(
+            previewWidth / imgWidth,
+            previewHeight / imgHeight
+        );
+
+        // Set base size to cover the container
+        cropImage.style.width = imgWidth * scaleToFit + 'px';
+        cropImage.style.height = imgHeight * scaleToFit + 'px';
+
+        // Apply transform: center image + user offset + user scale
+        cropImage.style.transform = `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(${scale})`;
+    },
+
+    closeCropModal() {
+        document.getElementById('cropModal').classList.remove('active');
+        this.tempImageData = null;
+        this.cropSettings = { scale: 1, posX: 0, posY: 0 };
+        this.isDragging = false;
+
+        // Remove event listeners
+        const cropPreview = document.getElementById('cropPreview');
+        cropPreview.onmousedown = null;
+        cropPreview.onwheel = null;
+        document.onmousemove = null;
+        document.onmouseup = null;
+
+        document.getElementById('formAvatarInput').value = '';
+    },
+
+    applyCrop() {
+        const cropImage = document.getElementById('cropImage');
+        const cropPreview = document.getElementById('cropPreview');
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 120;
+        canvas.height = 120;
+        const ctx = canvas.getContext('2d');
+
+        const img = new Image();
+        img.onload = () => {
+            const previewWidth = cropPreview.clientWidth;
+            const previewHeight = cropPreview.clientHeight;
+
+            const scale = this.cropSettings.scale;
+            const translateX = this.cropSettings.posX;
+            const translateY = this.cropSettings.posY;
+
+            const imgWidth = img.width;
+            const imgHeight = img.height;
+
+            // Calculate scale to cover preview
+            const scaleToFit = Math.max(
+                previewWidth / imgWidth,
+                previewHeight / imgHeight
+            );
+
+            // Calculate displayed size in pixels
+            const displayedWidth = imgWidth * scaleToFit * scale;
+            const displayedHeight = imgHeight * scaleToFit * scale;
+
+            // Calculate where image is positioned in preview (top-left corner)
+            const imgLeft = previewWidth / 2 - displayedWidth / 2 + translateX;
+            const imgTop = previewHeight / 2 - displayedHeight / 2 + translateY;
+
+            // Calculate what portion of original image is visible in preview
+            // If image extends beyond preview bounds, we crop to preview bounds
+            const visibleLeft = Math.max(0, -imgLeft);
+            const visibleTop = Math.max(0, -imgTop);
+            const visibleRight = Math.min(displayedWidth, previewWidth - imgLeft);
+            const visibleBottom = Math.min(displayedHeight, previewHeight - imgTop);
+
+            const visibleWidth = visibleRight - visibleLeft;
+            const visibleHeight = visibleBottom - visibleTop;
+
+            // Convert visible area back to original image coordinates
+            const sourceX = (visibleLeft / displayedWidth) * imgWidth;
+            const sourceY = (visibleTop / displayedHeight) * imgHeight;
+            const sourceWidth = (visibleWidth / displayedWidth) * imgWidth;
+            const sourceHeight = (visibleHeight / displayedHeight) * imgHeight;
+
+            // Draw the visible portion to fill entire canvas (stretching to square)
+            ctx.drawImage(
+                img,
+                sourceX,
+                sourceY,
+                sourceWidth,
+                sourceHeight,
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+            this.currentAvatar = canvas.toDataURL('image/jpeg', 0.9);
+
+            const formAvatar = document.getElementById('formAvatar');
+            formAvatar.src = this.currentAvatar;
+            formAvatar.style.display = 'block';
+            document.getElementById('formAvatarPlaceholder').style.display = 'none';
+
+            this.closeCropModal();
+        };
+        img.src = this.tempImageData;
     },
 
     showEditModal(id) {
@@ -422,6 +631,7 @@ const teamInfo = {
         // Fill form with employee data
         this.currentEmployeeId = id;
         this.currentAvatar = employee.avatar || null;
+        document.getElementById('formTeamName').textContent = this.teamName;
         document.getElementById('formTitle').textContent = 'Редактировать';
         document.getElementById('formSaveBtn').textContent = 'Сохранить';
         document.getElementById('formDeleteBtn').style.display = 'block';
@@ -851,6 +1061,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Close modals on escape key
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+        if (document.getElementById('cropModal').classList.contains('active')) {
+            teamInfo.closeCropModal();
+        }
         if (document.getElementById('employeeModal').classList.contains('active')) {
             teamInfo.closeEmployeeModal();
         }
@@ -874,6 +1087,17 @@ document.getElementById('importModal').addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
         teamInfo.closeImportDialog();
     }
+});
+
+document.getElementById('cropModal').addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+        teamInfo.closeCropModal();
+    }
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    teamInfo.init();
 });
 
 console.log('✅ Team Info script loaded');

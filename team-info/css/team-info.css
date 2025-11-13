@@ -1,7 +1,21 @@
 /* Team Info - Modern Minimalistic Design */
 
 /* Fonts */
-@import url('https://fonts.googleapis.com/css2?family=TT+Firs+Neue:wght@400;700&display=swap');
+@font-face {
+    font-family: 'TT Firs Neue';
+    src: url('../fonts/TTFirsNeue-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'TT Firs Neue';
+    src: url('../fonts/TTFirsNeue-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
 
 /* Variables */
 :root {
@@ -37,7 +51,7 @@
 body {
     font-family: 'TT Firs Neue', 'Segoe UI', sans-serif;
     font-weight: 400;
-    background: #2e2e2e;
+    background: #1a1a1a;
     color: #f2f2f2;
     height: 100vh;
     overflow: hidden;
@@ -53,12 +67,11 @@ body {
 /* Sidebar */
 .sidebar {
     width: 230px;
-    background: var(--bg-dark-white);
+    background: #e8e8e8;
     display: flex;
     flex-direction: column;
     padding: 0;
     transition: width 0.3s ease;
-    margin-right: 10px;
 }
 
 .sidebar.collapsed {
@@ -73,9 +86,10 @@ body {
 .back-button {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 8px;
-    padding: 20px;
+    padding: 0 40px;
+    height: 60px;
     background: var(--bg-white);
     border: none;
     cursor: pointer;
@@ -84,6 +98,7 @@ body {
     color: var(--black);
     font-weight: 400;
     transition: opacity 0.2s;
+    box-sizing: border-box;
 }
 
 .back-button:hover {
@@ -172,24 +187,31 @@ body {
     flex-direction: column;
     position: relative;
     overflow: hidden;
+    background: #1a1a1a;
 }
 
 /* Global header (top right corner) */
 .global-header {
     position: absolute;
-    top: 20px;
-    right: 40px;
+    top: 0;
+    right: 0;
+    left: 0;
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 20px;
     z-index: 100;
+    background: #212121;
+    padding: 0 40px;
+    height: 60px;
+    box-sizing: border-box;
 }
 
 /* Content area */
 .content-area {
     display: flex;
     gap: 20px;
-    padding: 80px 20px 20px 40px;
+    padding: 80px 40px 20px 40px;
     height: 100%;
     overflow: hidden;
 }
@@ -200,14 +222,20 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border-radius: 8px;
 }
 
 /* Section header (над таблицей) */
 .section-header {
-    padding: 0 0 20px 0;
+    padding: 16px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    background: #2e2e2e;
+    margin: 0;
+    height: 60px;
+    box-sizing: border-box;
+    border-radius: 8px 8px 0 0;
 }
 
 .add-employee-btn {
@@ -306,13 +334,14 @@ body {
 .table-container {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0;
 }
 
 /* Table */
 .employees-table {
     width: 100%;
-    background: #2e2e2e;
+    background: #f2f2f2;
     border-collapse: collapse;
     table-layout: fixed;
 }
@@ -320,7 +349,7 @@ body {
 .employees-table thead {
     position: sticky;
     top: 0;
-    background: #2e2e2e;
+    background: #212121;
     z-index: 10;
 }
 
@@ -388,7 +417,7 @@ body {
 }
 
 .employees-table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(0, 0, 0, 0.03);
 }
 
 .employees-table tbody tr.selected {
@@ -402,7 +431,7 @@ body {
 .employees-table td {
     padding: 16px 12px;
     font-size: 13px;
-    color: #f2f2f2;
+    color: #1a1a1a;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -428,7 +457,7 @@ body {
 .status-dropdown-icon {
     width: 12px;
     height: 12px;
-    color: #f2f2f2;
+    color: #1a1a1a;
     opacity: 0.5;
 }
 
@@ -498,19 +527,16 @@ body {
 .row-arrow {
     width: 20px;
     height: 20px;
-    color: #f2f2f2;
+    color: #1a1a1a;
     opacity: 0.5;
 }
 
 /* Right panel (statistics or employee card) */
 .right-panel {
     width: 380px;
-    background: var(--white);
-    border-radius: 8px;
+    background: transparent;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Employee card */
@@ -519,6 +545,7 @@ body {
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+    background: transparent;
 }
 
 /* Employee form */
@@ -527,6 +554,24 @@ body {
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+    background: transparent;
+}
+
+.form-team-header {
+    background: #2e2e2e;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    box-sizing: border-box;
+    border-radius: 8px 8px 0 0;
+}
+
+.form-team-name {
+    color: var(--white);
+    font-size: 14px;
+    font-weight: 400;
 }
 
 .form-header-section {
@@ -600,6 +645,7 @@ body {
     flex: 1;
     overflow-y: auto;
     padding: 20px 30px;
+    background: var(--white);
 }
 
 .form-group-inline {
@@ -659,6 +705,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    border-radius: 0 0 8px 8px;
 }
 
 .form-footer-buttons {
@@ -710,21 +757,45 @@ body {
 }
 
 .card-header {
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+}
+
+.card-team-header {
+    background: #2e2e2e;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    box-sizing: border-box;
+    border-radius: 8px 8px 0 0;
+}
+
+.card-team-name {
+    color: var(--white);
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.card-employee-info {
     padding: 20px;
-    background: var(--white);
     display: flex;
     gap: 16px;
+    background: var(--white);
 }
 
 .card-avatar {
-    width: 120px;
-    height: 120px;
-    border-radius: 4px;
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
     background: var(--gray);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    overflow: hidden;
 }
 
 .card-avatar img {
@@ -742,10 +813,11 @@ body {
 }
 
 .card-name {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--black);
-    line-height: 1.2;
+    line-height: 1.3;
+    margin-bottom: 4px;
 }
 
 .card-position {
@@ -779,29 +851,27 @@ body {
 .card-body {
     flex: 1;
     overflow-y: auto;
-    padding: 20px;
+    padding: 0 20px 20px 20px;
+    background: var(--white);
 }
 
 .info-group {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .info-label {
     font-size: 11px;
     color: var(--gray);
-    text-transform: uppercase;
-    white-space: nowrap;
-    flex-shrink: 0;
+    font-weight: 400;
 }
 
 .info-value {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--black);
-    text-align: right;
+    font-weight: 400;
     word-break: break-word;
 }
 
@@ -810,7 +880,9 @@ body {
     background: var(--white);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
+    border-top: 1px solid var(--border-gray);
+    border-radius: 0 0 8px 8px;
 }
 
 .card-footer-divider {
@@ -820,22 +892,25 @@ body {
 }
 
 .edit-btn, .delete-btn {
-    padding: 10px 16px;
+    padding: 12px 16px;
     border: none;
     border-radius: 4px;
     font-family: 'TT Firs Neue', sans-serif;
     font-size: 13px;
     cursor: pointer;
     transition: opacity 0.2s;
-    background: transparent;
     width: 100%;
+    font-weight: 400;
 }
 
 .edit-btn {
+    background: transparent;
     color: var(--black);
+    border: 1px solid var(--border-gray);
 }
 
 .delete-btn {
+    background: transparent;
     color: #fe0000;
 }
 
@@ -863,23 +938,49 @@ body {
 
 /* Statistics panel */
 .stats-panel {
-    padding: 30px;
-    text-align: center;
     display: flex;
     flex-direction: column;
     height: 100%;
+    background: transparent;
+    overflow: hidden;
+}
+
+.stats-header {
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+}
+
+.stats-team-header {
+    background: #2e2e2e;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    box-sizing: border-box;
+    border-radius: 8px 8px 0 0;
 }
 
 .stats-panel .team-name {
-    margin-bottom: 30px;
-    color: var(--black);
-    font-size: 16px;
-    font-weight: 700;
+    color: var(--white);
+    font-size: 14px;
+    font-weight: 400;
     justify-content: center;
 }
 
 .stats-panel .team-name svg {
-    color: var(--black);
+    color: var(--white);
+}
+
+.stats-content {
+    padding: 30px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    background: var(--white);
+    border-radius: 0 0 8px 8px;
 }
 
 .stats-title {
@@ -1114,6 +1215,39 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--gray-dark);
+}
+
+/* Image Crop Modal */
+.crop-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.crop-preview {
+    width: 100%;
+    height: 400px;
+    background: var(--bg-dark-white);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    cursor: move;
+    user-select: none;
+}
+
+.crop-preview img {
+    position: absolute;
+    max-width: none;
+    pointer-events: none;
+    left: 50%;
+    top: 50%;
+    transform-origin: center center;
+}
+
+.crop-hint {
+    font-size: 11px;
+    color: var(--gray);
+    text-align: center;
 }
 
 /* Responsive */
