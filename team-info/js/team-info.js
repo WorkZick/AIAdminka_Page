@@ -149,9 +149,9 @@ const teamInfo = {
         const statusMap = {
             'Работает': 'green',
             'В отпуске': 'yellow',
-            'В команде': 'blue',
+            'Командировка': 'blue',
             'Уволен': 'red',
-            'Бонмет': 'purple'
+            'Болеет': 'purple'
         };
         return statusMap[status] || 'green';
     },
@@ -303,13 +303,27 @@ const teamInfo = {
         let html = '';
 
         fields.forEach(field => {
-            if (field.value) {
-                html += `
-                    <div class="info-group">
-                        <div class="info-label">${field.label}</div>
-                        <div class="info-value">${this.escapeHtml(field.value)}</div>
-                    </div>
-                `;
+            if (field.value || field.label === 'Примечание') {
+                const isComment = field.label === 'Примечание';
+
+                if (isComment) {
+                    const placeholder = field.value ? '' : field.label;
+                    const valueText = field.value ? this.escapeHtml(field.value) : placeholder;
+                    const valueClass = field.value ? 'info-value textarea-style' : 'info-value textarea-style placeholder';
+
+                    html += `
+                        <div class="info-group vertical">
+                            <div class="${valueClass}">${valueText}</div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="info-group">
+                            <div class="info-label">${field.label}:</div>
+                            <div class="info-value">${this.escapeHtml(field.value)}</div>
+                        </div>
+                    `;
+                }
             }
         });
 
@@ -330,16 +344,16 @@ const teamInfo = {
     updateStats() {
         const total = this.data.length;
         const working = this.data.filter(e => (e.status || 'Работает') === 'Работает').length;
-        const bonmet = this.data.filter(e => e.status === 'Бонмет').length;
+        const sick = this.data.filter(e => e.status === 'Болеет').length;
         const leave = this.data.filter(e => e.status === 'В отпуске').length;
-        const onBreak = this.data.filter(e => e.status === 'В команде').length;
+        const trip = this.data.filter(e => e.status === 'Командировка').length;
         const fired = this.data.filter(e => e.status === 'Уволен').length;
 
         document.getElementById('totalCount').textContent = total;
         document.getElementById('workingCount').textContent = working;
-        document.getElementById('bonmetCount').textContent = bonmet;
+        document.getElementById('sickCount').textContent = sick;
         document.getElementById('leaveCount').textContent = leave;
-        document.getElementById('onBreakCount').textContent = onBreak;
+        document.getElementById('tripCount').textContent = trip;
         document.getElementById('firedCount').textContent = fired;
     },
 
@@ -356,7 +370,6 @@ const teamInfo = {
         this.currentEmployeeId = null;
         this.currentAvatar = null;
         document.getElementById('formTeamName').textContent = this.teamName;
-        document.getElementById('formTitle').textContent = 'Новый сотрудник';
         document.getElementById('formSaveBtn').textContent = 'Сохранить';
         document.getElementById('formDeleteBtn').style.display = 'none';
 
@@ -380,12 +393,12 @@ const teamInfo = {
         // Reset avatar
         const formAvatar = document.getElementById('formAvatar');
         formAvatar.style.display = 'none';
-        document.getElementById('formAvatarPlaceholder').style.display = 'block';
 
         // Reset change tracking
         this.formChanged = false;
         this.originalFormData = this.getFormData();
         this.attachFormChangeListeners();
+        this.attachAutoResizeListeners();
 
         document.getElementById('formFullName').focus();
     },
@@ -575,7 +588,6 @@ const teamInfo = {
             const formAvatar = document.getElementById('formAvatar');
             formAvatar.src = this.currentAvatar;
             formAvatar.style.display = 'block';
-            document.getElementById('formAvatarPlaceholder').style.display = 'none';
 
             this.closeCropModal();
         };
@@ -632,7 +644,6 @@ const teamInfo = {
         this.currentEmployeeId = id;
         this.currentAvatar = employee.avatar || null;
         document.getElementById('formTeamName').textContent = this.teamName;
-        document.getElementById('formTitle').textContent = 'Редактировать';
         document.getElementById('formSaveBtn').textContent = 'Сохранить';
         document.getElementById('formDeleteBtn').style.display = 'block';
 
@@ -658,16 +669,15 @@ const teamInfo = {
         if (employee.avatar) {
             formAvatar.src = employee.avatar;
             formAvatar.style.display = 'block';
-            document.getElementById('formAvatarPlaceholder').style.display = 'none';
         } else {
             formAvatar.style.display = 'none';
-            document.getElementById('formAvatarPlaceholder').style.display = 'block';
         }
 
         // Reset change tracking
         this.formChanged = false;
         this.originalFormData = this.getFormData();
         this.attachFormChangeListeners();
+        this.attachAutoResizeListeners();
     },
 
     closeForm() {
@@ -1045,6 +1055,28 @@ const teamInfo = {
         const currentData = this.getFormData();
         const hasChanges = JSON.stringify(currentData) !== JSON.stringify(this.originalFormData);
         this.formChanged = hasChanges;
+    },
+
+    attachAutoResizeListeners() {
+        const autoResize = (textarea) => {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        };
+
+        const fullNameField = document.getElementById('formFullName');
+        const positionField = document.getElementById('formPosition');
+
+        if (fullNameField) {
+            fullNameField.addEventListener('input', () => autoResize(fullNameField));
+            // Initial resize
+            autoResize(fullNameField);
+        }
+
+        if (positionField) {
+            positionField.addEventListener('input', () => autoResize(positionField));
+            // Initial resize
+            autoResize(positionField);
+        }
     }
 };
 

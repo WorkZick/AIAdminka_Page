@@ -31,11 +31,11 @@
     --border-gray: #c3c3c3;
 
     /* Status colors */
-    --status-green: #7ccb72;
-    --status-red: #ff8b8b;
-    --status-yellow: #fdbe2f;
-    --status-purple: #c696da;
-    --status-blue: #96b8da;
+    --status-green: #7ccb72;    /* Работает */
+    --status-red: #ff8b8b;      /* Уволен */
+    --status-yellow: #fdbe2f;   /* В отпуске */
+    --status-purple: #c696da;   /* Болеет */
+    --status-blue: #96b8da;     /* Командировка */
 
     /* Highlight */
     --highlight-yellow: #f0e8d8;
@@ -66,7 +66,7 @@ body {
 
 /* Sidebar */
 .sidebar {
-    width: 230px;
+    width: 12%;
     background: #e8e8e8;
     display: flex;
     flex-direction: column;
@@ -90,7 +90,7 @@ body {
     gap: 8px;
     padding: 0 40px;
     height: 60px;
-    background: var(--bg-white);
+    background: #e8e8e8;
     border: none;
     cursor: pointer;
     font-family: 'TT Firs Neue', sans-serif;
@@ -102,7 +102,7 @@ body {
 }
 
 .back-button:hover {
-    opacity: 0.7;
+    background: #d0d0d0;
 }
 
 .back-button svg {
@@ -112,14 +112,16 @@ body {
 
 .sidebar-menu {
     flex: 1;
-    padding: 20px 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 100px;
 }
 
 .menu-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 20px;
+    display: block;
+    padding: 16px 20px;
     color: var(--black);
     text-decoration: none;
     font-size: 14px;
@@ -128,26 +130,33 @@ body {
     border: none;
     background: transparent;
     width: 100%;
-    text-align: left;
+    text-align: center;
     font-family: 'TT Firs Neue', sans-serif;
     font-weight: 400;
     white-space: nowrap;
     overflow: hidden;
+    height: 48px;
+    position: relative;
 }
 
 .sidebar.collapsed .menu-item {
-    justify-content: center;
-    padding: 12px;
+    padding: 16px 20px;
 }
 
 .menu-item span {
-    text-align: left;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .menu-item svg {
     width: 20px;
     height: 20px;
-    flex-shrink: 0;
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .sidebar.collapsed .menu-item span {
@@ -491,7 +500,7 @@ body {
 
 .status-badge.purple {
     background: var(--status-purple);
-    color: var(--white);
+    color: var(--black);
 }
 
 .status-badge.blue {
@@ -537,10 +546,12 @@ body {
 
 /* Right panel (statistics or employee card) */
 .right-panel {
-    width: 380px;
+    flex: 0 0 320px;
     background: transparent;
     display: flex;
     flex-direction: column;
+    min-width: 320px;
+    max-width: 320px;
 }
 
 /* Employee card */
@@ -578,22 +589,23 @@ body {
     font-weight: 400;
 }
 
-.form-header-section {
+.form-employee-info {
     padding: 20px;
-    background: var(--white);
     display: flex;
     gap: 16px;
+    background: var(--white);
 }
 
 .form-avatar {
-    width: 120px;
-    height: 120px;
-    border-radius: 4px;
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
     background: var(--gray);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    overflow: hidden;
     cursor: pointer;
     transition: opacity 0.2s;
 }
@@ -609,38 +621,68 @@ body {
     object-fit: cover;
 }
 
-.form-avatar svg {
-    color: var(--white);
-}
-
 .form-info-section {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-width: 0;
 }
 
-.form-info-section h3 {
-    font-size: 14px;
+.form-name-input {
+    font-size: 18px;
     font-weight: 700;
     color: var(--black);
-    margin: 0;
+    line-height: 1.3;
+    margin-bottom: 4px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: 'TT Firs Neue', sans-serif;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    resize: none;
+    overflow: hidden;
+    min-height: auto;
 }
 
-.form-info-section input,
-.form-info-section select {
-    width: 100%;
-    padding: 8px 12px;
+.form-name-input:focus {
+    outline: none;
+}
+
+.form-position-input {
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 4px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-weight: 400;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    resize: none;
+    overflow: hidden;
+    min-height: auto;
+}
+
+.form-position-input:focus {
+    outline: none;
+}
+
+.form-status-select {
+    padding: 4px 8px;
     border: 1px solid var(--border-gray);
     border-radius: 4px;
     font-family: 'TT Firs Neue', sans-serif;
-    font-size: 13px;
+    font-size: 11px;
     color: var(--black);
     background: white;
+    cursor: pointer;
+    width: fit-content;
 }
 
-.form-info-section input:focus,
-.form-info-section select:focus {
+.form-status-select:focus {
     outline: none;
     border-color: var(--black);
 }
@@ -648,59 +690,66 @@ body {
 .form-body {
     flex: 1;
     overflow-y: auto;
-    padding: 20px 30px;
+    padding: 0 20px 20px 20px;
     background: var(--white);
 }
 
 .form-group-inline {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     display: flex;
-    align-items: center;
+    flex-direction: row;
+    align-items: flex-start;
     gap: 12px;
 }
 
 .form-group-inline label {
     font-size: 11px;
-    color: var(--gray);
-    text-transform: uppercase;
+    color: #1a1a1a;
     font-weight: 400;
     white-space: nowrap;
     flex-shrink: 0;
-    min-width: 120px;
 }
 
 .form-group-inline input,
 .form-group-inline select,
 .form-group-inline textarea {
     flex: 1;
-    padding: 8px 12px;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
     font-family: 'TT Firs Neue', sans-serif;
-    font-size: 13px;
-    color: var(--black);
-    background: white;
+    font-size: 11px;
+    color: #1a1a1a;
+    background: transparent;
+    font-weight: 700;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .form-group-inline textarea {
     resize: vertical;
-    min-height: 60px;
+    min-height: 120px;
+    padding: 12px;
+    background: #f2f2f2;
+    border: 1px solid #c3c3c3;
+    border-radius: 4px;
+    font-weight: 400;
+    width: 100%;
 }
 
 .form-group-inline.vertical {
     flex-direction: column;
-    align-items: stretch;
+    gap: 8px;
 }
 
 .form-group-inline.vertical label {
-    margin-bottom: 6px;
+    display: none;
 }
 
 .form-group-inline input:focus,
 .form-group-inline select:focus,
 .form-group-inline textarea:focus {
     outline: none;
-    border-color: var(--black);
 }
 
 .form-footer {
@@ -862,21 +911,47 @@ body {
 .info-group {
     margin-bottom: 10px;
     display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.info-group.vertical {
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
 }
 
 .info-label {
     font-size: 11px;
-    color: var(--gray);
+    color: #1a1a1a;
     font-weight: 400;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .info-value {
-    font-size: 13px;
-    color: var(--black);
-    font-weight: 400;
+    font-size: 11px;
+    color: #1a1a1a;
+    font-weight: 700;
     word-break: break-word;
+    text-align: left;
+    flex: 1;
+}
+
+.info-value.textarea-style {
+    padding: 12px;
+    background: #f2f2f2;
+    border: 1px solid #c3c3c3;
+    border-radius: 4px;
+    min-height: 120px;
+    font-weight: 400;
+    white-space: pre-wrap;
+    width: 100%;
+}
+
+.info-value.textarea-style.placeholder {
+    color: #8d8d8d;
+    font-weight: 400;
 }
 
 .card-footer {
@@ -885,7 +960,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    border-top: 1px solid var(--border-gray);
     border-radius: 0 0 8px 8px;
 }
 
@@ -910,7 +984,7 @@ body {
 .edit-btn {
     background: transparent;
     color: var(--black);
-    border: 1px solid var(--border-gray);
+    border: none;
 }
 
 .delete-btn {

@@ -45,9 +45,9 @@
                     <span>Партнеры</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
                 </div>
-
-                <div class="menu-separator"></div>
             </div>
+
+            <div class="menu-separator"></div>
 
             <div class="version-info">
                 О разработке<br>
@@ -166,10 +166,10 @@
 
                     <div class="stat-item">
                         <div class="stat-item-left">
-                            <div class="stat-count" id="bonmetCount">0</div>
+                            <div class="stat-count" id="sickCount">0</div>
                             <span class="stat-label-small">человек</span>
                         </div>
-                        <span class="status-badge purple">Бонмет</span>
+                        <span class="status-badge purple">Болеет</span>
                     </div>
 
                     <div class="stat-item">
@@ -182,10 +182,10 @@
 
                     <div class="stat-item">
                         <div class="stat-item-left">
-                            <div class="stat-count" id="onBreakCount">0</div>
+                            <div class="stat-count" id="tripCount">0</div>
                             <span class="stat-label-small">человек</span>
                         </div>
-                        <span class="status-badge blue">В команде</span>
+                        <span class="status-badge blue">Командировка</span>
                     </div>
 
                     <div class="stat-item">
@@ -215,9 +215,9 @@
                             <select class="card-status-select" id="cardStatusSelect" onchange="teamInfo.updateStatus()">
                                 <option value="Работает">Работает</option>
                                 <option value="В отпуске">В отпуске</option>
-                                <option value="В команде">В команде</option>
+                                <option value="Командировка">Командировка</option>
                                 <option value="Уволен">Уволен</option>
-                                <option value="Бонмет">Бонмет</option>
+                                <option value="Болеет">Болеет</option>
                             </select>
                         </div>
                     </div>
@@ -239,90 +239,89 @@
                 <div class="form-team-header">
                     <div class="form-team-name" id="formTeamName">Vadim team</div>
                 </div>
-                <div class="form-header-section">
+                <div class="form-employee-info">
                     <input type="file" id="formAvatarInput" accept="image/*" style="display: none;" onchange="teamInfo.handleAvatarUpload(event)">
                     <div class="form-avatar" onclick="document.getElementById('formAvatarInput').click()">
                         <img id="formAvatar" src="" alt="" style="display: none;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="formAvatarPlaceholder"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     </div>
                     <div class="form-info-section">
-                        <h3 id="formTitle">Новый сотрудник</h3>
-                        <input type="text" id="formFullName" placeholder="Ф.И.О.">
-                        <input type="text" id="formPosition" placeholder="Должность">
-                        <select id="formStatus">
+                        <textarea class="form-name-input" id="formFullName" placeholder="Ф.И.О." rows="1"></textarea>
+                        <textarea class="form-position-input" id="formPosition" placeholder="Должность" rows="1"></textarea>
+                        <select class="form-status-select" id="formStatus">
                             <option value="Работает">Работает</option>
                             <option value="В отпуске">В отпуске</option>
-                            <option value="В команде">В команде</option>
+                            <option value="Командировка">Командировка</option>
                             <option value="Уволен">Уволен</option>
-                            <option value="Бонмет">Бонмет</option>
+                            <option value="Болеет">Болеет</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="form-body">
+
                     <div class="form-group-inline">
-                        <label>Reddy ID</label>
+                        <label>Reddy ID:</label>
                         <input type="text" id="formReddyId" placeholder="Введите ID">
                     </div>
 
                     <div class="form-group-inline">
-                        <label>Рабочий Telegram</label>
+                        <label>Рабочий Telegram:</label>
                         <input type="text" id="formCorpTelegram" placeholder="@username">
                     </div>
 
                     <div class="form-group-inline">
-                        <label>Личный Telegram</label>
+                        <label>Личный Telegram:</label>
                         <input type="text" id="formPersonalTelegram" placeholder="@username">
                     </div>
 
                     <div class="form-group-inline">
-                        <label>День рождения</label>
+                        <label>День рождения:</label>
                         <input type="date" id="formBirthday">
                     </div>
 
                     <div class="form-group-inline">
-                        <label>Рабочая почта</label>
+                        <label>Рабочая почта:</label>
                         <input type="email" id="formCorpEmail" placeholder="example@company.com">
                     </div>
 
                     <div class="form-group-inline">
-                        <label>Личная почта</label>
+                        <label>Личная почта:</label>
                         <input type="email" id="formPersonalEmail" placeholder="example@gmail.com">
                     </div>
 
                     <div class="form-group-inline">
-                        <label>Рабочий телефон</label>
+                        <label>Рабочий телефон:</label>
                         <input type="tel" id="formCorpPhone" placeholder="+7 (xxx) xxx-xx-xx">
                     </div>
 
                     <div class="form-group-inline">
-                        <label>Личный телефон</label>
+                        <label>Личный телефон:</label>
                         <input type="tel" id="formPersonalPhone" placeholder="+7 (xxx) xxx-xx-xx">
                     </div>
 
                     <div class="form-group-inline">
-                        <label>Офис</label>
+                        <label>Офис:</label>
                         <input type="text" id="formOffice" placeholder="Офис">
                     </div>
 
                     <div class="form-group-inline">
-                        <label>Начало работы</label>
+                        <label>Начало работы:</label>
                         <input type="date" id="formStartDate">
                     </div>
 
                     <div class="form-group-inline">
-                        <label>Компания</label>
+                        <label>Компания:</label>
                         <input type="text" id="formCompany" placeholder='ООО "ТУРЕЦ"'>
                     </div>
 
                     <div class="form-group-inline">
-                        <label>Логин CRM</label>
+                        <label>Логин CRM:</label>
                         <input type="text" id="formCrmLogin" placeholder="abobus.i">
                     </div>
 
                     <div class="form-group-inline vertical">
                         <label>Примечание</label>
-                        <textarea id="formComment" placeholder="Дополнительная информация..."></textarea>
+                        <textarea id="formComment" placeholder="Примечание"></textarea>
                     </div>
                 </div>
 
@@ -367,9 +366,9 @@
                         <select class="form-select" id="statusSelect">
                             <option value="Работает">Работает</option>
                             <option value="В отпуске">В отпуске</option>
-                            <option value="В команде">В команде</option>
+                            <option value="Командировка">Командировка</option>
                             <option value="Уволен">Уволен</option>
-                            <option value="Бонмет">Бонмет</option>
+                            <option value="Болеет">Болеет</option>
                         </select>
                     </div>
 
