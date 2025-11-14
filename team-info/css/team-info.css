@@ -879,21 +879,49 @@ body {
     margin-bottom: 4px;
 }
 
-.card-status-select {
-    padding: 4px 8px;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
-    font-family: 'TT Firs Neue', sans-serif;
-    font-size: 11px;
-    color: var(--black);
-    background: white;
-    cursor: pointer;
+.card-status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     width: fit-content;
+    cursor: pointer;
+    position: relative;
 }
 
-.card-status-select:focus {
-    outline: none;
-    border-color: var(--black);
+.card-status-badge .status-dropdown-icon {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.card-status-badge:hover .status-dropdown-icon {
+    opacity: 1;
+}
+
+.status-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: white;
+    border: 1px solid var(--border-gray);
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    min-width: 120px;
+}
+
+.status-option {
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.status-option:hover {
+    background: var(--bg-dark-white);
 }
 
 .card-info-row {

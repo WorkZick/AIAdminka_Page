@@ -250,8 +250,11 @@ const teamInfo = {
         document.getElementById('cardName').textContent = employee.fullName || '';
         document.getElementById('cardPosition').textContent = employee.position || '';
 
-        const statusSelect = document.getElementById('cardStatusSelect');
-        statusSelect.value = employee.status || 'Работает';
+        const currentStatus = employee.status || 'Работает';
+        const statusClass = this.getStatusClass(currentStatus);
+        const statusText = document.getElementById('cardStatusText');
+        statusText.textContent = currentStatus;
+        statusText.className = `status-badge ${statusClass}`;
 
         const cardAvatar = document.getElementById('cardAvatar');
         if (employee.avatar) {
@@ -265,17 +268,31 @@ const teamInfo = {
         cardBody.innerHTML = this.generateCardInfo(employee);
     },
 
-    async updateStatus() {
+    toggleStatusDropdown() {
+        const dropdown = document.getElementById('cardStatusDropdown');
+        const isVisible = dropdown.style.display === 'flex';
+        dropdown.style.display = isVisible ? 'none' : 'flex';
+    },
+
+    async changeStatus(newStatus) {
         if (!this.currentEmployeeId) return;
 
         const employee = this.data.find(e => e.id === this.currentEmployeeId);
         if (!employee) return;
 
-        const newStatus = document.getElementById('cardStatusSelect').value;
         employee.status = newStatus;
         employee.updatedAt = new Date().toISOString();
 
         if (await storage.saveData(this.data)) {
+            // Update badge
+            const statusClass = this.getStatusClass(newStatus);
+            const statusText = document.getElementById('cardStatusText');
+            statusText.textContent = newStatus;
+            statusText.className = `status-badge ${statusClass}`;
+
+            // Hide dropdown
+            document.getElementById('cardStatusDropdown').style.display = 'none';
+
             this.render();
             this.updateStats();
         } else {
@@ -1104,6 +1121,22 @@ document.addEventListener('keydown', (e) => {
         }
         if (document.getElementById('employeeCard').style.display !== 'none') {
             teamInfo.closeCard();
+        }
+        // Close status dropdown
+        const dropdown = document.getElementById('cardStatusDropdown');
+        if (dropdown && dropdown.style.display === 'flex') {
+            dropdown.style.display = 'none';
+        }
+    }
+});
+
+// Close status dropdown on outside click
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('cardStatusDropdown');
+    const statusBadge = document.getElementById('cardStatusBadge');
+    if (dropdown && dropdown.style.display === 'flex') {
+        if (!dropdown.contains(e.target) && !statusBadge.contains(e.target)) {
+            dropdown.style.display = 'none';
         }
     }
 });

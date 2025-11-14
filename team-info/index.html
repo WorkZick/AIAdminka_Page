@@ -212,13 +212,27 @@
                         <div class="card-info-section">
                             <div class="card-name" id="cardName">Пантюков Вадим Алексеевич</div>
                             <div class="card-position" id="cardPosition">Дизайнер</div>
-                            <select class="card-status-select" id="cardStatusSelect" onchange="teamInfo.updateStatus()">
-                                <option value="Работает">Работает</option>
-                                <option value="В отпуске">В отпуске</option>
-                                <option value="Командировка">Командировка</option>
-                                <option value="Уволен">Уволен</option>
-                                <option value="Болеет">Болеет</option>
-                            </select>
+                            <div class="card-status-badge" id="cardStatusBadge" onclick="teamInfo.toggleStatusDropdown()">
+                                <span class="status-badge green" id="cardStatusText">Работает</span>
+                                <svg class="status-dropdown-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                            </div>
+                            <div class="status-dropdown" id="cardStatusDropdown" style="display: none;">
+                                <div class="status-option" onclick="teamInfo.changeStatus('Работает')">
+                                    <span class="status-badge green">Работает</span>
+                                </div>
+                                <div class="status-option" onclick="teamInfo.changeStatus('В отпуске')">
+                                    <span class="status-badge yellow">В отпуске</span>
+                                </div>
+                                <div class="status-option" onclick="teamInfo.changeStatus('Командировка')">
+                                    <span class="status-badge blue">Командировка</span>
+                                </div>
+                                <div class="status-option" onclick="teamInfo.changeStatus('Уволен')">
+                                    <span class="status-badge red">Уволен</span>
+                                </div>
+                                <div class="status-option" onclick="teamInfo.changeStatus('Болеет')">
+                                    <span class="status-badge purple">Болеет</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
