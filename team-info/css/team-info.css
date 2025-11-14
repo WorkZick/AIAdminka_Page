@@ -670,21 +670,22 @@ body {
     outline: none;
 }
 
-.form-status-select {
-    padding: 4px 8px;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
-    font-family: 'TT Firs Neue', sans-serif;
-    font-size: 11px;
-    color: var(--black);
-    background: white;
-    cursor: pointer;
+.form-status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     width: fit-content;
+    cursor: pointer;
+    position: relative;
 }
 
-.form-status-select:focus {
-    outline: none;
-    border-color: var(--black);
+.form-status-badge .status-dropdown-icon {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.form-status-badge:hover .status-dropdown-icon {
+    opacity: 1;
 }
 
 .form-body {

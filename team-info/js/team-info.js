@@ -9,6 +9,7 @@ const teamInfo = {
     formChanged: false,
     originalFormData: null,
     tempImageData: null,
+    currentFormStatus: 'Работает',
     cropSettings: {
         scale: 1,
         posX: 0,
@@ -274,6 +275,26 @@ const teamInfo = {
         dropdown.style.display = isVisible ? 'none' : 'flex';
     },
 
+    toggleFormStatusDropdown() {
+        const dropdown = document.getElementById('formStatusDropdown');
+        const isVisible = dropdown.style.display === 'flex';
+        dropdown.style.display = isVisible ? 'none' : 'flex';
+    },
+
+    changeFormStatus(newStatus) {
+        this.currentFormStatus = newStatus;
+        const statusClass = this.getStatusClass(newStatus);
+        const statusText = document.getElementById('formStatusText');
+        statusText.textContent = newStatus;
+        statusText.className = `status-badge ${statusClass}`;
+
+        // Hide dropdown
+        document.getElementById('formStatusDropdown').style.display = 'none';
+
+        // Trigger form change detection
+        this.onFormChange();
+    },
+
     async changeStatus(newStatus) {
         if (!this.currentEmployeeId) return;
 
@@ -392,7 +413,12 @@ const teamInfo = {
 
         document.getElementById('formFullName').value = '';
         document.getElementById('formPosition').value = '';
-        document.getElementById('formStatus').value = 'Работает';
+
+        // Set status badge
+        this.currentFormStatus = 'Работает';
+        const statusText = document.getElementById('formStatusText');
+        statusText.textContent = 'Работает';
+        statusText.className = 'status-badge green';
         document.getElementById('formReddyId').value = '';
         document.getElementById('formCorpTelegram').value = '';
         document.getElementById('formPersonalTelegram').value = '';
@@ -666,7 +692,13 @@ const teamInfo = {
 
         document.getElementById('formFullName').value = employee.fullName || '';
         document.getElementById('formPosition').value = employee.position || '';
-        document.getElementById('formStatus').value = employee.status || 'Работает';
+
+        // Set status badge
+        this.currentFormStatus = employee.status || 'Работает';
+        const statusClass = this.getStatusClass(this.currentFormStatus);
+        const statusText = document.getElementById('formStatusText');
+        statusText.textContent = this.currentFormStatus;
+        statusText.className = `status-badge ${statusClass}`;
         document.getElementById('formReddyId').value = employee.reddyId || employee.predefinedFields?.['Reddy'] || '';
         document.getElementById('formCorpTelegram').value = employee.corpTelegram || employee.predefinedFields?.['Корп. Telegram'] || '';
         document.getElementById('formPersonalTelegram').value = employee.personalTelegram || '';
@@ -717,7 +749,7 @@ const teamInfo = {
     async saveFromForm() {
         const fullName = document.getElementById('formFullName').value.trim();
         const position = document.getElementById('formPosition').value.trim();
-        const status = document.getElementById('formStatus').value;
+        const status = this.currentFormStatus || 'Работает';
         const reddyId = document.getElementById('formReddyId').value.trim();
         const corpTelegram = document.getElementById('formCorpTelegram').value.trim();
         const personalTelegram = document.getElementById('formPersonalTelegram').value.trim();
@@ -1033,7 +1065,7 @@ const teamInfo = {
         return {
             fullName: document.getElementById('formFullName').value,
             position: document.getElementById('formPosition').value,
-            status: document.getElementById('formStatus').value,
+            status: this.currentFormStatus || 'Работает',
             reddyId: document.getElementById('formReddyId').value,
             corpTelegram: document.getElementById('formCorpTelegram').value,
             personalTelegram: document.getElementById('formPersonalTelegram').value,
@@ -1122,21 +1154,35 @@ document.addEventListener('keydown', (e) => {
         if (document.getElementById('employeeCard').style.display !== 'none') {
             teamInfo.closeCard();
         }
-        // Close status dropdown
-        const dropdown = document.getElementById('cardStatusDropdown');
-        if (dropdown && dropdown.style.display === 'flex') {
-            dropdown.style.display = 'none';
+        // Close status dropdowns
+        const cardDropdown = document.getElementById('cardStatusDropdown');
+        if (cardDropdown && cardDropdown.style.display === 'flex') {
+            cardDropdown.style.display = 'none';
+        }
+        const formDropdown = document.getElementById('formStatusDropdown');
+        if (formDropdown && formDropdown.style.display === 'flex') {
+            formDropdown.style.display = 'none';
         }
     }
 });
 
-// Close status dropdown on outside click
+// Close status dropdowns on outside click
 document.addEventListener('click', (e) => {
-    const dropdown = document.getElementById('cardStatusDropdown');
-    const statusBadge = document.getElementById('cardStatusBadge');
-    if (dropdown && dropdown.style.display === 'flex') {
-        if (!dropdown.contains(e.target) && !statusBadge.contains(e.target)) {
-            dropdown.style.display = 'none';
+    // Card status dropdown
+    const cardDropdown = document.getElementById('cardStatusDropdown');
+    const cardStatusBadge = document.getElementById('cardStatusBadge');
+    if (cardDropdown && cardDropdown.style.display === 'flex') {
+        if (!cardDropdown.contains(e.target) && !cardStatusBadge.contains(e.target)) {
+            cardDropdown.style.display = 'none';
+        }
+    }
+
+    // Form status dropdown
+    const formDropdown = document.getElementById('formStatusDropdown');
+    const formStatusBadge = document.getElementById('formStatusBadge');
+    if (formDropdown && formDropdown.style.display === 'flex') {
+        if (!formDropdown.contains(e.target) && !formStatusBadge.contains(e.target)) {
+            formDropdown.style.display = 'none';
         }
     }
 });

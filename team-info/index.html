@@ -261,13 +261,27 @@
                     <div class="form-info-section">
                         <textarea class="form-name-input" id="formFullName" placeholder="Ф.И.О." rows="1"></textarea>
                         <textarea class="form-position-input" id="formPosition" placeholder="Должность" rows="1"></textarea>
-                        <select class="form-status-select" id="formStatus">
-                            <option value="Работает">Работает</option>
-                            <option value="В отпуске">В отпуске</option>
-                            <option value="Командировка">Командировка</option>
-                            <option value="Уволен">Уволен</option>
-                            <option value="Болеет">Болеет</option>
-                        </select>
+                        <div class="form-status-badge" id="formStatusBadge" onclick="teamInfo.toggleFormStatusDropdown()">
+                            <span class="status-badge green" id="formStatusText">Работает</span>
+                            <svg class="status-dropdown-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="status-dropdown" id="formStatusDropdown" style="display: none;">
+                            <div class="status-option" onclick="teamInfo.changeFormStatus('Работает')">
+                                <span class="status-badge green">Работает</span>
+                            </div>
+                            <div class="status-option" onclick="teamInfo.changeFormStatus('В отпуске')">
+                                <span class="status-badge yellow">В отпуске</span>
+                            </div>
+                            <div class="status-option" onclick="teamInfo.changeFormStatus('Командировка')">
+                                <span class="status-badge blue">Командировка</span>
+                            </div>
+                            <div class="status-option" onclick="teamInfo.changeFormStatus('Уволен')">
+                                <span class="status-badge red">Уволен</span>
+                            </div>
+                            <div class="status-option" onclick="teamInfo.changeFormStatus('Болеет')">
+                                <span class="status-badge purple">Болеет</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
