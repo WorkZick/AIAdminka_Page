@@ -627,6 +627,7 @@ body {
     flex-direction: column;
     gap: 8px;
     min-width: 0;
+    position: relative;
 }
 
 .form-name-input {
@@ -677,6 +678,7 @@ body {
     width: fit-content;
     cursor: pointer;
     position: relative;
+    z-index: 100;
 }
 
 .form-status-badge .status-dropdown-icon {
@@ -864,6 +866,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    position: relative;
 }
 
 .card-name {
@@ -887,6 +890,7 @@ body {
     width: fit-content;
     cursor: pointer;
     position: relative;
+    z-index: 100;
 }
 
 .card-status-badge .status-dropdown-icon {
