@@ -86,9 +86,9 @@ body {
 .back-button {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 8px;
-    padding: 0 40px;
+    padding: 0 20px;
     height: 60px;
     background: #e8e8e8;
     border: none;
@@ -105,9 +105,16 @@ body {
     background: #d0d0d0;
 }
 
-.back-button svg {
-    min-width: 20px;
-    min-height: 20px;
+.back-button img {
+    width: 30px;
+    height: 30px;
+    transition: transform 0.3s ease;
+    object-fit: contain;
+    display: block;
+}
+
+.sidebar.collapsed .back-button img {
+    transform: rotate(180deg);
 }
 
 .sidebar-menu {
@@ -150,13 +157,15 @@ body {
     transform: translate(-50%, -50%);
 }
 
-.menu-item svg {
+.menu-item img {
     width: 20px;
     height: 20px;
     position: absolute;
     right: 20px;
     top: 50%;
     transform: translateY(-50%);
+    object-fit: contain;
+    display: block;
 }
 
 .sidebar.collapsed .menu-item span {
@@ -266,9 +275,10 @@ body {
     opacity: 0.7;
 }
 
-.add-employee-btn svg {
+.add-employee-btn img {
     width: 16px;
     height: 16px;
+    filter: brightness(0) invert(1);
 }
 
 .search-box {
@@ -302,6 +312,7 @@ body {
     width: 16px;
     height: 16px;
     color: var(--gray);
+    filter: brightness(0) invert(1) opacity(0.5);
 }
 
 .team-name {
@@ -314,9 +325,10 @@ body {
     cursor: pointer;
 }
 
-.team-name svg {
+.team-name img {
     width: 16px;
     height: 16px;
+    filter: brightness(0) invert(1);
 }
 
 .export-btn, .import-btn {
@@ -338,9 +350,10 @@ body {
     opacity: 0.7;
 }
 
-.export-btn svg, .import-btn svg {
+.export-btn img, .import-btn img {
     width: 14px;
     height: 14px;
+    filter: brightness(0) invert(1);
 }
 
 /* Table container */
@@ -542,6 +555,11 @@ body {
     height: 20px;
     color: #1a1a1a;
     opacity: 0.5;
+    transition: transform 0.3s ease;
+}
+
+.employees-table tbody tr.selected .row-arrow {
+    transform: rotate(180deg);
 }
 
 /* Right panel (statistics or employee card) */
@@ -906,27 +924,24 @@ body {
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
-    background: white;
-    border: 1px solid var(--border-gray);
+    background: transparent;
+    border: none;
     border-radius: 4px;
     padding: 4px;
     display: flex;
     flex-direction: column;
     gap: 4px;
     z-index: 1000;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     min-width: 120px;
 }
 
 .status-option {
-    padding: 4px 8px;
-    border-radius: 4px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: opacity 0.2s;
 }
 
 .status-option:hover {
-    background: var(--bg-dark-white);
+    opacity: 0.8;
 }
 
 .card-info-row {
@@ -1085,65 +1100,76 @@ body {
 }
 
 .stats-content {
-    padding: 30px;
+    padding: 20px;
     text-align: center;
     display: flex;
     flex-direction: column;
     flex: 1;
-    background: var(--white);
+    background: #f2f2f2;
     border-radius: 0 0 8px 8px;
+    gap: 20px;
+}
+
+.stats-total-box {
+    background: #FFFFFF;
+    padding: 20px;
+    border-radius: 8px;
+    width: 95%;
+    margin: 0 auto;
+    box-sizing: border-box;
 }
 
 .stats-title {
-    font-size: 16px;
+    font-size: 12px;
     font-weight: 400;
     color: var(--black);
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .stats-count {
     font-size: 48px;
     font-weight: 700;
     color: var(--black);
-    margin-bottom: 8px;
+    margin-bottom: 4px;
+    line-height: 1;
 }
 
 .stats-label {
     font-size: 12px;
     color: var(--gray);
-    margin-bottom: 30px;
+    margin-bottom: 0;
 }
 
 .stats-breakdown {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
 
 .stat-item {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    padding: 12px;
-    background: var(--bg-white);
-    border-radius: 8px;
-}
-
-.stat-item-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .stat-count {
-    font-size: 16px;
+    font-size: 28px;
     font-weight: 700;
     color: var(--black);
+    line-height: 1;
 }
 
 .stat-label-small {
-    font-size: 13px;
-    color: #1a1a1a;
+    font-size: 11px;
+    color: var(--gray);
+    margin-bottom: 4px;
+}
+
+.stat-item .status-badge {
+    width: 100%;
+    text-align: center;
+    padding: 3px 12px;
 }
 
 /* Modal */

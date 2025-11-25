@@ -5,45 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Team Info - AIAdminka</title>
     <link rel="stylesheet" href="css/team-info.css">
-    <script src="https://unpkg.com/lucide@0.548.0/dist/umd/lucide.min.js"></script>
 </head>
 <body>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <button class="back-button" onclick="teamInfo.toggleSidebar()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                <img src="icons/arrow.svg" width="30" height="30" alt="Toggle">
             </button>
 
             <div class="sidebar-menu">
                 <div class="menu-item" onclick="window.location.href='../index.html'">
                     <span>Главная страница</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../excel-reports/index.html'">
                     <span>Excel отчеты</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Excel">
                 </div>
 
                 <div class="menu-item active">
                     <span>Team Info</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <img src="icons/team_info.svg" width="20" height="20" alt="Team Info">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../traffic-calculation/index.html'">
                     <span>Расчет трафика</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
                     <span>Документация</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../partners/index.html'">
                     <span>Партнеры</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                    <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
                 </div>
             </div>
 
@@ -70,12 +69,12 @@
             <!-- Global header (top right) -->
             <header class="global-header">
                 <button class="export-btn" onclick="teamInfo.exportJSON()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <img src="icons/export.svg" width="14" height="14" alt="Экспорт">
                     Экспорт списка
                 </button>
 
                 <button class="import-btn" onclick="teamInfo.showImportDialog()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <img src="icons/import.svg" width="14" height="14" alt="Импорт">
                     Импорт списка
                 </button>
             </header>
@@ -87,12 +86,12 @@
                     <!-- Section header -->
                     <header class="section-header">
                         <button class="add-employee-btn" onclick="teamInfo.showAddModal()">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                            <img src="icons/plus.svg" width="16" height="16" alt="Добавить">
                             Добавить сотрудника
                         </button>
 
                         <div class="search-box">
-                            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            <img class="search-icon" src="icons/serch.svg" width="16" height="16" alt="Поиск">
                             <input type="text" class="search-input" placeholder="Поиск" id="searchInput" oninput="teamInfo.filterTable()">
                         </div>
                     </header>
@@ -105,14 +104,14 @@
                             <th>
                                 <div class="sort-header" onclick="teamInfo.sortBy('status')">
                                     Статус
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M7 12h10m-7 6h4"/></svg>
+                                    <img src="icons/filter.svg" width="12" height="12" alt="Сортировка">
                                 </div>
                             </th>
                             <th>Фото</th>
                             <th>
                                 <div class="sort-header" onclick="teamInfo.sortBy('name')">
                                     Ф.И.О.
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M7 12h10m-7 6h4"/></svg>
+                                    <img src="icons/filter.svg" width="12" height="12" alt="Сортировка">
                                 </div>
                             </th>
                             <th>Должность</th>
@@ -129,7 +128,7 @@
 
                 <!-- Empty state -->
                 <div class="empty-state" id="emptyState" style="display: none;">
-                    <svg class="empty-state-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <img class="empty-state-icon" src="icons/team_info.svg" alt="Team">
                     <div class="empty-state-title">Команда пока пуста</div>
                     <div class="empty-state-text">Добавьте первого сотрудника, чтобы начать</div>
                     <button class="btn-primary" onclick="teamInfo.showAddModal()">Добавить сотрудника</button>
@@ -145,54 +144,46 @@
                     <div class="stats-team-header">
                         <div class="team-name" onclick="teamInfo.editTeamName()">
                             Vadim team
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                            <img src="icons/pen.svg" width="16" height="16" alt="Редактировать">
                         </div>
                     </div>
                 </div>
 
                 <div class="stats-content">
-                    <div class="stats-title">Количество сотрудников</div>
-                <div class="stats-count" id="totalCount">0</div>
-                <div class="stats-label">человек</div>
+                    <div class="stats-total-box">
+                        <div class="stats-title">Количество сотрудников</div>
+                        <div class="stats-count" id="totalCount">0</div>
+                        <div class="stats-label">человек</div>
+                    </div>
 
                 <div class="stats-breakdown">
                     <div class="stat-item">
-                        <div class="stat-item-left">
-                            <div class="stat-count" id="workingCount">0</div>
-                            <span class="stat-label-small">человек</span>
-                        </div>
+                        <div class="stat-count" id="workingCount">0</div>
+                        <span class="stat-label-small">человек</span>
                         <span class="status-badge green">Работает</span>
                     </div>
 
                     <div class="stat-item">
-                        <div class="stat-item-left">
-                            <div class="stat-count" id="sickCount">0</div>
-                            <span class="stat-label-small">человек</span>
-                        </div>
+                        <div class="stat-count" id="sickCount">0</div>
+                        <span class="stat-label-small">человек</span>
                         <span class="status-badge purple">Болеет</span>
                     </div>
 
                     <div class="stat-item">
-                        <div class="stat-item-left">
-                            <div class="stat-count" id="leaveCount">0</div>
-                            <span class="stat-label-small">человек</span>
-                        </div>
+                        <div class="stat-count" id="leaveCount">0</div>
+                        <span class="stat-label-small">человек</span>
                         <span class="status-badge yellow">В отпуске</span>
                     </div>
 
                     <div class="stat-item">
-                        <div class="stat-item-left">
-                            <div class="stat-count" id="tripCount">0</div>
-                            <span class="stat-label-small">человек</span>
-                        </div>
+                        <div class="stat-count" id="tripCount">0</div>
+                        <span class="stat-label-small">человек</span>
                         <span class="status-badge blue">Командировка</span>
                     </div>
 
                     <div class="stat-item">
-                        <div class="stat-item-left">
-                            <div class="stat-count" id="firedCount">0</div>
-                            <span class="stat-label-small">человек</span>
-                        </div>
+                        <div class="stat-count" id="firedCount">0</div>
+                        <span class="stat-label-small">человек</span>
                         <span class="status-badge red">Уволен</span>
                     </div>
                 </div>
@@ -214,7 +205,7 @@
                             <div class="card-position" id="cardPosition">Дизайнер</div>
                             <div class="card-status-badge" id="cardStatusBadge" onclick="teamInfo.toggleStatusDropdown()">
                                 <span class="status-badge green" id="cardStatusText">Работает</span>
-                                <svg class="status-dropdown-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                <img class="status-dropdown-icon" src="icons/arrow.svg" width="12" height="12" alt="Выбрать" style="transform: rotate(90deg);">
                             </div>
                             <div class="status-dropdown" id="cardStatusDropdown" style="display: none;">
                                 <div class="status-option" onclick="teamInfo.changeStatus('Работает')">
@@ -263,7 +254,7 @@
                         <textarea class="form-position-input" id="formPosition" placeholder="Должность" rows="1"></textarea>
                         <div class="form-status-badge" id="formStatusBadge" onclick="teamInfo.toggleFormStatusDropdown()">
                             <span class="status-badge green" id="formStatusText">Работает</span>
-                            <svg class="status-dropdown-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                            <img class="status-dropdown-icon" src="icons/arrow.svg" width="12" height="12" alt="Выбрать" style="transform: rotate(90deg);">
                         </div>
                         <div class="status-dropdown" id="formStatusDropdown" style="display: none;">
                             <div class="status-option" onclick="teamInfo.changeFormStatus('Работает')">
@@ -373,7 +364,7 @@
             <div class="modal-header">
                 <h2 class="modal-title" id="modalTitle">Добавить сотрудника</h2>
                 <button class="modal-close" onclick="teamInfo.closeEmployeeModal()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
                 </button>
             </div>
 
@@ -480,7 +471,7 @@
             <div class="modal-header">
                 <h2 class="modal-title">Импорт данных</h2>
                 <button class="modal-close" onclick="teamInfo.closeImportDialog()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
                 </button>
             </div>
 
@@ -505,7 +496,7 @@
             <div class="modal-header">
                 <h2 class="modal-title">Редактировать фото</h2>
                 <button class="modal-close" onclick="teamInfo.closeCropModal()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
                 </button>
             </div>
 
@@ -529,11 +520,5 @@
     <script src="js/storage.js"></script>
     <script src="js/export-manager.js"></script>
     <script src="js/team-info.js"></script>
-    <script>
-        // Initialize Lucide icons
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
-    </script>
 </body>
 </html>
