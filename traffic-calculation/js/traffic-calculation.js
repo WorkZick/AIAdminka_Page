@@ -2315,13 +2315,38 @@ const trafficCalc = {
                 'Очереди на вывод': partner.withdrawalQueues || 0,
                 'Зачисление вне лимитов': partner.creditsOutsideLimits || 0,
                 'Одобрение неверной суммы': partner.wrongAmountApproval || 0,
-                'Другие нарушения': partner.otherViolations || 0
+                'Другие нарушения': partner.otherViolations || 0,
+                '_description': partner.otherViolationsDescription || '' // Временное поле для комментария
             };
         });
 
         // Создаем книгу Excel
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(data);
+
+        // Убираем временное поле перед созданием листа
+        const exportData = data.map(({ _description, ...rest }) => rest);
+        const ws = XLSX.utils.json_to_sheet(exportData);
+
+        // Добавляем комментарии к ячейкам "Другие нарушения" (колонка W, индекс 22)
+        const otherViolationsCol = 22; // Колонка W (23-я колонка, индекс 22)
+
+        data.forEach((row, index) => {
+            if (row._description) {
+                const cellRef = XLSX.utils.encode_cell({ r: index + 1, c: otherViolationsCol });
+
+                // Создаем ячейку если не существует
+                if (!ws[cellRef]) {
+                    ws[cellRef] = { v: row['Другие нарушения'], t: 'n' };
+                }
+
+                // Добавляем комментарий
+                ws[cellRef].c = [{
+                    a: 'Описание нарушений',
+                    t: row._description
+                }];
+            }
+        });
+
         XLSX.utils.book_append_sheet(wb, ws, 'Детальный отчет');
 
         // Скачиваем файл
