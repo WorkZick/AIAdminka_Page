@@ -244,9 +244,18 @@
                 <div class="form-team-header">
                     <div class="form-team-name" id="formTeamName">Vadim team</div>
                 </div>
+
+                <!-- Template selector (only visible when adding new employee) -->
+                <div class="form-template-selector" id="formTemplateSelector" style="display: none;">
+                    <select class="template-select" id="templateSelect" onchange="teamInfo.handleTemplateChange()">
+                        <option value="">Шаблон</option>
+                    </select>
+                </div>
+
                 <div class="form-employee-info">
                     <input type="file" id="formAvatarInput" accept="image/*" style="display: none;" onchange="teamInfo.handleAvatarUpload(event)">
                     <div class="form-avatar" onclick="document.getElementById('formAvatarInput').click()">
+                        <img class="form-avatar-placeholder" src="icons/download_photo_placeholder.svg" alt="Загрузить фото">
                         <img id="formAvatar" src="" alt="" style="display: none;">
                     </div>
                     <div class="form-info-section">
@@ -344,12 +353,27 @@
                     </div>
                 </div>
 
-                <div class="form-footer">
-                    <div class="form-footer-buttons">
-                        <button class="form-btn" onclick="teamInfo.saveFromForm()" id="formSaveBtn">Сохранить</button>
-                        <button class="form-btn" onclick="teamInfo.closeForm()">Отменить</button>
+                <!-- Template fields container (only visible in template mode) -->
+                <div class="template-fields-container" id="templateFieldsContainer" style="display: none;">
+                    <div class="template-fields-list" id="templateFieldsList">
+                        <!-- Dynamic template fields will be added here -->
                     </div>
+                    <button class="btn-add-template-field" id="btnAddTemplateField" onclick="teamInfo.addTemplateField()">
+                        <img src="icons/plus.svg" width="16" height="16" alt="Добавить">
+                        Добавить поле
+                    </button>
+                </div>
+
+                <div class="form-footer">
+                    <button class="form-btn-save" onclick="teamInfo.saveFromForm()" id="formSaveBtn">
+                        <img src="icons/done.svg" width="20" height="20" alt="Сохранить">
+                        <span id="formSaveBtnText">Добавить сотрудника</span>
+                    </button>
                     <div class="form-divider"></div>
+                    <button class="form-btn-cancel" onclick="teamInfo.closeForm()">
+                        <img src="icons/cross.svg" width="20" height="20" alt="Отменить">
+                        Отменить
+                    </button>
                     <button class="btn-delete" onclick="teamInfo.deleteFromForm()" id="formDeleteBtn" style="display: none;">Удалить</button>
                 </div>
             </div>
