@@ -366,12 +366,12 @@
                 </div>
             </div>
 
-            <!-- Шаг 6: Нарушения (обязательный) -->
+            <!-- Шаг 6: Нарушения -->
             <div id="step6" class="analytics-step">
                 <div class="section">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <div>
-                            <h2 style="margin: 0 0 4px 0;">Шаг 6: Нарушения <span class="required-badge">Обязательный</span></h2>
+                            <h2 style="margin: 0 0 4px 0;">Шаг 6: Нарушения</h2>
                             <p class="step-description" style="margin: 0;">Выберите субагента и укажите ручные данные по нарушениям</p>
                         </div>
                         <button class="btn btn-danger" onclick="trafficCalc.resetAllViolationsData()" title="Сбросить данные для всех субагентов">
@@ -495,6 +495,7 @@
                                                             <i data-lucide="plus"></i>
                                                         </button>
                                                     </div>
+                                                    <textarea id="otherViolationsDescription" placeholder="Опишите нарушения..." rows="2" style="width: 100%; margin-top: 8px; resize: vertical;" onchange="trafficCalc.saveCurrentManualDataStep6()"></textarea>
                                                 </td>
                                             </tr>
                                         </tbody>

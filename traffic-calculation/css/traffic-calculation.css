@@ -1081,9 +1081,9 @@
 
 /* Калькулятор трафика */
 .modal-xlarge .modal-dialog-xlarge {
-    max-width: 1200px;
-    width: 50%;
-    min-width: 900px;
+    max-width: 1400px;
+    width: 95%;
+    min-width: 800px;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
@@ -1105,7 +1105,7 @@
 .traffic-settings-form {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 6px;
 }
 
 .traffic-param-section {
@@ -1113,10 +1113,11 @@
     border-radius: 2px;
     padding: 6px;
     background-color: #f5f4f0;
+    overflow: hidden;
 }
 
 .traffic-param-header {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     margin-bottom: 4px;
     color: #0054e3;
@@ -1125,19 +1126,29 @@
     gap: 3px;
     border-bottom: 1px solid #d4d0c8;
     padding-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.traffic-param-header i {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
 }
 
 .traffic-param-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 5px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
 }
 
 .traffic-level-card {
     border: 1px solid #7f9db9;
     border-radius: 2px;
-    padding: 5px;
+    padding: 4px;
     background-color: white;
+    min-width: 0;
 }
 
 .traffic-level-card.good {
@@ -1158,8 +1169,8 @@
 
 .traffic-level-title {
     font-weight: 700;
-    margin-bottom: 3px;
-    font-size: 10px;
+    margin-bottom: 2px;
+    font-size: 9px;
     text-transform: uppercase;
     line-height: 1;
 }
@@ -1182,49 +1193,55 @@
 
 .traffic-range-group {
     display: flex;
-    gap: 3px;
+    gap: 2px;
     align-items: center;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
 }
 
 .traffic-range-group label {
-    font-size: 10px;
+    font-size: 9px;
     color: #000;
     margin-bottom: 0;
-    width: 24px;
+    width: 20px;
     font-weight: 600;
+    flex-shrink: 0;
 }
 
 .traffic-range-group input[type="number"] {
     flex: 1;
-    padding: 2px 4px;
-    font-size: 11px;
+    padding: 2px 3px;
+    font-size: 10px;
     border: 1px solid #7f9db9;
     border-radius: 2px;
     font-family: 'Tahoma', sans-serif;
+    min-width: 0;
+    width: 100%;
 }
 
 .traffic-points-group {
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 2px;
 }
 
 .traffic-points-group label {
-    font-size: 10px;
+    font-size: 9px;
     color: #000;
     margin-bottom: 0;
     font-weight: 600;
+    flex-shrink: 0;
 }
 
 .traffic-points-group input[type="number"] {
     flex: 1;
-    padding: 2px 4px;
-    font-size: 11px;
+    padding: 2px 3px;
+    font-size: 10px;
     border: 1px solid #7f9db9;
     border-radius: 2px;
     font-weight: 700;
     font-family: 'Tahoma', sans-serif;
+    min-width: 0;
+    width: 100%;
 }
 
 /* Футер модального окна калькулятора */
@@ -1294,4 +1311,124 @@
     font-size: 14px;
     font-weight: 700;
     text-align: center;
+}
+
+/* Ячейка с tooltip для других нарушений */
+.violations-cell {
+    position: relative;
+    cursor: default;
+}
+
+.violations-cell[data-tooltip] {
+    cursor: help;
+}
+
+.violations-cell[data-tooltip]:hover {
+    background-color: #fef3c7;
+}
+
+.violations-cell[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: pre-wrap;
+    max-width: 300px;
+    min-width: 150px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+    text-align: left;
+    line-height: 1.4;
+}
+
+.violations-cell[data-tooltip]::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1f2937;
+    z-index: 1001;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    margin-bottom: -12px;
+}
+
+.violations-cell[data-tooltip]:hover::after,
+.violations-cell[data-tooltip]:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Настройки множителя для нарушений */
+.traffic-multiplier-settings {
+    padding: 4px;
+}
+
+.traffic-multiplier-card {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border: 1px solid #f59e0b;
+    border-radius: 4px;
+    padding: 8px;
+}
+
+.traffic-multiplier-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.traffic-multiplier-info .multiplier-label {
+    font-weight: 600;
+    color: #92400e;
+    font-size: 10px;
+}
+
+.traffic-multiplier-info input {
+    width: 60px;
+    padding: 3px 6px;
+    border: 1px solid #d97706;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.multiplier-example {
+    font-size: 9px;
+    color: #78350f;
+    font-style: italic;
+}
+
+/* Заголовок метода в таблице результатов */
+.method-header-row {
+    background: linear-gradient(135deg, #0054e3, #3b82f6) !important;
+}
+
+.method-header-row td {
+    color: white !important;
+    font-size: 12px;
+    padding: 8px 12px !important;
+    border: none !important;
+}
+
+.method-header-row .method-summary {
+    font-weight: normal;
+    font-size: 11px;
+    opacity: 0.9;
+    margin-left: 8px;
 }

@@ -75,6 +75,11 @@ const trafficCalc = {
                     bad: { min: 40, max: 59, points: -5 },
                     terrible: { min: 0, max: 39, points: -10 }
                 };
+            } else if (param.type === 'multiplier') {
+                // Для множителя (баллы за каждое нарушение)
+                settings[param.key] = {
+                    pointsPerItem: -20
+                };
             } else {
                 // Для числовых полей (чем меньше = лучше)
                 settings[param.key] = {
@@ -252,6 +257,28 @@ const trafficCalc = {
                         </div>
                     </div>
                 `;
+            } else if (param.type === 'multiplier') {
+                // Для множителя (баллы за каждое нарушение)
+                return `
+                    <div class="traffic-param-section">
+                        <div class="traffic-param-header">
+                            <i data-lucide="alert-triangle"></i>
+                            ${this.escapeHtml(param.name)}
+                        </div>
+                        <div class="traffic-multiplier-settings">
+                            <div class="traffic-multiplier-card">
+                                <div class="traffic-multiplier-info">
+                                    <span class="multiplier-label">Баллы за каждое нарушение:</span>
+                                    <input type="number" value="${settings.pointsPerItem || -20}"
+                                           onchange="trafficCalc.updateTrafficSettingMultiplier('${param.key}', 'pointsPerItem', parseInt(this.value))">
+                                </div>
+                                <div class="multiplier-example">
+                                    Пример: 5 нарушений = <span id="${param.key}Example">${(settings.pointsPerItem || -20) * 5}</span> баллов
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
             } else {
                 // Для числовых и процентных полей
                 return `
@@ -352,6 +379,19 @@ const trafficCalc = {
         this.saveTrafficSettings();
     },
 
+    // Обновить настройку множителя
+    updateTrafficSettingMultiplier(paramKey, field, value) {
+        if (!this.trafficSettings[paramKey]) return;
+        this.trafficSettings[paramKey][field] = value;
+        this.saveTrafficSettings();
+
+        // Обновляем пример
+        const exampleEl = document.getElementById(paramKey + 'Example');
+        if (exampleEl) {
+            exampleEl.textContent = value * 5;
+        }
+    },
+
     // Рассчитать трафик
     calculateTraffic() {
         if (!this.currentReportData || this.currentReportData.length === 0) {
@@ -378,59 +418,71 @@ const trafficCalc = {
         this.showTrafficResults();
     },
 
-    // Рассчитать процент трафика для каждого партнера
+    // Рассчитать процент трафика для каждого партнера (внутри каждого метода отдельно)
     calculateTrafficPercentages() {
         if (!this.trafficResults || this.trafficResults.length === 0) return;
 
-        // Считаем общую сумму баллов
-        const totalScore = this.trafficResults.reduce((sum, result) => sum + result.scores.total, 0);
-
-        if (totalScore === 0) {
-            // Если все баллы 0, делим равномерно
-            const equalPercent = Math.floor(100 / this.trafficResults.length);
-            this.trafficResults.forEach((result, index) => {
-                result.trafficPercent = index === 0 ? 100 - (equalPercent * (this.trafficResults.length - 1)) : equalPercent;
-            });
-            return;
-        }
-
-        // Рассчитываем процент для каждого и округляем вниз
-        let results = this.trafficResults.map(result => {
-            const exactPercent = (result.scores.total / totalScore) * 100;
-            const floorPercent = Math.floor(exactPercent);
-            return {
-                result: result,
-                exactPercent: exactPercent,
-                floorPercent: floorPercent,
-                remainder: exactPercent - floorPercent
-            };
-        });
-
-        // Присваиваем округленные проценты
-        results.forEach(item => {
-            item.result.trafficPercent = item.floorPercent;
-        });
-
-        // Вычисляем остаток
-        const currentTotal = results.reduce((sum, item) => sum + item.floorPercent, 0);
-        let deficit = 100 - currentTotal;
-
-        // Распределяем остаток между субагентами с наибольшими остатками
-        // Приоритет отдаем субагентам с высокими баллами
-        if (deficit > 0) {
-            results.sort((a, b) => {
-                // Сначала сортируем по остатку (убывание)
-                if (Math.abs(b.remainder - a.remainder) > 0.0001) {
-                    return b.remainder - a.remainder;
-                }
-                // Если остатки равны, сортируем по общим баллам (убывание)
-                return b.result.scores.total - a.result.scores.total;
-            });
-
-            for (let i = 0; i < deficit && i < results.length; i++) {
-                results[i].result.trafficPercent += 1;
+        // Группируем партнеров по методу
+        const methodGroups = {};
+        this.trafficResults.forEach(result => {
+            const method = result.method;
+            if (!methodGroups[method]) {
+                methodGroups[method] = [];
             }
-        }
+            methodGroups[method].push(result);
+        });
+
+        // Рассчитываем проценты для каждого метода отдельно (100% на каждый метод)
+        Object.keys(methodGroups).forEach(method => {
+            const groupResults = methodGroups[method];
+
+            // Считаем сумму баллов внутри метода
+            const totalScore = groupResults.reduce((sum, result) => sum + result.scores.total, 0);
+
+            if (totalScore === 0) {
+                // Если все баллы 0, делим равномерно внутри метода
+                const equalPercent = Math.floor(100 / groupResults.length);
+                groupResults.forEach((result, index) => {
+                    result.trafficPercent = index === 0 ? 100 - (equalPercent * (groupResults.length - 1)) : equalPercent;
+                });
+                return;
+            }
+
+            // Рассчитываем процент для каждого и округляем вниз
+            let results = groupResults.map(result => {
+                const exactPercent = (result.scores.total / totalScore) * 100;
+                const floorPercent = Math.floor(exactPercent);
+                return {
+                    result: result,
+                    exactPercent: exactPercent,
+                    floorPercent: floorPercent,
+                    remainder: exactPercent - floorPercent
+                };
+            });
+
+            // Присваиваем округленные проценты
+            results.forEach(item => {
+                item.result.trafficPercent = item.floorPercent;
+            });
+
+            // Вычисляем остаток до 100%
+            const currentTotal = results.reduce((sum, item) => sum + item.floorPercent, 0);
+            let deficit = 100 - currentTotal;
+
+            // Распределяем остаток между субагентами с наибольшими остатками
+            if (deficit > 0) {
+                results.sort((a, b) => {
+                    if (Math.abs(b.remainder - a.remainder) > 0.0001) {
+                        return b.remainder - a.remainder;
+                    }
+                    return b.result.scores.total - a.result.scores.total;
+                });
+
+                for (let i = 0; i < deficit && i < results.length; i++) {
+                    results[i].result.trafficPercent += 1;
+                }
+            }
+        });
     },
 
     // Оценить одного партнера
@@ -469,10 +521,22 @@ const trafficCalc = {
                 } else {
                     scores.terrible += paramSettings.terrible.points;
                 }
+            } else if (param.type === 'multiplier') {
+                // Для множителя - баллы за каждое нарушение
+                const numValue = parseInt(value) || 0;
+                const pointsPerItem = paramSettings.pointsPerItem || -20;
+                const totalPoints = numValue * pointsPerItem;
+
+                // Добавляем в bad если отрицательные, в good если положительные
+                if (totalPoints < 0) {
+                    scores.bad += totalPoints;
+                } else if (totalPoints > 0) {
+                    scores.good += totalPoints;
+                }
             } else {
                 // Для числовых и процентных полей проверяем диапазон
                 const numValue = parseFloat(value) || 0;
-                
+
                 if (numValue >= paramSettings.good.min && numValue <= paramSettings.good.max) {
                     scores.good += paramSettings.good.points;
                 } else if (numValue >= paramSettings.normal.min && numValue <= paramSettings.normal.max) {
@@ -506,27 +570,64 @@ const trafficCalc = {
         const tbody = document.getElementById('trafficResultsTableBody');
         if (!tbody || !this.trafficResults) return;
 
-        tbody.innerHTML = this.trafficResults.map(result => {
-            const getScoreClass = (score) => {
-                if (score > 0) return 'score-positive';
-                if (score < 0) return 'score-negative';
-                return 'score-zero';
-            };
+        const getScoreClass = (score) => {
+            if (score > 0) return 'score-positive';
+            if (score < 0) return 'score-negative';
+            return 'score-zero';
+        };
 
-            return `
-                <tr>
-                    <td>${this.escapeHtml(result.method)}</td>
-                    <td>${this.escapeHtml(result.subagent)}</td>
-                    <td>${this.escapeHtml(result.subagentId)}</td>
-                    <td class="${getScoreClass(result.scores.good)}">${result.scores.good}</td>
-                    <td class="${getScoreClass(result.scores.normal)}">${result.scores.normal}</td>
-                    <td class="${getScoreClass(result.scores.bad)}">${result.scores.bad}</td>
-                    <td class="${getScoreClass(result.scores.terrible)}">${result.scores.terrible}</td>
-                    <td class="${getScoreClass(result.scores.total)}"><strong>${result.scores.total}</strong></td>
-                    <td class="traffic-percent"><strong>${result.trafficPercent}%</strong></td>
+        // Группируем результаты по методу
+        const methodGroups = {};
+        this.trafficResults.forEach(result => {
+            const method = result.method;
+            if (!methodGroups[method]) {
+                methodGroups[method] = [];
+            }
+            methodGroups[method].push(result);
+        });
+
+        // Сортируем партнеров внутри каждого метода по проценту (убывание)
+        Object.keys(methodGroups).forEach(method => {
+            methodGroups[method].sort((a, b) => b.trafficPercent - a.trafficPercent);
+        });
+
+        // Формируем HTML с группировкой по методам
+        let html = '';
+        const methods = Object.keys(methodGroups).sort();
+
+        methods.forEach((method, methodIndex) => {
+            const groupResults = methodGroups[method];
+            const totalPercent = groupResults.reduce((sum, r) => sum + r.trafficPercent, 0);
+
+            // Заголовок метода
+            html += `
+                <tr class="method-header-row">
+                    <td colspan="9">
+                        <strong>${this.escapeHtml(method)}</strong>
+                        <span class="method-summary">(${groupResults.length} субагентов, всего ${totalPercent}%)</span>
+                    </td>
                 </tr>
             `;
-        }).join('');
+
+            // Партнеры внутри метода
+            groupResults.forEach(result => {
+                html += `
+                    <tr>
+                        <td>${this.escapeHtml(result.method)}</td>
+                        <td>${this.escapeHtml(result.subagent)}</td>
+                        <td>${this.escapeHtml(result.subagentId)}</td>
+                        <td class="${getScoreClass(result.scores.good)}">${result.scores.good}</td>
+                        <td class="${getScoreClass(result.scores.normal)}">${result.scores.normal}</td>
+                        <td class="${getScoreClass(result.scores.bad)}">${result.scores.bad}</td>
+                        <td class="${getScoreClass(result.scores.terrible)}">${result.scores.terrible}</td>
+                        <td class="${getScoreClass(result.scores.total)}"><strong>${result.scores.total}</strong></td>
+                        <td class="traffic-percent"><strong>${result.trafficPercent}%</strong></td>
+                    </tr>
+                `;
+            });
+        });
+
+        tbody.innerHTML = html;
 
         // Открываем модальное окно результатов
         document.getElementById('trafficResultsModal').classList.add('show');
@@ -594,7 +695,7 @@ const trafficCalc = {
         { key: 'withdrawalQueues', name: 'Очереди на вывод', type: 'number' },
         { key: 'creditsOutsideLimits', name: 'Зачисление вне лимитов', type: 'number' },
         { key: 'wrongAmountApproval', name: 'Одобрение неверной суммы', type: 'number' },
-        { key: 'otherViolations', name: 'Другие нарушения', type: 'number' }
+        { key: 'otherViolations', name: 'Другие нарушения', type: 'multiplier' }
     ],
 
     // Инициализация
@@ -1683,6 +1784,7 @@ const trafficCalc = {
         document.getElementById('creditsOutsideLimits').value = partner.creditsOutsideLimits || 0;
         document.getElementById('wrongAmountApproval').value = partner.wrongAmountApproval || 0;
         document.getElementById('otherViolations').value = partner.otherViolations || 0;
+        document.getElementById('otherViolationsDescription').value = partner.otherViolationsDescription || '';
 
         // Обновляем иконки
         if (typeof lucide !== 'undefined') {
@@ -1706,6 +1808,7 @@ const trafficCalc = {
         partner.creditsOutsideLimits = parseInt(document.getElementById('creditsOutsideLimits').value || 0);
         partner.wrongAmountApproval = parseInt(document.getElementById('wrongAmountApproval').value || 0);
         partner.otherViolations = parseInt(document.getElementById('otherViolations').value || 0);
+        partner.otherViolationsDescription = document.getElementById('otherViolationsDescription').value || '';
 
         storage.savePartners(allPartners);
 
@@ -1762,6 +1865,7 @@ const trafficCalc = {
         document.getElementById('creditsOutsideLimits').value = 0;
         document.getElementById('wrongAmountApproval').value = 0;
         document.getElementById('otherViolations').value = 0;
+        document.getElementById('otherViolationsDescription').value = '';
 
         // Сохраняем изменения
         this.saveCurrentManualDataStep6();
@@ -1790,6 +1894,7 @@ const trafficCalc = {
             partner.creditsOutsideLimits = 0;
             partner.wrongAmountApproval = 0;
             partner.otherViolations = 0;
+            partner.otherViolationsDescription = '';
         });
 
         storage.savePartners(allPartners);
@@ -1803,6 +1908,7 @@ const trafficCalc = {
             document.getElementById('creditsOutsideLimits').value = 0;
             document.getElementById('wrongAmountApproval').value = 0;
             document.getElementById('otherViolations').value = 0;
+            document.getElementById('otherViolationsDescription').value = '';
         }
 
         // Проверяем заполнение данных
@@ -2156,7 +2262,7 @@ const trafficCalc = {
                     <td>${partner.withdrawalQueues || 0}</td>
                     <td>${partner.creditsOutsideLimits || 0}</td>
                     <td>${partner.wrongAmountApproval || 0}</td>
-                    <td>${partner.otherViolations || 0}</td>
+                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>${partner.otherViolations || 0}${partner.otherViolationsDescription ? ' <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;opacity:0.6;"></i>' : ''}</td>
                 </tr>
             `;
         }).join('');
@@ -2260,7 +2366,7 @@ const trafficCalc = {
                     <td>${partner.withdrawalQueues || 0}</td>
                     <td>${partner.creditsOutsideLimits || 0}</td>
                     <td>${partner.wrongAmountApproval || 0}</td>
-                    <td>${partner.otherViolations || 0}</td>
+                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>${partner.otherViolations || 0}${partner.otherViolationsDescription ? ' <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;opacity:0.6;"></i>' : ''}</td>
                 </tr>
             `;
         }).join('');
@@ -2501,7 +2607,7 @@ const trafficCalc = {
                 storage.savePartners(processedPartners);
 
                 // Обновляем интерфейс
-                this.loadPartners();
+                this.renderPartners();
                 this.loadMethods();
                 this.closeImportModal();
 
