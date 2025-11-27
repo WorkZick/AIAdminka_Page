@@ -1,6 +1,30 @@
 {
-  "version": "2.4.1",
+  "version": "2.4.2",
   "updates": [
+    {
+      "version": "2.4.2",
+      "date": "2025-11-28",
+      "title": "Локальные иконки вместо Lucide CDN",
+      "changes": [
+        {
+          "category": "Изменено",
+          "items": [
+            "Полный переход с внешней библиотеки Lucide (unpkg.com) на локальные SVG иконки",
+            "Создана папка shared/icons/ с 32 SVG иконками",
+            "Создан shared/icons.js - локальная система иконок с API совместимым с Lucide",
+            "Удалены все внешние ссылки на unpkg.com из HTML файлов",
+            "Обновлена CSP (Content Security Policy) - убран unpkg.com из script-src"
+          ]
+        },
+        {
+          "category": "Исправлено",
+          "items": [
+            "Исправлена ошибка CSP: Refused to connect to unpkg.com/lucide",
+            "Проект теперь полностью автономен - не требует внешних CDN для иконок"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.4.1",
       "date": "2025-11-28",

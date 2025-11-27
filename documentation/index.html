@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://accounts.google.com; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://accounts.google.com; frame-ancestors 'self'">
     <title>Документация - Windows XP</title>
     <link rel="stylesheet" href="../css/xp-module.css">
     <link rel="stylesheet" href="css/documentation.css">
-    <script src="https://unpkg.com/lucide@0.548.0/dist/umd/lucide.min.js"></script>
+    <script src="../shared/icons.js"></script>
 </head>
 <body>
     <div class="container">
@@ -39,6 +39,7 @@
                     <li><a href="#sync">6. Синхронизация</a></li>
                     <li><a href="#desktop">7. Рабочий стол</a></li>
                     <li><a href="#troubleshooting">8. Проблемы</a></li>
+                    <li><a href="#architecture">9. Архитектура</a></li>
                 </ul>
             </div>
 
@@ -666,6 +667,49 @@
                     <li>JavaScript включён</li>
                     <li>LocalStorage: 50+ МБ свободно</li>
                     <li>Для больших файлов: 4+ ГБ RAM</li>
+                </ul>
+            </section>
+
+            <!-- 9. Архитектура -->
+            <section class="doc-section" id="architecture">
+                <h2><i data-lucide="settings"></i> 9. Архитектура</h2>
+
+                <p>Проект полностью автономен и не требует внешних зависимостей. Все ресурсы хранятся локально.</p>
+
+                <h3>Структура папки shared/:</h3>
+                <ul>
+                    <li><strong>shared/storage.js</strong> — единый модуль для работы с localStorage</li>
+                    <li><strong>shared/utils.js</strong> — библиотека утилит (escapeHtml, formatDate, copyToClipboard и др.)</li>
+                    <li><strong>shared/icons.js</strong> — локальная система иконок (замена Lucide CDN)</li>
+                    <li><strong>shared/icons/</strong> — папка с 32 SVG иконками</li>
+                </ul>
+
+                <h3>Система иконок (v2.4.2):</h3>
+                <p>Проект использует локальные SVG иконки вместо внешней библиотеки Lucide:</p>
+                <ul>
+                    <li><strong>LocalIcons.createIcons()</strong> — заменяет все &lt;i data-lucide="name"&gt; на SVG</li>
+                    <li><strong>Автозагрузка:</strong> иконки загружаются автоматически при DOMContentLoaded</li>
+                    <li><strong>Кэширование:</strong> загруженные иконки кэшируются для производительности</li>
+                    <li><strong>Совместимость:</strong> API совместим с Lucide (window.lucide.createIcons)</li>
+                </ul>
+
+                <h3>Доступные иконки:</h3>
+                <p>alert-triangle, arrow-left, arrow-right, bar-chart, book-open, calculator, check, check-square, chevron-down, cloud, cloud-sync, download, edit, file-plus, file-spreadsheet, file-text, filter, folder-open, git-branch, grid-3x3, handshake, hash, help-circle, info, layout-grid, list, lock, menu, minus, mouse-pointer, play, plus, rotate-ccw, settings, trash-2, trending-up, type, unlock, upload, users, volume-2, x</p>
+
+                <h3>Добавление новой иконки:</h3>
+                <ol>
+                    <li>Создайте SVG файл в shared/icons/ (например: my-icon.svg)</li>
+                    <li>Формат SVG: width="24" height="24" viewBox="0 0 24 24" stroke="currentColor"</li>
+                    <li>Используйте в HTML: &lt;i data-lucide="my-icon"&gt;&lt;/i&gt;</li>
+                </ol>
+
+                <h3>Безопасность (CSP):</h3>
+                <p>Все HTML файлы содержат Content-Security-Policy заголовки:</p>
+                <ul>
+                    <li><strong>script-src 'self':</strong> только локальные скрипты</li>
+                    <li><strong>style-src 'self' 'unsafe-inline':</strong> локальные стили + inline</li>
+                    <li><strong>connect-src 'self':</strong> только локальные запросы + Google API</li>
+                    <li><strong>frame-ancestors 'self':</strong> защита от clickjacking</li>
                 </ul>
             </section>
         </div>
