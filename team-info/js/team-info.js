@@ -1931,9 +1931,4 @@ document.getElementById('cropModal').addEventListener('click', (e) => {
     }
 });
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    teamInfo.init();
-});
-
 console.log('✅ Team Info script loaded');
