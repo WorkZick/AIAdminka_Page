@@ -20,7 +20,7 @@
                 <h1><i data-lucide="book-open"></i> Документация SimpleAIAdminka</h1>
                 <p class="doc-subtitle">Полное руководство по использованию модулей</p>
                 <div class="doc-meta">
-                    <span>Версия: 2.3.0</span>
+                    <span>Версия: 2.4.0</span>
                     <span>•</span>
                     <span id="currentDate"></span>
                 </div>
@@ -35,8 +35,9 @@
                     <li><a href="#traffic-calc">3. Расчет трафика</a></li>
                     <li><a href="#excel-reports">4. Excel отчёты</a></li>
                     <li><a href="#partners">5. Партнеры</a></li>
-                    <li><a href="#desktop">6. Рабочий стол</a></li>
-                    <li><a href="#troubleshooting">7. Проблемы</a></li>
+                    <li><a href="#sync">6. Синхронизация</a></li>
+                    <li><a href="#desktop">7. Рабочий стол</a></li>
+                    <li><a href="#troubleshooting">8. Проблемы</a></li>
                 </ul>
             </div>
 
@@ -52,6 +53,7 @@
                     <li><strong>Расчет трафика</strong> — управление партнерами и аналитика</li>
                     <li><strong>Excel отчёты</strong> — обработка файлов по шаблонам</li>
                     <li><strong>Партнеры</strong> — управление информацией о партнерах</li>
+                    <li><strong>Синхронизация</strong> — облачное хранение через Google Sheets (NEW v2.4.0)</li>
                     <li><strong>Рабочий стол</strong> — drag & drop иконок, сохранение позиций</li>
                     <li><strong>Документация</strong> — справочное руководство</li>
                 </ul>
@@ -484,9 +486,82 @@
                 </ul>
             </section>
 
-            <!-- 6. Рабочий стол -->
+            <!-- 6. Синхронизация -->
+            <section class="doc-section" id="sync">
+                <h2><i data-lucide="cloud"></i> 6. Синхронизация (NEW v2.4.0)</h2>
+
+                <p><strong>Облачная синхронизация данных</strong> через Google Sheets с системой контроля доступа. Позволяет обмениваться данными между пользователями.</p>
+
+                <h3>Доступ к проекту:</h3>
+                <ul>
+                    <li><strong>GitHub Pages:</strong> <a href="https://workzick.github.io/AIAdminka_Page/" target="_blank">https://workzick.github.io/AIAdminka_Page/</a></li>
+                    <li><strong>Требуется:</strong> Google аккаунт для авторизации</li>
+                </ul>
+
+                <h3>Авторизация:</h3>
+                <ul>
+                    <li><strong>Войти через Google:</strong> OAuth авторизация с автоматическим получением email и имени</li>
+                    <li><strong>Запросить доступ:</strong> Отправка запроса администратору для новых пользователей</li>
+                    <li><strong>Проверить доступ:</strong> Проверка статуса запроса (защита от спама - 10 сек)</li>
+                    <li><strong>Выйти:</strong> Выход из аккаунта с очисткой данных сессии</li>
+                </ul>
+
+                <h3>Статусы подключения:</h3>
+                <ul>
+                    <li><strong>Не авторизован:</strong> Серый статус - требуется вход через Google</li>
+                    <li><strong>Ожидание:</strong> Жёлтый статус - запрос отправлен, ожидает одобрения</li>
+                    <li><strong>Подключено:</strong> Зелёный статус - полный доступ к функционалу</li>
+                </ul>
+
+                <h3>Экспорт данных:</h3>
+                <ul>
+                    <li><strong>Экспорт в облако:</strong> Сохранение локальных данных в Google Sheets</li>
+                    <li><strong>Данные:</strong> Название проекта, версия, автор, заметки</li>
+                    <li><strong>Автоматическое обновление:</strong> Данные перезаписываются при повторном экспорте</li>
+                </ul>
+
+                <h3>Импорт данных:</h3>
+                <ul>
+                    <li><strong>Выбор пользователя:</strong> Список доступных пользователей для импорта</li>
+                    <li><strong>Права доступа:</strong> Видны только данные тех, кто разрешил вам доступ</li>
+                    <li><strong>Предпросмотр:</strong> Просмотр данных перед импортом</li>
+                </ul>
+
+                <h3>Настройки доступа:</h3>
+                <ul>
+                    <li><strong>Кому видны данные:</strong> Выбор пользователей, которые могут импортировать ваши данные</li>
+                    <li><strong>Публичный доступ:</strong> Возможность сделать данные доступными всем</li>
+                    <li><strong>Приватный доступ:</strong> Ограничение доступа выбранным пользователям</li>
+                </ul>
+
+                <h3>Журнал операций:</h3>
+                <ul>
+                    <li><strong>Логирование:</strong> Запись всех действий с временными метками</li>
+                    <li><strong>Типы записей:</strong> Информация, успех, ошибка</li>
+                    <li><strong>Сохранение:</strong> Логи сохраняются в localStorage</li>
+                    <li><strong>Очистка:</strong> Возможность очистить журнал</li>
+                </ul>
+
+                <h3>Бэкенд (Google Apps Script):</h3>
+                <ul>
+                    <li><strong>Лист 'Approved':</strong> Список одобренных пользователей с их Script URL</li>
+                    <li><strong>Лист 'Requests':</strong> Запросы на доступ от новых пользователей</li>
+                    <li><strong>Лист 'Data':</strong> Хранение данных пользователей</li>
+                    <li><strong>Лист 'Access':</strong> Матрица прав доступа между пользователями</li>
+                </ul>
+
+                <h3>Безопасность:</h3>
+                <ul>
+                    <li><strong>OAuth 2.0:</strong> Безопасная авторизация через Google</li>
+                    <li><strong>Токен сессии:</strong> Автоматическое истечение через 1 час</li>
+                    <li><strong>Контроль доступа:</strong> Только одобренные пользователи имеют доступ</li>
+                    <li><strong>Защита от спама:</strong> Ограничение частоты запросов</li>
+                </ul>
+            </section>
+
+            <!-- 7. Рабочий стол -->
             <section class="doc-section" id="desktop">
-                <h2><i data-lucide="layout-grid"></i> 6. Рабочий стол</h2>
+                <h2><i data-lucide="layout-grid"></i> 7. Рабочий стол</h2>
 
                 <p>Главная страница с иконками модулей. Интерфейс Windows XP с функцией drag & drop.</p>
 
@@ -525,9 +600,9 @@
                 </ul>
             </section>
 
-            <!-- 7. Решение проблем -->
+            <!-- 8. Решение проблем -->
             <section class="doc-section" id="troubleshooting">
-                <h2><i data-lucide="help-circle"></i> 7. Решение проблем</h2>
+                <h2><i data-lucide="help-circle"></i> 8. Решение проблем</h2>
                 
                 <h3>Типичные проблемы:</h3>
                 
