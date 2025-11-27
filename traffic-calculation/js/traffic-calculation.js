@@ -12,6 +12,13 @@ const trafficCalc = {
         percent: false
     },
 
+    // SIDEBAR
+    toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('collapsed');
+        localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+    },
+
     // КАЛЬКУЛЯТОР ТРАФИКА
 
     // Открыть калькулятор трафика
@@ -29,11 +36,6 @@ const trafficCalc = {
         
         // Открываем модальное окно
         document.getElementById('trafficCalculatorModal').classList.add('show');
-        
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Закрыть калькулятор трафика
@@ -163,11 +165,6 @@ const trafficCalc = {
                     // Перерисовываем форму с новыми настройками
                     this.renderTrafficSettings();
 
-                    // Обновляем иконки
-                    if (typeof lucide !== 'undefined') {
-                        lucide.createIcons();
-                    }
-
                     alert('Настройки успешно импортированы!');
                 } catch (error) {
                     alert(`Ошибка при импорте настроек: ${error.message}`);
@@ -198,7 +195,7 @@ const trafficCalc = {
                 return `
                     <div class="traffic-param-section">
                         <div class="traffic-param-header">
-                            <i data-lucide="type"></i>
+                            <img src="icons/filter.svg" alt="" style="width: 14px; height: 14px;">
                             ${this.escapeHtml(param.name)}
                         </div>
                         <div class="traffic-param-grid">
@@ -262,7 +259,7 @@ const trafficCalc = {
                 return `
                     <div class="traffic-param-section">
                         <div class="traffic-param-header">
-                            <i data-lucide="alert-triangle"></i>
+                            <img src="icons/cross.svg" alt="" style="width: 14px; height: 14px;">
                             ${this.escapeHtml(param.name)}
                         </div>
                         <div class="traffic-multiplier-settings">
@@ -284,7 +281,7 @@ const trafficCalc = {
                 return `
                     <div class="traffic-param-section">
                         <div class="traffic-param-header">
-                            <i data-lucide="hash"></i>
+                            <img src="icons/filter.svg" alt="" style="width: 14px; height: 14px;">
                             ${this.escapeHtml(param.name)}
                         </div>
                         <div class="traffic-param-grid">
@@ -366,10 +363,6 @@ const trafficCalc = {
             }
         }).join('');
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Обновить настройку
@@ -632,10 +625,6 @@ const trafficCalc = {
         // Открываем модальное окно результатов
         document.getElementById('trafficResultsModal').classList.add('show');
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Закрыть результаты
@@ -752,10 +741,6 @@ const trafficCalc = {
             document.getElementById('reportTab').classList.add('active');
         }
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Загрузка методов
@@ -850,21 +835,16 @@ const trafficCalc = {
                     <td>
                         <div class="action-buttons">
                             <button class="action-btn" onclick="trafficCalc.editPartner('${partner.id}')" title="Редактировать">
-                                <i data-lucide="edit"></i> Изменить
+                                <img src="icons/pen.svg" alt="" style="width: 12px; height: 12px;"> Изменить
                             </button>
                             <button class="action-btn delete" onclick="trafficCalc.deletePartner('${partner.id}')" title="Удалить">
-                                <i data-lucide="trash-2"></i> Удалить
+                                <img src="icons/cross.svg" alt="" style="width: 12px; height: 12px;"> Удалить
                             </button>
                         </div>
                     </td>
                 </tr>
             `;
         }).join('');
-
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Фильтрация партнеров
@@ -888,10 +868,6 @@ const trafficCalc = {
         document.getElementById('editStatusSelect').value = partner.status;
 
         document.getElementById('editModal').classList.add('show');
-
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Сохранение изменений
@@ -942,10 +918,6 @@ const trafficCalc = {
     showMethodModal() {
         this.renderMethodsList();
         document.getElementById('methodModal').classList.add('show');
-
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     closeMethodModal() {
@@ -967,14 +939,10 @@ const trafficCalc = {
             <div class="method-item">
                 <span>${this.escapeHtml(method)}</span>
                 <button onclick="trafficCalc.deleteMethod('${this.escapeHtml(method)}')">
-                    <i data-lucide="trash-2"></i> Удалить
+                    <img src="icons/cross.svg" alt="" style="width: 12px; height: 12px;"> Удалить
                 </button>
             </div>
         `).join('');
-
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     addMethod() {
@@ -1174,10 +1142,6 @@ const trafficCalc = {
             this.checkManualDataCompletionStep6();
         }
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     updateStepsIndicator(currentStep) {
@@ -1440,10 +1404,6 @@ const trafficCalc = {
         // Автоматически формируем отчет
         this.generateReport();
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Подтверждение сброса аналитики
@@ -1574,10 +1534,6 @@ const trafficCalc = {
         document.getElementById('depositWorkTimePercent').value = partner.depositWorkTimePercent || 0;
         document.getElementById('withdrawalWorkTimePercent').value = partner.withdrawalWorkTimePercent || 0;
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Увеличение значения
@@ -1786,10 +1742,6 @@ const trafficCalc = {
         document.getElementById('otherViolations').value = partner.otherViolations || 0;
         document.getElementById('otherViolationsDescription').value = partner.otherViolationsDescription || '';
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Сохранение данных по нарушениям (шаг 6)
@@ -2262,7 +2214,7 @@ const trafficCalc = {
                     <td>${partner.withdrawalQueues || 0}</td>
                     <td>${partner.creditsOutsideLimits || 0}</td>
                     <td>${partner.wrongAmountApproval || 0}</td>
-                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>${partner.otherViolations || 0}${partner.otherViolationsDescription ? ' <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;opacity:0.6;"></i>' : ''}</td>
+                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>${partner.otherViolations || 0}${partner.otherViolationsDescription ? ' <img src="icons/filter.svg" alt="info" style="width:14px;height:14px;vertical-align:middle;opacity:0.6;">' : ''}</td>
                 </tr>
             `;
         }).join('');
@@ -2274,10 +2226,6 @@ const trafficCalc = {
         document.getElementById('reportNotGenerated').style.display = 'none';
         document.getElementById('reportGenerated').style.display = 'block';
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Экспорт детального отчета в Excel
@@ -2391,17 +2339,13 @@ const trafficCalc = {
                     <td>${partner.withdrawalQueues || 0}</td>
                     <td>${partner.creditsOutsideLimits || 0}</td>
                     <td>${partner.wrongAmountApproval || 0}</td>
-                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>${partner.otherViolations || 0}${partner.otherViolationsDescription ? ' <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;opacity:0.6;"></i>' : ''}</td>
+                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>${partner.otherViolations || 0}${partner.otherViolationsDescription ? ' <img src="icons/filter.svg" alt="info" style="width:14px;height:14px;vertical-align:middle;opacity:0.6;">' : ''}</td>
                 </tr>
             `;
         }).join('');
 
         document.getElementById('detailedReportModal').classList.add('show');
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Закрыть детальный отчет
@@ -2537,10 +2481,6 @@ const trafficCalc = {
 
         modal.classList.add('show');
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Закрыть модальное окно импорта
