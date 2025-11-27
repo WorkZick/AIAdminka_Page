@@ -21,6 +21,7 @@ const syncApp = {
     selectedImportUser: null,
     accessSettings: {},
     logs: [],
+    lastAccessCheck: 0, // Время последней проверки доступа (защита от спама)
 
     // Данные для синхронизации
     syncData: {
@@ -128,10 +129,19 @@ const syncApp = {
         this.checkAccessStatus();
     },
 
-    checkAccessStatus() {
+    checkAccessStatus(force) {
         if (!this.currentUser || !this.currentUser.email) {
             return;
         }
+
+        // Защита от спама: не чаще раза в 10 секунд (если не force)
+        const now = Date.now();
+        if (!force && now - this.lastAccessCheck < 10000) {
+            const waitSec = Math.ceil((10000 - (now - this.lastAccessCheck)) / 1000);
+            this.addLog('info', 'Подождите ' + waitSec + ' сек...');
+            return;
+        }
+        this.lastAccessCheck = now;
 
         this.addLog('info', 'Проверка доступа...');
 
@@ -332,11 +342,18 @@ const syncApp = {
                 btnRequestAccess.textContent = this.pendingRequest ? 'Запрос отправлен' : 'Запросить доступ';
             }
 
+            // Показываем кнопку проверки доступа
+            const btnCheckAccess = document.getElementById('btnCheckAccess');
+            if (btnCheckAccess) btnCheckAccess.style.display = 'block';
+
             btnExport.disabled = true;
             btnImport.disabled = true;
             btnAccess.disabled = true;
 
         } else {
+            // Скрываем кнопку проверки если уже одобрен
+            const btnCheckAccess = document.getElementById('btnCheckAccess');
+            if (btnCheckAccess) btnCheckAccess.style.display = 'none';
             // Авторизован и одобрен
             statusEl.className = 'header-status connected';
             statusEl.querySelector('.status-text').textContent = 'Подключено';

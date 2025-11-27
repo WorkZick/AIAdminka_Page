@@ -373,6 +373,25 @@ body {
     color: #f39c12;
 }
 
+.btn-check-access {
+    width: 100%;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid #3498db;
+    border-radius: 4px;
+    color: #3498db;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 8px;
+}
+
+.btn-check-access:hover {
+    background: #3498db;
+    color: #fff;
+}
+
 .btn-test {
     width: 100%;
     padding: 10px 16px;
