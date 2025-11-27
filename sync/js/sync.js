@@ -1,5 +1,6 @@
 /**
  * Sync Module - Cloud Synchronization via Google Sheets + OAuth
+ * С контролем доступа через лист Approved
  */
 
 const syncApp = {
@@ -8,9 +9,14 @@ const syncApp = {
     REDIRECT_URI: 'https://workzick.github.io/AIAdminka_Page/sync/callback.html',
     SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
 
+    // URL скрипта (базовый для проверки доступа)
+    BASE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwowqwa2j0so4q7PTnlCRUOUH-8lhsVK1cpGC3Si2v3HvKEHL2pzLHV1uwLvmO2pxQM/exec',
+
     // Состояние
     scriptUrl: '',
     currentUser: null,
+    isApproved: false,
+    pendingRequest: false,
     allUsers: [],
     selectedImportUser: null,
     accessSettings: {},
@@ -26,7 +32,6 @@ const syncApp = {
 
     // Инициализация
     init() {
-        this.loadConfig();
         this.loadData();
         this.loadLogs();
         this.checkAuth();
@@ -55,8 +60,12 @@ const syncApp = {
 
     logout() {
         localStorage.removeItem('sync-auth');
+        localStorage.removeItem('sync-access-status');
         this.currentUser = null;
-        this.updateConnectionUI();
+        this.isApproved = false;
+        this.pendingRequest = false;
+        this.scriptUrl = '';
+        this.updateUI();
         this.addLog('info', 'Вы вышли из аккаунта');
     },
 
@@ -72,8 +81,11 @@ const syncApp = {
                     picture: auth.picture,
                     accessToken: auth.accessToken
                 };
+                // Загружаем статус доступа
+                this.loadAccessStatus();
             } else {
                 localStorage.removeItem('sync-auth');
+                localStorage.removeItem('sync-access-status');
             }
         }
     },
@@ -88,15 +100,134 @@ const syncApp = {
                 picture: auth.picture,
                 accessToken: auth.accessToken
             };
-            this.updateConnectionUI();
             this.addLog('success', 'Авторизован как ' + auth.email);
 
-            // Сохраняем конфиг
-            localStorage.setItem('sync-config', JSON.stringify({
-                scriptUrl: this.scriptUrl,
-                currentUser: this.currentUser
-            }));
+            // Проверяем доступ после авторизации
+            this.checkAccessStatus();
         }
+    },
+
+    // =============== Access Control ===============
+
+    loadAccessStatus() {
+        const statusData = localStorage.getItem('sync-access-status');
+        if (statusData) {
+            const status = JSON.parse(statusData);
+            // Проверяем актуальность (кэш на 5 минут)
+            if (Date.now() - status.timestamp < 300000) {
+                this.isApproved = status.approved;
+                this.pendingRequest = status.pendingRequest;
+                if (status.scriptUrl) {
+                    this.scriptUrl = status.scriptUrl;
+                }
+                this.updateUI();
+                return;
+            }
+        }
+        // Если кэш устарел - проверяем заново
+        this.checkAccessStatus();
+    },
+
+    checkAccessStatus() {
+        if (!this.currentUser || !this.currentUser.email) {
+            return;
+        }
+
+        this.addLog('info', 'Проверка доступа...');
+
+        const url = this.BASE_SCRIPT_URL + '?action=checkAccess&email=' + encodeURIComponent(this.currentUser.email);
+        const self = this;
+
+        fetch(url)
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(result) {
+                if (result.error) {
+                    self.addLog('error', 'Ошибка: ' + result.error);
+                    return;
+                }
+
+                self.isApproved = result.approved;
+                self.pendingRequest = result.pendingRequest || false;
+
+                if (result.approved && result.scriptUrl) {
+                    self.scriptUrl = result.scriptUrl;
+                    self.addLog('success', 'Доступ подтверждён');
+                } else if (result.pendingRequest) {
+                    self.addLog('info', 'Запрос на рассмотрении');
+                } else {
+                    self.addLog('info', 'Требуется запрос доступа');
+                }
+
+                // Сохраняем в кэш
+                localStorage.setItem('sync-access-status', JSON.stringify({
+                    approved: self.isApproved,
+                    pendingRequest: self.pendingRequest,
+                    scriptUrl: self.scriptUrl,
+                    timestamp: Date.now()
+                }));
+
+                self.updateUI();
+            })
+            .catch(function(err) {
+                self.addLog('error', 'Ошибка проверки: ' + err.message);
+            });
+    },
+
+    requestAccess() {
+        if (!this.currentUser || !this.currentUser.email) {
+            alert('Сначала авторизуйтесь через Google');
+            return;
+        }
+
+        this.addLog('info', 'Отправка запроса на доступ...');
+
+        const url = this.BASE_SCRIPT_URL +
+            '?action=requestAccess' +
+            '&email=' + encodeURIComponent(this.currentUser.email) +
+            '&name=' + encodeURIComponent(this.currentUser.name || '');
+
+        const self = this;
+
+        fetch(url)
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(result) {
+                if (result.error) {
+                    self.addLog('error', 'Ошибка: ' + result.error);
+                    alert('Ошибка: ' + result.error);
+                    return;
+                }
+
+                if (result.alreadyApproved) {
+                    self.addLog('success', 'Вы уже одобрены!');
+                    self.checkAccessStatus();
+                } else if (result.alreadyRequested) {
+                    self.addLog('info', 'Запрос уже отправлен ранее');
+                    alert('Ваш запрос уже отправлен и ожидает рассмотрения.');
+                    self.pendingRequest = true;
+                } else {
+                    self.addLog('success', 'Запрос отправлен!');
+                    alert('Запрос на доступ отправлен!\nАдминистратор рассмотрит его в ближайшее время.');
+                    self.pendingRequest = true;
+                }
+
+                // Обновляем кэш
+                localStorage.setItem('sync-access-status', JSON.stringify({
+                    approved: self.isApproved,
+                    pendingRequest: self.pendingRequest,
+                    scriptUrl: self.scriptUrl,
+                    timestamp: Date.now()
+                }));
+
+                self.updateUI();
+            })
+            .catch(function(err) {
+                self.addLog('error', 'Ошибка запроса: ' + err.message);
+                alert('Ошибка отправки запроса');
+            });
     },
 
     // =============== Sidebar ===============
@@ -105,70 +236,6 @@ const syncApp = {
         const sidebar = document.getElementById('sidebar');
         sidebar.classList.toggle('collapsed');
         localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
-    },
-
-    // =============== Config ===============
-
-    loadConfig() {
-        const saved = localStorage.getItem('sync-config');
-        if (saved) {
-            const config = JSON.parse(saved);
-            this.scriptUrl = config.scriptUrl || '';
-        }
-        document.getElementById('configScriptUrl').value = this.scriptUrl;
-    },
-
-    saveConfig() {
-        this.scriptUrl = document.getElementById('configScriptUrl').value.trim();
-        localStorage.setItem('sync-config', JSON.stringify({
-            scriptUrl: this.scriptUrl,
-            currentUser: this.currentUser
-        }));
-        this.updateConnectionUI();
-    },
-
-    updateConnectionUI() {
-        const statusEl = document.getElementById('connectionStatus');
-        const statusValue = document.getElementById('statusValue');
-        const userEmail = document.getElementById('userEmail');
-        const userName = document.getElementById('userName');
-        const btnExport = document.getElementById('btnExport');
-        const btnImport = document.getElementById('btnImport');
-        const btnAccess = document.getElementById('btnAccess');
-        const btnLogin = document.getElementById('btnLogin');
-        const btnLogout = document.getElementById('btnLogout');
-
-        if (this.currentUser && this.currentUser.email) {
-            statusEl.className = 'header-status connected';
-            statusEl.querySelector('.status-text').textContent = 'Подключено';
-            statusValue.textContent = 'Авторизован';
-            statusValue.className = 'info-value success';
-            userEmail.textContent = this.currentUser.email;
-            userName.textContent = this.currentUser.name || '-';
-
-            if (btnLogin) btnLogin.style.display = 'none';
-            if (btnLogout) btnLogout.style.display = 'block';
-
-            // Кнопки активны только если есть URL скрипта
-            const hasScript = !!this.scriptUrl;
-            btnExport.disabled = !hasScript;
-            btnImport.disabled = !hasScript;
-            btnAccess.disabled = !hasScript;
-        } else {
-            statusEl.className = 'header-status';
-            statusEl.querySelector('.status-text').textContent = 'Не авторизован';
-            statusValue.textContent = 'Требуется вход';
-            statusValue.className = 'info-value';
-            userEmail.textContent = '-';
-            userName.textContent = '-';
-
-            if (btnLogin) btnLogin.style.display = 'block';
-            if (btnLogout) btnLogout.style.display = 'none';
-
-            btnExport.disabled = true;
-            btnImport.disabled = true;
-            btnAccess.disabled = true;
-        }
     },
 
     // =============== Data ===============
@@ -206,11 +273,93 @@ const syncApp = {
         this.addLog('info', 'Данные сброшены');
     },
 
+    // =============== UI ===============
+
+    updateUI() {
+        this.updateConnectionUI();
+        this.renderLogs();
+    },
+
+    updateConnectionUI() {
+        const statusEl = document.getElementById('connectionStatus');
+        const statusValue = document.getElementById('statusValue');
+        const userEmail = document.getElementById('userEmail');
+        const userName = document.getElementById('userName');
+        const btnExport = document.getElementById('btnExport');
+        const btnImport = document.getElementById('btnImport');
+        const btnAccess = document.getElementById('btnAccess');
+        const btnLogin = document.getElementById('btnLogin');
+        const btnLogout = document.getElementById('btnLogout');
+        const btnRequestAccess = document.getElementById('btnRequestAccess');
+        const configField = document.querySelector('.config-field');
+
+        // Скрываем поле URL (оно теперь автоматическое)
+        if (configField) {
+            configField.style.display = 'none';
+        }
+
+        if (!this.currentUser) {
+            // Не авторизован
+            statusEl.className = 'header-status';
+            statusEl.querySelector('.status-text').textContent = 'Не авторизован';
+            statusValue.textContent = 'Требуется вход';
+            statusValue.className = 'info-value';
+            userEmail.textContent = '-';
+            userName.textContent = '-';
+
+            if (btnLogin) btnLogin.style.display = 'block';
+            if (btnLogout) btnLogout.style.display = 'none';
+            if (btnRequestAccess) btnRequestAccess.style.display = 'none';
+
+            btnExport.disabled = true;
+            btnImport.disabled = true;
+            btnAccess.disabled = true;
+
+        } else if (!this.isApproved) {
+            // Авторизован, но не одобрен
+            statusEl.className = 'header-status pending';
+            statusEl.querySelector('.status-text').textContent = this.pendingRequest ? 'Ожидание' : 'Нет доступа';
+            statusValue.textContent = this.pendingRequest ? 'Запрос на рассмотрении' : 'Требуется запрос';
+            statusValue.className = 'info-value warning';
+            userEmail.textContent = this.currentUser.email;
+            userName.textContent = this.currentUser.name || '-';
+
+            if (btnLogin) btnLogin.style.display = 'none';
+            if (btnLogout) btnLogout.style.display = 'block';
+            if (btnRequestAccess) {
+                btnRequestAccess.style.display = 'block';
+                btnRequestAccess.disabled = this.pendingRequest;
+                btnRequestAccess.textContent = this.pendingRequest ? 'Запрос отправлен' : 'Запросить доступ';
+            }
+
+            btnExport.disabled = true;
+            btnImport.disabled = true;
+            btnAccess.disabled = true;
+
+        } else {
+            // Авторизован и одобрен
+            statusEl.className = 'header-status connected';
+            statusEl.querySelector('.status-text').textContent = 'Подключено';
+            statusValue.textContent = 'Доступ разрешён';
+            statusValue.className = 'info-value success';
+            userEmail.textContent = this.currentUser.email;
+            userName.textContent = this.currentUser.name || '-';
+
+            if (btnLogin) btnLogin.style.display = 'none';
+            if (btnLogout) btnLogout.style.display = 'block';
+            if (btnRequestAccess) btnRequestAccess.style.display = 'none';
+
+            btnExport.disabled = false;
+            btnImport.disabled = false;
+            btnAccess.disabled = false;
+        }
+    },
+
     // =============== API Calls ===============
 
     callApi(action, params) {
         if (!this.scriptUrl) {
-            alert('Введите URL Google Apps Script');
+            alert('Нет доступа к облаку');
             return Promise.reject('No script URL');
         }
 
@@ -246,27 +395,6 @@ const syncApp = {
             });
     },
 
-    // =============== Test Connection ===============
-
-    testConnection() {
-        if (!this.currentUser) {
-            this.login();
-            return;
-        }
-
-        this.addLog('info', 'Проверка подключения...');
-
-        const self = this;
-        this.callApi('ping', { name: this.currentUser.name || '' })
-            .then(function(result) {
-                self.addLog('success', 'Подключено как ' + self.currentUser.email);
-                alert('Подключено!\n\nВаш email: ' + self.currentUser.email + '\nИмя: ' + (self.currentUser.name || '-'));
-            })
-            .catch(function(err) {
-                alert('Ошибка подключения: ' + err.message);
-            });
-    },
-
     // =============== Export ===============
 
     showExportModal() {
@@ -289,7 +417,7 @@ const syncApp = {
             data: JSON.stringify(dataToExport),
             name: this.currentUser.name || ''
         })
-        .then(function(result) {
+        .then(function() {
             self.addLog('success', 'Данные успешно экспортированы');
             alert('Данные успешно экспортированы!');
         })
@@ -388,7 +516,7 @@ const syncApp = {
         this.addLog('info', 'Сохранение настроек доступа...');
 
         this.callApi('setAccess', { allowedViewers: JSON.stringify(allowedViewers) })
-            .then(function(result) {
+            .then(function() {
                 self.addLog('success', 'Настройки доступа сохранены');
                 alert('Настройки доступа сохранены!');
             })
@@ -551,13 +679,6 @@ const syncApp = {
         });
 
         listEl.innerHTML = html;
-    },
-
-    // =============== UI Update ===============
-
-    updateUI() {
-        this.updateConnectionUI();
-        this.renderLogs();
     },
 
     // =============== Helpers ===============

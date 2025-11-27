@@ -345,6 +345,34 @@ body {
     background: rgba(0,0,0,0.05);
 }
 
+.btn-request-access {
+    width: 100%;
+    padding: 12px 16px;
+    background: #f39c12;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-bottom: 8px;
+}
+
+.btn-request-access:hover {
+    background: #e67e22;
+}
+
+.btn-request-access:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.info-value.warning {
+    color: #f39c12;
+}
+
 .btn-test {
     width: 100%;
     padding: 10px 16px;
