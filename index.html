@@ -4,127 +4,147 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://accounts.google.com; frame-ancestors 'self'">
-    <title>SimpleAIAdminka - Windows XP</title>
-    <link rel="stylesheet" href="css/xp-style.css">
-    <script src="shared/icons.js"></script>
+    <title>AIAdminka</title>
+    <link rel="stylesheet" href="css/home.css">
 </head>
 <body>
-    <!-- Desktop (Рабочий стол) -->
-    <div class="desktop" id="desktop">
-        <!-- Прозрачная сетка при перетаскивании -->
-        <div class="desktop-grid"></div>
-        <div class="desktop-icons" id="desktopIcons">
-            <!-- Иконки будут добавлены динамически через JavaScript -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button class="back-button" onclick="homeApp.toggleSidebar()">
+                <img src="icons/arrow.svg" width="30" height="30" alt="Toggle">
+            </button>
+
+            <div class="sidebar-menu">
+                <div class="menu-item active">
+                    <span>Главная страница</span>
+                    <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='excel-reports/index.html'">
+                    <span>Excel отчеты</span>
+                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Excel">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='team-info/index.html'">
+                    <span>Team Info</span>
+                    <img src="icons/team_info.svg" width="20" height="20" alt="Team Info">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='traffic-calculation/index.html'">
+                    <span>Расчет трафика</span>
+                    <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='documentation/index.html'">
+                    <span>Документация</span>
+                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='partners/index.html'">
+                    <span>Партнеры</span>
+                    <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='sync/index.html'">
+                    <span>Синхронизация</span>
+                    <img src="icons/sync.svg" width="20" height="20" alt="Синхронизация">
+                </div>
+            </div>
+
+            <div class="menu-separator"></div>
+
+            <div class="version-info" onclick="homeApp.showAbout()">
+                О разработке<br>
+                <span id="versionText">Version 2.5.0</span>
+            </div>
+        </aside>
+
+        <script>
+            (function() {
+                const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+                if (collapsed) {
+                    document.getElementById('sidebar').classList.add('collapsed');
+                }
+            })();
+        </script>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header -->
+            <header class="global-header">
+                <div class="header-title">AIAdminka</div>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <div class="modules-grid">
+                    <!-- Excel отчеты -->
+                    <a href="excel-reports/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/excel_reports.svg" alt="Excel">
+                        </div>
+                        <div class="module-title">Excel отчеты</div>
+                        <div class="module-desc">Работа с отчетами и таблицами</div>
+                    </a>
+
+                    <!-- Team Info -->
+                    <a href="team-info/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/team_info.svg" alt="Team">
+                        </div>
+                        <div class="module-title">Team Info</div>
+                        <div class="module-desc">Управление командой</div>
+                    </a>
+
+                    <!-- Расчет трафика -->
+                    <a href="traffic-calculation/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/Traffic calculation.svg" alt="Трафик">
+                        </div>
+                        <div class="module-title">Расчет трафика</div>
+                        <div class="module-desc">Калькулятор трафика</div>
+                    </a>
+
+                    <!-- Документация -->
+                    <a href="documentation/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/documents.svg" alt="Документация">
+                        </div>
+                        <div class="module-title">Документация</div>
+                        <div class="module-desc">Справка и руководства</div>
+                    </a>
+
+                    <!-- Партнеры -->
+                    <a href="partners/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/partners.svg" alt="Партнеры">
+                        </div>
+                        <div class="module-title">Партнеры</div>
+                        <div class="module-desc">База партнеров</div>
+                    </a>
+
+                    <!-- Синхронизация -->
+                    <a href="sync/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/sync.svg" alt="Синхронизация">
+                        </div>
+                        <div class="module-title">Синхронизация</div>
+                        <div class="module-desc">Облачное хранение данных</div>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Context Menu (Контекстное меню) -->
-    <div class="context-menu" id="contextMenu">
-        <div class="context-menu-item" onclick="contextMenuAction('open')">
-            <span class="context-menu-item-icon"><i data-lucide="folder-open"></i></span>
-            Открыть
-        </div>
-        <div class="context-menu-separator"></div>
-        <div class="context-menu-item" id="contextLockItem" onclick="contextMenuAction('lock')">
-            <span class="context-menu-item-icon" id="contextLockIcon"><i data-lucide="unlock"></i></span>
-            <span id="contextLockText">Заблокировать</span>
-        </div>
-        <div class="context-menu-item" id="contextDeleteItem" onclick="contextMenuAction('delete')">
-            <span class="context-menu-item-icon"><i data-lucide="trash-2"></i></span>
-            Удалить
-        </div>
-    </div>
-
-    <!-- Taskbar (Панель задач) -->
-    <div class="taskbar">
-        <!-- Кнопка Пуск -->
-        <button class="start-button" onclick="toggleStartMenu()">
-            <div class="start-icon"><i data-lucide="menu"></i></div>
-            <span>Пуск</span>
-        </button>
-
-        <!-- Quick Launch -->
-        <div class="quick-launch"></div>
-
-        <!-- System Tray (Область уведомлений) -->
-        <div class="system-tray">
-            <div class="system-tray-icon"><i data-lucide="volume-2"></i></div>
-            <div class="clock" id="clock">12:00</div>
-        </div>
-    </div>
-
-    <!-- Start Menu (Меню Пуск) -->
-    <div class="start-menu" id="startMenu">
-        <div class="start-menu-header">
-            <div class="start-menu-user">Администратор</div>
-        </div>
-        
-        <div class="start-menu-content">
-            <div class="start-menu-item" onclick="openModule('excel-reports/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="file-spreadsheet"></i></div>
-                <div>Excel отчеты</div>
-            </div>
-            
-            <div class="start-menu-item" onclick="openModule('team-info/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="users"></i></div>
-                <div>Team Info</div>
-            </div>
-            
-            <div class="start-menu-item" onclick="openModule('traffic-calculation/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="trending-up"></i></div>
-                <div>Расчет трафика</div>
-            </div>
-            
-            <div class="start-menu-item" onclick="openModule('documentation/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="book-open"></i></div>
-                <div>Документация</div>
-            </div>
-
-            <div class="start-menu-item" onclick="openModule('partners/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="handshake"></i></div>
-                <div>Партнеры</div>
-            </div>
-
-            <div class="start-menu-item" onclick="openModule('sync/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="cloud-sync"></i></div>
-                <div>Синхронизация</div>
-            </div>
-
-            <div class="start-menu-separator"></div>
-            
-            <div class="start-menu-item" style="opacity: 0.5; cursor: default;">
-                <div class="start-menu-item-icon"><i data-lucide="file-text"></i></div>
-                <div>Гайды (в разработке)</div>
-            </div>
-        </div>
-        
-        <div class="start-menu-footer">
-            <div class="start-menu-footer-item" onclick="desktop.alignToGrid(); toggleStartMenu();">
-                <span><i data-lucide="grid-3x3"></i></span>
-                <span>Выровнять по сетке</span>
-            </div>
-            <div class="start-menu-footer-item" onclick="desktop.lockAll(); toggleStartMenu();">
-                <span><i data-lucide="lock"></i></span>
-                <span>Заблокировать все</span>
-            </div>
-            <div class="start-menu-footer-item" onclick="desktop.unlockAll(); toggleStartMenu();">
-                <span><i data-lucide="unlock"></i></span>
-                <span>Разблокировать все</span>
-            </div>
-            <div class="start-menu-separator"></div>
-            <div class="start-menu-footer-item" onclick="resetDesktop()">
-                <span><i data-lucide="rotate-ccw"></i></span>
-                <span>Сбросить</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- About Modal (Модальное окно "О разработке") -->
-    <div class="modal" id="aboutModal" onclick="if(event.target === this) closeAboutModal()">
-        <div class="modal-content">
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-dialog">
             <div class="modal-header">
-                <span class="modal-title">О разработке</span>
-                <button class="modal-close" onclick="closeAboutModal()">&times;</button>
+                <h2 class="modal-title">О разработке</h2>
+                <button class="modal-close" onclick="homeApp.closeAbout()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
             </div>
             <div class="modal-body">
                 <p>Это проект <strong>Vadim P</strong></p>
@@ -135,7 +155,6 @@
         </div>
     </div>
 
-    <script src="shared/storage.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/home.js"></script>
 </body>
 </html>
