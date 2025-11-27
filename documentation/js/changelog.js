@@ -36,8 +36,49 @@ const changelog = {
     // Эти данные используются только если не удалось загрузить JSON
     // ВАЖНО: При обновлении changelog.json нужно также обновить эти данные!
     fallbackData: {
-        "version": "2.4.0",
+        "version": "2.4.2",
         "updates": [
+            {
+                "version": "2.4.2",
+                "date": "2025-11-28",
+                "title": "Локальные иконки вместо Lucide CDN",
+                "changes": [
+                    {
+                        "category": "Изменено",
+                        "items": [
+                            "Полный переход с внешней библиотеки Lucide (unpkg.com) на локальные SVG иконки",
+                            "Создана папка shared/icons/ с 32 SVG иконками",
+                            "Создан shared/icons.js - локальная система иконок с API совместимым с Lucide",
+                            "Удалены все внешние ссылки на unpkg.com из HTML файлов",
+                            "Обновлена CSP (Content Security Policy) - убран unpkg.com из script-src"
+                        ]
+                    },
+                    {
+                        "category": "Исправлено",
+                        "items": [
+                            "Исправлена ошибка CSP: Refused to connect to unpkg.com/lucide",
+                            "Проект теперь полностью автономен - не требует внешних CDN для иконок"
+                        ]
+                    }
+                ]
+            },
+            {
+                "version": "2.4.1",
+                "date": "2025-11-28",
+                "title": "Исправления безопасности",
+                "changes": [
+                    {
+                        "category": "Безопасность",
+                        "items": [
+                            "Исправлена XSS уязвимость через avatar URL в модулях Partners и Team Info",
+                            "Добавлена валидация URL изображений (только data:image/, http://, https://)",
+                            "Заменены inline onclick на addEventListener для предотвращения XSS инъекций",
+                            "Добавлены Content-Security-Policy заголовки во все HTML файлы",
+                            "Безопасное создание DOM элементов вместо innerHTML с пользовательскими данными"
+                        ]
+                    }
+                ]
+            },
             {
                 "version": "2.4.0",
                 "date": "2025-11-28",
