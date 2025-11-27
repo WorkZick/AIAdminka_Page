@@ -41,6 +41,15 @@ const partnersApp = {
         localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
     },
 
+    // Validate URL for safe usage in img src
+    isValidImageUrl(url) {
+        if (!url) return false;
+        // Allow data URLs and http/https URLs only
+        return url.startsWith('data:image/') ||
+               url.startsWith('http://') ||
+               url.startsWith('https://');
+    },
+
     // Render table
     render() {
         const partnersData = this.getPartners();
@@ -67,33 +76,51 @@ const partnersApp = {
                 });
             }
 
-            tbody.innerHTML = sortedData.map(partner => {
+            // Clear tbody and build rows with safe event listeners
+            tbody.innerHTML = '';
+
+            sortedData.forEach(partner => {
                 const statusClass = this.getStatusColor(partner.status || 'Работает');
                 const avatar = partner.avatar || '';
-                return `
-                <tr onclick="partnersApp.selectPartner('${partner.id}')" class="${this.selectedPartnerId === partner.id ? 'selected' : ''}">
+                const isValidAvatar = this.isValidImageUrl(avatar);
+
+                const tr = document.createElement('tr');
+                tr.className = this.selectedPartnerId === partner.id ? 'selected' : '';
+                tr.dataset.partnerId = partner.id;
+                tr.addEventListener('click', () => this.selectPartner(partner.id));
+
+                tr.innerHTML = `
                     <td>
                         <div class="counters-cell">
-                            <span>${partner.dep || 0}</span>
-                            <span>${partner.with || 0}</span>
-                            <span>${partner.comp || 0}</span>
+                            <span>${parseInt(partner.dep) || 0}</span>
+                            <span>${parseInt(partner.with) || 0}</span>
+                            <span>${parseInt(partner.comp) || 0}</span>
                         </div>
                     </td>
                     <td>
-                        <div class="partner-avatar">
-                            ${avatar ? `<img src="${avatar}" alt="">` : ''}
-                        </div>
+                        <div class="partner-avatar"></div>
                     </td>
                     <td>${this.escapeHtml(partner.fullName || '')}</td>
                     <td>${this.escapeHtml(partner.method || '')}</td>
                     <td>${this.escapeHtml(partner.subagent || '')}</td>
                     <td>${this.escapeHtml(partner.subagentId || '')}</td>
-                    <td><span class="status-badge ${statusClass}">${this.escapeHtml(partner.status || 'Работает')}</span></td>
+                    <td><span class="status-badge ${this.escapeHtml(statusClass)}">${this.escapeHtml(partner.status || 'Работает')}</span></td>
                     <td>
                         <img class="row-arrow" src="icons/arrow.svg" width="20" height="20" alt="Открыть" style="transform: rotate(${this.selectedPartnerId === partner.id ? '180deg' : '0deg'}); transition: transform 0.2s ease;">
                     </td>
-                </tr>
-            `}).join('');
+                `;
+
+                // Safely set avatar image
+                if (isValidAvatar) {
+                    const avatarDiv = tr.querySelector('.partner-avatar');
+                    const img = document.createElement('img');
+                    img.src = avatar;
+                    img.alt = '';
+                    avatarDiv.appendChild(img);
+                }
+
+                tbody.appendChild(tr);
+            });
         }
 
         this.updateStats();
@@ -172,12 +199,13 @@ const partnersApp = {
         document.getElementById('partnerCard').style.display = 'flex';
         document.getElementById('partnerForm').style.display = 'none';
 
-        // Set avatar
+        // Set avatar with URL validation
         const cardAvatar = document.getElementById('cardAvatar');
-        if (partner.avatar) {
+        if (partner.avatar && this.isValidImageUrl(partner.avatar)) {
             cardAvatar.src = partner.avatar;
             cardAvatar.style.display = 'block';
         } else {
+            cardAvatar.src = '';
             cardAvatar.style.display = 'none';
         }
 
