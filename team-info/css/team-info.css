@@ -1,0 +1,1629 @@
+/* Team Info - Modern Minimalistic Design */
+
+/* Fonts */
+@font-face {
+    font-family: 'TT Firs Neue';
+    src: url('../fonts/TTFirsNeue-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'TT Firs Neue';
+    src: url('../fonts/TTFirsNeue-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Variables */
+:root {
+    --white: #f2f2f2;
+    --black: #1a1a1a;
+    --gray: #8d8d8d;
+    --bg-white: #f2f2f2;
+    --bg-dark-white: #e8e8e8;
+    --gray-dark: #2e2e2e;
+    --gray-darker: #212121;
+    --bg-black: #1a1a1a;
+    --yellow: #fdbe2f;
+    --border-gray: #c3c3c3;
+
+    /* Status colors */
+    --status-green: #7ccb72;    /* Работает */
+    --status-red: #ff8b8b;      /* Уволен */
+    --status-yellow: #fdbe2f;   /* В отпуске */
+    --status-purple: #c696da;   /* Болеет */
+    --status-blue: #96b8da;     /* Командировка */
+
+    /* Highlight */
+    --highlight-yellow: #f0e8d8;
+    --red-delete: #fe0000;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'TT Firs Neue', 'Segoe UI', sans-serif;
+    font-weight: 400;
+    background: #1a1a1a;
+    color: #f2f2f2;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Layout */
+.app-container {
+    display: flex;
+    height: 100vh;
+    background: #2e2e2e;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 12%;
+    background: #e8e8e8;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar.collapsed .version-info,
+.sidebar.collapsed .menu-separator {
+    display: none;
+}
+
+.back-button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 0 20px;
+    height: 60px;
+    background: #e8e8e8;
+    border: none;
+    cursor: pointer;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 14px;
+    color: var(--black);
+    font-weight: 400;
+    transition: opacity 0.2s;
+    box-sizing: border-box;
+}
+
+.back-button:hover {
+    background: #d0d0d0;
+}
+
+.back-button img {
+    width: 30px;
+    height: 30px;
+    transition: transform 0.3s ease;
+    object-fit: contain;
+    display: block;
+}
+
+.sidebar.collapsed .back-button img {
+    transform: rotate(180deg);
+}
+
+.sidebar-menu {
+    flex: 1;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding-top: 100px;
+}
+
+.menu-item {
+    display: block;
+    padding: 16px 20px;
+    color: var(--black);
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.2s;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: center;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    height: 48px;
+    position: relative;
+}
+
+.sidebar.collapsed .menu-item {
+    padding: 16px 20px;
+}
+
+.menu-item span {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.menu-item img {
+    width: 20px;
+    height: 20px;
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    object-fit: contain;
+    display: block;
+}
+
+.sidebar.collapsed .menu-item span {
+    display: none;
+}
+
+.menu-item.active {
+    background: var(--yellow);
+    font-weight: 700;
+}
+
+.menu-item:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.menu-separator {
+    height: 1px;
+    background: #c3c3c3;
+    margin: 10px 20px;
+}
+
+.sidebar.collapsed .menu-separator {
+    margin: 10px;
+}
+
+.version-info {
+    padding: 20px;
+    font-size: 12px;
+    color: var(--gray);
+    line-height: 1.5;
+}
+
+/* Main wrapper */
+.main-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    background: #1a1a1a;
+}
+
+/* Global header (top right corner) */
+.global-header {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 20px;
+    z-index: 100;
+    background: #212121;
+    padding: 0 40px 0 40px;
+    height: 60px;
+    box-sizing: border-box;
+}
+
+/* Content area */
+.content-area {
+    display: flex;
+    gap: 20px;
+    padding: 80px 40px 20px 40px;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Table section */
+.table-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+/* Section header (над таблицей) */
+.section-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #2e2e2e;
+    margin: 0;
+    height: 60px;
+    box-sizing: border-box;
+    border-radius: 8px 8px 0 0;
+}
+
+.add-employee-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    color: #f2f2f2;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.add-employee-btn:hover {
+    opacity: 0.7;
+}
+
+.add-employee-btn img {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(1);
+}
+
+.search-box {
+    position: relative;
+}
+
+.search-input {
+    padding: 8px 12px 8px 35px;
+    background: #212121;
+    border: none;
+    border-radius: 4px;
+    color: #f2f2f2;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 14px;
+    width: 250px;
+}
+
+.search-input:focus {
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: var(--gray);
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--gray);
+    filter: brightness(0) invert(1) opacity(0.5);
+}
+
+.team-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #f2f2f2;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.team-name img {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(1);
+}
+
+.export-btn, .import-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    color: #f2f2f2;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: opacity 0.2s;
+}
+
+.export-btn:hover, .import-btn:hover {
+    opacity: 0.7;
+}
+
+.export-btn img, .import-btn img {
+    width: 14px;
+    height: 14px;
+    filter: brightness(0) invert(1);
+}
+
+/* Table container */
+.table-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+}
+
+/* Table */
+.employees-table {
+    width: 100%;
+    background: #f2f2f2;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.employees-table thead {
+    position: sticky;
+    top: 0;
+    background: #212121;
+    z-index: 10;
+}
+
+.employees-table th {
+    padding: 16px 12px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 400;
+    color: #f2f2f2;
+    border-bottom: 1px solid var(--border-gray);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.employees-table th:first-child {
+    padding-left: 40px;
+    width: 140px;
+}
+
+.employees-table th:nth-child(2) {
+    width: 100px;
+}
+
+.employees-table th:nth-child(3) {
+    width: 150px;
+}
+
+.employees-table th:nth-child(4) {
+    width: 150px;
+}
+
+.employees-table th:nth-child(5) {
+    width: 120px;
+}
+
+.employees-table th:nth-child(6) {
+    width: 100px;
+}
+
+.employees-table th:nth-child(7) {
+    width: 180px;
+}
+
+.employees-table th:nth-child(8) {
+    width: 40px;
+}
+
+.sort-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.sort-header svg {
+    width: 12px;
+    height: 12px;
+}
+
+.employees-table tbody tr {
+    border-bottom: 1px solid var(--border-gray);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.employees-table tbody tr:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.employees-table tbody tr.selected {
+    background: var(--highlight-yellow);
+}
+
+.employees-table tbody tr.selected td {
+    color: var(--black);
+}
+
+.employees-table td {
+    padding: 16px 12px;
+    font-size: 13px;
+    color: #1a1a1a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.employees-table td:first-child {
+    padding-left: 40px;
+}
+
+/* Employee name */
+.employee-name {
+    white-space: normal;
+    line-height: 1.3;
+}
+
+/* Status cell */
+.status-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dropdown-icon {
+    width: 12px;
+    height: 12px;
+    color: #1a1a1a;
+    opacity: 0.5;
+}
+
+/* Status badge */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.status-badge.green {
+    background: var(--status-green);
+    color: var(--black);
+}
+
+.status-badge.red {
+    background: var(--status-red);
+    color: var(--black);
+}
+
+.status-badge.yellow {
+    background: var(--status-yellow);
+    color: var(--black);
+}
+
+.status-badge.purple {
+    background: var(--status-purple);
+    color: var(--black);
+}
+
+.status-badge.blue {
+    background: var(--status-blue);
+    color: var(--black);
+}
+
+/* Employee avatar in table */
+.employee-info {
+    display: flex;
+    align-items: center;
+}
+
+.employee-avatar {
+    width: 80px;
+    height: 80px;
+    min-width: 80px;
+    min-height: 80px;
+    max-width: 80px;
+    max-height: 80px;
+    border-radius: 4px;
+    background: var(--gray);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.employee-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Row arrow */
+.row-arrow {
+    width: 20px;
+    height: 20px;
+    color: #1a1a1a;
+    opacity: 0.5;
+    transition: transform 0.3s ease;
+}
+
+.employees-table tbody tr.selected .row-arrow {
+    transform: rotate(180deg);
+}
+
+/* Right panel (statistics or employee card) */
+.right-panel {
+    flex: 0 0 320px;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    min-width: 320px;
+    max-width: 320px;
+}
+
+/* Employee card */
+.employee-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+}
+
+/* Employee form */
+.employee-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+}
+
+.form-team-header {
+    background: #2e2e2e;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    box-sizing: border-box;
+    border-radius: 8px 8px 0 0;
+}
+
+.form-team-name {
+    color: var(--white);
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.form-template-selector {
+    padding: 6px 20px 4px 20px;
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.template-select {
+    width: 120px;
+    padding: 4px 8px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 11px;
+    color: var(--black);
+    background: var(--white);
+    cursor: pointer;
+    outline: none;
+    height: 24px;
+}
+
+.template-select:focus {
+    border-color: #999;
+}
+
+.form-employee-info {
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    background: var(--white);
+}
+
+.form-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    background: #d9d9d9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    position: relative;
+}
+
+.form-avatar:hover {
+    opacity: 0.8;
+}
+
+.form-avatar.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    background: repeating-linear-gradient(
+        45deg,
+        #d9d9d9,
+        #d9d9d9 10px,
+        #c9c9c9 10px,
+        #c9c9c9 20px
+    );
+}
+
+.form-avatar.disabled:hover {
+    opacity: 0.5;
+}
+
+.form-avatar-placeholder {
+    width: 24px;
+    height: 24px;
+    color: #999;
+    position: absolute;
+}
+
+.form-avatar img#formAvatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.form-info-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    position: relative;
+}
+
+.form-name-input {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--black);
+    line-height: 1.3;
+    margin-bottom: 4px;
+    padding: 0 0 2px 0;
+    border: none;
+    border-bottom: 1px solid #e0e0e0;
+    background: transparent;
+    font-family: 'TT Firs Neue', sans-serif;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    resize: none;
+    overflow: hidden;
+    min-height: auto;
+}
+
+.form-name-input:focus {
+    outline: none;
+}
+
+.form-name-input.disabled,
+.form-position-input.disabled {
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 5px,
+        rgba(0,0,0,0.03) 5px,
+        rgba(0,0,0,0.03) 10px
+    );
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.form-position-input {
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 4px;
+    padding: 0 0 2px 0;
+    border: none;
+    border-bottom: 1px solid #e0e0e0;
+    background: transparent;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-weight: 400;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    resize: none;
+    overflow: hidden;
+    min-height: auto;
+}
+
+.form-position-input:focus {
+    outline: none;
+}
+
+.form-status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    cursor: pointer;
+    position: relative;
+    z-index: 100;
+}
+
+.form-status-badge .status-dropdown-icon {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.form-status-badge:hover .status-dropdown-icon {
+    opacity: 1;
+}
+
+.form-status-badge.disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.form-status-badge.disabled .status-color {
+    background: repeating-linear-gradient(
+        45deg,
+        currentColor,
+        currentColor 3px,
+        transparent 3px,
+        transparent 6px
+    );
+    opacity: 0.5;
+}
+
+.form-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 20px 20px;
+    background: var(--white);
+}
+
+.form-group-inline {
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+    position: relative;
+}
+
+.form-group-inline label {
+    font-size: 11px;
+    color: #1a1a1a;
+    font-weight: 400;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.field-toggle-btn {
+    position: absolute;
+    left: -24px;
+    top: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.field-toggle-btn:hover {
+    opacity: 1;
+}
+
+.field-toggle-btn img {
+    filter: opacity(0.7);
+}
+
+.field-disabled {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+.field-disabled .field-toggle-btn {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.form-group-inline input,
+.form-group-inline select,
+.form-group-inline textarea {
+    flex: 1;
+    padding: 0 0 2px 0;
+    border: none;
+    border-bottom: 1px solid #e0e0e0;
+    border-radius: 0;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 11px;
+    color: #1a1a1a;
+    background: transparent;
+    font-weight: 700;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.form-group-inline textarea {
+    resize: none;
+    min-height: 40px;
+    max-height: 200px;
+    padding: 12px;
+    background: #f2f2f2;
+    border: 1px solid #c3c3c3;
+    border-radius: 4px;
+    font-weight: 400;
+    width: 100%;
+    overflow-y: auto;
+}
+
+.form-group-inline.vertical {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group-inline.vertical label {
+    display: none;
+}
+
+.form-group-inline input:focus,
+.form-group-inline select:focus,
+.form-group-inline textarea:focus {
+    outline: none;
+}
+
+.form-footer {
+    padding: 16px 20px;
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-radius: 0 0 8px 8px;
+}
+
+.form-btn-save {
+    width: 100%;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    background: transparent;
+    color: var(--black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.form-btn-save:hover {
+    opacity: 0.7;
+}
+
+.form-btn-cancel {
+    width: 100%;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--black);
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.form-btn-cancel:hover {
+    opacity: 0.7;
+}
+
+.form-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-gray);
+}
+
+.template-fields-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 20px 20px;
+    background: var(--white);
+}
+
+.template-fields-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.template-field-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: var(--white);
+    border-radius: 4px;
+}
+
+.template-field-input {
+    flex: 2;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 11px;
+    color: var(--black);
+    background: var(--white);
+}
+
+.template-field-type {
+    flex: 1;
+    max-width: 100px;
+    min-width: 80px;
+    padding: 6px 8px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 11px;
+    color: var(--black);
+    background: var(--white);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.template-field-remove {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.template-field-remove:hover {
+    opacity: 1;
+}
+
+.btn-add-template-field {
+    width: 100%;
+    padding: 10px;
+    border: 1px dashed #d0d0d0;
+    border-radius: 4px;
+    background: transparent;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 11px;
+    color: var(--black);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-add-template-field:hover {
+    opacity: 0.7;
+}
+
+.btn-delete {
+    width: 100%;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    background: transparent;
+    color: #fe0000;
+    transition: opacity 0.2s;
+}
+
+.btn-delete:hover {
+    opacity: 0.7;
+}
+
+.card-header {
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+}
+
+.card-team-header {
+    background: #2e2e2e;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    box-sizing: border-box;
+    border-radius: 8px 8px 0 0;
+}
+
+.card-team-name {
+    color: var(--white);
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.card-employee-info {
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    background: var(--white);
+}
+
+.card-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    background: var(--gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.card-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.card-info-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+
+.card-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--black);
+    line-height: 1.3;
+    margin-bottom: 4px;
+}
+
+.card-position {
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 4px;
+}
+
+.card-status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    cursor: pointer;
+    position: relative;
+    z-index: 100;
+}
+
+.card-status-badge .status-dropdown-icon {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.card-status-badge:hover .status-dropdown-icon {
+    opacity: 1;
+}
+
+.status-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 1000;
+    min-width: 120px;
+}
+
+.status-option {
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.status-option:hover {
+    opacity: 0.8;
+}
+
+.card-info-row {
+    font-size: 11px;
+    color: var(--gray);
+}
+
+.card-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 20px 20px;
+    background: var(--white);
+}
+
+.info-group {
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.info-group.vertical {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.info-label {
+    font-size: 11px;
+    color: #1a1a1a;
+    font-weight: 400;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.info-value {
+    font-size: 11px;
+    color: #1a1a1a;
+    font-weight: 700;
+    word-break: break-word;
+    text-align: left;
+    flex: 1;
+}
+
+.info-value.textarea-style {
+    padding: 12px;
+    background: #f2f2f2;
+    border: 1px solid #c3c3c3;
+    border-radius: 4px;
+    min-height: 120px;
+    font-weight: 400;
+    white-space: pre-wrap;
+    width: 100%;
+}
+
+.info-value.textarea-style.placeholder {
+    color: #8d8d8d;
+    font-weight: 400;
+}
+
+.card-footer {
+    padding: 16px 20px;
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-radius: 0 0 8px 8px;
+}
+
+.card-footer-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-gray);
+}
+
+.edit-btn, .delete-btn {
+    padding: 12px 16px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    width: 100%;
+    font-weight: 400;
+}
+
+.edit-btn {
+    background: transparent;
+    color: var(--black);
+    border: none;
+}
+
+.delete-btn {
+    background: transparent;
+    color: #fe0000;
+}
+
+.edit-btn:hover, .delete-btn:hover {
+    opacity: 0.7;
+}
+
+/* Close button */
+.close-card-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    z-index: 10;
+}
+
+.close-card-btn svg {
+    width: 24px;
+    height: 24px;
+    color: var(--black);
+}
+
+/* Statistics panel */
+.stats-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+}
+
+.stats-header {
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+}
+
+.stats-team-header {
+    background: #2e2e2e;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    box-sizing: border-box;
+    border-radius: 8px 8px 0 0;
+}
+
+.stats-panel .team-name {
+    color: var(--white);
+    font-size: 14px;
+    font-weight: 400;
+    justify-content: center;
+}
+
+.stats-panel .team-name svg {
+    color: var(--white);
+}
+
+.stats-content {
+    padding: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    background: #f2f2f2;
+    border-radius: 0 0 8px 8px;
+    gap: 20px;
+}
+
+.stats-total-box {
+    background: #FFFFFF;
+    padding: 20px;
+    border-radius: 8px;
+    width: 95%;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.stats-title {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--black);
+    margin-bottom: 12px;
+}
+
+.stats-count {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--black);
+    margin-bottom: 4px;
+    line-height: 1;
+}
+
+.stats-label {
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 0;
+}
+
+.stats-breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-count {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--black);
+    line-height: 1;
+}
+
+.stat-label-small {
+    font-size: 11px;
+    color: var(--gray);
+    margin-bottom: 4px;
+}
+
+.stat-item .status-badge {
+    width: 100%;
+    text-align: center;
+    padding: 3px 12px;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-dialog {
+    background: var(--white);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 20px 30px;
+    border-bottom: 1px solid var(--border-gray);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--black);
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.modal-close svg {
+    width: 24px;
+    height: 24px;
+    color: var(--black);
+}
+
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 30px;
+}
+
+.modal-footer {
+    padding: 20px 30px;
+    border-top: 1px solid var(--border-gray);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Form */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-size: 12px;
+    color: var(--black);
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-gray);
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    color: var(--black);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--black);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Buttons */
+.btn-primary {
+    background: var(--black);
+    color: #ffffff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+    opacity: 0.8;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--black);
+    border: 1px solid var(--border-gray);
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+    background: var(--bg-white);
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 100px 40px;
+}
+
+.empty-state-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    color: var(--gray);
+}
+
+.empty-state-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f2f2f2;
+    margin-bottom: 12px;
+}
+
+.empty-state-text {
+    font-size: 14px;
+    color: var(--gray);
+    margin-bottom: 30px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark-white);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-dark);
+}
+
+/* Image Crop Modal */
+.crop-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.crop-preview {
+    width: 100%;
+    height: 400px;
+    background: var(--bg-dark-white);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    cursor: move;
+    user-select: none;
+}
+
+.crop-preview img {
+    position: absolute;
+    max-width: none;
+    pointer-events: none;
+    left: 50%;
+    top: 50%;
+    transform-origin: center center;
+}
+
+.crop-hint {
+    font-size: 11px;
+    color: var(--gray);
+    text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 60px;
+    }
+
+    .menu-item span {
+        display: none;
+    }
+
+    .employee-card-panel {
+        width: 100%;
+    }
+
+    .search-input {
+        width: 150px;
+    }
+}

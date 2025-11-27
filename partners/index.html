@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Партнеры - AIAdminka</title>
+    <link rel="stylesheet" href="css/partners.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button class="back-button" onclick="partnersApp.toggleSidebar()">
+                <img src="icons/arrow.svg" width="30" height="30" alt="Toggle">
+            </button>
+
+            <div class="sidebar-menu">
+                <div class="menu-item" onclick="window.location.href='../index.html'">
+                    <span>Главная страница</span>
+                    <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../excel-reports/index.html'">
+                    <span>Excel отчеты</span>
+                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Excel">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../team-info/index.html'">
+                    <span>Team Info</span>
+                    <img src="icons/team_info.svg" width="20" height="20" alt="Team Info">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../traffic-calculation/index.html'">
+                    <span>Расчет трафика</span>
+                    <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
+                    <span>Документация</span>
+                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
+                </div>
+
+                <div class="menu-item active">
+                    <span>Партнеры</span>
+                    <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../sync/index.html'">
+                    <span>Синхронизация</span>
+                    <img src="icons/sync.svg" width="20" height="20" alt="Синхронизация">
+                </div>
+            </div>
+
+            <div class="menu-separator"></div>
+
+            <div class="version-info">
+                О разработке<br>
+                Version 0.0.01
+            </div>
+        </aside>
+
+        <script>
+            // Immediately set sidebar state to prevent flashing
+            (function() {
+                const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+                if (collapsed) {
+                    document.getElementById('sidebar').classList.add('collapsed');
+                }
+            })();
+        </script>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header (top right) -->
+            <header class="global-header">
+                <button class="export-btn" onclick="partnersApp.exportJSON()">
+                    <img src="icons/export.svg" width="14" height="14" alt="Экспорт">
+                    Экспорт списка
+                </button>
+
+                <button class="import-btn" onclick="partnersApp.showImportDialog()">
+                    <img src="icons/import.svg" width="14" height="14" alt="Импорт">
+                    Импорт списка
+                </button>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Table section -->
+                <main class="table-section">
+                    <!-- Section header -->
+                    <header class="section-header">
+                        <button class="add-partner-btn" onclick="partnersApp.showAddModal()">
+                            <img src="icons/plus.svg" width="16" height="16" alt="Добавить">
+                            Добавить партнера
+                        </button>
+
+                        <div class="search-box">
+                            <img class="search-icon" src="icons/serch.svg" width="16" height="16" alt="Поиск">
+                            <input type="text" class="search-input" placeholder="Поиск" id="searchInput" oninput="partnersApp.filterTable()">
+                        </div>
+                    </header>
+
+                    <!-- Table -->
+                    <div class="table-container">
+                        <table class="partners-table">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <div class="counters-header">
+                                            <span>DEP</span>
+                                            <span>WITH</span>
+                                            <span>COMP</span>
+                                        </div>
+                                    </th>
+                                    <th>Фото</th>
+                                    <th>
+                                        <div class="sort-header" onclick="partnersApp.sortBy('fullName')">
+                                            Ф.И.О.
+                                            <img src="icons/filter.svg" width="16" height="16" alt="Сортировка">
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="sort-header" onclick="partnersApp.sortBy('method')">
+                                            Метод
+                                            <img src="icons/filter.svg" width="16" height="16" alt="Сортировка">
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="sort-header" onclick="partnersApp.sortBy('subagent')">
+                                            Субагент
+                                            <img src="icons/filter.svg" width="16" height="16" alt="Сортировка">
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="sort-header" onclick="partnersApp.sortBy('subagentId')">
+                                            ID Субагента
+                                            <img src="icons/filter.svg" width="16" height="16" alt="Сортировка">
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="sort-header" onclick="partnersApp.sortBy('status')">
+                                            Статус
+                                            <img src="icons/filter.svg" width="16" height="16" alt="Сортировка">
+                                        </div>
+                                    </th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="partnersTableBody">
+                                <!-- Rows will be generated by JavaScript -->
+                            </tbody>
+                        </table>
+
+                        <!-- Empty state -->
+                        <div class="empty-state" id="emptyState" style="display: none;">
+                            <img class="empty-state-icon" src="icons/partners.svg" alt="Partners">
+                            <div class="empty-state-title">Партнеры не добавлены</div>
+                            <div class="empty-state-text">Добавьте первого партнера, чтобы начать</div>
+                            <button class="btn-primary" onclick="partnersApp.showAddModal()">Добавить партнера</button>
+                        </div>
+                    </div>
+                </main>
+
+                <!-- Right panel (statistics or partner card) -->
+                <aside class="right-panel">
+                    <!-- Statistics panel (shown by default) -->
+                    <div class="stats-panel" id="statsPanel">
+                        <div class="stats-header">
+                            <div class="stats-team-header">
+                                <div class="team-name">
+                                    Партнеры
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="stats-content">
+                            <div class="stats-total-box">
+                                <div class="stats-title">Количество партнеров</div>
+                                <div class="stats-count" id="totalCount">0</div>
+                                <div class="stats-label">партнеров</div>
+                            </div>
+
+                            <div class="stats-breakdown">
+                                <div class="stat-item full-width">
+                                    <div class="stat-count" id="methodsCount">0</div>
+                                    <span class="stat-label-small">уникальных методов</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Partner card (shown when partner selected) -->
+                    <div class="partner-card" id="partnerCard" style="display: none;">
+                        <div class="card-header">
+                            <div class="card-team-header">
+                                <div class="card-team-name">Партнер</div>
+                            </div>
+                            <div class="card-partner-info">
+                                <div class="card-avatar">
+                                    <img id="cardAvatar" src="" alt="" style="display: none;">
+                                </div>
+                                <div class="card-info-section">
+                                    <div class="card-name" id="cardFullName">ФИО</div>
+                                    <div class="card-position" id="cardPosition">Должность</div>
+                                    <div class="card-status-badge" id="cardStatusBadge" onclick="partnersApp.toggleStatusDropdown()">
+                                        <span class="status-badge green" id="cardStatusText">Работает</span>
+                                        <img class="status-dropdown-icon" src="icons/arrow.svg" width="12" height="12" alt="Выбрать" style="transform: rotate(90deg);">
+                                    </div>
+                                    <div class="status-dropdown" id="cardStatusDropdown" style="display: none;">
+                                        <div class="status-option" onclick="partnersApp.changeStatus('Работает')">
+                                            <span class="status-badge green">Работает</span>
+                                        </div>
+                                        <div class="status-option" onclick="partnersApp.changeStatus('В отпуске')">
+                                            <span class="status-badge yellow">В отпуске</span>
+                                        </div>
+                                        <div class="status-option" onclick="partnersApp.changeStatus('Командировка')">
+                                            <span class="status-badge blue">Командировка</span>
+                                        </div>
+                                        <div class="status-option" onclick="partnersApp.changeStatus('Уволен')">
+                                            <span class="status-badge red">Уволен</span>
+                                        </div>
+                                        <div class="status-option" onclick="partnersApp.changeStatus('Болеет')">
+                                            <span class="status-badge purple">Болеет</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body" id="cardBody">
+                            <!-- Info will be generated by JavaScript -->
+                        </div>
+
+                        <div class="card-footer">
+                            <button class="edit-btn" onclick="partnersApp.editFromCard()">Редактировать</button>
+                            <div class="card-footer-divider"></div>
+                            <button class="delete-btn" onclick="partnersApp.deleteFromCard()">Удалить</button>
+                        </div>
+                    </div>
+
+                    <!-- Partner form (for adding/editing) -->
+                    <div class="partner-form" id="partnerForm" style="display: none;">
+                        <div class="form-team-header">
+                            <div class="form-team-name" id="formTitle">Добавить партнера</div>
+                        </div>
+
+                        <!-- Template selector (only visible when adding new partner) -->
+                        <div class="form-template-selector" id="formTemplateSelector" style="display: none;">
+                            <select class="template-select" id="templateSelect" onchange="partnersApp.handleTemplateChange()">
+                                <option value="">Шаблон</option>
+                            </select>
+                        </div>
+
+                        <!-- Avatar, name, position, status section -->
+                        <div class="form-partner-info">
+                            <input type="file" id="formAvatarInput" accept="image/*" style="display: none;" onchange="partnersApp.handleAvatarUpload(event)">
+                            <div class="form-avatar" onclick="document.getElementById('formAvatarInput').click()">
+                                <img class="form-avatar-placeholder" src="icons/download_photo_placeholder.svg" alt="Загрузить фото">
+                                <img id="formAvatar" src="" alt="" style="display: none;">
+                            </div>
+                            <div class="form-info-section">
+                                <textarea class="form-name-input" id="formFullName" placeholder="Ф.И.О." rows="1"></textarea>
+                                <textarea class="form-position-input" id="formPosition" placeholder="Должность" rows="1"></textarea>
+                                <div class="form-status-badge" id="formStatusBadge" onclick="partnersApp.toggleFormStatusDropdown()">
+                                    <span class="status-badge green" id="formStatusText">Работает</span>
+                                    <img class="status-dropdown-icon" src="icons/arrow.svg" width="12" height="12" alt="Выбрать" style="transform: rotate(90deg);">
+                                </div>
+                                <div class="status-dropdown" id="formStatusDropdown" style="display: none;">
+                                    <div class="status-option" onclick="partnersApp.changeFormStatus('Работает')">
+                                        <span class="status-badge green">Работает</span>
+                                    </div>
+                                    <div class="status-option" onclick="partnersApp.changeFormStatus('В отпуске')">
+                                        <span class="status-badge yellow">В отпуске</span>
+                                    </div>
+                                    <div class="status-option" onclick="partnersApp.changeFormStatus('Командировка')">
+                                        <span class="status-badge blue">Командировка</span>
+                                    </div>
+                                    <div class="status-option" onclick="partnersApp.changeFormStatus('Уволен')">
+                                        <span class="status-badge red">Уволен</span>
+                                    </div>
+                                    <div class="status-option" onclick="partnersApp.changeFormStatus('Болеет')">
+                                        <span class="status-badge purple">Болеет</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-body" id="formBody">
+                            <div class="form-group-inline counters-group">
+                                <label>DEP:</label>
+                                <input type="number" id="formDep" placeholder="0" min="0">
+                                <label>WITH:</label>
+                                <input type="number" id="formWith" placeholder="0" min="0">
+                                <label>COMP:</label>
+                                <input type="number" id="formComp" placeholder="0" min="0">
+                            </div>
+
+                            <div class="form-group-inline">
+                                <label>Метод:</label>
+                                <input type="text" id="formMethod" placeholder="Например: WebMoney">
+                            </div>
+
+                            <div class="form-group-inline">
+                                <label>Субагент:</label>
+                                <input type="text" id="formSubagent" placeholder="Например: ООО «Финанс»">
+                            </div>
+
+                            <div class="form-group-inline">
+                                <label>ID Субагента:</label>
+                                <input type="text" id="formSubagentId" placeholder="Например: 12345">
+                            </div>
+                        </div>
+
+                        <!-- Template fields container (only visible in template mode) -->
+                        <div class="template-fields-container" id="templateFieldsContainer" style="display: none;">
+                            <div class="template-fields-list" id="templateFieldsList">
+                                <!-- Dynamic template fields will be added here -->
+                            </div>
+                            <button class="btn-add-template-field" id="btnAddTemplateField" onclick="partnersApp.addTemplateField()">
+                                <img src="icons/plus.svg" width="16" height="16" alt="Добавить">
+                                Добавить поле
+                            </button>
+                        </div>
+
+                        <div class="form-footer">
+                            <button class="form-btn-save" onclick="partnersApp.saveFromForm()" id="formSaveBtn">
+                                <img src="icons/done.svg" width="20" height="20" alt="Сохранить">
+                                <span id="formSaveBtnText">Добавить партнера</span>
+                            </button>
+                            <div class="form-divider"></div>
+                            <button class="form-btn-cancel" onclick="partnersApp.closeForm()">
+                                <img src="icons/cross.svg" width="20" height="20" alt="Отменить">
+                                Отменить
+                            </button>
+                            <button class="btn-delete" onclick="partnersApp.deleteFromForm()" id="formDeleteBtn" style="display: none;">Удалить</button>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal" id="importModal">
+        <div class="modal-dialog" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Импорт данных</h2>
+                <button class="modal-close" onclick="partnersApp.closeImportDialog()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Выберите JSON файл</label>
+                    <input type="file" class="form-input" id="importFileInput" accept=".json">
+                </div>
+                <div id="importPreview" style="display: none; padding: 12px; background: #f0e8d8; border-radius: 4px; margin-top: 12px; font-size: 13px;"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="partnersApp.closeImportDialog()">Отмена</button>
+                <button class="btn-primary" onclick="partnersApp.importData()" id="importBtn" disabled>Импортировать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crop Modal -->
+    <div class="modal" id="cropModal">
+        <div class="modal-dialog" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Обрезка фото</h2>
+                <button class="modal-close" onclick="partnersApp.closeCropModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="crop-container">
+                    <div class="crop-preview" id="cropPreview">
+                        <img id="cropImage" src="" alt="">
+                    </div>
+                </div>
+                <p class="crop-hint">Используйте колесо мыши для масштабирования и перетаскивайте для позиционирования</p>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="partnersApp.closeCropModal()">Отмена</button>
+                <button class="btn-primary" onclick="partnersApp.applyCrop()">Применить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../shared/storage.js"></script>
+    <script src="js/partners.js"></script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Синхронизация...</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #1a1a1a;
+            color: #f2f2f2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #333;
+            border-top-color: #fdbe2f;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .message {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .sub {
+            font-size: 12px;
+            color: #888;
+        }
+        .error {
+            color: #e74c3c;
+        }
+        .success {
+            color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner" id="spinner"></div>
+        <div class="message" id="message">Обработка данных...</div>
+        <div class="sub" id="sub">Окно закроется автоматически</div>
+    </div>
+
+    <script>
+        (function() {
+            var message = document.getElementById('message');
+            var sub = document.getElementById('sub');
+            var spinner = document.getElementById('spinner');
+
+            try {
+                // Получаем параметры из URL
+                var params = new URLSearchParams(window.location.search);
+                var action = params.get('action');
+                var data = params.get('data');
+
+                if (!action || !data) {
+                    throw new Error('Отсутствуют параметры');
+                }
+
+                // Декодируем данные
+                var decoded = decodeURIComponent(data);
+                var parsed = JSON.parse(decoded);
+
+                // Сохраняем в localStorage с меткой времени
+                var result = {
+                    action: action,
+                    data: parsed,
+                    timestamp: Date.now()
+                };
+
+                localStorage.setItem('sync-callback-result', JSON.stringify(result));
+
+                // Показываем успех
+                spinner.style.display = 'none';
+                message.textContent = 'Данные получены!';
+                message.className = 'message success';
+
+                // Закрываем окно через 1 секунду
+                setTimeout(function() {
+                    window.close();
+                }, 1000);
+
+            } catch (e) {
+                spinner.style.display = 'none';
+                message.textContent = 'Ошибка: ' + e.message;
+                message.className = 'message error';
+                sub.textContent = 'Закройте это окно вручную';
+            }
+        })();
+    </script>
+</body>
+</html>

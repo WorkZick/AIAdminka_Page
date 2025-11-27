@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Info - AIAdminka</title>
+    <link rel="stylesheet" href="css/team-info.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button class="back-button" onclick="teamInfo.toggleSidebar()">
+                <img src="icons/arrow.svg" width="30" height="30" alt="Toggle">
+            </button>
+
+            <div class="sidebar-menu">
+                <div class="menu-item" onclick="window.location.href='../index.html'">
+                    <span>Главная страница</span>
+                    <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../excel-reports/index.html'">
+                    <span>Excel отчеты</span>
+                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Excel">
+                </div>
+
+                <div class="menu-item active">
+                    <span>Team Info</span>
+                    <img src="icons/team_info.svg" width="20" height="20" alt="Team Info">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../traffic-calculation/index.html'">
+                    <span>Расчет трафика</span>
+                    <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
+                    <span>Документация</span>
+                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../partners/index.html'">
+                    <span>Партнеры</span>
+                    <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../sync/index.html'">
+                    <span>Синхронизация</span>
+                    <img src="icons/sync.svg" width="20" height="20" alt="Синхронизация">
+                </div>
+            </div>
+
+            <div class="menu-separator"></div>
+
+            <div class="version-info">
+                О разработке<br>
+                Version 0.0.01
+            </div>
+        </aside>
+
+        <script>
+            // Immediately set sidebar state to prevent flashing
+            (function() {
+                const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+                if (collapsed) {
+                    document.getElementById('sidebar').classList.add('collapsed');
+                }
+            })();
+        </script>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header (top right) -->
+            <header class="global-header">
+                <button class="export-btn" onclick="teamInfo.exportJSON()">
+                    <img src="icons/export.svg" width="14" height="14" alt="Экспорт">
+                    Экспорт списка
+                </button>
+
+                <button class="import-btn" onclick="teamInfo.showImportDialog()">
+                    <img src="icons/import.svg" width="14" height="14" alt="Импорт">
+                    Импорт списка
+                </button>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Table section -->
+                <main class="table-section">
+                    <!-- Section header -->
+                    <header class="section-header">
+                        <button class="add-employee-btn" onclick="teamInfo.showAddModal()">
+                            <img src="icons/plus.svg" width="16" height="16" alt="Добавить">
+                            Добавить сотрудника
+                        </button>
+
+                        <div class="search-box">
+                            <img class="search-icon" src="icons/serch.svg" width="16" height="16" alt="Поиск">
+                            <input type="text" class="search-input" placeholder="Поиск" id="searchInput" oninput="teamInfo.filterTable()">
+                        </div>
+                    </header>
+
+                    <!-- Table -->
+                    <div class="table-container">
+                <table class="employees-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                <div class="sort-header" onclick="teamInfo.sortBy('status')">
+                                    Статус
+                                    <img src="icons/filter.svg" width="12" height="12" alt="Сортировка">
+                                </div>
+                            </th>
+                            <th>Фото</th>
+                            <th>
+                                <div class="sort-header" onclick="teamInfo.sortBy('name')">
+                                    Ф.И.О.
+                                    <img src="icons/filter.svg" width="12" height="12" alt="Сортировка">
+                                </div>
+                            </th>
+                            <th>Должность</th>
+                            <th>Логин CRM</th>
+                            <th>Reddy ID</th>
+                            <th>День рождения</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeesTableBody">
+                        <!-- Rows will be generated by JavaScript -->
+                    </tbody>
+                </table>
+
+                <!-- Empty state -->
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <img class="empty-state-icon" src="icons/team_info.svg" alt="Team">
+                    <div class="empty-state-title">Команда пока пуста</div>
+                    <div class="empty-state-text">Добавьте первого сотрудника, чтобы начать</div>
+                    <button class="btn-primary" onclick="teamInfo.showAddModal()">Добавить сотрудника</button>
+                </div>
+            </div>
+                </main>
+
+                <!-- Right panel (statistics or employee card) -->
+                <aside class="right-panel">
+            <!-- Statistics panel (shown by default) -->
+            <div class="stats-panel" id="statsPanel">
+                <div class="stats-header">
+                    <div class="stats-team-header">
+                        <div class="team-name" onclick="teamInfo.editTeamName()">
+                            Vadim team
+                            <img src="icons/pen.svg" width="16" height="16" alt="Редактировать">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-content">
+                    <div class="stats-total-box">
+                        <div class="stats-title">Количество сотрудников</div>
+                        <div class="stats-count" id="totalCount">0</div>
+                        <div class="stats-label">человек</div>
+                    </div>
+
+                <div class="stats-breakdown">
+                    <div class="stat-item">
+                        <div class="stat-count" id="workingCount">0</div>
+                        <span class="stat-label-small">человек</span>
+                        <span class="status-badge green">Работает</span>
+                    </div>
+
+                    <div class="stat-item">
+                        <div class="stat-count" id="sickCount">0</div>
+                        <span class="stat-label-small">человек</span>
+                        <span class="status-badge purple">Болеет</span>
+                    </div>
+
+                    <div class="stat-item">
+                        <div class="stat-count" id="leaveCount">0</div>
+                        <span class="stat-label-small">человек</span>
+                        <span class="status-badge yellow">В отпуске</span>
+                    </div>
+
+                    <div class="stat-item">
+                        <div class="stat-count" id="tripCount">0</div>
+                        <span class="stat-label-small">человек</span>
+                        <span class="status-badge blue">Командировка</span>
+                    </div>
+
+                    <div class="stat-item">
+                        <div class="stat-count" id="firedCount">0</div>
+                        <span class="stat-label-small">человек</span>
+                        <span class="status-badge red">Уволен</span>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <!-- Employee card (shown when employee selected) -->
+            <div class="employee-card" id="employeeCard" style="display: none;">
+                <div class="card-header">
+                    <div class="card-team-header">
+                        <div class="card-team-name" id="cardTeamName">Vadim team</div>
+                    </div>
+                    <div class="card-employee-info">
+                        <div class="card-avatar">
+                            <img id="cardAvatar" src="" alt="" style="display: none;">
+                        </div>
+                        <div class="card-info-section">
+                            <div class="card-name" id="cardName">Пантюков Вадим Алексеевич</div>
+                            <div class="card-position" id="cardPosition">Дизайнер</div>
+                            <div class="card-status-badge" id="cardStatusBadge" onclick="teamInfo.toggleStatusDropdown()">
+                                <span class="status-badge green" id="cardStatusText">Работает</span>
+                                <img class="status-dropdown-icon" src="icons/arrow.svg" width="12" height="12" alt="Выбрать" style="transform: rotate(90deg);">
+                            </div>
+                            <div class="status-dropdown" id="cardStatusDropdown" style="display: none;">
+                                <div class="status-option" onclick="teamInfo.changeStatus('Работает')">
+                                    <span class="status-badge green">Работает</span>
+                                </div>
+                                <div class="status-option" onclick="teamInfo.changeStatus('В отпуске')">
+                                    <span class="status-badge yellow">В отпуске</span>
+                                </div>
+                                <div class="status-option" onclick="teamInfo.changeStatus('Командировка')">
+                                    <span class="status-badge blue">Командировка</span>
+                                </div>
+                                <div class="status-option" onclick="teamInfo.changeStatus('Уволен')">
+                                    <span class="status-badge red">Уволен</span>
+                                </div>
+                                <div class="status-option" onclick="teamInfo.changeStatus('Болеет')">
+                                    <span class="status-badge purple">Болеет</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body" id="cardBody">
+                    <!-- Info will be generated by JavaScript -->
+                </div>
+
+                <div class="card-footer">
+                    <button class="edit-btn" onclick="teamInfo.editFromCard()">Редактировать</button>
+                    <div class="card-footer-divider"></div>
+                    <button class="delete-btn" onclick="teamInfo.deleteFromCard()">Удалить</button>
+                </div>
+            </div>
+
+            <!-- Employee form (for adding/editing) -->
+            <div class="employee-form" id="employeeForm" style="display: none;">
+                <div class="form-team-header">
+                    <div class="form-team-name" id="formTeamName">Vadim team</div>
+                </div>
+
+                <!-- Template selector (only visible when adding new employee) -->
+                <div class="form-template-selector" id="formTemplateSelector" style="display: none;">
+                    <select class="template-select" id="templateSelect" onchange="teamInfo.handleTemplateChange()">
+                        <option value="">Шаблон</option>
+                    </select>
+                </div>
+
+                <div class="form-employee-info">
+                    <input type="file" id="formAvatarInput" accept="image/*" style="display: none;" onchange="teamInfo.handleAvatarUpload(event)">
+                    <div class="form-avatar" onclick="document.getElementById('formAvatarInput').click()">
+                        <img class="form-avatar-placeholder" src="icons/download_photo_placeholder.svg" alt="Загрузить фото">
+                        <img id="formAvatar" src="" alt="" style="display: none;">
+                    </div>
+                    <div class="form-info-section">
+                        <textarea class="form-name-input" id="formFullName" placeholder="Ф.И.О." rows="1"></textarea>
+                        <textarea class="form-position-input" id="formPosition" placeholder="Должность" rows="1"></textarea>
+                        <div class="form-status-badge" id="formStatusBadge" onclick="teamInfo.toggleFormStatusDropdown()">
+                            <span class="status-badge green" id="formStatusText">Работает</span>
+                            <img class="status-dropdown-icon" src="icons/arrow.svg" width="12" height="12" alt="Выбрать" style="transform: rotate(90deg);">
+                        </div>
+                        <div class="status-dropdown" id="formStatusDropdown" style="display: none;">
+                            <div class="status-option" onclick="teamInfo.changeFormStatus('Работает')">
+                                <span class="status-badge green">Работает</span>
+                            </div>
+                            <div class="status-option" onclick="teamInfo.changeFormStatus('В отпуске')">
+                                <span class="status-badge yellow">В отпуске</span>
+                            </div>
+                            <div class="status-option" onclick="teamInfo.changeFormStatus('Командировка')">
+                                <span class="status-badge blue">Командировка</span>
+                            </div>
+                            <div class="status-option" onclick="teamInfo.changeFormStatus('Уволен')">
+                                <span class="status-badge red">Уволен</span>
+                            </div>
+                            <div class="status-option" onclick="teamInfo.changeFormStatus('Болеет')">
+                                <span class="status-badge purple">Болеет</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-body">
+
+                    <div class="form-group-inline">
+                        <label>Reddy ID:</label>
+                        <input type="text" id="formReddyId" placeholder="Введите ID">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Рабочий Telegram:</label>
+                        <input type="text" id="formCorpTelegram" placeholder="@username">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Личный Telegram:</label>
+                        <input type="text" id="formPersonalTelegram" placeholder="@username">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>День рождения:</label>
+                        <input type="date" id="formBirthday">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Рабочая почта:</label>
+                        <input type="email" id="formCorpEmail" placeholder="example@company.com">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Личная почта:</label>
+                        <input type="email" id="formPersonalEmail" placeholder="example@gmail.com">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Рабочий телефон:</label>
+                        <input type="tel" id="formCorpPhone" placeholder="+7 (xxx) xxx-xx-xx">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Личный телефон:</label>
+                        <input type="tel" id="formPersonalPhone" placeholder="+7 (xxx) xxx-xx-xx">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Офис:</label>
+                        <input type="text" id="formOffice" placeholder="Офис">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Начало работы:</label>
+                        <input type="date" id="formStartDate">
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Компания:</label>
+                        <input type="text" id="formCompany" placeholder='ООО "ТУРЕЦ"'>
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label>Логин CRM:</label>
+                        <input type="text" id="formCrmLogin" placeholder="abobus.i">
+                    </div>
+
+                    <div class="form-group-inline vertical">
+                        <label>Примечание</label>
+                        <textarea id="formComment" placeholder="Примечание"></textarea>
+                    </div>
+                </div>
+
+                <!-- Template fields container (only visible in template mode) -->
+                <div class="template-fields-container" id="templateFieldsContainer" style="display: none;">
+                    <div class="template-fields-list" id="templateFieldsList">
+                        <!-- Dynamic template fields will be added here -->
+                    </div>
+                    <button class="btn-add-template-field" id="btnAddTemplateField" onclick="teamInfo.addTemplateField()">
+                        <img src="icons/plus.svg" width="16" height="16" alt="Добавить">
+                        Добавить поле
+                    </button>
+                </div>
+
+                <div class="form-footer">
+                    <button class="form-btn-save" onclick="teamInfo.saveFromForm()" id="formSaveBtn">
+                        <img src="icons/done.svg" width="20" height="20" alt="Сохранить">
+                        <span id="formSaveBtnText">Добавить сотрудника</span>
+                    </button>
+                    <div class="form-divider"></div>
+                    <button class="form-btn-cancel" onclick="teamInfo.closeForm()">
+                        <img src="icons/cross.svg" width="20" height="20" alt="Отменить">
+                        Отменить
+                    </button>
+                    <button class="btn-delete" onclick="teamInfo.deleteFromForm()" id="formDeleteBtn" style="display: none;">Удалить</button>
+                </div>
+            </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Employee Modal -->
+    <div class="modal" id="employeeModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Добавить сотрудника</h2>
+                <button class="modal-close" onclick="teamInfo.closeEmployeeModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <form id="employeeForm">
+                    <div class="form-group">
+                        <label class="form-label">Ф.И.О.</label>
+                        <input type="text" class="form-input" id="fullNameInput" placeholder="Иванов Иван Иванович" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Должность</label>
+                        <input type="text" class="form-input" id="positionInput" placeholder="Менеджер" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Статус</label>
+                        <select class="form-select" id="statusSelect">
+                            <option value="Работает">Работает</option>
+                            <option value="В отпуске">В отпуске</option>
+                            <option value="Командировка">Командировка</option>
+                            <option value="Уволен">Уволен</option>
+                            <option value="Болеет">Болеет</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ID Reddy</label>
+                        <input type="text" class="form-input" id="reddyInput" placeholder="40182221672">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Рабочий Telegram</label>
+                        <input type="text" class="form-input" id="corpTelegramInput" placeholder="@username">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Личный Telegram</label>
+                        <input type="text" class="form-input" id="personalTelegramInput" placeholder="@username">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">День рождения</label>
+                        <input type="date" class="form-input" id="birthdayInput">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Рабочая почта</label>
+                        <input type="email" class="form-input" id="corpEmailInput" placeholder="example@company.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Личная почта</label>
+                        <input type="email" class="form-input" id="personalEmailInput" placeholder="example@gmail.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Рабочий телефон</label>
+                        <input type="tel" class="form-input" id="corpPhoneInput" placeholder="+7 (xxx) xxx-xx-xx">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Личный телефон</label>
+                        <input type="tel" class="form-input" id="personalPhoneInput" placeholder="+7 (xxx) xxx-xx-xx">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Офис</label>
+                        <input type="text" class="form-input" id="officeInput" placeholder="тут">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Начало работы по Wolan</label>
+                        <input type="date" class="form-input" id="startDateInput">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Название компании</label>
+                        <input type="text" class="form-input" id="companyInput" placeholder='ООО "ТУРЕЦ"'>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Логин CRM</label>
+                        <input type="text" class="form-input" id="crmLoginInput" placeholder="abobus.i">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Примечание</label>
+                        <textarea class="form-textarea" id="commentInput" placeholder="Дополнительная информация..."></textarea>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="teamInfo.closeEmployeeModal()">Отменить</button>
+                <button class="btn-primary" onclick="teamInfo.saveEmployee()" id="saveEmployeeBtn">Добавить сотрудника</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal" id="importModal">
+        <div class="modal-dialog" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Импорт данных</h2>
+                <button class="modal-close" onclick="teamInfo.closeImportDialog()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Выберите JSON файл</label>
+                    <input type="file" class="form-input" id="importFileInput" accept=".json">
+                </div>
+                <div id="importPreview" style="display: none; padding: 12px; background: #f0e8d8; border-radius: 4px; margin-top: 12px; font-size: 13px;"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="teamInfo.closeImportDialog()">Отмена</button>
+                <button class="btn-primary" onclick="teamInfo.importData()" id="importBtn" disabled>Импортировать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Crop Modal -->
+    <div class="modal" id="cropModal">
+        <div class="modal-dialog" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Редактировать фото</h2>
+                <button class="modal-close" onclick="teamInfo.closeCropModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+
+            <div class="modal-body" style="padding: 20px;">
+                <div class="crop-container">
+                    <div class="crop-preview" id="cropPreview">
+                        <img id="cropImage" src="" alt="" draggable="false">
+                    </div>
+                    <div class="crop-hint">Используйте колесико мыши для масштабирования и перетащите изображение для позиционирования</div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="teamInfo.closeCropModal()">Отмена</button>
+                <button class="btn-primary" onclick="teamInfo.applyCrop()">Применить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../shared/storage.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/export-manager.js"></script>
+    <script src="js/team-info.js"></script>
+</body>
+</html>

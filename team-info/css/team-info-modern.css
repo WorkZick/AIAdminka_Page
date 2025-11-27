@@ -1,0 +1,926 @@
+/* Team Info - Windows XP Modern Style */
+
+/* Основные стили */
+body {
+    background: #ece9d8;
+}
+
+.container {
+    background: transparent;
+}
+
+/* Навигация в стиле XP */
+nav {
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(180deg, #ece9d8 0%, #d4cdb6 100%);
+    border: 1px solid #003c74;
+    color: #000;
+    text-decoration: none;
+    font-size: 11px;
+    border-radius: 3px;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.1s;
+}
+
+nav a:hover {
+    background: linear-gradient(180deg, #f5f2e8 0%, #dcd6c0 100%);
+}
+
+.nav-right {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Кнопки в стиле XP */
+.btn {
+    background: linear-gradient(180deg, #ece9d8 0%, #d4cdb6 100%);
+    border: 1px solid #003c74;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    border-radius: 3px;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.1s;
+    color: #000;
+    white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, #f5f2e8 0%, #dcd6c0 100%);
+}
+
+.btn:active:not(:disabled) {
+    background: linear-gradient(180deg, #d4cdb6 0%, #c8c0a8 100%);
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.btn-primary,
+.btn-add-employee {
+    background: linear-gradient(180deg, #6fa4e8 0%, #2b6ec5 100%);
+    color: white;
+    font-weight: bold;
+    border-color: #003c74;
+}
+
+.btn-primary:hover:not(:disabled),
+.btn-add-employee:hover:not(:disabled) {
+    background: linear-gradient(180deg, #85b5f0 0%, #4080d0 100%);
+}
+
+.btn-success {
+    background: linear-gradient(180deg, #7dc579 0%, #4a9e46 100%);
+    color: white;
+    font-weight: bold;
+    border-color: #2d6b2a;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: linear-gradient(180deg, #8fd08b 0%, #5ab156 100%);
+}
+
+.btn-warning {
+    background: linear-gradient(180deg, #f5c542 0%, #e0a020 100%);
+    color: #000;
+    font-weight: bold;
+    border-color: #c58f1d;
+}
+
+.btn-warning:hover:not(:disabled) {
+    background: linear-gradient(180deg, #ffd75c 0%, #f0b030 100%);
+}
+
+.btn-secondary {
+    background: linear-gradient(180deg, #ddd 0%, #bbb 100%);
+    color: #333;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-details {
+    margin-top: 8px;
+    font-size: 10px;
+    padding: 4px 8px;
+}
+
+/* Header в стиле XP */
+header {
+    background: white;
+    padding: 16px 20px;
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+    margin-bottom: 16px;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+header h1 {
+    color: #003c74;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+header p {
+    color: #666;
+    font-size: 11px;
+}
+
+/* Сетка команды */
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+/* Пустая команда */
+.empty-team {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+    border-radius: 8px;
+}
+
+.empty-team h3 {
+    color: #003c74;
+    font-size: 18px;
+    margin-bottom: 12px;
+}
+
+.empty-team p {
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 20px;
+}
+
+/* Карточка сотрудника в стиле XP */
+.employee-card {
+    background: #f0f0f0;
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+    padding: 16px;
+    position: relative;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.1s;
+}
+
+.employee-card:hover {
+    border-color: #fafafa #606060 #606060 #fafafa;
+}
+
+.employee-card.dragging {
+    opacity: 0.5;
+}
+
+.drag-handle {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    cursor: move;
+    color: #999;
+    font-size: 14px;
+    padding: 4px;
+    user-select: none;
+}
+
+.drag-handle:hover {
+    color: #666;
+}
+
+.card-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 4px;
+}
+
+.card-action-btn {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #003c74;
+    background: linear-gradient(180deg, #ece9d8 0%, #d4cdb6 100%);
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+}
+
+.card-action-btn:hover {
+    background: linear-gradient(180deg, #f5f2e8 0%, #dcd6c0 100%);
+}
+
+.card-action-btn.copy {
+    background: linear-gradient(180deg, #93c5fd 0%, #3b82f6 100%);
+}
+
+.card-action-btn.copy:hover {
+    background: linear-gradient(180deg, #bfdbfe 0%, #60a5fa 100%);
+}
+
+.card-action-btn.delete {
+    background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
+}
+
+.card-action-btn.delete:hover {
+    background: linear-gradient(180deg, #fca5a5 0%, #ef4444 100%);
+}
+
+.employee-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 3px;
+    background: linear-gradient(135deg, #6fa4e8 0%, #2b6ec5 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: bold;
+    border: 1px solid #003c74;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.3);
+    margin: 0 auto 12px;
+}
+
+.employee-name {
+    text-align: center;
+    font-size: 13px;
+    font-weight: bold;
+    color: #003c74;
+    margin-bottom: 4px;
+}
+
+.employee-position {
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #bbb;
+}
+
+.employee-grade {
+    display: inline-block;
+    padding: 2px 6px;
+    background: linear-gradient(135deg, #6fa4e8 0%, #2b6ec5 100%);
+    color: white;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: bold;
+    margin-left: 4px;
+}
+
+.employee-info {
+    margin: 8px 0;
+}
+
+.employee-field {
+    margin: 6px 0;
+    font-size: 11px;
+}
+
+.field-label {
+    color: #666;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.field-value {
+    color: #000;
+    padding: 4px 8px;
+    background: white;
+    border: 1px solid #999;
+    border-radius: 2px;
+    display: block;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.field-value:hover {
+    background: #e8f0ff;
+}
+
+.field-value.copied {
+    background: #90EE90;
+    animation: flash 0.5s;
+}
+
+@keyframes flash {
+    0%, 100% { background: #90EE90; }
+    50% { background: #7FFF00; }
+}
+
+.field-value.field-concealed {
+    cursor: pointer;
+    user-select: none;
+    font-family: monospace;
+    color: #999 !important; /* Цвет текста "скрыто" */
+    font-style: italic;
+}
+
+.field-value.revealed {
+    background: #ffffcc;
+}
+
+.employee-comment {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid #bbb;
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+    background: #fafafa;
+    padding: 8px;
+    border-radius: 2px;
+}
+
+.employee-dates {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid #bbb;
+    font-size: 10px;
+    color: #999;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Модальное окно в стиле XP - ВАЖНО: используем класс .active */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-dialog {
+    background: #f0f0f0;
+    border: 3px solid;
+    border-color: #0055e5 #003db4 #003db4 #0055e5;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.4);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+.modal-header {
+    background: linear-gradient(180deg, #0997ff 0%, #0053ee 50%, #0050ee 50%, #003db4 100%);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 5px 5px 0 0;
+}
+
+.modal-header h2 {
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    margin: 0;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+.modal-close {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #003c74;
+    background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 2px;
+}
+
+.modal-close:hover {
+    filter: brightness(1.1);
+}
+
+.modal-body {
+    padding: 16px;
+    max-height: calc(90vh - 120px);
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 12px 16px;
+    background: #ddd;
+    border-top: 1px solid #999;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* Формы в стиле XP */
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: bold;
+    color: #000;
+    margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid #7f9db9;
+    border-radius: 2px;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    background: white;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #0055e5;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.1), 0 0 3px rgba(0, 85, 229, 0.5);
+}
+
+.form-group textarea {
+    min-height: 60px;
+    resize: vertical;
+}
+
+/* Кастомные поля */
+.custom-fields-section {
+    margin: 16px 0;
+    padding: 12px;
+    background: #e8e8e8;
+    border: 1px solid #bbb;
+    border-radius: 3px;
+}
+
+.custom-fields-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.custom-fields-header label {
+    font-size: 11px;
+    font-weight: bold;
+    color: #000;
+}
+
+.custom-fields-container {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.custom-field {
+    display: grid;
+    grid-template-columns: 1fr 2fr auto auto;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.custom-field-predefined {
+    margin-bottom: 8px;
+}
+
+.custom-field-predefined label {
+    display: block;
+    font-size: 11px;
+    font-weight: bold;
+    color: #000;
+    margin-bottom: 4px;
+}
+
+.custom-field-predefined input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid #7f9db9;
+    border-radius: 2px;
+    font-size: 11px;
+}
+
+.custom-field input[type="text"] {
+    padding: 4px 6px;
+    border: 1px solid #7f9db9;
+    border-radius: 2px;
+    font-size: 11px;
+}
+
+.custom-field-name {
+    grid-column: 1;
+}
+
+.custom-field-value {
+    grid-column: 2;
+}
+
+.visibility-checkbox {
+    grid-column: 3;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.remove-field-btn {
+    grid-column: 4;
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
+    color: white;
+    border: 1px solid #991b1b;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.remove-field-btn:hover {
+    background: linear-gradient(180deg, #fca5a5 0%, #ef4444 100%);
+}
+
+.btn-small {
+    padding: 4px 8px;
+    font-size: 10px;
+}
+
+/* Dropdown меню экспорта */
+.export-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.export-dropdown {
+    position: relative;
+}
+
+.export-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    background: #f0f0f0;
+    border: 2px solid;
+    border-color: #fff #808080 #808080 #fff;
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+    min-width: 200px;
+    z-index: 1000;
+    display: none;
+}
+
+.export-menu.active {
+    display: block;
+}
+
+.export-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    background: #f0f0f0;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: all 0.1s;
+}
+
+.export-option:hover {
+    background: #316ac5;
+    color: white;
+}
+
+.export-desc {
+    font-size: 9px;
+    opacity: 0.8;
+}
+
+/* Модальное окно экспорта */
+.export-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.export-modal.active {
+    display: flex;
+}
+
+.export-dialog {
+    background: #f0f0f0;
+    border: 3px solid;
+    border-color: #0055e5 #003db4 #003db4 #0055e5;
+    border-radius: 8px;
+    padding: 16px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: auto;
+    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.export-dialog h2 {
+    color: #003c74;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+#exportItems {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    padding: 8px;
+    background: white;
+    border: 1px solid #999;
+    border-radius: 2px;
+}
+
+.export-item {
+    padding: 8px;
+    margin: 4px 0;
+    cursor: pointer;
+    border-radius: 2px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.export-item:hover {
+    background: #e8f0ff;
+}
+
+.export-checkbox {
+    margin-top: 2px;
+}
+
+.export-preview {
+    flex: 1;
+}
+
+.export-preview-title {
+    font-weight: bold;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.export-preview-content {
+    font-size: 10px;
+    color: #666;
+}
+
+.format-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    cursor: pointer;
+    border: 1px solid #bbb;
+    border-radius: 3px;
+    background: white;
+    margin-bottom: 8px;
+}
+
+.format-option:hover {
+    background: #e8f0ff;
+    border-color: #0055e5;
+}
+
+.format-option input[type="radio"] {
+    cursor: pointer;
+}
+
+.format-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.format-label small {
+    font-size: 9px;
+    color: #666;
+}
+
+/* ==================== ТИПИЗИРОВАННЫЕ ПОЛЯ ==================== */
+
+/* Компактная сетка для кастомного поля */
+.custom-field {
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+/* Верхняя строка: название + тип */
+.custom-field-header {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr;
+    gap: 6px;
+}
+
+.custom-field-name {
+    padding: 5px 8px;
+    border: 1px solid #7f9db9;
+    border-radius: 2px;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    width: 100%;
+}
+
+.custom-field-type {
+    padding: 5px 6px;
+    border: 1px solid #7f9db9;
+    border-radius: 2px;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    background: white;
+    width: 100%;
+}
+
+/* Контейнер для значений */
+.custom-field-values {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Строка со значением */
+.field-value-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px;
+    align-items: center;
+}
+
+.field-value-input {
+    padding: 5px 8px;
+    border: 1px solid #7f9db9;
+    border-radius: 2px;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    width: 100%;
+}
+
+/* Денежный тип - инпут + валюта в одной строке */
+.money-input-group {
+    display: grid;
+    grid-template-columns: 1fr 70px;
+    gap: 4px;
+    width: 100%;
+}
+
+.money-value {
+    padding: 5px 8px;
+    border: 1px solid #7f9db9;
+    border-radius: 2px;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    width: 100%;
+}
+
+.field-currency-select {
+    padding: 5px 6px;
+    border: 1px solid #7f9db9;
+    border-radius: 2px;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 11px;
+    background: white;
+    width: 100%;
+}
+
+/* Кнопка удаления значения - компактная */
+.btn-remove-value {
+    background: #e74c3c;
+    border: none;
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.btn-remove-value:hover {
+    background: #c0392b;
+}
+
+/* Нижняя строка: кнопки и чекбокс */
+.custom-field-controls {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding-top: 4px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.btn-add-value {
+    padding: 4px 10px;
+    border: 1px solid #7f9db9;
+    background: white;
+    border-radius: 2px;
+    font-family: 'Tahoma', sans-serif;
+    font-size: 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.btn-add-value:hover {
+    background: #e8f0ff;
+    border-color: #0055e5;
+}
+
+.visibility-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: #666;
+    justify-self: center;
+}
+
+.remove-field-btn {
+    background: #c0392b;
+    border: none;
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+}
+
+.remove-field-btn:hover {
+    background: #a02a1f;
+}
+
+/* ==================== КОНЕЦ ТИПИЗИРОВАННЫХ ПОЛЕЙ ==================== */

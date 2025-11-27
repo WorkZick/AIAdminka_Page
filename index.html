@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleAIAdminka - Windows XP</title>
+    <link rel="stylesheet" href="css/xp-style.css">
+    <script src="https://unpkg.com/lucide@0.548.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <!-- Desktop (Рабочий стол) -->
+    <div class="desktop" id="desktop">
+        <!-- Прозрачная сетка при перетаскивании -->
+        <div class="desktop-grid"></div>
+        <div class="desktop-icons" id="desktopIcons">
+            <!-- Иконки будут добавлены динамически через JavaScript -->
+        </div>
+    </div>
+
+    <!-- Context Menu (Контекстное меню) -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" onclick="contextMenuAction('open')">
+            <span class="context-menu-item-icon"><i data-lucide="folder-open"></i></span>
+            Открыть
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" id="contextLockItem" onclick="contextMenuAction('lock')">
+            <span class="context-menu-item-icon" id="contextLockIcon"><i data-lucide="unlock"></i></span>
+            <span id="contextLockText">Заблокировать</span>
+        </div>
+        <div class="context-menu-item" id="contextDeleteItem" onclick="contextMenuAction('delete')">
+            <span class="context-menu-item-icon"><i data-lucide="trash-2"></i></span>
+            Удалить
+        </div>
+    </div>
+
+    <!-- Taskbar (Панель задач) -->
+    <div class="taskbar">
+        <!-- Кнопка Пуск -->
+        <button class="start-button" onclick="toggleStartMenu()">
+            <div class="start-icon"><i data-lucide="menu"></i></div>
+            <span>Пуск</span>
+        </button>
+
+        <!-- Quick Launch -->
+        <div class="quick-launch"></div>
+
+        <!-- System Tray (Область уведомлений) -->
+        <div class="system-tray">
+            <div class="system-tray-icon"><i data-lucide="volume-2"></i></div>
+            <div class="clock" id="clock">12:00</div>
+        </div>
+    </div>
+
+    <!-- Start Menu (Меню Пуск) -->
+    <div class="start-menu" id="startMenu">
+        <div class="start-menu-header">
+            <div class="start-menu-user">Администратор</div>
+        </div>
+        
+        <div class="start-menu-content">
+            <div class="start-menu-item" onclick="openModule('excel-reports/index.html'); toggleStartMenu();">
+                <div class="start-menu-item-icon"><i data-lucide="file-spreadsheet"></i></div>
+                <div>Excel отчеты</div>
+            </div>
+            
+            <div class="start-menu-item" onclick="openModule('team-info/index.html'); toggleStartMenu();">
+                <div class="start-menu-item-icon"><i data-lucide="users"></i></div>
+                <div>Team Info</div>
+            </div>
+            
+            <div class="start-menu-item" onclick="openModule('traffic-calculation/index.html'); toggleStartMenu();">
+                <div class="start-menu-item-icon"><i data-lucide="trending-up"></i></div>
+                <div>Расчет трафика</div>
+            </div>
+            
+            <div class="start-menu-item" onclick="openModule('documentation/index.html'); toggleStartMenu();">
+                <div class="start-menu-item-icon"><i data-lucide="book-open"></i></div>
+                <div>Документация</div>
+            </div>
+
+            <div class="start-menu-item" onclick="openModule('partners/index.html'); toggleStartMenu();">
+                <div class="start-menu-item-icon"><i data-lucide="handshake"></i></div>
+                <div>Партнеры</div>
+            </div>
+
+            <div class="start-menu-item" onclick="openModule('sync/index.html'); toggleStartMenu();">
+                <div class="start-menu-item-icon"><i data-lucide="cloud-sync"></i></div>
+                <div>Синхронизация</div>
+            </div>
+
+            <div class="start-menu-separator"></div>
+            
+            <div class="start-menu-item" style="opacity: 0.5; cursor: default;">
+                <div class="start-menu-item-icon"><i data-lucide="file-text"></i></div>
+                <div>Гайды (в разработке)</div>
+            </div>
+        </div>
+        
+        <div class="start-menu-footer">
+            <div class="start-menu-footer-item" onclick="desktop.alignToGrid(); toggleStartMenu();">
+                <span><i data-lucide="grid-3x3"></i></span>
+                <span>Выровнять по сетке</span>
+            </div>
+            <div class="start-menu-footer-item" onclick="desktop.lockAll(); toggleStartMenu();">
+                <span><i data-lucide="lock"></i></span>
+                <span>Заблокировать все</span>
+            </div>
+            <div class="start-menu-footer-item" onclick="desktop.unlockAll(); toggleStartMenu();">
+                <span><i data-lucide="unlock"></i></span>
+                <span>Разблокировать все</span>
+            </div>
+            <div class="start-menu-separator"></div>
+            <div class="start-menu-footer-item" onclick="resetDesktop()">
+                <span><i data-lucide="rotate-ccw"></i></span>
+                <span>Сбросить</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal (Модальное окно "О разработке") -->
+    <div class="modal" id="aboutModal" onclick="if(event.target === this) closeAboutModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">О разработке</span>
+                <button class="modal-close" onclick="closeAboutModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Это проект <strong>Vadim P</strong></p>
+                <p>Reddy ID для связи: <strong>62219492522</strong></p>
+                <p>Ссылка на чат с актуальной версией:<br>
+                <a href="https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_" target="_blank">https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="shared/storage.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
