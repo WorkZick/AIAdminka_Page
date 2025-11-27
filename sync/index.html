@@ -92,8 +92,11 @@
                                 <label>URL Google Apps Script:</label>
                                 <input type="text" id="configScriptUrl" placeholder="https://script.google.com/macros/s/..." oninput="syncApp.saveConfig()">
                             </div>
-                            <button class="btn-test" onclick="syncApp.testConnection()">
-                                Проверить подключение
+                            <button class="btn-login" id="btnLogin" onclick="syncApp.login()">
+                                Войти через Google
+                            </button>
+                            <button class="btn-logout" id="btnLogout" onclick="syncApp.logout()" style="display:none;">
+                                Выйти
                             </button>
                             <div class="config-info" id="configInfo">
                                 <div class="info-row">

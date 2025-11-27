@@ -1,10 +1,13 @@
 /**
- * Sync Module - Cloud Synchronization via Google Sheets + Apps Script
- *
- * Работает через открытие в новой вкладке + ручное копирование результата
+ * Sync Module - Cloud Synchronization via Google Sheets + OAuth
  */
 
 const syncApp = {
+    // OAuth Config
+    CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
+    REDIRECT_URI: 'https://workzick.github.io/AIAdminka_Page/sync/callback.html',
+    SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+
     // Состояние
     scriptUrl: '',
     currentUser: null,
@@ -26,8 +29,74 @@ const syncApp = {
         this.loadConfig();
         this.loadData();
         this.loadLogs();
+        this.checkAuth();
         this.updateUI();
         this.addLog('info', 'Модуль синхронизации загружен');
+
+        // Проверяем авторизацию каждые 2 секунды (для callback)
+        const self = this;
+        setInterval(function() {
+            self.checkAuthCallback();
+        }, 2000);
+    },
+
+    // =============== OAuth ===============
+
+    login() {
+        const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
+            '?client_id=' + encodeURIComponent(this.CLIENT_ID) +
+            '&redirect_uri=' + encodeURIComponent(this.REDIRECT_URI) +
+            '&response_type=token' +
+            '&scope=' + encodeURIComponent(this.SCOPES);
+
+        window.open(authUrl, '_blank', 'width=500,height=600');
+        this.addLog('info', 'Открыто окно авторизации Google');
+    },
+
+    logout() {
+        localStorage.removeItem('sync-auth');
+        this.currentUser = null;
+        this.updateConnectionUI();
+        this.addLog('info', 'Вы вышли из аккаунта');
+    },
+
+    checkAuth() {
+        const authData = localStorage.getItem('sync-auth');
+        if (authData) {
+            const auth = JSON.parse(authData);
+            // Проверяем, не истёк ли токен (1 час)
+            if (Date.now() - auth.timestamp < 3600000) {
+                this.currentUser = {
+                    email: auth.email,
+                    name: auth.name,
+                    picture: auth.picture,
+                    accessToken: auth.accessToken
+                };
+            } else {
+                localStorage.removeItem('sync-auth');
+            }
+        }
+    },
+
+    checkAuthCallback() {
+        const authData = localStorage.getItem('sync-auth');
+        if (authData && !this.currentUser) {
+            const auth = JSON.parse(authData);
+            this.currentUser = {
+                email: auth.email,
+                name: auth.name,
+                picture: auth.picture,
+                accessToken: auth.accessToken
+            };
+            this.updateConnectionUI();
+            this.addLog('success', 'Авторизован как ' + auth.email);
+
+            // Сохраняем конфиг
+            localStorage.setItem('sync-config', JSON.stringify({
+                scriptUrl: this.scriptUrl,
+                currentUser: this.currentUser
+            }));
+        }
     },
 
     // =============== Sidebar ===============
@@ -45,10 +114,8 @@ const syncApp = {
         if (saved) {
             const config = JSON.parse(saved);
             this.scriptUrl = config.scriptUrl || '';
-            this.currentUser = config.currentUser || null;
         }
         document.getElementById('configScriptUrl').value = this.scriptUrl;
-        this.updateConnectionUI();
     },
 
     saveConfig() {
@@ -68,34 +135,36 @@ const syncApp = {
         const btnExport = document.getElementById('btnExport');
         const btnImport = document.getElementById('btnImport');
         const btnAccess = document.getElementById('btnAccess');
+        const btnLogin = document.getElementById('btnLogin');
+        const btnLogout = document.getElementById('btnLogout');
 
-        if (this.currentUser) {
+        if (this.currentUser && this.currentUser.email) {
             statusEl.className = 'header-status connected';
             statusEl.querySelector('.status-text').textContent = 'Подключено';
-            statusValue.textContent = 'Подключено';
+            statusValue.textContent = 'Авторизован';
             statusValue.className = 'info-value success';
             userEmail.textContent = this.currentUser.email;
             userName.textContent = this.currentUser.name || '-';
-            btnExport.disabled = false;
-            btnImport.disabled = false;
-            btnAccess.disabled = false;
-        } else if (this.scriptUrl) {
-            statusEl.className = 'header-status pending';
-            statusEl.querySelector('.status-text').textContent = 'Требуется проверка';
-            statusValue.textContent = 'Нажмите "Проверить"';
-            statusValue.className = 'info-value';
-            userEmail.textContent = '-';
-            userName.textContent = '-';
-            btnExport.disabled = true;
-            btnImport.disabled = true;
-            btnAccess.disabled = true;
+
+            if (btnLogin) btnLogin.style.display = 'none';
+            if (btnLogout) btnLogout.style.display = 'block';
+
+            // Кнопки активны только если есть URL скрипта
+            const hasScript = !!this.scriptUrl;
+            btnExport.disabled = !hasScript;
+            btnImport.disabled = !hasScript;
+            btnAccess.disabled = !hasScript;
         } else {
             statusEl.className = 'header-status';
-            statusEl.querySelector('.status-text').textContent = 'Не настроено';
-            statusValue.textContent = 'Введите URL';
+            statusEl.querySelector('.status-text').textContent = 'Не авторизован';
+            statusValue.textContent = 'Требуется вход';
             statusValue.className = 'info-value';
             userEmail.textContent = '-';
             userName.textContent = '-';
+
+            if (btnLogin) btnLogin.style.display = 'block';
+            if (btnLogout) btnLogout.style.display = 'none';
+
             btnExport.disabled = true;
             btnImport.disabled = true;
             btnAccess.disabled = true;
@@ -137,25 +206,65 @@ const syncApp = {
         this.addLog('info', 'Данные сброшены');
     },
 
+    // =============== API Calls ===============
+
+    callApi(action, params) {
+        if (!this.scriptUrl) {
+            alert('Введите URL Google Apps Script');
+            return Promise.reject('No script URL');
+        }
+
+        if (!this.currentUser || !this.currentUser.email) {
+            alert('Необходимо авторизоваться');
+            return Promise.reject('Not authorized');
+        }
+
+        let url = this.scriptUrl + '?action=' + action + '&email=' + encodeURIComponent(this.currentUser.email);
+
+        if (params) {
+            Object.keys(params).forEach(function(key) {
+                url += '&' + key + '=' + encodeURIComponent(params[key]);
+            });
+        }
+
+        const self = this;
+
+        return fetch(url)
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(result) {
+                if (result.error) {
+                    self.addLog('error', 'Ошибка: ' + result.error);
+                    throw new Error(result.error);
+                }
+                return result;
+            })
+            .catch(function(err) {
+                self.addLog('error', 'Ошибка запроса: ' + err.message);
+                throw err;
+            });
+    },
+
     // =============== Test Connection ===============
 
     testConnection() {
-        if (!this.scriptUrl) {
-            alert('Введите URL Google Apps Script');
+        if (!this.currentUser) {
+            this.login();
             return;
         }
 
         this.addLog('info', 'Проверка подключения...');
 
-        // Открываем в новой вкладке
-        const url = this.scriptUrl + '?action=ping';
-        window.open(url, '_blank');
-
-        // Показываем модалку для ввода результата
-        this.openModal('resultModal');
-        document.getElementById('resultAction').value = 'ping';
-        document.getElementById('resultInput').value = '';
-        document.getElementById('resultInput').placeholder = '{"success":true,"email":"...","name":"..."}';
+        const self = this;
+        this.callApi('ping', { name: this.currentUser.name || '' })
+            .then(function(result) {
+                self.addLog('success', 'Подключено как ' + self.currentUser.email);
+                alert('Подключено!\n\nВаш email: ' + self.currentUser.email + '\nИмя: ' + (self.currentUser.name || '-'));
+            })
+            .catch(function(err) {
+                alert('Ошибка подключения: ' + err.message);
+            });
     },
 
     // =============== Export ===============
@@ -175,13 +284,18 @@ const syncApp = {
             exportedAt: new Date().toISOString()
         };
 
-        const url = this.scriptUrl + '?action=export&data=' + encodeURIComponent(JSON.stringify(dataToExport));
-        window.open(url, '_blank');
-
-        this.openModal('resultModal');
-        document.getElementById('resultAction').value = 'export';
-        document.getElementById('resultInput').value = '';
-        document.getElementById('resultInput').placeholder = '{"success":true}';
+        const self = this;
+        this.callApi('export', {
+            data: JSON.stringify(dataToExport),
+            name: this.currentUser.name || ''
+        })
+        .then(function(result) {
+            self.addLog('success', 'Данные успешно экспортированы');
+            alert('Данные успешно экспортированы!');
+        })
+        .catch(function(err) {
+            alert('Ошибка экспорта: ' + err.message);
+        });
     },
 
     // =============== Import ===============
@@ -189,25 +303,50 @@ const syncApp = {
     showImportModal() {
         this.addLog('info', 'Загрузка списка пользователей...');
 
-        const url = this.scriptUrl + '?action=getAvailableUsers';
-        window.open(url, '_blank');
-
-        this.openModal('resultModal');
-        document.getElementById('resultAction').value = 'getAvailableUsers';
-        document.getElementById('resultInput').value = '';
-        document.getElementById('resultInput').placeholder = '{"users":[...]}';
+        const self = this;
+        this.callApi('getAvailableUsers')
+            .then(function(result) {
+                const users = result.users || [];
+                if (users.length === 0) {
+                    alert('Нет доступных пользователей для импорта.\nПопросите коллег дать вам доступ.');
+                    return;
+                }
+                self.openModal('importModal');
+                self.renderImportUsersList(users);
+            })
+            .catch(function(err) {
+                alert('Ошибка загрузки: ' + err.message);
+            });
     },
 
-    doImportFromUser(email) {
-        this.addLog('info', 'Импорт от ' + email + '...');
+    doImport() {
+        if (!this.selectedImportUser) {
+            alert('Выберите пользователя');
+            return;
+        }
 
-        const url = this.scriptUrl + '?action=import&fromEmail=' + encodeURIComponent(email);
-        window.open(url, '_blank');
+        this.closeModal('importModal');
+        this.addLog('info', 'Импорт от ' + this.selectedImportUser + '...');
 
-        this.openModal('resultModal');
-        document.getElementById('resultAction').value = 'import';
-        document.getElementById('resultInput').value = '';
-        document.getElementById('resultInput').placeholder = '{"success":true,"data":{...}}';
+        const self = this;
+        this.callApi('import', { fromEmail: this.selectedImportUser })
+            .then(function(result) {
+                if (result.data) {
+                    self.syncData = {
+                        projectName: result.data.projectName || '',
+                        version: result.data.version || '',
+                        author: result.data.author || '',
+                        note: result.data.note || ''
+                    };
+                    localStorage.setItem('sync-data', JSON.stringify(self.syncData));
+                    self.loadData();
+                    self.addLog('success', 'Данные импортированы');
+                    alert('Данные успешно импортированы!');
+                }
+            })
+            .catch(function(err) {
+                alert('Ошибка импорта: ' + err.message);
+            });
     },
 
     // =============== Access Settings ===============
@@ -215,147 +354,47 @@ const syncApp = {
     showAccessModal() {
         this.addLog('info', 'Загрузка настроек доступа...');
 
-        const url = this.scriptUrl + '?action=getAllUsers';
-        window.open(url, '_blank');
-
-        this.openModal('resultModal');
-        document.getElementById('resultAction').value = 'getAllUsers';
-        document.getElementById('resultInput').value = '';
-        document.getElementById('resultInput').placeholder = '{"users":[...],"myAllowedViewers":[...]}';
-    },
-
-    saveAccessToServer(allowedViewers) {
-        this.addLog('info', 'Сохранение настроек доступа...');
-
-        const url = this.scriptUrl + '?action=setAccess&allowedViewers=' + encodeURIComponent(JSON.stringify(allowedViewers));
-        window.open(url, '_blank');
-
-        this.openModal('resultModal');
-        document.getElementById('resultAction').value = 'setAccess';
-        document.getElementById('resultInput').value = '';
-        document.getElementById('resultInput').placeholder = '{"success":true}';
-    },
-
-    // =============== Result Modal ===============
-
-    applyResult() {
-        const action = document.getElementById('resultAction').value;
-        const input = document.getElementById('resultInput').value.trim();
-
-        if (!input) {
-            alert('Вставьте результат из открывшейся вкладки');
-            return;
-        }
-
-        let result;
-        try {
-            result = JSON.parse(input);
-        } catch (e) {
-            alert('Ошибка: неверный формат JSON\n\nУбедитесь, что скопировали весь текст из вкладки');
-            return;
-        }
-
-        if (result.error) {
-            this.addLog('error', 'Ошибка: ' + result.error);
-            alert('Ошибка: ' + result.error);
-            this.closeModal('resultModal');
-            return;
-        }
-
-        this.closeModal('resultModal');
-
-        switch (action) {
-            case 'ping':
-                this.handlePingResult(result);
-                break;
-            case 'export':
-                this.handleExportResult(result);
-                break;
-            case 'getAvailableUsers':
-                this.handleGetAvailableUsersResult(result);
-                break;
-            case 'import':
-                this.handleImportResult(result);
-                break;
-            case 'getAllUsers':
-                this.handleGetAllUsersResult(result);
-                break;
-            case 'setAccess':
-                this.handleSetAccessResult(result);
-                break;
-        }
-    },
-
-    handlePingResult(result) {
-        this.currentUser = {
-            email: result.email,
-            name: result.name
-        };
-
-        localStorage.setItem('sync-config', JSON.stringify({
-            scriptUrl: this.scriptUrl,
-            currentUser: this.currentUser
-        }));
-
-        this.updateConnectionUI();
-        this.addLog('success', 'Подключено как ' + result.email);
-        alert('Подключено!\n\nВаш email: ' + result.email + '\nИмя: ' + (result.name || '-'));
-    },
-
-    handleExportResult(result) {
-        if (result.success) {
-            this.addLog('success', 'Данные успешно экспортированы');
-            alert('Данные успешно экспортированы!');
-        }
-    },
-
-    handleGetAvailableUsersResult(result) {
-        const users = result.users || [];
-
-        if (users.length === 0) {
-            alert('Нет доступных пользователей для импорта.\nПопросите коллег дать вам доступ.');
-            return;
-        }
-
-        this.openModal('importModal');
-        this.renderImportUsersList(users);
-    },
-
-    handleImportResult(result) {
-        if (result.data) {
-            this.syncData = {
-                projectName: result.data.projectName || '',
-                version: result.data.version || '',
-                author: result.data.author || '',
-                note: result.data.note || ''
-            };
-            localStorage.setItem('sync-data', JSON.stringify(this.syncData));
-            this.loadData();
-
-            this.addLog('success', 'Данные импортированы');
-            alert('Данные успешно импортированы!');
-        }
-    },
-
-    handleGetAllUsersResult(result) {
-        this.allUsers = result.users || [];
-        this.accessSettings = {};
-
-        const mySettings = result.myAllowedViewers || [];
         const self = this;
-        mySettings.forEach(function(email) {
-            self.accessSettings[email] = true;
+        this.callApi('getAllUsers')
+            .then(function(result) {
+                self.allUsers = result.users || [];
+                self.accessSettings = {};
+
+                const mySettings = result.myAllowedViewers || [];
+                mySettings.forEach(function(email) {
+                    self.accessSettings[email] = true;
+                });
+
+                self.openModal('accessModal');
+                self.renderAccessUsersList();
+            })
+            .catch(function(err) {
+                alert('Ошибка загрузки: ' + err.message);
+            });
+    },
+
+    saveAccess() {
+        this.closeModal('accessModal');
+
+        const allowedViewers = [];
+        const self = this;
+
+        Object.keys(this.accessSettings).forEach(function(email) {
+            if (self.accessSettings[email]) {
+                allowedViewers.push(email);
+            }
         });
 
-        this.openModal('accessModal');
-        this.renderAccessUsersList();
-    },
+        this.addLog('info', 'Сохранение настроек доступа...');
 
-    handleSetAccessResult(result) {
-        if (result.success) {
-            this.addLog('success', 'Настройки доступа сохранены');
-            alert('Настройки доступа сохранены!');
-        }
+        this.callApi('setAccess', { allowedViewers: JSON.stringify(allowedViewers) })
+            .then(function(result) {
+                self.addLog('success', 'Настройки доступа сохранены');
+                alert('Настройки доступа сохранены!');
+            })
+            .catch(function(err) {
+                alert('Ошибка сохранения: ' + err.message);
+            });
     },
 
     // =============== Render Lists ===============
@@ -408,16 +447,6 @@ const syncApp = {
         this.selectedImportUser = null;
     },
 
-    doImport() {
-        if (!this.selectedImportUser) {
-            alert('Выберите пользователя');
-            return;
-        }
-
-        this.closeModal('importModal');
-        this.doImportFromUser(this.selectedImportUser);
-    },
-
     renderAccessUsersList() {
         const listEl = document.getElementById('accessUsersList');
         const self = this;
@@ -457,21 +486,6 @@ const syncApp = {
                 checkbox.classList.toggle('checked', self.accessSettings[email]);
             });
         });
-    },
-
-    saveAccess() {
-        this.closeModal('accessModal');
-
-        const allowedViewers = [];
-        const self = this;
-
-        Object.keys(this.accessSettings).forEach(function(email) {
-            if (self.accessSettings[email]) {
-                allowedViewers.push(email);
-            }
-        });
-
-        this.saveAccessToServer(allowedViewers);
     },
 
     // =============== Modals ===============
