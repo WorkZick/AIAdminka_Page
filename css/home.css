@@ -176,9 +176,6 @@ body {
     margin: 10px 20px;
 }
 
-.sidebar.collapsed .menu-separator {
-    margin: 10px;
-}
 
 .version-info {
     padding: 20px;
@@ -264,12 +261,6 @@ body {
     background: #3a3a3a;
     border-color: var(--yellow);
     transform: translateY(-4px);
-}
-
-.module-card.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    pointer-events: none;
 }
 
 .module-icon {

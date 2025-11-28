@@ -1,6 +1,35 @@
 {
-  "version": "2.5.5",
+  "version": "2.5.6",
   "updates": [
+    {
+      "version": "2.5.6",
+      "date": "2025-11-28",
+      "title": "Очистка кода Главной страницы",
+      "changes": [
+        {
+          "category": "Удалено",
+          "items": [
+            "Удалён дублирующийся код загрузки версии из home.js (loadVersion(), init()) - используется shared/version.js",
+            "Удалён неиспользуемый CSS класс .module-card.disabled",
+            "Удалено дублирующееся CSS правило .sidebar.collapsed .menu-separator"
+          ]
+        },
+        {
+          "category": "Изменено",
+          "items": [
+            "Placeholder версии в HTML заменён на 'Загрузка...' (версия загружается динамически)"
+          ]
+        },
+        {
+          "category": "Файлы",
+          "items": [
+            "js/home.js - удалено ~15 строк дублирующего кода",
+            "css/home.css - удалено 2 неиспользуемых CSS правила",
+            "index.html - актуализирован placeholder версии"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.5.5",
       "date": "2025-11-28",
