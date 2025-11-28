@@ -36,8 +36,41 @@ const changelog = {
     // Эти данные используются только если не удалось загрузить JSON
     // ВАЖНО: При обновлении changelog.json нужно также обновить эти данные!
     fallbackData: {
-        "version": "2.5.4",
+        "version": "2.5.5",
         "updates": [
+            {
+                "version": "2.5.5",
+                "date": "2025-11-28",
+                "title": "Очистка кода модуля Документация",
+                "changes": [
+                    {
+                        "category": "Удалено",
+                        "items": [
+                            "Удалён неактуальный код Lucide (data-lucide, lucide.createIcons()) - Lucide не используется с v2.4.2",
+                            "Удалена дублирующаяся функция formatDate() - используется Utils.formatDate()"
+                        ]
+                    },
+                    {
+                        "category": "Изменено",
+                        "items": [
+                            "Иконки категорий в истории обновлений заменены на текстовые символы (+, ✓, ⚡, −, ✎)",
+                            "Объединены объекты icons и colors в единый categoryStyles"
+                        ]
+                    },
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "Добавлены недостающие категории: Безопасность, Бэкенд, Файлы"
+                        ]
+                    },
+                    {
+                        "category": "Файлы",
+                        "items": [
+                            "documentation/js/changelog.js - очистка ~15 строк мёртвого кода"
+                        ]
+                    }
+                ]
+            },
             {
                 "version": "2.5.4",
                 "date": "2025-11-28",
@@ -1263,23 +1296,16 @@ const changelog = {
         modal.innerHTML = `
             <div class="changelog-dialog">
                 <div class="changelog-header">
-                    <h2><i data-lucide="git-branch"></i> История обновлений</h2>
-                    <button class="changelog-close" onclick="this.closest('.changelog-modal').remove()">
-                        <i data-lucide="x"></i>
-                    </button>
+                    <h2>История обновлений</h2>
+                    <button class="changelog-close" onclick="this.closest('.changelog-modal').remove()">×</button>
                 </div>
                 <div class="changelog-body">
                     ${this.renderTimeline()}
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
-        
-        // Инициализируем иконки Lucide
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
         
         // Закрытие по клику вне диалога
         modal.addEventListener('click', (e) => {
@@ -1322,7 +1348,7 @@ const changelog = {
                         <span class="version-number">v${update.version}</span>
                         ${isLatest ? '<span class="version-badge">Latest</span>' : ''}
                     </div>
-                    <div class="changelog-date">${this.formatDate(update.date)}</div>
+                    <div class="changelog-date">${Utils.formatDate(update.date)}</div>
                     <h3 class="changelog-title">${update.title}</h3>
                     ${update.changes.map(change => this.renderChanges(change)).join('')}
                 </div>
@@ -1331,46 +1357,30 @@ const changelog = {
     },
     
     renderChanges(change) {
-        const icons = {
-            'Новое': 'plus-circle',
-            'Исправлено': 'check-circle',
-            'Улучшено': 'zap',
-            'Удалено': 'trash-2',
-            'Изменено': 'edit',
-            'Интерфейс': 'layout'
+        const categoryStyles = {
+            'Новое': { symbol: '+', color: '#4caf50' },
+            'Исправлено': { symbol: '✓', color: '#2196f3' },
+            'Улучшено': { symbol: '⚡', color: '#ff9800' },
+            'Удалено': { symbol: '−', color: '#f44336' },
+            'Изменено': { symbol: '✎', color: '#9c27b0' },
+            'Интерфейс': { symbol: '▣', color: '#00bcd4' },
+            'Безопасность': { symbol: '🔒', color: '#e91e63' },
+            'Бэкенд': { symbol: '⚙', color: '#607d8b' },
+            'Файлы': { symbol: '📁', color: '#795548' }
         };
-        
-        const colors = {
-            'Новое': '#4caf50',
-            'Исправлено': '#2196f3',
-            'Улучшено': '#ff9800',
-            'Удалено': '#f44336',
-            'Изменено': '#9c27b0',
-            'Интерфейс': '#00bcd4'
-        };
-        
-        const icon = icons[change.category] || 'circle';
-        const color = colors[change.category] || '#666';
-        
+
+        const style = categoryStyles[change.category] || { symbol: '•', color: '#666' };
+
         return `
             <div class="changelog-category">
-                <h4 style="color: ${color};">
-                    <i data-lucide="${icon}"></i> ${change.category}
+                <h4 style="color: ${style.color};">
+                    <span style="margin-right: 6px;">${style.symbol}</span>${change.category}
                 </h4>
                 <ul class="changelog-list">
                     ${change.items.map(item => `<li>${item}</li>`).join('')}
                 </ul>
             </div>
         `;
-    },
-    
-    formatDate(dateStr) {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('ru-RU', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
     }
 };
 
