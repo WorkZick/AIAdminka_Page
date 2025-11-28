@@ -73,43 +73,25 @@
                     throw new Error('Токен не получен');
                 }
 
-                // Получаем информацию о пользователе
-                message.textContent = 'Получение данных...';
+                // Сохраняем токен (данные пользователя получит основная страница)
+                var authData = {
+                    accessToken: accessToken,
+                    timestamp: Date.now(),
+                    needsUserInfo: true
+                };
 
-                fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-                    headers: {
-                        'Authorization': 'Bearer ' + accessToken
-                    }
-                })
-                .then(function(response) {
-                    return response.json();
-                })
-                .then(function(userInfo) {
-                    // Сохраняем данные авторизации
-                    var authData = {
-                        accessToken: accessToken,
-                        email: userInfo.email,
-                        name: userInfo.name,
-                        picture: userInfo.picture,
-                        timestamp: Date.now()
-                    };
+                localStorage.setItem('sync-auth', JSON.stringify(authData));
 
-                    localStorage.setItem('sync-auth', JSON.stringify(authData));
+                // Показываем успех
+                spinner.style.display = 'none';
+                message.textContent = 'Авторизация успешна!';
+                message.className = 'message success';
+                sub.textContent = 'Окно закроется автоматически';
 
-                    // Показываем успех
-                    spinner.style.display = 'none';
-                    message.textContent = 'Авторизация успешна!';
-                    message.className = 'message success';
-                    sub.textContent = userInfo.email;
-
-                    // Закрываем окно через 1.5 секунды
-                    setTimeout(function() {
-                        window.close();
-                    }, 1500);
-                })
-                .catch(function(err) {
-                    throw new Error('Ошибка получения данных: ' + err.message);
-                });
+                // Закрываем окно через 1 секунду
+                setTimeout(function() {
+                    window.close();
+                }, 1000);
 
             } catch (e) {
                 spinner.style.display = 'none';
