@@ -1,6 +1,27 @@
 {
-  "version": "2.5.12",
+  "version": "2.5.13",
   "updates": [
+    {
+      "version": "2.5.13",
+      "date": "2025-11-28",
+      "title": "Исправление переноса текста в сайдбаре",
+      "changes": [
+        {
+          "category": "Исправлено",
+          "items": [
+            "Исправлен перенос текста пунктов меню на 2 строки на страницах Excel Отчеты и Синхронизация",
+            "Добавлены недостающие CSS свойства white-space: nowrap и overflow: hidden"
+          ]
+        },
+        {
+          "category": "Файлы",
+          "items": [
+            "excel-reports/css/excel-reports.css - унифицированы стили .menu-item",
+            "sync/css/sync.css - унифицированы стили .menu-item"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.5.12",
       "date": "2025-11-28",
