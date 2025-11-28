@@ -91,14 +91,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 6px;
-    padding: 0 16px;
-    height: 44px;
+    gap: 8px;
+    padding: 0 20px;
+    height: 60px;
     background: #e8e8e8;
     border: none;
     cursor: pointer;
     font-family: 'TT Firs Neue', sans-serif;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--black);
     font-weight: 400;
     transition: opacity 0.2s;
@@ -110,8 +110,8 @@ body {
 }
 
 .back-button img {
-    width: 24px;
-    height: 24px;
+    width: 30px;
+    height: 30px;
     transition: transform 0.3s ease;
     object-fit: contain;
     display: block;
@@ -127,15 +127,15 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    padding-top: 40px;
+    padding-top: 100px;
 }
 
 .menu-item {
     display: block;
-    padding: 10px 16px;
+    padding: 16px 20px;
     color: var(--black);
     text-decoration: none;
-    font-size: 12px;
+    font-size: 14px;
     transition: background 0.2s;
     cursor: pointer;
     border: none;
@@ -146,12 +146,12 @@ body {
     font-weight: 400;
     white-space: nowrap;
     overflow: hidden;
-    height: 36px;
+    height: 48px;
     position: relative;
 }
 
 .sidebar.collapsed .menu-item {
-    padding: 10px 16px;
+    padding: 16px 20px;
 }
 
 .menu-item span {
@@ -162,10 +162,10 @@ body {
 }
 
 .menu-item img {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     position: absolute;
-    right: 16px;
+    right: 20px;
     top: 50%;
     transform: translateY(-50%);
     object-fit: contain;
@@ -188,14 +188,18 @@ body {
 .menu-separator {
     height: 1px;
     background: #c3c3c3;
-    margin: 6px 16px;
+    margin: 10px 20px;
+}
+
+.sidebar.collapsed .menu-separator {
+    margin: 10px;
 }
 
 .version-info {
-    padding: 12px 16px;
-    font-size: 11px;
+    padding: 20px;
+    font-size: 12px;
     color: var(--gray);
-    line-height: 1.4;
+    line-height: 1.5;
 }
 
 /* Main wrapper */
