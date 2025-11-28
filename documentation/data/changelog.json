@@ -1,6 +1,40 @@
 {
-  "version": "2.5.2",
+  "version": "2.5.3",
   "updates": [
+    {
+      "version": "2.5.3",
+      "date": "2025-11-28",
+      "title": "Исправление OAuth и очистка кода Синхронизации",
+      "changes": [
+        {
+          "category": "Исправлено",
+          "items": [
+            "Исправлена авторизация Google OAuth на GitHub Pages",
+            "Решена проблема CSP (Content Security Policy) блокирующая запросы к googleapis.com",
+            "callback.html теперь только сохраняет токен, sync.js получает данные пользователя",
+            "Добавлен script.googleusercontent.com в CSP для работы Google Apps Script"
+          ]
+        },
+        {
+          "category": "Удалено",
+          "items": [
+            "Удалено неиспользуемое поле 'URL Google Apps Script' (URL захардкожен)",
+            "Удалена устаревшая секция 'Как настроить?' с неактуальными инструкциями",
+            "Удалён неиспользуемый resultModal для ввода результата",
+            "Очищены неиспользуемые CSS стили: .config-field, .help-list, .result-textarea"
+          ]
+        },
+        {
+          "category": "Файлы",
+          "items": [
+            "sync/callback.html - упрощён, убран CSP и fetch",
+            "sync/js/sync.js - добавлен fetchUserInfo(), очищен мёртвый код",
+            "sync/index.html - удалены неиспользуемые элементы",
+            "sync/css/sync.css - удалены неиспользуемые стили (~40 строк)"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.5.2",
       "date": "2025-11-28",

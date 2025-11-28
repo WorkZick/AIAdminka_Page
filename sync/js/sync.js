@@ -6,7 +6,7 @@
 const syncApp = {
     // OAuth Config
     CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
-    REDIRECT_URI: 'https://workzick.github.io/AIAdminka_Page/SimpleAIAdminka/sync/callback.html',
+    REDIRECT_URI: 'https://workzick.github.io/AIAdminka_Page/sync/callback.html',
     SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
 
     // URL скрипта (базовый для проверки доступа)
@@ -347,12 +347,6 @@ const syncApp = {
         const btnLogin = document.getElementById('btnLogin');
         const btnLogout = document.getElementById('btnLogout');
         const btnRequestAccess = document.getElementById('btnRequestAccess');
-        const configField = document.querySelector('.config-field');
-
-        // Скрываем поле URL (оно теперь автоматическое)
-        if (configField) {
-            configField.style.display = 'none';
-        }
 
         if (!this.currentUser) {
             // Не авторизован
