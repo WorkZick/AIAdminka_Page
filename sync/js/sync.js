@@ -6,7 +6,7 @@
 const syncApp = {
     // OAuth Config
     CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
-    REDIRECT_URI: 'https://workzick.github.io/AIAdminka_Page/sync/callback.html',
+    REDIRECT_URI: 'https://workzick.github.io/AIAdminka_Page/SimpleAIAdminka/sync/callback.html',
     SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
 
     // URL скрипта (базовый для проверки доступа)
@@ -35,6 +35,10 @@ const syncApp = {
     init() {
         this.loadData();
         this.loadLogs();
+
+        // Проверяем токен в URL (от callback.html)
+        this.checkTokenInUrl();
+
         this.checkAuth();
         this.updateUI();
         this.addLog('info', 'Модуль синхронизации загружен');
@@ -44,6 +48,28 @@ const syncApp = {
         setInterval(function() {
             self.checkAuthCallback();
         }, 2000);
+    },
+
+    // Проверка токена в URL (от callback.html)
+    checkTokenInUrl() {
+        const hash = window.location.hash.substring(1);
+        if (hash.startsWith('auth_token=')) {
+            const token = decodeURIComponent(hash.replace('auth_token=', ''));
+            if (token) {
+                // Сохраняем токен
+                const authData = {
+                    accessToken: token,
+                    timestamp: Date.now(),
+                    needsUserInfo: true
+                };
+                localStorage.setItem('sync-auth', JSON.stringify(authData));
+
+                // Очищаем hash из URL
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+
+                this.addLog('info', 'Токен получен, загружаем данные пользователя...');
+            }
+        }
     },
 
     // =============== OAuth ===============

@@ -59,7 +59,7 @@
             var spinner = document.getElementById('spinner');
 
             try {
-                // Получаем токен из URL hash (Google OAuth возвращает в hash)
+                // Получаем токен из URL hash
                 var hash = window.location.hash.substring(1);
                 var params = new URLSearchParams(hash);
                 var accessToken = params.get('access_token');
@@ -73,25 +73,10 @@
                     throw new Error('Токен не получен');
                 }
 
-                // Сохраняем токен (данные пользователя получит основная страница)
-                var authData = {
-                    accessToken: accessToken,
-                    timestamp: Date.now(),
-                    needsUserInfo: true
-                };
-
-                localStorage.setItem('sync-auth', JSON.stringify(authData));
-
-                // Показываем успех
-                spinner.style.display = 'none';
-                message.textContent = 'Авторизация успешна!';
-                message.className = 'message success';
-                sub.textContent = 'Окно закроется автоматически';
-
-                // Закрываем окно через 1 секунду
-                setTimeout(function() {
-                    window.close();
-                }, 1000);
+                // Перенаправляем на index.html с токеном (обходим CSP)
+                message.textContent = 'Перенаправление...';
+                var baseUrl = window.location.href.replace('callback.html', 'index.html').split('#')[0];
+                window.location.href = baseUrl + '#auth_token=' + encodeURIComponent(accessToken);
 
             } catch (e) {
                 spinner.style.display = 'none';
