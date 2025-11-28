@@ -1,6 +1,26 @@
 {
-  "version": "2.5.9",
+  "version": "2.5.10",
   "updates": [
+    {
+      "version": "2.5.10",
+      "date": "2025-11-28",
+      "title": "Очистка кода страницы Партнеры",
+      "changes": [
+        {
+          "category": "Удалено",
+          "items": [
+            "Удалены дублирующиеся CSS стили: .card-header, .card-team-header, .card-team-name, .card-partner-info, .card-info-section, .card-name, .card-position",
+            "Удалён неиспользуемый CSS селектор .sort-header svg (в HTML используется img)"
+          ]
+        },
+        {
+          "category": "Файлы",
+          "items": [
+            "partners/css/partners.css - удалено ~58 строк дублирующегося кода"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.5.9",
       "date": "2025-11-28",
