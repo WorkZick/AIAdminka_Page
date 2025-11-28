@@ -1,6 +1,5 @@
 // Logger for Excel Reports
 const logger = {
-    logs: [],
     element: null,
 
     init() {
@@ -18,8 +17,6 @@ const logger = {
             minute: '2-digit',
             second: '2-digit'
         });
-
-        this.logs.push({ time, message, type });
 
         // Remove empty state message
         const emptyState = this.element.querySelector('.log-empty');
@@ -40,7 +37,6 @@ const logger = {
     },
 
     clear() {
-        this.logs = [];
         if (this.element) {
             this.element.innerHTML = '<div class="log-empty">Нет записей</div>';
         }

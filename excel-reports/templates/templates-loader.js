@@ -18,8 +18,3 @@ const TEMPLATES = {
     MERGE_FILES: window.TEMPLATE_MERGE_FILES,
     REGISTRATIONS: window.TEMPLATE_REGISTRATIONS
 };
-
-// Экспортируем для обратной совместимости
-window.TEMPLATES = TEMPLATES;
-
-console.log('Загружено шаблонов:', Object.keys(TEMPLATES).length);

@@ -36,8 +36,30 @@ const changelog = {
     // Эти данные используются только если не удалось загрузить JSON
     // ВАЖНО: При обновлении changelog.json нужно также обновить эти данные!
     fallbackData: {
-        "version": "2.5.6",
+        "version": "2.5.7",
         "updates": [
+            {
+                "version": "2.5.7",
+                "date": "2025-11-28",
+                "title": "Очистка кода страницы Excel отчеты",
+                "changes": [
+                    {
+                        "category": "Удалено",
+                        "items": [
+                            "Удалена избыточная строка window.TEMPLATES = TEMPLATES (TEMPLATES уже глобальная константа)",
+                            "Удалён отладочный console.log из templates-loader.js",
+                            "Удалён неиспользуемый массив logs из logger.js (данные сохранялись, но не использовались)"
+                        ]
+                    },
+                    {
+                        "category": "Файлы",
+                        "items": [
+                            "excel-reports/templates/templates-loader.js - удалено 5 строк",
+                            "excel-reports/js/logger.js - удалено 2 строки"
+                        ]
+                    }
+                ]
+            },
             {
                 "version": "2.5.6",
                 "date": "2025-11-28",
