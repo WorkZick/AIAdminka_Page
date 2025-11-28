@@ -35,10 +35,6 @@ const syncApp = {
     init() {
         this.loadData();
         this.loadLogs();
-
-        // Проверяем токен в URL (от callback.html)
-        this.checkTokenInUrl();
-
         this.checkAuth();
         this.updateUI();
         this.addLog('info', 'Модуль синхронизации загружен');
@@ -48,28 +44,6 @@ const syncApp = {
         setInterval(function() {
             self.checkAuthCallback();
         }, 2000);
-    },
-
-    // Проверка токена в URL (от callback.html)
-    checkTokenInUrl() {
-        const hash = window.location.hash.substring(1);
-        if (hash.startsWith('auth_token=')) {
-            const token = decodeURIComponent(hash.replace('auth_token=', ''));
-            if (token) {
-                // Сохраняем токен
-                const authData = {
-                    accessToken: token,
-                    timestamp: Date.now(),
-                    needsUserInfo: true
-                };
-                localStorage.setItem('sync-auth', JSON.stringify(authData));
-
-                // Очищаем hash из URL
-                history.replaceState(null, '', window.location.pathname + window.location.search);
-
-                this.addLog('info', 'Токен получен, загружаем данные пользователя...');
-            }
-        }
     },
 
     // =============== OAuth ===============
