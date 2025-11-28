@@ -63,6 +63,11 @@ body {
     transition: width 0.3s ease;
 }
 
+.sidebar.no-transition,
+.sidebar.no-transition * {
+    transition: none !important;
+}
+
 .sidebar.collapsed {
     width: 60px;
 }

@@ -54,7 +54,7 @@
 
             <div class="menu-separator"></div>
 
-            <div class="version-info" onclick="homeApp.showAbout()">
+            <div class="version-info">
                 О разработке<br>
                 <span id="versionText">Загрузка...</span>
             </div>
@@ -62,10 +62,16 @@
 
         <script>
             (function() {
-                const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
-                if (collapsed) {
-                    document.getElementById('sidebar').classList.add('collapsed');
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.add('no-transition');
+                if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                    sidebar.classList.add('collapsed');
                 }
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        sidebar.classList.remove('no-transition');
+                    });
+                });
             })();
         </script>
 
