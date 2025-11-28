@@ -739,35 +739,6 @@ const teamInfo = {
         img.src = this.tempImageData;
     },
 
-    showEditModal(id) {
-        const employee = this.data.find(e => e.id === id);
-        if (!employee) return;
-
-        this.currentEmployeeId = id;
-        document.getElementById('modalTitle').textContent = 'Редактировать сотрудника';
-        document.getElementById('saveEmployeeBtn').textContent = 'Сохранить изменения';
-
-        document.getElementById('fullNameInput').value = employee.fullName || '';
-        document.getElementById('positionInput').value = employee.position || '';
-        document.getElementById('statusSelect').value = employee.status || 'Работает';
-        document.getElementById('reddyInput').value = employee.reddyId || employee.predefinedFields?.['Reddy'] || '';
-        document.getElementById('corpTelegramInput').value = employee.corpTelegram || employee.predefinedFields?.['Корп. Telegram'] || '';
-        document.getElementById('personalTelegramInput').value = employee.personalTelegram || '';
-        document.getElementById('birthdayInput').value = employee.birthday || '';
-        document.getElementById('corpEmailInput').value = employee.corpEmail || employee.predefinedFields?.['Корп. e-mail'] || '';
-        document.getElementById('personalEmailInput').value = employee.personalEmail || '';
-        document.getElementById('corpPhoneInput').value = employee.corpPhone || employee.predefinedFields?.['Корп. телефон'] || '';
-        document.getElementById('personalPhoneInput').value = employee.personalPhone || '';
-        document.getElementById('officeInput').value = employee.office || '';
-        document.getElementById('startDateInput').value = employee.startDate || '';
-        document.getElementById('companyInput').value = employee.company || '';
-        document.getElementById('crmLoginInput').value = employee.crmLogin || '';
-        document.getElementById('commentInput').value = employee.comment || '';
-
-        document.getElementById('employeeModal').classList.add('active');
-        document.getElementById('fullNameInput').focus();
-    },
-
     editFromCard() {
         if (this.currentEmployeeId) {
             this.showEditForm(this.currentEmployeeId);
@@ -1577,102 +1548,6 @@ const teamInfo = {
         }
     },
 
-    closeEmployeeModal() {
-        document.getElementById('employeeModal').classList.remove('active');
-    },
-
-    async saveEmployee() {
-        const fullName = document.getElementById('fullNameInput').value.trim();
-        const position = document.getElementById('positionInput').value.trim();
-        const status = document.getElementById('statusSelect').value;
-        const reddyId = document.getElementById('reddyInput').value.trim();
-        const corpTelegram = document.getElementById('corpTelegramInput').value.trim();
-        const personalTelegram = document.getElementById('personalTelegramInput').value.trim();
-        const birthday = document.getElementById('birthdayInput').value;
-        const corpEmail = document.getElementById('corpEmailInput').value.trim();
-        const personalEmail = document.getElementById('personalEmailInput').value.trim();
-        const corpPhone = document.getElementById('corpPhoneInput').value.trim();
-        const personalPhone = document.getElementById('personalPhoneInput').value.trim();
-        const office = document.getElementById('officeInput').value.trim();
-        const startDate = document.getElementById('startDateInput').value;
-        const company = document.getElementById('companyInput').value.trim();
-        const crmLogin = document.getElementById('crmLoginInput').value.trim();
-        const comment = document.getElementById('commentInput').value.trim();
-
-        if (!fullName) {
-            alert('Введите ФИО');
-            return;
-        }
-
-        if (!position) {
-            alert('Введите должность');
-            return;
-        }
-
-        const employeeData = {
-            fullName,
-            position,
-            status,
-            reddyId,
-            corpTelegram,
-            personalTelegram,
-            birthday,
-            corpEmail,
-            personalEmail,
-            corpPhone,
-            personalPhone,
-            office,
-            startDate,
-            company,
-            crmLogin,
-            comment,
-            avatar: this.currentAvatar || '',
-            predefinedFields: {}
-        };
-
-        // Store in predefinedFields for compatibility
-        if (reddyId) employeeData.predefinedFields['Reddy'] = reddyId;
-        if (corpTelegram) employeeData.predefinedFields['Корп. Telegram'] = corpTelegram;
-        if (corpEmail) employeeData.predefinedFields['Корп. e-mail'] = corpEmail;
-        if (corpPhone) employeeData.predefinedFields['Корп. телефон'] = corpPhone;
-
-        if (this.currentEmployeeId) {
-            // Edit existing
-            const employee = this.data.find(e => e.id === this.currentEmployeeId);
-            if (employee) {
-                Object.assign(employee, employeeData);
-                employee.updatedAt = new Date().toISOString();
-
-                if (await storage.saveData(this.data)) {
-                    this.closeEmployeeModal();
-                    this.render();
-                    this.updateStats();
-                    if (this.currentEmployeeId && document.getElementById('employeeCard').style.display !== 'none') {
-                        this.openCard(this.currentEmployeeId);
-                    }
-                    alert('Сотрудник обновлен!');
-                } else {
-                    alert('Ошибка сохранения');
-                }
-            }
-        } else {
-            // Add new
-            employeeData.id = Date.now();
-            employeeData.createdAt = new Date().toISOString();
-
-            this.data.unshift(employeeData);
-
-            if (await storage.saveData(this.data)) {
-                this.closeEmployeeModal();
-                this.render();
-                this.updateStats();
-                alert('Сотрудник добавлен!');
-            } else {
-                alert('Ошибка сохранения');
-            }
-        }
-    },
-
     async deleteFromCard() {
         if (!this.currentEmployeeId) return;
 
@@ -1809,7 +1684,7 @@ const teamInfo = {
 
     attachFormChangeListeners() {
         const formFields = [
-            'formFullName', 'formPosition', 'formStatus', 'formReddyId',
+            'formFullName', 'formPosition', 'formReddyId',
             'formCorpTelegram', 'formPersonalTelegram', 'formBirthday',
             'formCorpEmail', 'formPersonalEmail', 'formCorpPhone',
             'formPersonalPhone', 'formOffice', 'formStartDate',
@@ -1870,9 +1745,6 @@ document.addEventListener('keydown', (e) => {
         if (document.getElementById('cropModal').classList.contains('active')) {
             teamInfo.closeCropModal();
         }
-        if (document.getElementById('employeeModal').classList.contains('active')) {
-            teamInfo.closeEmployeeModal();
-        }
         if (document.getElementById('importModal').classList.contains('active')) {
             teamInfo.closeImportDialog();
         }
@@ -1913,12 +1785,6 @@ document.addEventListener('click', (e) => {
 });
 
 // Close modals on backdrop click
-document.getElementById('employeeModal').addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        teamInfo.closeEmployeeModal();
-    }
-});
-
 document.getElementById('importModal').addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
         teamInfo.closeImportDialog();

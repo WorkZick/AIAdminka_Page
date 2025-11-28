@@ -1,6 +1,38 @@
 {
-  "version": "2.5.7",
+  "version": "2.5.8",
   "updates": [
+    {
+      "version": "2.5.8",
+      "date": "2025-11-28",
+      "title": "Очистка кода страницы Team Info",
+      "changes": [
+        {
+          "category": "Удалено",
+          "items": [
+            "Удалён неиспользуемый файл team-info-modern.css (XP-стили, не подключён)",
+            "Удалён файл team-info.css.backup",
+            "Удалён файл export-manager.js (функции не использовались, ссылки на несуществующий DOM)",
+            "Удалено неиспользуемое модальное окно employeeModal (~105 строк HTML)",
+            "Удалены методы showEditModal(), saveEmployee(), closeEmployeeModal() (заменены правой панелью)",
+            "Удалён неиспользуемый CSS класс .employee-card-panel",
+            "Удалена неактуальная ссылка на formStatus в attachFormChangeListeners()",
+            "Удалено устаревшее поле grade из миграции данных"
+          ]
+        },
+        {
+          "category": "Файлы",
+          "items": [
+            "team-info/css/team-info-modern.css - удалён",
+            "team-info/css/team-info.css.backup - удалён",
+            "team-info/js/export-manager.js - удалён",
+            "team-info/index.html - удалено ~105 строк",
+            "team-info/js/team-info.js - удалено ~120 строк",
+            "team-info/css/team-info.css - удалено 4 строки",
+            "team-info/js/storage.js - удалена 1 строка"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.5.7",
       "date": "2025-11-28",

@@ -388,113 +388,6 @@
         </div>
     </div>
 
-    <!-- Add/Edit Employee Modal -->
-    <div class="modal" id="employeeModal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h2 class="modal-title" id="modalTitle">Добавить сотрудника</h2>
-                <button class="modal-close" onclick="teamInfo.closeEmployeeModal()">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <form id="employeeForm">
-                    <div class="form-group">
-                        <label class="form-label">Ф.И.О.</label>
-                        <input type="text" class="form-input" id="fullNameInput" placeholder="Иванов Иван Иванович" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Должность</label>
-                        <input type="text" class="form-input" id="positionInput" placeholder="Менеджер" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Статус</label>
-                        <select class="form-select" id="statusSelect">
-                            <option value="Работает">Работает</option>
-                            <option value="В отпуске">В отпуске</option>
-                            <option value="Командировка">Командировка</option>
-                            <option value="Уволен">Уволен</option>
-                            <option value="Болеет">Болеет</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">ID Reddy</label>
-                        <input type="text" class="form-input" id="reddyInput" placeholder="40182221672">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Рабочий Telegram</label>
-                        <input type="text" class="form-input" id="corpTelegramInput" placeholder="@username">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Личный Telegram</label>
-                        <input type="text" class="form-input" id="personalTelegramInput" placeholder="@username">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">День рождения</label>
-                        <input type="date" class="form-input" id="birthdayInput">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Рабочая почта</label>
-                        <input type="email" class="form-input" id="corpEmailInput" placeholder="example@company.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Личная почта</label>
-                        <input type="email" class="form-input" id="personalEmailInput" placeholder="example@gmail.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Рабочий телефон</label>
-                        <input type="tel" class="form-input" id="corpPhoneInput" placeholder="+7 (xxx) xxx-xx-xx">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Личный телефон</label>
-                        <input type="tel" class="form-input" id="personalPhoneInput" placeholder="+7 (xxx) xxx-xx-xx">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Офис</label>
-                        <input type="text" class="form-input" id="officeInput" placeholder="тут">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Начало работы по Wolan</label>
-                        <input type="date" class="form-input" id="startDateInput">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Название компании</label>
-                        <input type="text" class="form-input" id="companyInput" placeholder='ООО "ТУРЕЦ"'>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Логин CRM</label>
-                        <input type="text" class="form-input" id="crmLoginInput" placeholder="abobus.i">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Примечание</label>
-                        <textarea class="form-textarea" id="commentInput" placeholder="Дополнительная информация..."></textarea>
-                    </div>
-                </form>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="teamInfo.closeEmployeeModal()">Отменить</button>
-                <button class="btn-primary" onclick="teamInfo.saveEmployee()" id="saveEmployeeBtn">Добавить сотрудника</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Import Modal -->
     <div class="modal" id="importModal">
         <div class="modal-dialog" style="max-width: 400px;">
@@ -549,7 +442,6 @@
     <script src="../shared/version.js"></script>
     <script src="../shared/storage.js"></script>
     <script src="js/storage.js"></script>
-    <script src="js/export-manager.js"></script>
     <script src="js/team-info.js"></script>
 </body>
 </html>
