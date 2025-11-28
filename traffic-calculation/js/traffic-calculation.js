@@ -5,12 +5,39 @@ const trafficCalc = {
     editingPartnerId: null,
     currentReportData: null,
     currentStep: 1,
-    completedSteps: [], // Список завершенных шагов
+    completedSteps: [],
     filesUploaded: {
         deposits: false,
         quality: false,
         percent: false
     },
+    ourPartnerIds: [],
+    currentSelectedPartnerId: null,
+    currentSelectedPartnerId6: null,
+    allPartnersListForStep5: [],
+    allPartnersListForStep6: [],
+    trafficSettings: null,
+    trafficResults: null,
+
+    // Параметры для оценки трафика
+    trafficParams: [
+        { key: 'backCount', name: 'Back', type: 'number' },
+        { key: 'cringeCount', name: 'Cringe', type: 'number' },
+        { key: 'autoDisableCount', name: 'Автоотключение', type: 'number' },
+        { key: 'depositAppealsCount', name: 'Обращений по пополнениям', type: 'number' },
+        { key: 'delayedAppealsCount', name: 'Обращения 15+ мин', type: 'number' },
+        { key: 'depositSuccessPercent', name: '% успешных пополнений', type: 'percent' },
+        { key: 'withdrawalSuccessPercent', name: '% успешных выводов', type: 'percent' },
+        { key: 'depositWorkTimePercent', name: '% Времени работы на пополнения', type: 'percent' },
+        { key: 'withdrawalWorkTimePercent', name: '% Времени работы на вывод', type: 'percent' },
+        { key: 'chatIgnoring', name: 'Игнорирование чатов', type: 'number' },
+        { key: 'webmanagementIgnore', name: 'Игнор Webmanagement', type: 'number' },
+        { key: 'depositQueues', name: 'Очереди на пополнение', type: 'number' },
+        { key: 'withdrawalQueues', name: 'Очереди на вывод', type: 'number' },
+        { key: 'creditsOutsideLimits', name: 'Зачисление вне лимитов', type: 'number' },
+        { key: 'wrongAmountApproval', name: 'Одобрение неверной суммы', type: 'number' },
+        { key: 'otherViolations', name: 'Другие нарушения', type: 'multiplier' }
+    ],
 
     // SIDEBAR
     toggleSidebar() {
@@ -588,7 +615,7 @@ const trafficCalc = {
         let html = '';
         const methods = Object.keys(methodGroups).sort();
 
-        methods.forEach((method, methodIndex) => {
+        methods.forEach(method => {
             const groupResults = methodGroups[method];
             const totalPercent = groupResults.reduce((sum, r) => sum + r.trafficPercent, 0);
 
@@ -661,31 +688,6 @@ const trafficCalc = {
         const date = new Date().toISOString().split('T')[0];
         XLSX.writeFile(wb, `traffic_results_${date}.xlsx`);
     },
-    ourPartnerIds: [], // Список наших Субагент ID
-    currentSelectedPartnerId: null, // Текущий выбранный партнер для ручных данных
-    allPartnersListForStep5: [], // Список всех партнеров для шага 5
-    trafficSettings: null, // Настройки калькулятора трафика
-    trafficResults: null, // Результаты расчета трафика
-
-    // Параметры для оценки трафика (16 параметров)
-    trafficParams: [
-        { key: 'backCount', name: 'Back', type: 'number' },
-        { key: 'cringeCount', name: 'Cringe', type: 'number' },
-        { key: 'autoDisableCount', name: 'Автоотключение', type: 'number' },
-        { key: 'depositAppealsCount', name: 'Обращений по пополнениям', type: 'number' },
-        { key: 'delayedAppealsCount', name: 'Обращения 15+ мин', type: 'number' },
-        { key: 'depositSuccessPercent', name: '% успешных пополнений', type: 'percent' },
-        { key: 'withdrawalSuccessPercent', name: '% успешных выводов', type: 'percent' },
-        { key: 'depositWorkTimePercent', name: '% Времени работы на пополнения', type: 'percent' },
-        { key: 'withdrawalWorkTimePercent', name: '% Времени работы на вывод', type: 'percent' },
-        { key: 'chatIgnoring', name: 'Игнорирование чатов', type: 'number' },
-        { key: 'webmanagementIgnore', name: 'Игнор Webmanagement', type: 'number' },
-        { key: 'depositQueues', name: 'Очереди на пополнение', type: 'number' },
-        { key: 'withdrawalQueues', name: 'Очереди на вывод', type: 'number' },
-        { key: 'creditsOutsideLimits', name: 'Зачисление вне лимитов', type: 'number' },
-        { key: 'wrongAmountApproval', name: 'Одобрение неверной суммы', type: 'number' },
-        { key: 'otherViolations', name: 'Другие нарушения', type: 'multiplier' }
-    ],
 
     // Инициализация
     init() {
@@ -2134,11 +2136,6 @@ const trafficCalc = {
         }
     },
 
-    // Парсинг данных из отчета "Контроль качества" (старая функция - удалена)
-    parseQualityData(data, autoDisableData) {
-        // Эта функция больше не используется
-    },
-
     // Чтение Excel файла
     readExcelFile(file) {
         return new Promise((resolve, reject) => {
@@ -2300,57 +2297,6 @@ const trafficCalc = {
         // Скачиваем файл
         const date = new Date().toISOString().split('T')[0];
         XLSX.writeFile(wb, `detailed_report_${date}.xlsx`);
-    },
-
-    // Показать детальный отчет
-    showDetailedReport() {
-        if (!this.currentReportData || this.currentReportData.length === 0) {
-            alert('Сначала сформируйте отчет');
-            return;
-        }
-
-        const tbody = document.getElementById('detailedReportTableBody');
-        tbody.innerHTML = this.currentReportData.map(partner => {
-            const date = new Date(partner.dateAdded).toLocaleDateString('ru-RU');
-            const statusClass = partner.status === 'новый' ? 'new' : partner.status === 'старый' ? 'old' : 'closed';
-            const statusText = partner.status === 'новый' ? 'Новый' : partner.status === 'старый' ? 'Старый' : 'Закрыт';
-
-            return `
-                <tr>
-                    <td>${this.escapeHtml(partner.method)}</td>
-                    <td>${this.escapeHtml(partner.subagent)}</td>
-                    <td>${this.escapeHtml(partner.subagentId)}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    <td>${date}</td>
-                    <td>${partner.backCount || 0}</td>
-                    <td>${partner.cringeCount || 0}</td>
-                    <td>${partner.autoDisableCount || 0}</td>
-                    <td>${partner.depositTransactionsCount || 0}</td>
-                    <td>${partner.withdrawalTransactionsCount || 0}</td>
-                    <td>${partner.depositAppealsCount || 0}</td>
-                    <td>${partner.delayedAppealsCount || 0}</td>
-                    <td>${partner.depositSuccessPercent || 0}%</td>
-                    <td>${partner.withdrawalSuccessPercent || 0}%</td>
-                    <td>${partner.depositWorkTimePercent || 0}%</td>
-                    <td>${partner.withdrawalWorkTimePercent || 0}%</td>
-                    <td>${partner.chatIgnoring || 0}</td>
-                    <td>${partner.webmanagementIgnore || 0}</td>
-                    <td>${partner.depositQueues || 0}</td>
-                    <td>${partner.withdrawalQueues || 0}</td>
-                    <td>${partner.creditsOutsideLimits || 0}</td>
-                    <td>${partner.wrongAmountApproval || 0}</td>
-                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>${partner.otherViolations || 0}${partner.otherViolationsDescription ? ' <img src="icons/filter.svg" alt="info" style="width:14px;height:14px;vertical-align:middle;opacity:0.6;">' : ''}</td>
-                </tr>
-            `;
-        }).join('');
-
-        document.getElementById('detailedReportModal').classList.add('show');
-
-    },
-
-    // Закрыть детальный отчет
-    closeDetailedReport() {
-        document.getElementById('detailedReportModal').classList.remove('show');
     },
 
     // Экранирование HTML
@@ -2540,7 +2486,7 @@ const trafficCalc = {
                 const processedPartners = jsonData.partners.map(partner => {
                     // Убеждаемся что есть обязательные поля
                     if (!partner.id) {
-                        partner.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                        partner.id = Date.now().toString() + Math.random().toString(36).slice(2, 11);
                     }
                     if (!partner.dateAdded) {
                         partner.dateAdded = new Date().toISOString();

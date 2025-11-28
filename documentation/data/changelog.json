@@ -1,6 +1,43 @@
 {
-  "version": "2.5.8",
+  "version": "2.5.9",
   "updates": [
+    {
+      "version": "2.5.9",
+      "date": "2025-11-28",
+      "title": "Очистка кода страницы Расчет трафика",
+      "changes": [
+        {
+          "category": "Удалено",
+          "items": [
+            "Удалена неиспользуемая функция parseQualityData (пустая, с комментарием 'больше не используется')",
+            "Удалены функции showDetailedReport и closeDetailedReport (работали с несуществующим модальным окном)",
+            "Удалён неиспользуемый CSS класс .optional-badge",
+            "Удалены дублирующиеся объявления свойств из середины объекта trafficCalc"
+          ]
+        },
+        {
+          "category": "Исправлено",
+          "items": [
+            "Исправлена неиспользуемая переменная methodIndex в forEach",
+            "Заменён устаревший метод substr() на slice()"
+          ]
+        },
+        {
+          "category": "Улучшено",
+          "items": [
+            "Реорганизованы свойства объекта trafficCalc - все перенесены в начало",
+            "Добавлены недостающие объявления свойств: currentSelectedPartnerId6, allPartnersListForStep6"
+          ]
+        },
+        {
+          "category": "Файлы",
+          "items": [
+            "traffic-calculation/js/traffic-calculation.js - удалено ~100 строк",
+            "traffic-calculation/css/traffic-calculation.css - удалено 10 строк"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.5.8",
       "date": "2025-11-28",
