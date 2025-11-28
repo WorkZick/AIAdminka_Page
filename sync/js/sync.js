@@ -6,7 +6,7 @@
 const syncApp = {
     // OAuth Config
     CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
-    REDIRECT_URI: 'https://workzick.github.io/AIAdminka_Page/SimpleAIAdminka/sync/callback.html',
+    REDIRECT_URI: 'https://workzick.github.io/AIAdminka_Page/SimpleAIAdminka/sync/callback.html?v=2',
     SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
 
     // URL скрипта (базовый для проверки доступа)
