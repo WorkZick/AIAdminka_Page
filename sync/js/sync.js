@@ -6,7 +6,7 @@
 const syncApp = {
     // OAuth Config
     CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
-    REDIRECT_URI: 'https://workzick.github.io/AIAdminka_Page/SimpleAIAdminka/sync/callback.html?v=2',
+    REDIRECT_URI: 'https://workzick.github.io/AIAdminka_Page/SimpleAIAdminka/sync/callback.html',
     SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
 
     // URL скрипта (базовый для проверки доступа)
@@ -130,23 +130,27 @@ const syncApp = {
     },
 
     checkAuthCallback() {
+        // Проверяем pending токен от callback.html
+        const pendingData = localStorage.getItem('sync-auth-pending');
+        if (pendingData && !this.currentUser) {
+            const pending = JSON.parse(pendingData);
+            localStorage.removeItem('sync-auth-pending');
+            this.fetchUserInfo(pending.accessToken);
+            return;
+        }
+
+        // Проверяем обычный auth
         const authData = localStorage.getItem('sync-auth');
         if (authData && !this.currentUser) {
             const auth = JSON.parse(authData);
-            // Если нужно получить данные пользователя
-            if (auth.needsUserInfo) {
-                this.fetchUserInfo(auth.accessToken);
-            } else {
-                this.currentUser = {
-                    email: auth.email,
-                    name: auth.name,
-                    picture: auth.picture,
-                    accessToken: auth.accessToken
-                };
-                this.addLog('success', 'Авторизован как ' + auth.email);
-                // Проверяем доступ после авторизации
-                this.checkAccessStatus();
-            }
+            this.currentUser = {
+                email: auth.email,
+                name: auth.name,
+                picture: auth.picture,
+                accessToken: auth.accessToken
+            };
+            this.addLog('success', 'Авторизован как ' + auth.email);
+            this.checkAccessStatus();
         }
     },
 
