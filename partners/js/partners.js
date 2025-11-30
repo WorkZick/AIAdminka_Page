@@ -24,14 +24,94 @@ const partnersApp = {
     },
 
     // Form status
-    formStatus: 'Работает',
+    formStatus: 'Открыт',
+
+    // Columns configuration
+    // Fixed columns: counters (first), arrow (last)
+    // Configurable columns with order and visibility
+    defaultColumns: [
+        { id: 'avatar', label: 'Фото', visible: true, sortable: false },
+        { id: 'method', label: 'Метод', visible: true, sortable: true },
+        { id: 'subagent', label: 'Субагент', visible: true, sortable: true },
+        { id: 'subagentId', label: 'ID Субагента', visible: true, sortable: true },
+        { id: 'status', label: 'Статус', visible: true, sortable: true }
+    ],
+
+    // Get columns config from localStorage, merge with defaults and custom fields
+    getColumnsConfig() {
+        let columns = [];
+        const saved = localStorage.getItem('partnersColumnsConfig');
+
+        if (saved) {
+            try {
+                columns = JSON.parse(saved);
+            } catch (e) {
+                columns = [...this.defaultColumns];
+            }
+        } else {
+            columns = [...this.defaultColumns];
+        }
+
+        // Collect all custom fields from partners data
+        const customFieldNames = this.collectCustomFieldNames();
+
+        // Add missing custom fields to columns (hidden by default)
+        customFieldNames.forEach(fieldName => {
+            const exists = columns.some(c => c.id === `custom_${fieldName}`);
+            if (!exists) {
+                columns.push({
+                    id: `custom_${fieldName}`,
+                    label: fieldName,
+                    visible: false,
+                    sortable: true,
+                    isCustom: true
+                });
+            }
+        });
+
+        // Remove custom columns that no longer have data
+        columns = columns.filter(col => {
+            if (col.isCustom) {
+                const fieldName = col.id.replace('custom_', '');
+                return customFieldNames.includes(fieldName);
+            }
+            return true;
+        });
+
+        return columns;
+    },
+
+    // Collect unique custom field names from all partners
+    collectCustomFieldNames() {
+        const partners = this.getPartners();
+        const fieldNames = new Set();
+
+        partners.forEach(partner => {
+            if (partner.customFields) {
+                Object.keys(partner.customFields).forEach(key => {
+                    if (partner.customFields[key]) { // Only if has value
+                        fieldNames.add(key);
+                    }
+                });
+            }
+        });
+
+        return Array.from(fieldNames);
+    },
+
+    // Save columns config to localStorage
+    saveColumnsConfig(columns) {
+        localStorage.setItem('partnersColumnsConfig', JSON.stringify(columns));
+    },
 
     // Initialize
     init() {
+        this.renderTableHeader();
         this.render();
         this.updateStats();
         this.setupImportHandler();
         this.setupCropHandlers();
+        this.renderColumnsMenu();
     },
 
     // Toggle sidebar
@@ -48,6 +128,205 @@ const partnersApp = {
         return url.startsWith('data:image/') ||
                url.startsWith('http://') ||
                url.startsWith('https://');
+    },
+
+    // Render table header based on columns config
+    renderTableHeader() {
+        const thead = document.getElementById('partnersTableHead');
+        const columns = this.getColumnsConfig();
+        const visibleColumns = columns.filter(c => c.visible);
+
+        let html = '<tr>';
+
+        // Fixed first column: DEP/WITH/COMP
+        html += `<th>
+            <div class="counters-header">
+                <span>DEP</span>
+                <span>WITH</span>
+                <span>COMP</span>
+            </div>
+        </th>`;
+
+        // Dynamic columns
+        visibleColumns.forEach(col => {
+            if (col.sortable) {
+                html += `<th data-column="${col.id}">
+                    <div class="sort-header" onclick="partnersApp.sortBy('${col.id}')">
+                        ${this.escapeHtml(col.label)}
+                        <img src="icons/filter.svg" width="16" height="16" alt="Сортировка">
+                    </div>
+                </th>`;
+            } else {
+                html += `<th data-column="${col.id}">${this.escapeHtml(col.label)}</th>`;
+            }
+        });
+
+        // Fixed last column: arrow
+        html += '<th></th>';
+        html += '</tr>';
+
+        thead.innerHTML = html;
+    },
+
+    // Render columns menu
+    renderColumnsMenu() {
+        const columnsList = document.getElementById('columnsList');
+        const columns = this.getColumnsConfig();
+        const visibleCount = columns.filter(c => c.visible).length;
+        const isMaxReached = visibleCount >= this.maxVisibleColumns;
+
+        let html = '';
+        columns.forEach((col, index) => {
+            const activeClass = col.visible ? 'active' : '';
+            const disabledClass = (!col.visible && isMaxReached) ? 'disabled' : '';
+            html += `
+                <div class="column-item ${activeClass} ${disabledClass}"
+                     data-column-id="${col.id}"
+                     data-index="${index}"
+                     draggable="true"
+                     onclick="partnersApp.toggleColumn('${col.id}')"
+                     ondragstart="partnersApp.handleColumnDragStart(event)"
+                     ondragover="partnersApp.handleColumnDragOver(event)"
+                     ondrop="partnersApp.handleColumnDrop(event)"
+                     ondragend="partnersApp.handleColumnDragEnd(event)">
+                    <div class="column-item-drag" onmousedown="event.stopPropagation()">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 5h2v2H9V5zm4 0h2v2h-2V5zM9 9h2v2H9V9zm4 0h2v2h-2V9zm-4 4h2v2H9v-2zm4 0h2v2h-2v-2zm-4 4h2v2H9v-2zm4 0h2v2h-2v-2z"/>
+                        </svg>
+                    </div>
+                    <div class="column-item-checkbox">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                        </svg>
+                    </div>
+                    <span class="column-item-label">${this.escapeHtml(col.label)}</span>
+                </div>
+            `;
+        });
+
+        // Add footer with limit and reset button
+        html += `
+            <div class="columns-menu-footer">
+                <span>${visibleCount}/${this.maxVisibleColumns}</span>
+                <button class="columns-reset-btn" onclick="event.stopPropagation(); partnersApp.resetColumnsConfig()">Сбросить</button>
+            </div>
+        `;
+
+        columnsList.innerHTML = html;
+    },
+
+    // Reset columns to default configuration
+    resetColumnsConfig() {
+        localStorage.removeItem('partnersColumnsConfig');
+        this.renderColumnsMenu();
+        this.renderTableHeader();
+        this.render();
+    },
+
+    // Toggle columns menu visibility
+    toggleColumnsMenu(event) {
+        event.stopPropagation();
+        const menu = document.getElementById('columnsMenu');
+        menu.classList.toggle('active');
+    },
+
+    // Close columns menu
+    closeColumnsMenu() {
+        const menu = document.getElementById('columnsMenu');
+        menu.classList.remove('active');
+    },
+
+    // Maximum visible columns (excluding fixed DEP/WITH/COMP and arrow)
+    maxVisibleColumns: 5,
+
+    // Toggle column visibility
+    toggleColumn(columnId) {
+        const columns = this.getColumnsConfig();
+        const column = columns.find(c => c.id === columnId);
+        if (!column) return;
+
+        // Check if trying to enable and already at max
+        const visibleCount = columns.filter(c => c.visible).length;
+        if (!column.visible && visibleCount >= this.maxVisibleColumns) {
+            alert(`Максимум ${this.maxVisibleColumns} колонок. Отключите одну из текущих колонок.`);
+            return;
+        }
+
+        column.visible = !column.visible;
+        this.saveColumnsConfig(columns);
+        this.renderColumnsMenu();
+        this.renderTableHeader();
+        this.render();
+    },
+
+    // Drag and drop for column reordering
+    draggedColumnIndex: null,
+
+    handleColumnDragStart(event) {
+        const item = event.target.closest('.column-item');
+        this.draggedColumnIndex = parseInt(item.dataset.index);
+        item.classList.add('dragging');
+        event.dataTransfer.effectAllowed = 'move';
+    },
+
+    handleColumnDragOver(event) {
+        event.preventDefault();
+        const item = event.target.closest('.column-item');
+        if (item) {
+            document.querySelectorAll('.column-item').forEach(el => el.classList.remove('drag-over'));
+            item.classList.add('drag-over');
+        }
+    },
+
+    handleColumnDrop(event) {
+        event.preventDefault();
+        const targetItem = event.target.closest('.column-item');
+        if (!targetItem || this.draggedColumnIndex === null) return;
+
+        const targetIndex = parseInt(targetItem.dataset.index);
+        if (this.draggedColumnIndex === targetIndex) return;
+
+        const columns = this.getColumnsConfig();
+        const [movedColumn] = columns.splice(this.draggedColumnIndex, 1);
+        columns.splice(targetIndex, 0, movedColumn);
+
+        this.saveColumnsConfig(columns);
+        this.renderColumnsMenu();
+        this.renderTableHeader();
+        this.render();
+    },
+
+    handleColumnDragEnd() {
+        this.draggedColumnIndex = null;
+        document.querySelectorAll('.column-item').forEach(el => {
+            el.classList.remove('dragging', 'drag-over');
+        });
+    },
+
+    // Render single column cell
+    renderColumnCell(columnId, partner, statusClass) {
+        // Handle custom fields
+        if (columnId.startsWith('custom_')) {
+            const fieldName = columnId.replace('custom_', '');
+            const value = partner.customFields?.[fieldName] || '';
+            return `<td data-column="${columnId}">${this.escapeHtml(value)}</td>`;
+        }
+
+        // Handle standard fields
+        switch (columnId) {
+            case 'avatar':
+                return `<td data-column="avatar"><div class="partner-avatar"></div></td>`;
+            case 'method':
+                return `<td data-column="method">${this.escapeHtml(partner.method || '')}</td>`;
+            case 'subagent':
+                return `<td data-column="subagent">${this.escapeHtml(partner.subagent || '')}</td>`;
+            case 'subagentId':
+                return `<td data-column="subagentId">${this.escapeHtml(partner.subagentId || '')}</td>`;
+            case 'status':
+                return `<td data-column="status"><span class="status-badge ${this.escapeHtml(statusClass)}">${this.escapeHtml(partner.status || 'Открыт')}</span></td>`;
+            default:
+                return '<td></td>';
+        }
     },
 
     // Render table
@@ -79,8 +358,11 @@ const partnersApp = {
             // Clear tbody and build rows with safe event listeners
             tbody.innerHTML = '';
 
+            const columns = this.getColumnsConfig();
+            const visibleColumns = columns.filter(c => c.visible);
+
             sortedData.forEach(partner => {
-                const statusClass = this.getStatusColor(partner.status || 'Работает');
+                const statusClass = this.getStatusColor(partner.status || 'Открыт');
                 const avatar = partner.avatar || '';
                 const isValidAvatar = this.isValidImageUrl(avatar);
 
@@ -89,7 +371,8 @@ const partnersApp = {
                 tr.dataset.partnerId = partner.id;
                 tr.addEventListener('click', () => this.selectPartner(partner.id));
 
-                tr.innerHTML = `
+                // Fixed first column: DEP/WITH/COMP
+                let rowHtml = `
                     <td>
                         <div class="counters-cell">
                             <span>${parseInt(partner.dep) || 0}</span>
@@ -97,26 +380,31 @@ const partnersApp = {
                             <span>${parseInt(partner.comp) || 0}</span>
                         </div>
                     </td>
-                    <td>
-                        <div class="partner-avatar"></div>
-                    </td>
-                    <td>${this.escapeHtml(partner.fullName || '')}</td>
-                    <td>${this.escapeHtml(partner.method || '')}</td>
-                    <td>${this.escapeHtml(partner.subagent || '')}</td>
-                    <td>${this.escapeHtml(partner.subagentId || '')}</td>
-                    <td><span class="status-badge ${this.escapeHtml(statusClass)}">${this.escapeHtml(partner.status || 'Работает')}</span></td>
+                `;
+
+                // Dynamic columns based on config
+                visibleColumns.forEach(col => {
+                    rowHtml += this.renderColumnCell(col.id, partner, statusClass, isValidAvatar);
+                });
+
+                // Fixed last column: arrow
+                rowHtml += `
                     <td>
                         <img class="row-arrow" src="icons/arrow.svg" width="20" height="20" alt="Открыть" style="transform: rotate(${this.selectedPartnerId === partner.id ? '180deg' : '0deg'}); transition: transform 0.2s ease;">
                     </td>
                 `;
 
-                // Safely set avatar image
+                tr.innerHTML = rowHtml;
+
+                // Safely set avatar image (only if avatar column is visible)
                 if (isValidAvatar) {
                     const avatarDiv = tr.querySelector('.partner-avatar');
-                    const img = document.createElement('img');
-                    img.src = avatar;
-                    img.alt = '';
-                    avatarDiv.appendChild(img);
+                    if (avatarDiv) {
+                        const img = document.createElement('img');
+                        img.src = avatar;
+                        img.alt = '';
+                        avatarDiv.appendChild(img);
+                    }
                 }
 
                 tbody.appendChild(tr);
@@ -209,12 +497,12 @@ const partnersApp = {
             cardAvatar.style.display = 'none';
         }
 
-        // Set name, position, status
-        document.getElementById('cardFullName').textContent = partner.fullName || '-';
-        document.getElementById('cardPosition').textContent = partner.position || '-';
+        // Set subagent info
+        document.getElementById('cardFullName').textContent = partner.subagent || '-';
+        document.getElementById('cardPosition').textContent = partner.subagentId || '-';
 
         // Set status badge
-        const status = partner.status || 'Работает';
+        const status = partner.status || 'Открыт';
         const statusText = document.getElementById('cardStatusText');
         statusText.textContent = status;
         statusText.className = 'status-badge ' + this.getStatusColor(status);
@@ -227,11 +515,8 @@ const partnersApp = {
     // Get status color class
     getStatusColor(status) {
         const colors = {
-            'Работает': 'green',
-            'В отпуске': 'yellow',
-            'Командировка': 'blue',
-            'Уволен': 'red',
-            'Болеет': 'purple'
+            'Открыт': 'green',
+            'Закрыт': 'red'
         };
         return colors[status] || 'green';
     },
@@ -242,7 +527,7 @@ const partnersApp = {
 
         // Counters
         html += `
-            <div class="info-group counters-info">
+            <div class="counters-info">
                 <div class="counter-item">
                     <span class="counter-label">DEP</span>
                     <span class="counter-value">${partner.dep || 0}</span>
@@ -258,19 +543,11 @@ const partnersApp = {
             </div>
         `;
 
-        // Default fields
+        // Method field (subagent and ID are in header)
         html += `
             <div class="info-group">
                 <span class="info-label">Метод:</span>
                 <span class="info-value">${this.escapeHtml(partner.method || '-')}</span>
-            </div>
-            <div class="info-group">
-                <span class="info-label">Субагент:</span>
-                <span class="info-value">${this.escapeHtml(partner.subagent || '-')}</span>
-            </div>
-            <div class="info-group">
-                <span class="info-label">ID Субагента:</span>
-                <span class="info-value">${this.escapeHtml(partner.subagentId || '-')}</span>
             </div>
         `;
 
@@ -294,7 +571,12 @@ const partnersApp = {
     // Toggle status dropdown in card
     toggleStatusDropdown() {
         const dropdown = document.getElementById('cardStatusDropdown');
-        dropdown.style.display = dropdown.style.display === 'none' ? 'flex' : 'none';
+        const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
+        const isOpen = dropdown.style.display === 'none';
+        dropdown.style.display = isOpen ? 'flex' : 'none';
+        if (arrow) {
+            arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+        }
     },
 
     // Change status from card
@@ -313,14 +595,24 @@ const partnersApp = {
         statusText.textContent = status;
         statusText.className = 'status-badge ' + this.getStatusColor(status);
 
-        // Hide dropdown
+        // Hide dropdown and reset arrow
         document.getElementById('cardStatusDropdown').style.display = 'none';
+        const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
+        if (arrow) arrow.style.transform = 'rotate(-90deg)';
+
+        // Update table
+        this.render();
     },
 
     // Toggle form status dropdown
     toggleFormStatusDropdown() {
         const dropdown = document.getElementById('formStatusDropdown');
-        dropdown.style.display = dropdown.style.display === 'none' ? 'flex' : 'none';
+        const arrow = document.querySelector('#formStatusBadge .status-dropdown-icon');
+        const isOpen = dropdown.style.display === 'none';
+        dropdown.style.display = isOpen ? 'flex' : 'none';
+        if (arrow) {
+            arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+        }
     },
 
     // Change form status
@@ -330,8 +622,10 @@ const partnersApp = {
         statusText.textContent = status;
         statusText.className = 'status-badge ' + this.getStatusColor(status);
 
-        // Hide dropdown
+        // Hide dropdown and reset arrow
         document.getElementById('formStatusDropdown').style.display = 'none';
+        const arrow = document.querySelector('#formStatusBadge .status-dropdown-icon');
+        if (arrow) arrow.style.transform = 'rotate(-90deg)';
     },
 
     // Show add modal (form on right panel)
@@ -339,7 +633,7 @@ const partnersApp = {
         this.editingPartnerId = null;
         this.selectedPartnerId = null;
         this.isTemplateMode = false;
-        this.formStatus = 'Работает';
+        this.formStatus = 'Открыт';
         this.render();
 
         document.getElementById('statsPanel').style.display = 'none';
@@ -356,8 +650,9 @@ const partnersApp = {
         // Hide template fields container
         document.getElementById('templateFieldsContainer').style.display = 'none';
 
-        // Show form body
+        // Show form body and counters
         document.getElementById('formBody').style.display = 'block';
+        document.getElementById('formCounters').style.display = 'flex';
 
         // Show partner info section
         document.querySelector('.form-partner-info').style.display = 'flex';
@@ -365,32 +660,15 @@ const partnersApp = {
         // Remove dynamically added template fields
         this.removeDynamicFields();
 
-        // Show all default fields
-        const formGroups = document.querySelectorAll('#formBody .form-group-inline');
-        formGroups.forEach(group => {
-            group.style.display = 'flex';
-        });
+        // Clear header fields
+        document.getElementById('formSubagent').value = '';
+        document.getElementById('formSubagentId').value = '';
+        document.getElementById('formMethod').value = '';
 
-        // Reset header fields visibility (show all by default)
-        const formAvatar = document.querySelector('.form-avatar');
-        const formFullName = document.getElementById('formFullName');
-        const formPosition = document.getElementById('formPosition');
-        const formStatusBadge = document.getElementById('formStatusBadge');
-
-        if (formAvatar) formAvatar.style.display = 'flex';
-        if (formFullName) formFullName.style.display = 'block';
-        if (formPosition) formPosition.style.display = 'block';
-        if (formStatusBadge) formStatusBadge.style.display = 'flex';
-
-        // Clear form
-        document.getElementById('formFullName').value = '';
-        document.getElementById('formPosition').value = '';
+        // Clear counters
         document.getElementById('formDep').value = '';
         document.getElementById('formWith').value = '';
         document.getElementById('formComp').value = '';
-        document.getElementById('formMethod').value = '';
-        document.getElementById('formSubagent').value = '';
-        document.getElementById('formSubagentId').value = '';
 
         // Reset avatar
         const formAvatarImg = document.getElementById('formAvatar');
@@ -400,7 +678,7 @@ const partnersApp = {
 
         // Reset status
         const statusText = document.getElementById('formStatusText');
-        statusText.textContent = 'Работает';
+        statusText.textContent = 'Открыт';
         statusText.className = 'status-badge green';
 
         // Load template list and apply default if exists
@@ -417,7 +695,7 @@ const partnersApp = {
 
         this.editingPartnerId = this.selectedPartnerId;
         this.isTemplateMode = false;
-        this.formStatus = partner.status || 'Работает';
+        this.formStatus = partner.status || 'Открыт';
 
         document.getElementById('statsPanel').style.display = 'none';
         document.getElementById('partnerCard').style.display = 'none';
@@ -432,41 +710,25 @@ const partnersApp = {
         // Hide template fields container
         document.getElementById('templateFieldsContainer').style.display = 'none';
 
-        // Show form body
+        // Show form body and counters
         document.getElementById('formBody').style.display = 'block';
+        document.getElementById('formCounters').style.display = 'flex';
 
         // Show partner info section
         document.querySelector('.form-partner-info').style.display = 'flex';
 
-        // Remove dynamically added template fields first
+        // Clear formBody first
         this.removeDynamicFields();
 
-        // Show all default fields
-        const formGroups = document.querySelectorAll('#formBody .form-group-inline');
-        formGroups.forEach(group => {
-            group.style.display = 'flex';
-        });
+        // Fill header fields
+        document.getElementById('formSubagent').value = partner.subagent || '';
+        document.getElementById('formSubagentId').value = partner.subagentId || '';
+        document.getElementById('formMethod').value = partner.method || '';
 
-        // Reset header fields visibility (show all when editing)
-        const formAvatarDiv = document.querySelector('.form-avatar');
-        const formFullName = document.getElementById('formFullName');
-        const formPosition = document.getElementById('formPosition');
-        const formStatusBadge = document.getElementById('formStatusBadge');
-
-        if (formAvatarDiv) formAvatarDiv.style.display = 'flex';
-        if (formFullName) formFullName.style.display = 'block';
-        if (formPosition) formPosition.style.display = 'block';
-        if (formStatusBadge) formStatusBadge.style.display = 'flex';
-
-        // Fill form
-        document.getElementById('formFullName').value = partner.fullName || '';
-        document.getElementById('formPosition').value = partner.position || '';
+        // Fill counters
         document.getElementById('formDep').value = partner.dep || '';
         document.getElementById('formWith').value = partner.with || '';
         document.getElementById('formComp').value = partner.comp || '';
-        document.getElementById('formMethod').value = partner.method || '';
-        document.getElementById('formSubagent').value = partner.subagent || '';
-        document.getElementById('formSubagentId').value = partner.subagentId || '';
 
         // Set avatar
         const formAvatar = document.getElementById('formAvatar');
@@ -510,8 +772,11 @@ const partnersApp = {
         // Hide template fields container
         document.getElementById('templateFieldsContainer').style.display = 'none';
 
-        // Show form body
+        // Show form body and counters (remove disabled state)
         document.getElementById('formBody').style.display = 'block';
+        const formCounters = document.getElementById('formCounters');
+        formCounters.style.display = 'flex';
+        formCounters.classList.remove('disabled');
 
         // Show partner info section
         document.querySelector('.form-partner-info').style.display = 'flex';
@@ -519,16 +784,11 @@ const partnersApp = {
         // Remove dynamically added fields
         this.removeDynamicFields();
 
-        // Show all default fields
-        const formGroups = document.querySelectorAll('#formBody .form-group-inline');
-        formGroups.forEach(group => {
-            group.style.display = 'flex';
-        });
-
         // Reset header fields visibility and remove disabled state
         const formAvatar = document.querySelector('.form-avatar');
-        const formFullName = document.getElementById('formFullName');
-        const formPosition = document.getElementById('formPosition');
+        const subagentInput = document.getElementById('formSubagent');
+        const subagentIdInput = document.getElementById('formSubagentId');
+        const methodInput = document.getElementById('formMethod');
         const formStatusBadge = document.getElementById('formStatusBadge');
 
         if (formAvatar) {
@@ -536,15 +796,17 @@ const partnersApp = {
             formAvatar.classList.remove('disabled');
             formAvatar.style.pointerEvents = 'auto';
         }
-        if (formFullName) {
-            formFullName.style.display = 'block';
-            formFullName.classList.remove('disabled');
-            formFullName.readOnly = false;
+        if (subagentInput) {
+            subagentInput.classList.remove('disabled');
+            subagentInput.readOnly = false;
         }
-        if (formPosition) {
-            formPosition.style.display = 'block';
-            formPosition.classList.remove('disabled');
-            formPosition.readOnly = false;
+        if (subagentIdInput) {
+            subagentIdInput.classList.remove('disabled');
+            subagentIdInput.readOnly = false;
+        }
+        if (methodInput) {
+            methodInput.classList.remove('disabled');
+            methodInput.readOnly = false;
         }
         if (formStatusBadge) {
             formStatusBadge.style.display = 'flex';
@@ -558,18 +820,10 @@ const partnersApp = {
         }
     },
 
-    // Remove dynamically added fields
+    // Remove dynamically added fields (clear formBody)
     removeDynamicFields() {
-        const dynamicFields = document.querySelectorAll('#formBody .form-group-inline[data-custom-field="true"]');
-        dynamicFields.forEach(field => field.remove());
-
-        const templateFields = document.querySelectorAll('#formBody .form-group-inline');
-        templateFields.forEach(group => {
-            const input = group.querySelector('input, textarea');
-            if (input && input.id.startsWith('templateField_')) {
-                group.remove();
-            }
-        });
+        const formBody = document.getElementById('formBody');
+        formBody.innerHTML = '';
     },
 
     // Handle avatar upload
@@ -705,57 +959,47 @@ const partnersApp = {
             return;
         }
 
-        const fullName = document.getElementById('formFullName').value.trim();
-        const position = document.getElementById('formPosition').value.trim();
+        // Header fields (always required)
+        const subagent = document.getElementById('formSubagent').value.trim();
+        const subagentId = document.getElementById('formSubagentId').value.trim();
+        const method = document.getElementById('formMethod').value.trim();
+        const avatar = document.getElementById('formAvatar').src || '';
+
+        // DEP/WITH/COMP counters (always visible)
         const dep = parseInt(document.getElementById('formDep').value) || 0;
         const withVal = parseInt(document.getElementById('formWith').value) || 0;
         const comp = parseInt(document.getElementById('formComp').value) || 0;
-        const method = document.getElementById('formMethod').value.trim();
-        const subagent = document.getElementById('formSubagent').value.trim();
-        const subagentId = document.getElementById('formSubagentId').value.trim();
-        const avatar = document.getElementById('formAvatar').src || '';
 
-        if (!method || !subagent || !subagentId) {
-            alert('Пожалуйста, заполните все обязательные поля (Метод, Субагент, ID Субагента)');
+        // Validate required header fields
+        if (!subagent || !subagentId || !method) {
+            alert('Пожалуйста, заполните все обязательные поля (Субагент, ID Субагента, Метод)');
             return;
         }
 
-        // Collect custom fields
+        // Collect template fields (custom fields from template)
         const customFields = {};
-        const customFieldInputs = document.querySelectorAll('#formBody input[data-field-label]');
-        customFieldInputs.forEach(input => {
-            const label = input.getAttribute('data-field-label');
-            const value = input.value.trim();
-            if (label && value) {
-                customFields[label] = value;
-            }
-        });
-
-        // Also collect template fields
         const templateFieldInputs = document.querySelectorAll('#formBody .form-group-inline');
         templateFieldInputs.forEach(group => {
             const input = group.querySelector('input, textarea');
             const label = group.querySelector('label');
-            if (input && input.id.startsWith('templateField_') && label) {
+            if (input && label) {
                 const value = input.value.trim();
                 const labelText = label.textContent.replace(':', '').trim();
-                if (value) {
+                if (labelText && value) {
                     customFields[labelText] = value;
                 }
             }
         });
 
         const partnerData = {
-            fullName,
-            position,
+            subagent,
+            subagentId,
+            method,
             dep,
             with: withVal,
             comp,
             status: this.formStatus,
             avatar: avatar && avatar !== window.location.href ? avatar : '',
-            method,
-            subagent,
-            subagentId,
             customFields
         };
 
@@ -790,6 +1034,7 @@ const partnersApp = {
         if (confirm('Вы уверены, что хотите удалить этого партнера?')) {
             if (StorageManager.deleteItem('partners-data', this.selectedPartnerId)) {
                 this.selectedPartnerId = null;
+                this.cleanupUnusedColumns();
                 this.render();
                 this.showStatsPanel();
             } else {
@@ -806,11 +1051,41 @@ const partnersApp = {
             if (StorageManager.deleteItem('partners-data', this.editingPartnerId)) {
                 this.editingPartnerId = null;
                 this.selectedPartnerId = null;
+                this.cleanupUnusedColumns();
                 this.render();
                 this.showStatsPanel();
             } else {
                 alert('Ошибка при удалении партнера');
             }
+        }
+    },
+
+    // Remove custom columns that are no longer used by any partner
+    cleanupUnusedColumns() {
+        const saved = localStorage.getItem('partnersColumnsConfig');
+        if (!saved) return;
+
+        try {
+            let columns = JSON.parse(saved);
+            const customFieldNames = this.collectCustomFieldNames();
+
+            // Filter out custom columns that no longer have data
+            const cleanedColumns = columns.filter(col => {
+                if (col.isCustom) {
+                    const fieldName = col.id.replace('custom_', '');
+                    return customFieldNames.includes(fieldName);
+                }
+                return true;
+            });
+
+            // Save only if something changed
+            if (cleanedColumns.length !== columns.length) {
+                this.saveColumnsConfig(cleanedColumns);
+                this.renderColumnsMenu();
+                this.renderTableHeader();
+            }
+        } catch (e) {
+            // Ignore errors
         }
     },
 
@@ -837,7 +1112,16 @@ const partnersApp = {
         } else if (value) {
             this.currentTemplateId = value;
             this.applyTemplate(value);
+        } else {
+            // Empty value selected - show default fields, remove template fields
+            this.resetToDefaultFields();
         }
+    },
+
+    // Reset form to default state (no template - empty formBody)
+    resetToDefaultFields() {
+        this.removeDynamicFields();
+        this.currentTemplateId = '';
     },
 
     restoreTemplateSelection() {
@@ -1003,25 +1287,37 @@ const partnersApp = {
         // Hide default form fields
         document.getElementById('formBody').style.display = 'none';
 
+        // Show counters as preview (disabled)
+        const formCounters = document.getElementById('formCounters');
+        formCounters.style.display = 'flex';
+        formCounters.classList.add('disabled');
+        document.getElementById('formDep').value = '0';
+        document.getElementById('formWith').value = '0';
+        document.getElementById('formComp').value = '0';
+
         // Show partner info section (as preview, disabled)
         document.querySelector('.form-partner-info').style.display = 'flex';
 
         // Set preview placeholders
-        const fullNameInput = document.getElementById('formFullName');
-        const positionInput = document.getElementById('formPosition');
+        const subagentInput = document.getElementById('formSubagent');
+        const subagentIdInput = document.getElementById('formSubagentId');
+        const methodInput = document.getElementById('formMethod');
         const statusBadge = document.getElementById('formStatusBadge');
         const formAvatar = document.querySelector('.form-avatar');
 
-        fullNameInput.value = 'Ф.И.О.';
-        positionInput.value = 'Должность';
+        subagentInput.value = 'Субагент';
+        subagentIdInput.value = 'ID Субагента';
+        methodInput.value = 'Метод';
 
         // Disable inputs
-        fullNameInput.classList.add('disabled');
-        positionInput.classList.add('disabled');
+        subagentInput.classList.add('disabled');
+        subagentIdInput.classList.add('disabled');
+        methodInput.classList.add('disabled');
         if (statusBadge) statusBadge.classList.add('disabled');
 
-        fullNameInput.readOnly = true;
-        positionInput.readOnly = true;
+        subagentInput.readOnly = true;
+        subagentIdInput.readOnly = true;
+        methodInput.readOnly = true;
 
         // Disable avatar upload
         if (formAvatar) {
@@ -1121,35 +1417,24 @@ const partnersApp = {
         const savedTemplates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
         const template = savedTemplates[templateId];
 
-        if (template) {
-            // Remove previously added dynamic template fields
+        if (template && template.fields) {
+            // Clear formBody first
             this.removeDynamicFields();
 
-            // Hide default fields except the first 3 (Method, Subagent, SubagentId)
-            const defaultGroups = document.querySelectorAll('#formBody .form-group-inline');
-            defaultGroups.forEach((group, index) => {
-                // Keep first 3 default fields visible
-                if (index >= 3) {
-                    group.style.display = 'none';
-                }
-            });
-
             // Create dynamic fields from template
-            if (template.fields) {
-                template.fields.forEach(field => {
-                    const fieldHtml = `
-                        <div class="form-group-inline">
-                            <label>${this.escapeHtml(field.label)}:</label>
-                            ${field.type === 'textarea'
-                                ? `<textarea id="${field.id}" placeholder="${this.escapeHtml(field.label)}" data-field-label="${this.escapeHtml(field.label)}"></textarea>`
-                                : `<input type="${field.type}" id="${field.id}" placeholder="${this.escapeHtml(field.label)}" data-field-label="${this.escapeHtml(field.label)}">`
-                            }
-                        </div>
-                    `;
+            template.fields.forEach(field => {
+                const fieldHtml = `
+                    <div class="form-group-inline" data-template-field="true">
+                        <label>${this.escapeHtml(field.label)}:</label>
+                        ${field.type === 'textarea'
+                            ? `<textarea id="${field.id}" placeholder="${this.escapeHtml(field.label)}" data-field-label="${this.escapeHtml(field.label)}"></textarea>`
+                            : `<input type="${field.type}" id="${field.id}" placeholder="${this.escapeHtml(field.label)}" data-field-label="${this.escapeHtml(field.label)}">`
+                        }
+                    </div>
+                `;
 
-                    document.getElementById('formBody').insertAdjacentHTML('beforeend', fieldHtml);
-                });
-            }
+                document.getElementById('formBody').insertAdjacentHTML('beforeend', fieldHtml);
+            });
         }
     },
 
@@ -1158,6 +1443,11 @@ const partnersApp = {
         const invalidFields = this.templateFields.filter(f => !f.label.trim());
         if (invalidFields.length > 0) {
             alert('Все поля должны иметь название');
+            return;
+        }
+
+        if (this.templateFields.length === 0) {
+            alert('Добавьте хотя бы одно поле для шаблона');
             return;
         }
 
@@ -1208,21 +1498,31 @@ const partnersApp = {
             formAvatar.style.pointerEvents = 'auto';
         }
 
-        const fullNameInput = document.getElementById('formFullName');
-        const positionInput = document.getElementById('formPosition');
+        const subagentInput = document.getElementById('formSubagent');
+        const subagentIdInput = document.getElementById('formSubagentId');
+        const methodInput = document.getElementById('formMethod');
         const statusBadge = document.getElementById('formStatusBadge');
 
-        if (fullNameInput) {
-            fullNameInput.classList.remove('disabled');
-            fullNameInput.readOnly = false;
+        if (subagentInput) {
+            subagentInput.classList.remove('disabled');
+            subagentInput.readOnly = false;
         }
-        if (positionInput) {
-            positionInput.classList.remove('disabled');
-            positionInput.readOnly = false;
+        if (subagentIdInput) {
+            subagentIdInput.classList.remove('disabled');
+            subagentIdInput.readOnly = false;
+        }
+        if (methodInput) {
+            methodInput.classList.remove('disabled');
+            methodInput.readOnly = false;
         }
         if (statusBadge) {
             statusBadge.classList.remove('disabled');
         }
+
+        // Show counters back (remove disabled state)
+        const formCounters = document.getElementById('formCounters');
+        formCounters.style.display = 'flex';
+        formCounters.classList.remove('disabled');
 
         // Show partner info section again
         document.querySelector('.form-partner-info').style.display = 'flex';
@@ -1379,13 +1679,14 @@ const partnersApp = {
         this.pendingImportData.forEach(partner => {
             if (!existingIds.has(partner.id)) {
                 StorageManager.addItem('partners-data', {
-                    fullName: partner.fullName,
-                    position: partner.position,
-                    status: partner.status,
-                    avatar: partner.avatar,
-                    method: partner.method,
                     subagent: partner.subagent,
                     subagentId: partner.subagentId,
+                    method: partner.method,
+                    dep: partner.dep || 0,
+                    with: partner.with || 0,
+                    comp: partner.comp || 0,
+                    status: partner.status,
+                    avatar: partner.avatar,
                     customFields: partner.customFields || {}
                 });
                 added++;
@@ -1438,17 +1739,27 @@ document.getElementById('cropModal')?.addEventListener('click', (e) => {
     }
 });
 
-// Close status dropdowns when clicking outside
+// Close dropdowns and menus when clicking outside
 document.addEventListener('click', (e) => {
     const cardStatusBadge = document.getElementById('cardStatusBadge');
     const cardStatusDropdown = document.getElementById('cardStatusDropdown');
     const formStatusBadge = document.getElementById('formStatusBadge');
     const formStatusDropdown = document.getElementById('formStatusDropdown');
+    const columnsSettings = document.querySelector('.columns-settings');
+    const columnsMenu = document.getElementById('columnsMenu');
 
     if (cardStatusBadge && !cardStatusBadge.contains(e.target)) {
         cardStatusDropdown.style.display = 'none';
+        const arrow = cardStatusBadge.querySelector('.status-dropdown-icon');
+        if (arrow) arrow.style.transform = 'rotate(-90deg)';
     }
     if (formStatusBadge && !formStatusBadge.contains(e.target)) {
         formStatusDropdown.style.display = 'none';
+        const arrow = formStatusBadge.querySelector('.status-dropdown-icon');
+        if (arrow) arrow.style.transform = 'rotate(-90deg)';
+    }
+    // Close columns menu when clicking outside
+    if (columnsSettings && columnsMenu && !columnsSettings.contains(e.target)) {
+        columnsMenu.classList.remove('active');
     }
 });
