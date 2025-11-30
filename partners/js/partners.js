@@ -1,12 +1,20 @@
-// Partners App - Modern UI with Templates (independent from Team Info)
+// Partners App - Cloud Sync Version
 const partnersApp = {
     selectedPartnerId: null,
     editingPartnerId: null,
     sortField: null,
     sortDirection: 'asc',
     pendingImportData: null,
-    importType: 'json', // 'json' or 'excel'
+    importType: 'json',
     selectedImportTemplateId: null,
+
+    // Cached data
+    cachedPartners: [],
+    cachedMethods: [],
+    cachedTemplates: {},
+
+    // Loading state
+    isLoading: false,
 
     // Template system
     isTemplateMode: false,
@@ -14,33 +22,150 @@ const partnersApp = {
     currentTemplateId: null,
     templateFields: [],
 
+    // ==================== INITIALIZATION ====================
+
+    async init() {
+        // Check authentication
+        if (!AuthGuard.check()) {
+            return; // Will redirect to login
+        }
+
+        // Initialize CloudStorage
+        await CloudStorage.init();
+
+        // Show loading
+        this.showLoading(true);
+
+        try {
+            // Load data from cloud
+            await this.loadAllData();
+
+            // Render UI
+            this.renderTableHeader();
+            this.render();
+            this.updateStats();
+            this.setupImportHandler();
+            this.setupCropHandlers();
+            this.renderColumnsMenu();
+
+        } catch (error) {
+            console.error('Init error:', error);
+            this.showError('Ошибка загрузки данных: ' + error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    },
+
+    async loadAllData() {
+        // Load all data in parallel
+        const [partners, methods, templates] = await Promise.all([
+            CloudStorage.getPartners(),
+            CloudStorage.getMethods(),
+            CloudStorage.getTemplates()
+        ]);
+
+        this.cachedPartners = partners;
+        this.cachedMethods = methods;
+
+        // Cache partners to localStorage for other modules (traffic-calculation)
+        this.syncPartnersToLocalStorage();
+
+        // Convert templates array to object
+        this.cachedTemplates = {};
+        templates.forEach(t => {
+            this.cachedTemplates[t.id] = t;
+        });
+    },
+
+    // Sync partners to localStorage for other modules
+    syncPartnersToLocalStorage() {
+        try {
+            localStorage.setItem('partners-data', JSON.stringify(this.cachedPartners));
+        } catch (e) {
+            console.error('Failed to sync partners to localStorage:', e);
+        }
+    },
+
+    // ==================== LOADING UI ====================
+
+    showLoading(show) {
+        this.isLoading = show;
+        let overlay = document.getElementById('loadingOverlay');
+
+        if (show) {
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'loadingOverlay';
+                overlay.innerHTML = `
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Загрузка...</div>
+                `;
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(26, 26, 26, 0.9);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                `;
+                const style = document.createElement('style');
+                style.textContent = `
+                    .loading-spinner {
+                        width: 40px;
+                        height: 40px;
+                        border: 3px solid rgba(255,255,255,0.1);
+                        border-top-color: #fdbe2f;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                    .loading-text {
+                        margin-top: 16px;
+                        color: #f2f2f2;
+                        font-size: 14px;
+                    }
+                    @keyframes spin { to { transform: rotate(360deg); } }
+                `;
+                document.head.appendChild(style);
+                document.body.appendChild(overlay);
+            }
+            overlay.style.display = 'flex';
+        } else if (overlay) {
+            overlay.style.display = 'none';
+        }
+    },
+
+    showError(message) {
+        alert(message);
+    },
+
     // ==================== METHODS MANAGEMENT ====================
 
-    // Get methods from localStorage
     getMethods() {
-        return JSON.parse(localStorage.getItem('partnersMethods') || '[]');
+        return this.cachedMethods;
     },
 
-    // Save methods to localStorage
-    saveMethods(methods) {
-        localStorage.setItem('partnersMethods', JSON.stringify(methods));
+    async loadMethods() {
+        this.cachedMethods = await CloudStorage.getMethods();
+        return this.cachedMethods;
     },
 
-    // Show methods dialog
     showMethodsDialog() {
         document.getElementById('methodsModal').classList.add('active');
         document.getElementById('newMethodInput').value = '';
         this.renderMethodsList();
     },
 
-    // Close methods dialog
     closeMethodsDialog() {
         document.getElementById('methodsModal').classList.remove('active');
         this.populateMethodsSelect();
     },
 
-    // Add new method
-    addMethod() {
+    async addMethod() {
         const input = document.getElementById('newMethodInput');
         const name = input.value.trim();
 
@@ -50,32 +175,33 @@ const partnersApp = {
         }
 
         const methods = this.getMethods();
-
         if (methods.some(m => m.name.toLowerCase() === name.toLowerCase())) {
             alert('Метод с таким названием уже существует');
             return;
         }
 
-        methods.push({
-            id: 'method_' + Date.now(),
-            name: name
-        });
-
-        this.saveMethods(methods);
-        input.value = '';
-        this.renderMethodsList();
+        try {
+            const result = await CloudStorage.addMethod({ name: name });
+            this.cachedMethods.push({ id: result.id, name: name });
+            input.value = '';
+            this.renderMethodsList();
+        } catch (error) {
+            this.showError('Ошибка добавления метода: ' + error.message);
+        }
     },
 
-    // Delete method
-    deleteMethod(methodId) {
+    async deleteMethod(methodId) {
         if (!confirm('Удалить этот метод?')) return;
 
-        const methods = this.getMethods().filter(m => m.id !== methodId);
-        this.saveMethods(methods);
-        this.renderMethodsList();
+        try {
+            await CloudStorage.deleteMethod(methodId);
+            this.cachedMethods = this.cachedMethods.filter(m => m.id !== methodId);
+            this.renderMethodsList();
+        } catch (error) {
+            this.showError('Ошибка удаления метода: ' + error.message);
+        }
     },
 
-    // Start editing method
     startEditMethod(methodId) {
         const methods = this.getMethods();
         const method = methods.find(m => m.id === methodId);
@@ -97,8 +223,7 @@ const partnersApp = {
         document.getElementById(`editMethodInput_${methodId}`).focus();
     },
 
-    // Save edited method
-    saveEditMethod(methodId) {
+    async saveEditMethod(methodId) {
         const input = document.getElementById(`editMethodInput_${methodId}`);
         const newName = input.value.trim();
 
@@ -109,7 +234,6 @@ const partnersApp = {
 
         const methods = this.getMethods();
         const methodIndex = methods.findIndex(m => m.id === methodId);
-
         if (methodIndex === -1) return;
 
         if (methods.some((m, i) => i !== methodIndex && m.name.toLowerCase() === newName.toLowerCase())) {
@@ -117,23 +241,30 @@ const partnersApp = {
             return;
         }
 
-        const oldName = methods[methodIndex].name;
-        methods[methodIndex].name = newName;
-        this.saveMethods(methods);
+        try {
+            const oldName = methods[methodIndex].name;
+            await CloudStorage.updateMethod(methodId, { id: methodId, name: newName });
+            this.cachedMethods[methodIndex].name = newName;
 
-        // Update all partners with this method
-        const partners = this.getPartners();
-        partners.forEach(partner => {
-            if (partner.method === oldName) {
-                partner.method = newName;
-                StorageManager.updateItem('partners-data', partner.id, partner);
+            // Update partners with this method
+            const partners = this.getPartners();
+            for (const partner of partners) {
+                if (partner.method === oldName) {
+                    partner.method = newName;
+                    await CloudStorage.updatePartner(partner.id, partner);
+                }
             }
-        });
 
-        this.renderMethodsList();
+            // Refresh partners cache
+            this.cachedPartners = await CloudStorage.getPartners(false);
+            this.syncPartnersToLocalStorage();
+            this.renderMethodsList();
+            this.render();
+        } catch (error) {
+            this.showError('Ошибка сохранения метода: ' + error.message);
+        }
     },
 
-    // Render methods list
     renderMethodsList() {
         const container = document.getElementById('methodsList');
         const methods = this.getMethods();
@@ -156,13 +287,11 @@ const partnersApp = {
         `).join('');
     },
 
-    // Populate methods select in form
     populateMethodsSelect(selectedValue = '') {
         const select = document.getElementById('formMethod');
         if (!select) return;
 
         const methods = this.getMethods();
-
         select.innerHTML = '<option value="">Выберите метод</option>';
 
         methods.forEach(method => {
@@ -187,12 +316,9 @@ const partnersApp = {
         originalSrc: null
     },
 
-    // Form status
     formStatus: 'Открыт',
 
     // Columns configuration
-    // Fixed columns: counters (first), arrow (last)
-    // Configurable columns with order and visibility
     defaultColumns: [
         { id: 'avatar', label: 'Фото', visible: true, sortable: false },
         { id: 'method', label: 'Метод', visible: true, sortable: true },
@@ -201,7 +327,6 @@ const partnersApp = {
         { id: 'status', label: 'Статус', visible: true, sortable: true }
     ],
 
-    // Get columns config from localStorage, merge with defaults and custom fields
     getColumnsConfig() {
         let columns = [];
         const saved = localStorage.getItem('partnersColumnsConfig');
@@ -216,10 +341,8 @@ const partnersApp = {
             columns = [...this.defaultColumns];
         }
 
-        // Collect all custom fields from partners data
         const customFieldNames = this.collectCustomFieldNames();
 
-        // Add missing custom fields to columns (hidden by default)
         customFieldNames.forEach(fieldName => {
             const exists = columns.some(c => c.id === `custom_${fieldName}`);
             if (!exists) {
@@ -233,7 +356,6 @@ const partnersApp = {
             }
         });
 
-        // Remove custom columns that no longer have data
         columns = columns.filter(col => {
             if (col.isCustom) {
                 const fieldName = col.id.replace('custom_', '');
@@ -245,7 +367,6 @@ const partnersApp = {
         return columns;
     },
 
-    // Collect unique custom field names from all partners
     collectCustomFieldNames() {
         const partners = this.getPartners();
         const fieldNames = new Set();
@@ -253,7 +374,7 @@ const partnersApp = {
         partners.forEach(partner => {
             if (partner.customFields) {
                 Object.keys(partner.customFields).forEach(key => {
-                    if (partner.customFields[key]) { // Only if has value
+                    if (partner.customFields[key]) {
                         fieldNames.add(key);
                     }
                 });
@@ -263,46 +384,29 @@ const partnersApp = {
         return Array.from(fieldNames);
     },
 
-    // Save columns config to localStorage
     saveColumnsConfig(columns) {
         localStorage.setItem('partnersColumnsConfig', JSON.stringify(columns));
     },
 
-    // Initialize
-    init() {
-        this.renderTableHeader();
-        this.render();
-        this.updateStats();
-        this.setupImportHandler();
-        this.setupCropHandlers();
-        this.renderColumnsMenu();
-    },
-
-    // Toggle sidebar
     toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         sidebar.classList.toggle('collapsed');
         localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
     },
 
-    // Validate URL for safe usage in img src
     isValidImageUrl(url) {
         if (!url) return false;
-        // Allow data URLs and http/https URLs only
         return url.startsWith('data:image/') ||
                url.startsWith('http://') ||
                url.startsWith('https://');
     },
 
-    // Render table header based on columns config
     renderTableHeader() {
         const thead = document.getElementById('partnersTableHead');
         const columns = this.getColumnsConfig();
         const visibleColumns = columns.filter(c => c.visible);
 
         let html = '<tr>';
-
-        // Fixed first column: DEP/WITH/COMP
         html += `<th>
             <div class="counters-header">
                 <span>DEP</span>
@@ -311,7 +415,6 @@ const partnersApp = {
             </div>
         </th>`;
 
-        // Dynamic columns
         visibleColumns.forEach(col => {
             if (col.sortable) {
                 html += `<th data-column="${col.id}">
@@ -325,14 +428,12 @@ const partnersApp = {
             }
         });
 
-        // Fixed last column: arrow
         html += '<th></th>';
         html += '</tr>';
 
         thead.innerHTML = html;
     },
 
-    // Render columns menu
     renderColumnsMenu() {
         const columnsList = document.getElementById('columnsList');
         const columns = this.getColumnsConfig();
@@ -368,7 +469,6 @@ const partnersApp = {
             `;
         });
 
-        // Add footer with limit and reset button
         html += `
             <div class="columns-menu-footer">
                 <span>${visibleCount}/${this.maxVisibleColumns}</span>
@@ -379,7 +479,6 @@ const partnersApp = {
         columnsList.innerHTML = html;
     },
 
-    // Reset columns to default configuration
     resetColumnsConfig() {
         localStorage.removeItem('partnersColumnsConfig');
         this.renderColumnsMenu();
@@ -387,29 +486,24 @@ const partnersApp = {
         this.render();
     },
 
-    // Toggle columns menu visibility
     toggleColumnsMenu(event) {
         event.stopPropagation();
         const menu = document.getElementById('columnsMenu');
         menu.classList.toggle('active');
     },
 
-    // Close columns menu
     closeColumnsMenu() {
         const menu = document.getElementById('columnsMenu');
         menu.classList.remove('active');
     },
 
-    // Maximum visible columns (excluding fixed DEP/WITH/COMP and arrow)
     maxVisibleColumns: 5,
 
-    // Toggle column visibility
     toggleColumn(columnId) {
         const columns = this.getColumnsConfig();
         const column = columns.find(c => c.id === columnId);
         if (!column) return;
 
-        // Check if trying to enable and already at max
         const visibleCount = columns.filter(c => c.visible).length;
         if (!column.visible && visibleCount >= this.maxVisibleColumns) {
             alert(`Максимум ${this.maxVisibleColumns} колонок. Отключите одну из текущих колонок.`);
@@ -423,7 +517,6 @@ const partnersApp = {
         this.render();
     },
 
-    // Drag and drop for column reordering
     draggedColumnIndex: null,
 
     handleColumnDragStart(event) {
@@ -467,16 +560,13 @@ const partnersApp = {
         });
     },
 
-    // Render single column cell
     renderColumnCell(columnId, partner, statusClass) {
-        // Handle custom fields
         if (columnId.startsWith('custom_')) {
             const fieldName = columnId.replace('custom_', '');
             const value = partner.customFields?.[fieldName] || '';
             return `<td data-column="${columnId}">${this.escapeHtml(value)}</td>`;
         }
 
-        // Handle standard fields
         switch (columnId) {
             case 'avatar':
                 return `<td data-column="avatar"><div class="partner-avatar"></div></td>`;
@@ -493,7 +583,6 @@ const partnersApp = {
         }
     },
 
-    // Render table
     render() {
         const partnersData = this.getPartners();
         const tbody = document.getElementById('partnersTableBody');
@@ -507,19 +596,17 @@ const partnersApp = {
             emptyState.style.display = 'none';
             table.style.display = 'table';
 
-            // Sort data if needed
             let sortedData = [...partnersData];
             if (this.sortField) {
                 sortedData.sort((a, b) => {
-                    const valA = (a[this.sortField] || '').toLowerCase();
-                    const valB = (b[this.sortField] || '').toLowerCase();
+                    const valA = (a[this.sortField] || '').toString().toLowerCase();
+                    const valB = (b[this.sortField] || '').toString().toLowerCase();
                     if (valA < valB) return this.sortDirection === 'asc' ? -1 : 1;
                     if (valA > valB) return this.sortDirection === 'asc' ? 1 : -1;
                     return 0;
                 });
             }
 
-            // Clear tbody and build rows with safe event listeners
             tbody.innerHTML = '';
 
             const columns = this.getColumnsConfig();
@@ -535,7 +622,6 @@ const partnersApp = {
                 tr.dataset.partnerId = partner.id;
                 tr.addEventListener('click', () => this.selectPartner(partner.id));
 
-                // Fixed first column: DEP/WITH/COMP
                 let rowHtml = `
                     <td>
                         <div class="counters-cell">
@@ -546,12 +632,10 @@ const partnersApp = {
                     </td>
                 `;
 
-                // Dynamic columns based on config
                 visibleColumns.forEach(col => {
                     rowHtml += this.renderColumnCell(col.id, partner, statusClass, isValidAvatar);
                 });
 
-                // Fixed last column: arrow
                 rowHtml += `
                     <td>
                         <img class="row-arrow" src="icons/arrow.svg" width="20" height="20" alt="Открыть" style="transform: rotate(${this.selectedPartnerId === partner.id ? '180deg' : '0deg'}); transition: transform 0.2s ease;">
@@ -560,7 +644,6 @@ const partnersApp = {
 
                 tr.innerHTML = rowHtml;
 
-                // Safely set avatar image (only if avatar column is visible)
                 if (isValidAvatar) {
                     const avatarDiv = tr.querySelector('.partner-avatar');
                     if (avatarDiv) {
@@ -578,22 +661,18 @@ const partnersApp = {
         this.updateStats();
     },
 
-    // Get partners from storage
     getPartners() {
-        return StorageManager.getArray('partners-data');
+        return this.cachedPartners;
     },
 
-    // Update statistics
     updateStats() {
         const partners = this.getPartners();
         document.getElementById('totalCount').textContent = partners.length;
 
-        // Count unique methods
         const uniqueMethods = new Set(partners.map(p => p.method).filter(Boolean));
         document.getElementById('methodsCount').textContent = uniqueMethods.size;
     },
 
-    // Sort by field
     sortBy(field) {
         if (this.sortField === field) {
             this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -604,7 +683,6 @@ const partnersApp = {
         this.render();
     },
 
-    // Filter table
     filterTable() {
         const searchValue = document.getElementById('searchInput').value.toLowerCase();
         const rows = document.querySelectorAll('.partners-table tbody tr');
@@ -615,7 +693,6 @@ const partnersApp = {
         });
     },
 
-    // Select partner
     selectPartner(id) {
         if (this.selectedPartnerId === id) {
             this.deselectPartner();
@@ -627,21 +704,18 @@ const partnersApp = {
         this.showPartnerCard(id);
     },
 
-    // Deselect partner
     deselectPartner() {
         this.selectedPartnerId = null;
         this.render();
         this.showStatsPanel();
     },
 
-    // Show stats panel
     showStatsPanel() {
         document.getElementById('statsPanel').style.display = 'flex';
         document.getElementById('partnerCard').style.display = 'none';
         document.getElementById('partnerForm').style.display = 'none';
     },
 
-    // Show partner card
     showPartnerCard(id) {
         const partners = this.getPartners();
         const partner = partners.find(p => p.id === id);
@@ -651,7 +725,6 @@ const partnersApp = {
         document.getElementById('partnerCard').style.display = 'flex';
         document.getElementById('partnerForm').style.display = 'none';
 
-        // Set avatar with URL validation
         const cardAvatar = document.getElementById('cardAvatar');
         if (partner.avatar && this.isValidImageUrl(partner.avatar)) {
             cardAvatar.src = partner.avatar;
@@ -661,22 +734,18 @@ const partnersApp = {
             cardAvatar.style.display = 'none';
         }
 
-        // Set subagent info
         document.getElementById('cardFullName').textContent = partner.subagent || '-';
         document.getElementById('cardPosition').textContent = partner.subagentId || '-';
 
-        // Set status badge
         const status = partner.status || 'Открыт';
         const statusText = document.getElementById('cardStatusText');
         statusText.textContent = status;
         statusText.className = 'status-badge ' + this.getStatusColor(status);
 
-        // Generate card body with all fields
         const cardBody = document.getElementById('cardBody');
         cardBody.innerHTML = this.generateCardInfo(partner);
     },
 
-    // Get status color class
     getStatusColor(status) {
         const colors = {
             'Открыт': 'green',
@@ -685,11 +754,9 @@ const partnersApp = {
         return colors[status] || 'green';
     },
 
-    // Generate card info HTML
     generateCardInfo(partner) {
         let html = '';
 
-        // Counters
         html += `
             <div class="counters-info">
                 <div class="counter-item">
@@ -707,7 +774,6 @@ const partnersApp = {
             </div>
         `;
 
-        // Method field (subagent and ID are in header)
         html += `
             <div class="info-group">
                 <span class="info-label">Метод:</span>
@@ -715,7 +781,6 @@ const partnersApp = {
             </div>
         `;
 
-        // Custom fields from template
         if (partner.customFields) {
             Object.entries(partner.customFields).forEach(([label, value]) => {
                 if (value) {
@@ -732,7 +797,6 @@ const partnersApp = {
         return html;
     },
 
-    // Toggle status dropdown in card
     toggleStatusDropdown() {
         const dropdown = document.getElementById('cardStatusDropdown');
         const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
@@ -743,32 +807,37 @@ const partnersApp = {
         }
     },
 
-    // Change status from card
-    changeStatus(status) {
+    async changeStatus(status) {
         if (!this.selectedPartnerId) return;
 
         const partners = this.getPartners();
         const partner = partners.find(p => p.id === this.selectedPartnerId);
         if (!partner) return;
 
-        // Update in storage
-        StorageManager.updateItem('partners-data', this.selectedPartnerId, { status });
+        try {
+            partner.status = status;
+            await CloudStorage.updatePartner(this.selectedPartnerId, partner);
 
-        // Update UI
-        const statusText = document.getElementById('cardStatusText');
-        statusText.textContent = status;
-        statusText.className = 'status-badge ' + this.getStatusColor(status);
+            // Update cache
+            const index = this.cachedPartners.findIndex(p => p.id === this.selectedPartnerId);
+            if (index !== -1) {
+                this.cachedPartners[index].status = status;
+            }
 
-        // Hide dropdown and reset arrow
-        document.getElementById('cardStatusDropdown').style.display = 'none';
-        const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
-        if (arrow) arrow.style.transform = 'rotate(-90deg)';
+            const statusText = document.getElementById('cardStatusText');
+            statusText.textContent = status;
+            statusText.className = 'status-badge ' + this.getStatusColor(status);
 
-        // Update table
-        this.render();
+            document.getElementById('cardStatusDropdown').style.display = 'none';
+            const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
+            if (arrow) arrow.style.transform = 'rotate(-90deg)';
+
+            this.render();
+        } catch (error) {
+            this.showError('Ошибка обновления статуса: ' + error.message);
+        }
     },
 
-    // Toggle form status dropdown
     toggleFormStatusDropdown() {
         const dropdown = document.getElementById('formStatusDropdown');
         const arrow = document.querySelector('#formStatusBadge .status-dropdown-icon');
@@ -779,20 +848,17 @@ const partnersApp = {
         }
     },
 
-    // Change form status
     changeFormStatus(status) {
         this.formStatus = status;
         const statusText = document.getElementById('formStatusText');
         statusText.textContent = status;
         statusText.className = 'status-badge ' + this.getStatusColor(status);
 
-        // Hide dropdown and reset arrow
         document.getElementById('formStatusDropdown').style.display = 'none';
         const arrow = document.querySelector('#formStatusBadge .status-dropdown-icon');
         if (arrow) arrow.style.transform = 'rotate(-90deg)';
     },
 
-    // Show add modal (form on right panel)
     showAddModal() {
         this.editingPartnerId = null;
         this.selectedPartnerId = null;
@@ -808,50 +874,35 @@ const partnersApp = {
         document.getElementById('formSaveBtnText').textContent = 'Добавить партнера';
         document.getElementById('formDeleteBtn').style.display = 'none';
 
-        // Show template selector
         document.getElementById('formTemplateSelector').style.display = 'flex';
-
-        // Hide template fields container
         document.getElementById('templateFieldsContainer').style.display = 'none';
-
-        // Show form body and counters
         document.getElementById('formBody').style.display = 'block';
         document.getElementById('formCounters').style.display = 'flex';
-
-        // Show partner info section
         document.querySelector('.form-partner-info').style.display = 'flex';
 
-        // Remove dynamically added template fields
         this.removeDynamicFields();
 
-        // Clear header fields
         document.getElementById('formSubagent').value = '';
         document.getElementById('formSubagentId').value = '';
 
-        // Populate methods select
         this.populateMethodsSelect('');
 
-        // Clear counters
         document.getElementById('formDep').value = '';
         document.getElementById('formWith').value = '';
         document.getElementById('formComp').value = '';
 
-        // Reset avatar
         const formAvatarImg = document.getElementById('formAvatar');
         formAvatarImg.src = '';
         formAvatarImg.style.display = 'none';
         document.querySelector('.form-avatar-placeholder').style.display = 'block';
 
-        // Reset status
         const statusText = document.getElementById('formStatusText');
         statusText.textContent = 'Открыт';
         statusText.className = 'status-badge green';
 
-        // Load template list and apply default if exists
         this.updateTemplateList();
     },
 
-    // Edit from card
     editFromCard() {
         if (!this.selectedPartnerId) return;
 
@@ -870,35 +921,23 @@ const partnersApp = {
         document.getElementById('formTitle').textContent = 'Редактировать партнера';
         document.getElementById('formSaveBtnText').textContent = 'Сохранить изменения';
 
-        // Hide template selector when editing
         document.getElementById('formTemplateSelector').style.display = 'none';
-
-        // Hide template fields container
         document.getElementById('templateFieldsContainer').style.display = 'none';
-
-        // Show form body and counters
         document.getElementById('formBody').style.display = 'block';
         document.getElementById('formCounters').style.display = 'flex';
-
-        // Show partner info section
         document.querySelector('.form-partner-info').style.display = 'flex';
 
-        // Clear formBody first
         this.removeDynamicFields();
 
-        // Fill header fields
         document.getElementById('formSubagent').value = partner.subagent || '';
         document.getElementById('formSubagentId').value = partner.subagentId || '';
 
-        // Populate methods select with current value
         this.populateMethodsSelect(partner.method || '');
 
-        // Fill counters
         document.getElementById('formDep').value = partner.dep || '';
         document.getElementById('formWith').value = partner.with || '';
         document.getElementById('formComp').value = partner.comp || '';
 
-        // Set avatar
         const formAvatar = document.getElementById('formAvatar');
         const placeholder = document.querySelector('.form-avatar-placeholder');
         if (partner.avatar) {
@@ -911,12 +950,10 @@ const partnersApp = {
             placeholder.style.display = 'block';
         }
 
-        // Set status
         const statusText = document.getElementById('formStatusText');
         statusText.textContent = this.formStatus;
         statusText.className = 'status-badge ' + this.getStatusColor(this.formStatus);
 
-        // If partner has custom fields, add them to the form
         if (partner.customFields) {
             Object.entries(partner.customFields).forEach(([label, value]) => {
                 const fieldId = 'customField_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -931,28 +968,22 @@ const partnersApp = {
         }
     },
 
-    // Close form
     closeForm() {
         this.editingPartnerId = null;
         this.isTemplateMode = false;
         this.editingTemplateId = null;
 
-        // Hide template fields container
         document.getElementById('templateFieldsContainer').style.display = 'none';
 
-        // Show form body and counters (remove disabled state)
         document.getElementById('formBody').style.display = 'block';
         const formCounters = document.getElementById('formCounters');
         formCounters.style.display = 'flex';
         formCounters.classList.remove('disabled');
 
-        // Show partner info section
         document.querySelector('.form-partner-info').style.display = 'flex';
 
-        // Remove dynamically added fields
         this.removeDynamicFields();
 
-        // Reset header fields visibility and remove disabled state
         const formAvatar = document.querySelector('.form-avatar');
         const subagentInput = document.getElementById('formSubagent');
         const subagentIdInput = document.getElementById('formSubagentId');
@@ -988,13 +1019,11 @@ const partnersApp = {
         }
     },
 
-    // Remove dynamically added fields (clear formBody)
     removeDynamicFields() {
         const formBody = document.getElementById('formBody');
         formBody.innerHTML = '';
     },
 
-    // Handle avatar upload
     handleAvatarUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -1007,7 +1036,6 @@ const partnersApp = {
         reader.readAsDataURL(file);
     },
 
-    // Show crop modal
     showCropModal(imageSrc) {
         const modal = document.getElementById('cropModal');
         const cropImage = document.getElementById('cropImage');
@@ -1019,24 +1047,20 @@ const partnersApp = {
 
         modal.classList.add('active');
 
-        // Center image after load
         cropImage.onload = () => {
             this.updateCropTransform();
         };
     },
 
-    // Close crop modal
     closeCropModal() {
         document.getElementById('cropModal').classList.remove('active');
         document.getElementById('formAvatarInput').value = '';
     },
 
-    // Setup crop handlers
     setupCropHandlers() {
         const cropPreview = document.getElementById('cropPreview');
         if (!cropPreview) return;
 
-        // Mouse wheel for zoom
         cropPreview.addEventListener('wheel', (e) => {
             e.preventDefault();
             const delta = e.deltaY > 0 ? -0.1 : 0.1;
@@ -1044,7 +1068,6 @@ const partnersApp = {
             this.updateCropTransform();
         });
 
-        // Drag for position
         cropPreview.addEventListener('mousedown', (e) => {
             this.cropData.isDragging = true;
             this.cropData.startX = e.clientX - this.cropData.offsetX;
@@ -1063,7 +1086,6 @@ const partnersApp = {
         });
     },
 
-    // Update crop transform
     updateCropTransform() {
         const cropImage = document.getElementById('cropImage');
         if (!cropImage) return;
@@ -1075,20 +1097,17 @@ const partnersApp = {
         cropImage.style.marginTop = `-${cropImage.naturalHeight / 2}px`;
     },
 
-    // Apply crop
     applyCrop() {
         const cropPreview = document.getElementById('cropPreview');
         const cropImage = document.getElementById('cropImage');
 
-        // Create canvas to extract cropped image
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const size = 200; // Output size
+        const size = 200;
 
         canvas.width = size;
         canvas.height = size;
 
-        // Calculate crop area
         const previewRect = cropPreview.getBoundingClientRect();
         const imageRect = cropImage.getBoundingClientRect();
 
@@ -1106,10 +1125,8 @@ const partnersApp = {
             0, 0, size, size
         );
 
-        // Get cropped image data
         const croppedData = canvas.toDataURL('image/jpeg', 0.8);
 
-        // Set avatar preview
         const formAvatar = document.getElementById('formAvatar');
         const placeholder = document.querySelector('.form-avatar-placeholder');
         formAvatar.src = croppedData;
@@ -1119,32 +1136,26 @@ const partnersApp = {
         this.closeCropModal();
     },
 
-    // Save from form
-    saveFromForm() {
-        // Check if we're in template mode
+    async saveFromForm() {
         if (this.isTemplateMode) {
             this.saveTemplate();
             return;
         }
 
-        // Header fields (always required)
         const subagent = document.getElementById('formSubagent').value.trim();
         const subagentId = document.getElementById('formSubagentId').value.trim();
         const method = document.getElementById('formMethod').value.trim();
         const avatar = document.getElementById('formAvatar').src || '';
 
-        // DEP/WITH/COMP counters (always visible)
         const dep = parseInt(document.getElementById('formDep').value) || 0;
         const withVal = parseInt(document.getElementById('formWith').value) || 0;
         const comp = parseInt(document.getElementById('formComp').value) || 0;
 
-        // Validate required header fields
         if (!subagent || !subagentId || !method) {
             alert('Пожалуйста, заполните все обязательные поля (Субагент, ID Субагента, Метод)');
             return;
         }
 
-        // Collect template fields (custom fields from template)
         const customFields = {};
         const templateFieldInputs = document.querySelectorAll('#formBody .form-group-inline');
         templateFieldInputs.forEach(group => {
@@ -1171,90 +1182,112 @@ const partnersApp = {
             customFields
         };
 
-        if (this.editingPartnerId) {
-            // Update existing
-            if (StorageManager.updateItem('partners-data', this.editingPartnerId, partnerData)) {
-                this.selectedPartnerId = this.editingPartnerId;
-                this.editingPartnerId = null;
-                this.render();
-                this.showPartnerCard(this.selectedPartnerId);
-            } else {
-                alert('Ошибка при обновлении партнера');
-            }
-        } else {
-            // Add new
-            const newPartner = StorageManager.addItem('partners-data', partnerData);
-            if (newPartner) {
-                this.selectedPartnerId = newPartner.id;
-                this.editingPartnerId = null;
-                this.render();
-                this.showPartnerCard(this.selectedPartnerId);
-            } else {
-                alert('Ошибка при добавлении партнера');
-            }
-        }
-    },
-
-    // Delete from card
-    deleteFromCard() {
-        if (!this.selectedPartnerId) return;
-
-        if (confirm('Вы уверены, что хотите удалить этого партнера?')) {
-            if (StorageManager.deleteItem('partners-data', this.selectedPartnerId)) {
-                this.selectedPartnerId = null;
-                this.cleanupUnusedColumns();
-                this.render();
-                this.showStatsPanel();
-            } else {
-                alert('Ошибка при удалении партнера');
-            }
-        }
-    },
-
-    // Delete from form
-    deleteFromForm() {
-        if (!this.editingPartnerId) return;
-
-        if (confirm('Вы уверены, что хотите удалить этого партнера?')) {
-            if (StorageManager.deleteItem('partners-data', this.editingPartnerId)) {
-                this.editingPartnerId = null;
-                this.selectedPartnerId = null;
-                this.cleanupUnusedColumns();
-                this.render();
-                this.showStatsPanel();
-            } else {
-                alert('Ошибка при удалении партнера');
-            }
-        }
-    },
-
-    // Remove custom columns that are no longer used by any partner
-    cleanupUnusedColumns() {
-        const saved = localStorage.getItem('partnersColumnsConfig');
-        if (!saved) return;
+        this.showLoading(true);
 
         try {
-            let columns = JSON.parse(saved);
-            const customFieldNames = this.collectCustomFieldNames();
+            if (this.editingPartnerId) {
+                partnerData.id = this.editingPartnerId;
+                await CloudStorage.updatePartner(this.editingPartnerId, partnerData);
 
-            // Filter out custom columns that no longer have data
-            const cleanedColumns = columns.filter(col => {
-                if (col.isCustom) {
-                    const fieldName = col.id.replace('custom_', '');
-                    return customFieldNames.includes(fieldName);
+                const index = this.cachedPartners.findIndex(p => p.id === this.editingPartnerId);
+                if (index !== -1) {
+                    this.cachedPartners[index] = { ...this.cachedPartners[index], ...partnerData };
                 }
-                return true;
-            });
 
-            // Save only if something changed
-            if (cleanedColumns.length !== columns.length) {
-                this.saveColumnsConfig(cleanedColumns);
+                this.selectedPartnerId = this.editingPartnerId;
+                this.editingPartnerId = null;
                 this.renderColumnsMenu();
-                this.renderTableHeader();
+                this.render();
+                this.showPartnerCard(this.selectedPartnerId);
+            } else {
+                const result = await CloudStorage.addPartner(partnerData);
+                partnerData.id = result.id;
+                this.cachedPartners.push(partnerData);
+                this.syncPartnersToLocalStorage();
+
+                this.selectedPartnerId = result.id;
+                this.editingPartnerId = null;
+                this.renderColumnsMenu();
+                this.render();
+                this.showPartnerCard(this.selectedPartnerId);
             }
-        } catch (e) {
-            // Ignore errors
+        } catch (error) {
+            this.showError('Ошибка сохранения: ' + error.message);
+        } finally {
+            this.showLoading(false);
         }
+    },
+
+    async deleteFromCard() {
+        if (!this.selectedPartnerId) return;
+
+        if (!confirm('Вы уверены, что хотите удалить этого партнера?')) return;
+
+        this.showLoading(true);
+
+        try {
+            await CloudStorage.deletePartner(this.selectedPartnerId);
+            this.cachedPartners = this.cachedPartners.filter(p => p.id !== this.selectedPartnerId);
+            this.syncPartnersToLocalStorage();
+            this.selectedPartnerId = null;
+            this.cleanupUnusedColumns();
+            this.render();
+            this.showStatsPanel();
+        } catch (error) {
+            this.showError('Ошибка удаления: ' + error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    },
+
+    async deleteFromForm() {
+        if (!this.editingPartnerId) return;
+
+        if (!confirm('Вы уверены, что хотите удалить этого партнера?')) return;
+
+        this.showLoading(true);
+
+        try {
+            await CloudStorage.deletePartner(this.editingPartnerId);
+            this.cachedPartners = this.cachedPartners.filter(p => p.id !== this.editingPartnerId);
+            this.syncPartnersToLocalStorage();
+            this.editingPartnerId = null;
+            this.selectedPartnerId = null;
+            this.cleanupUnusedColumns();
+            this.render();
+            this.showStatsPanel();
+        } catch (error) {
+            this.showError('Ошибка удаления: ' + error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    },
+
+    cleanupUnusedColumns() {
+        const saved = localStorage.getItem('partnersColumnsConfig');
+
+        if (saved) {
+            try {
+                let columns = JSON.parse(saved);
+                const customFieldNames = this.collectCustomFieldNames();
+
+                const cleanedColumns = columns.filter(col => {
+                    if (col.isCustom) {
+                        const fieldName = col.id.replace('custom_', '');
+                        return customFieldNames.includes(fieldName);
+                    }
+                    return true;
+                });
+
+                if (cleanedColumns.length !== columns.length) {
+                    this.saveColumnsConfig(cleanedColumns);
+                }
+            } catch (e) {}
+        }
+
+        // Всегда обновляем UI колонок
+        this.renderColumnsMenu();
+        this.renderTableHeader();
     },
 
     // ==================== TEMPLATE SYSTEM ====================
@@ -1263,7 +1296,6 @@ const partnersApp = {
         const templateSelect = document.getElementById('templateSelect');
         const value = templateSelect.value;
 
-        // Save current template selection before action
         if (!value.includes('_template')) {
             this.currentTemplateId = value;
         }
@@ -1281,12 +1313,10 @@ const partnersApp = {
             this.currentTemplateId = value;
             this.applyTemplate(value);
         } else {
-            // Empty value selected - show default fields, remove template fields
             this.resetToDefaultFields();
         }
     },
 
-    // Reset form to default state (no template - empty formBody)
     resetToDefaultFields() {
         this.removeDynamicFields();
         this.currentTemplateId = '';
@@ -1297,15 +1327,13 @@ const partnersApp = {
         if (this.currentTemplateId !== undefined) {
             templateSelect.value = this.currentTemplateId;
         } else {
-            const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
-            const defaultTemplate = Object.values(templates).find(t => t.isDefault);
+            const defaultTemplate = Object.values(this.cachedTemplates).find(t => t.isDefault);
             templateSelect.value = defaultTemplate ? defaultTemplate.id : '';
         }
     },
 
-    showDeleteTemplateDialog() {
-        const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
-        const templateList = Object.values(templates);
+    async showDeleteTemplateDialog() {
+        const templateList = Object.values(this.cachedTemplates);
 
         if (templateList.length === 0) {
             alert('Нет шаблонов для удаления');
@@ -1337,21 +1365,27 @@ const partnersApp = {
         const templateToDelete = templateList[index];
 
         if (confirm(`Удалить шаблон "${templateToDelete.name}"?`)) {
-            if (this.currentTemplateId === templateToDelete.id) {
-                this.currentTemplateId = undefined;
+            this.showLoading(true);
+            try {
+                await CloudStorage.deleteTemplate(templateToDelete.id);
+                if (this.currentTemplateId === templateToDelete.id) {
+                    this.currentTemplateId = undefined;
+                }
+                delete this.cachedTemplates[templateToDelete.id];
+                this.updateTemplateList();
+                alert('Шаблон удален!');
+            } catch (error) {
+                this.showError('Ошибка удаления шаблона: ' + error.message);
+            } finally {
+                this.showLoading(false);
             }
-            delete templates[templateToDelete.id];
-            localStorage.setItem('partnersTemplates', JSON.stringify(templates));
-            this.updateTemplateList();
-            alert('Шаблон удален!');
         } else {
             this.restoreTemplateSelection();
         }
     },
 
-    showRenameTemplateDialog() {
-        const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
-        const templateList = Object.values(templates);
+    async showRenameTemplateDialog() {
+        const templateList = Object.values(this.cachedTemplates);
 
         if (templateList.length === 0) {
             alert('Нет шаблонов для переименования');
@@ -1392,23 +1426,29 @@ const partnersApp = {
 
         const makeDefault = confirm('Установить этот шаблон как основной?\n(Основной шаблон будет автоматически выбран при добавлении партнера)');
 
-        if (makeDefault) {
-            Object.values(templates).forEach(t => {
-                t.isDefault = false;
-            });
+        this.showLoading(true);
+        try {
+            if (makeDefault) {
+                Object.values(this.cachedTemplates).forEach(t => {
+                    t.isDefault = false;
+                });
+            }
+
+            this.cachedTemplates[templateToRename.id].name = newName.trim();
+            this.cachedTemplates[templateToRename.id].isDefault = makeDefault;
+
+            await CloudStorage.saveTemplate(this.cachedTemplates[templateToRename.id]);
+            this.updateTemplateList();
+            alert('Шаблон обновлен!');
+        } catch (error) {
+            this.showError('Ошибка обновления шаблона: ' + error.message);
+        } finally {
+            this.showLoading(false);
         }
-
-        templates[templateToRename.id].name = newName.trim();
-        templates[templateToRename.id].isDefault = makeDefault;
-
-        localStorage.setItem('partnersTemplates', JSON.stringify(templates));
-        this.updateTemplateList();
-        alert('Шаблон обновлен!');
     },
 
     showEditTemplateDialog() {
-        const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
-        const templateList = Object.values(templates);
+        const templateList = Object.values(this.cachedTemplates);
 
         if (templateList.length === 0) {
             alert('Нет шаблонов для редактирования');
@@ -1446,16 +1486,10 @@ const partnersApp = {
     },
 
     showTemplateEditor(existingTemplate = null) {
-        // Hide template selector
         document.getElementById('formTemplateSelector').style.display = 'none';
-
-        // Change button text
         document.getElementById('formSaveBtnText').textContent = 'Сохранить шаблон';
-
-        // Hide default form fields
         document.getElementById('formBody').style.display = 'none';
 
-        // Show counters as preview (disabled)
         const formCounters = document.getElementById('formCounters');
         formCounters.style.display = 'flex';
         formCounters.classList.add('disabled');
@@ -1463,10 +1497,8 @@ const partnersApp = {
         document.getElementById('formWith').value = '0';
         document.getElementById('formComp').value = '0';
 
-        // Show partner info section (as preview, disabled)
         document.querySelector('.form-partner-info').style.display = 'flex';
 
-        // Set preview placeholders
         const subagentInput = document.getElementById('formSubagent');
         const subagentIdInput = document.getElementById('formSubagentId');
         const methodInput = document.getElementById('formMethod');
@@ -1477,7 +1509,6 @@ const partnersApp = {
         subagentIdInput.value = 'ID Субагента';
         methodInput.value = 'Метод';
 
-        // Disable inputs
         subagentInput.classList.add('disabled');
         subagentIdInput.classList.add('disabled');
         methodInput.classList.add('disabled');
@@ -1487,19 +1518,14 @@ const partnersApp = {
         subagentIdInput.readOnly = true;
         methodInput.readOnly = true;
 
-        // Disable avatar upload
         if (formAvatar) {
             formAvatar.classList.add('disabled');
             formAvatar.style.pointerEvents = 'none';
         }
 
-        // Show template fields container
         document.getElementById('templateFieldsContainer').style.display = 'block';
-
-        // Clear template fields list
         document.getElementById('templateFieldsList').innerHTML = '';
 
-        // Load existing template fields or initialize empty
         if (existingTemplate && existingTemplate.fields) {
             this.templateFields = existingTemplate.fields.map(f => ({...f}));
             existingTemplate.fields.forEach(field => {
@@ -1582,14 +1608,11 @@ const partnersApp = {
     applyTemplate(templateId) {
         if (!templateId) return;
 
-        const savedTemplates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
-        const template = savedTemplates[templateId];
+        const template = this.cachedTemplates[templateId];
 
         if (template && template.fields) {
-            // Clear formBody first
             this.removeDynamicFields();
 
-            // Create dynamic fields from template
             template.fields.forEach(field => {
                 const fieldHtml = `
                     <div class="form-group-inline" data-template-field="true">
@@ -1606,8 +1629,7 @@ const partnersApp = {
         }
     },
 
-    saveTemplate() {
-        // Validate that all fields have labels (if there are any fields)
+    async saveTemplate() {
         const invalidFields = this.templateFields.filter(f => !f.label.trim());
         if (invalidFields.length > 0) {
             alert('Все поля должны иметь название');
@@ -1619,108 +1641,89 @@ const partnersApp = {
             return;
         }
 
-        const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
+        const templateName = prompt('Введите название шаблона:', this.editingTemplateId ? this.cachedTemplates[this.editingTemplateId].name : '');
+        if (!templateName || !templateName.trim()) {
+            return;
+        }
 
-        if (this.editingTemplateId) {
-            // Editing existing template
-            const template = templates[this.editingTemplateId];
-            const templateName = prompt('Введите название шаблона:', template.name);
-            if (!templateName || !templateName.trim()) {
-                this.editingTemplateId = null;
-                return;
-            }
+        this.showLoading(true);
 
-            templates[this.editingTemplateId].name = templateName.trim();
-            templates[this.editingTemplateId].fields = this.templateFields.map(f => ({
-                id: f.id,
-                label: f.label,
-                type: f.type
-            }));
-        } else {
-            // Creating new template
-            const templateName = prompt('Введите название шаблона:');
-            if (!templateName || !templateName.trim()) return;
-
-            const templateId = 'template_' + Date.now();
-            templates[templateId] = {
-                id: templateId,
+        try {
+            const templateData = {
+                id: this.editingTemplateId || ('template_' + Date.now()),
                 name: templateName.trim(),
                 fields: this.templateFields.map(f => ({
                     id: f.id,
                     label: f.label,
                     type: f.type
                 })),
-                createdAt: new Date().toISOString()
+                isDefault: this.editingTemplateId ? this.cachedTemplates[this.editingTemplateId].isDefault : false
             };
+
+            await CloudStorage.saveTemplate(templateData);
+            this.cachedTemplates[templateData.id] = templateData;
+
+            this.editingTemplateId = null;
+
+            const formAvatar = document.querySelector('.form-avatar');
+            if (formAvatar) {
+                formAvatar.classList.remove('disabled');
+                formAvatar.style.pointerEvents = 'auto';
+            }
+
+            const subagentInput = document.getElementById('formSubagent');
+            const subagentIdInput = document.getElementById('formSubagentId');
+            const methodInput = document.getElementById('formMethod');
+            const statusBadge = document.getElementById('formStatusBadge');
+
+            if (subagentInput) {
+                subagentInput.classList.remove('disabled');
+                subagentInput.readOnly = false;
+            }
+            if (subagentIdInput) {
+                subagentIdInput.classList.remove('disabled');
+                subagentIdInput.readOnly = false;
+            }
+            if (methodInput) {
+                methodInput.classList.remove('disabled');
+                methodInput.readOnly = false;
+            }
+            if (statusBadge) {
+                statusBadge.classList.remove('disabled');
+            }
+
+            const formCounters = document.getElementById('formCounters');
+            formCounters.style.display = 'flex';
+            formCounters.classList.remove('disabled');
+
+            document.querySelector('.form-partner-info').style.display = 'flex';
+
+            this.closeForm();
+            this.updateTemplateList();
+
+            alert('Шаблон сохранен!');
+        } catch (error) {
+            this.showError('Ошибка сохранения шаблона: ' + error.message);
+        } finally {
+            this.showLoading(false);
         }
-
-        localStorage.setItem('partnersTemplates', JSON.stringify(templates));
-
-        // Reset editing mode
-        this.editingTemplateId = null;
-
-        // Enable avatar and fields back
-        const formAvatar = document.querySelector('.form-avatar');
-        if (formAvatar) {
-            formAvatar.classList.remove('disabled');
-            formAvatar.style.pointerEvents = 'auto';
-        }
-
-        const subagentInput = document.getElementById('formSubagent');
-        const subagentIdInput = document.getElementById('formSubagentId');
-        const methodInput = document.getElementById('formMethod');
-        const statusBadge = document.getElementById('formStatusBadge');
-
-        if (subagentInput) {
-            subagentInput.classList.remove('disabled');
-            subagentInput.readOnly = false;
-        }
-        if (subagentIdInput) {
-            subagentIdInput.classList.remove('disabled');
-            subagentIdInput.readOnly = false;
-        }
-        if (methodInput) {
-            methodInput.classList.remove('disabled');
-            methodInput.readOnly = false;
-        }
-        if (statusBadge) {
-            statusBadge.classList.remove('disabled');
-        }
-
-        // Show counters back (remove disabled state)
-        const formCounters = document.getElementById('formCounters');
-        formCounters.style.display = 'flex';
-        formCounters.classList.remove('disabled');
-
-        // Show partner info section again
-        document.querySelector('.form-partner-info').style.display = 'flex';
-
-        // Close form and refresh template list
-        this.closeForm();
-        this.updateTemplateList();
-
-        alert('Шаблон сохранен!');
     },
 
     updateTemplateList() {
         const templateSelect = document.getElementById('templateSelect');
-        const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
 
-        // Clear all options
         templateSelect.innerHTML = '';
 
-        // Find default template
-        const defaultTemplate = Object.values(templates).find(t => t.isDefault);
+        const defaultTemplate = Object.values(this.cachedTemplates).find(t => t.isDefault);
 
-        // Add base "Шаблон" option only if no templates exist or no default template
-        if (Object.keys(templates).length === 0 || !defaultTemplate) {
+        if (Object.keys(this.cachedTemplates).length === 0 || !defaultTemplate) {
             const baseOption = document.createElement('option');
             baseOption.value = '';
             baseOption.textContent = 'Шаблон';
             templateSelect.appendChild(baseOption);
         }
 
-        Object.values(templates).forEach(template => {
+        Object.values(this.cachedTemplates).forEach(template => {
             const option = document.createElement('option');
             option.value = template.id;
             const isDefault = template.isDefault ? ' (основной)' : '';
@@ -1728,7 +1731,6 @@ const partnersApp = {
             templateSelect.appendChild(option);
         });
 
-        // Auto-select and apply default template if exists
         if (defaultTemplate) {
             templateSelect.value = defaultTemplate.id;
             this.currentTemplateId = defaultTemplate.id;
@@ -1742,7 +1744,7 @@ const partnersApp = {
         addOption.textContent = '+ Добавить шаблон';
         templateSelect.appendChild(addOption);
 
-        if (Object.keys(templates).length > 0) {
+        if (Object.keys(this.cachedTemplates).length > 0) {
             const editOption = document.createElement('option');
             editOption.value = 'edit_template';
             editOption.textContent = 'Изменить шаблон';
@@ -1762,11 +1764,9 @@ const partnersApp = {
 
     // ==================== EXPORT/IMPORT ====================
 
-    // Export type
     exportType: 'json',
     selectedExportTemplateId: null,
 
-    // Show export dialog
     showExportDialog() {
         const partners = this.getPartners();
         if (partners.length === 0) {
@@ -1778,31 +1778,23 @@ const partnersApp = {
         this.exportType = 'json';
         this.selectedExportTemplateId = null;
 
-        // Reset to JSON mode
         this.setExportType('json');
-
-        // Populate template select
         this.populateExportTemplateSelect();
 
-        // Update count
         document.getElementById('exportCount').textContent = `Партнеров для экспорта: ${partners.length}`;
     },
 
-    // Close export dialog
     closeExportDialog() {
         document.getElementById('exportModal').classList.remove('active');
     },
 
-    // Set export type
     setExportType(type) {
         this.exportType = type;
 
-        // Update buttons
         document.querySelectorAll('#exportModal .import-type-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.type === type);
         });
 
-        // Show/hide sections
         document.getElementById('jsonExportSection').style.display = type === 'json' ? 'block' : 'none';
         document.getElementById('excelExportSection').style.display = type === 'excel' ? 'block' : 'none';
 
@@ -1811,14 +1803,12 @@ const partnersApp = {
         }
     },
 
-    // Populate export template select
     populateExportTemplateSelect() {
         const select = document.getElementById('exportTemplateSelect');
-        const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
 
         select.innerHTML = '<option value="">Без шаблона (базовые поля)</option>';
 
-        Object.values(templates).forEach(template => {
+        Object.values(this.cachedTemplates).forEach(template => {
             const option = document.createElement('option');
             option.value = template.id;
             const isDefault = template.isDefault ? ' (основной)' : '';
@@ -1826,15 +1816,13 @@ const partnersApp = {
             select.appendChild(option);
         });
 
-        // Auto-select default template if exists
-        const defaultTemplate = Object.values(templates).find(t => t.isDefault);
+        const defaultTemplate = Object.values(this.cachedTemplates).find(t => t.isDefault);
         if (defaultTemplate) {
             select.value = defaultTemplate.id;
             this.selectedExportTemplateId = defaultTemplate.id;
         }
     },
 
-    // Update export preview for Excel
     updateExportPreview() {
         const select = document.getElementById('exportTemplateSelect');
         const templateId = select.value;
@@ -1842,13 +1830,10 @@ const partnersApp = {
 
         const previewInfo = document.getElementById('exportPreviewInfo');
 
-        // Base columns
         let columns = ['Субагент', 'ID Субагента', 'Метод', 'DEP', 'WITH', 'COMP', 'Статус', 'Фото'];
 
-        // Add template fields if template selected
         if (templateId) {
-            const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
-            const template = templates[templateId];
+            const template = this.cachedTemplates[templateId];
             if (template && template.fields) {
                 columns = columns.concat(template.fields.map(f => f.label));
             }
@@ -1857,7 +1842,6 @@ const partnersApp = {
         previewInfo.innerHTML = `<strong>Колонки:</strong> ${columns.join(', ')}`;
     },
 
-    // Do export
     doExport() {
         if (this.exportType === 'json') {
             this.exportAsJSON();
@@ -1867,7 +1851,6 @@ const partnersApp = {
         this.closeExportDialog();
     },
 
-    // Export as JSON
     exportAsJSON() {
         const partners = this.getPartners();
         const exportData = {
@@ -1888,20 +1871,16 @@ const partnersApp = {
         URL.revokeObjectURL(url);
     },
 
-    // Export as Excel
     exportAsExcel() {
         const partners = this.getPartners();
         const templateId = this.selectedExportTemplateId;
 
-        // Base headers
         const baseHeaders = ['Субагент', 'ID Субагента', 'Метод', 'DEP', 'WITH', 'COMP', 'Статус', 'Фото'];
 
-        // Add template fields if template selected
         let templateHeaders = [];
         let templateName = 'базовый';
         if (templateId) {
-            const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
-            const template = templates[templateId];
+            const template = this.cachedTemplates[templateId];
             if (template && template.fields) {
                 templateHeaders = template.fields.map(f => f.label);
                 templateName = template.name;
@@ -1910,7 +1889,6 @@ const partnersApp = {
 
         const allHeaders = [...baseHeaders, ...templateHeaders];
 
-        // Create data rows
         const data = [allHeaders];
         partners.forEach(partner => {
             const row = [
@@ -1924,7 +1902,6 @@ const partnersApp = {
                 partner.avatar || ''
             ];
 
-            // Add custom fields
             templateHeaders.forEach(header => {
                 row.push(partner.customFields?.[header] || '');
             });
@@ -1932,22 +1909,18 @@ const partnersApp = {
             data.push(row);
         });
 
-        // Create workbook
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(data);
 
-        // Set column widths
         const colWidths = allHeaders.map(h => ({ wch: Math.max(h.length + 2, 15) }));
         ws['!cols'] = colWidths;
 
         XLSX.utils.book_append_sheet(wb, ws, 'Партнеры');
 
-        // Download
         const fileName = `partners_${templateName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
         XLSX.writeFile(wb, fileName);
     },
 
-    // Show import dialog
     showImportDialog() {
         document.getElementById('importModal').classList.add('active');
         document.getElementById('importFileInput').value = '';
@@ -1958,17 +1931,11 @@ const partnersApp = {
         this.importType = 'json';
         this.selectedImportTemplateId = null;
 
-        // Reset to JSON mode
         this.setImportType('json');
-
-        // Populate template select for Excel import
         this.populateImportTemplateSelect();
-
-        // Update Excel hint
         this.updateExcelHint();
     },
 
-    // Close import dialog
     closeImportDialog() {
         document.getElementById('importModal').classList.remove('active');
         this.pendingImportData = null;
@@ -1976,35 +1943,29 @@ const partnersApp = {
         this.selectedImportTemplateId = null;
     },
 
-    // Set import type (json or excel)
     setImportType(type) {
         this.importType = type;
         this.pendingImportData = null;
         document.getElementById('importPreview').style.display = 'none';
         document.getElementById('importBtn').disabled = true;
 
-        // Update buttons
         document.querySelectorAll('.import-type-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.type === type);
         });
 
-        // Show/hide sections
         document.getElementById('jsonImportSection').style.display = type === 'json' ? 'block' : 'none';
         document.getElementById('excelImportSection').style.display = type === 'excel' ? 'block' : 'none';
 
-        // Clear file inputs
         document.getElementById('importFileInput').value = '';
         document.getElementById('importExcelInput').value = '';
     },
 
-    // Populate import template select
     populateImportTemplateSelect() {
         const select = document.getElementById('importTemplateSelect');
-        const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
 
         select.innerHTML = '<option value="">Без шаблона (базовые поля)</option>';
 
-        Object.values(templates).forEach(template => {
+        Object.values(this.cachedTemplates).forEach(template => {
             const option = document.createElement('option');
             option.value = template.id;
             const isDefault = template.isDefault ? ' (основной)' : '';
@@ -2012,15 +1973,13 @@ const partnersApp = {
             select.appendChild(option);
         });
 
-        // Auto-select default template if exists
-        const defaultTemplate = Object.values(templates).find(t => t.isDefault);
+        const defaultTemplate = Object.values(this.cachedTemplates).find(t => t.isDefault);
         if (defaultTemplate) {
             select.value = defaultTemplate.id;
             this.selectedImportTemplateId = defaultTemplate.id;
         }
     },
 
-    // Update Excel hint based on selected template
     updateExcelHint() {
         const select = document.getElementById('importTemplateSelect');
         const templateId = select.value;
@@ -2028,7 +1987,6 @@ const partnersApp = {
 
         const hintColumns = document.getElementById('excelHintColumns');
 
-        // Base columns (always required)
         const baseColumns = [
             { name: 'Субагент', required: true },
             { name: 'ID Субагента', required: true },
@@ -2040,11 +1998,9 @@ const partnersApp = {
             { name: 'Фото', required: false }
         ];
 
-        // Add template fields if template selected
         let templateColumns = [];
         if (templateId) {
-            const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
-            const template = templates[templateId];
+            const template = this.cachedTemplates[templateId];
             if (template && template.fields) {
                 templateColumns = template.fields.map(f => ({
                     name: f.label,
@@ -2053,7 +2009,6 @@ const partnersApp = {
             }
         }
 
-        // Generate hint HTML
         let html = '';
         [...baseColumns, ...templateColumns].forEach(col => {
             const className = col.required ? 'required' : 'optional';
@@ -2063,19 +2018,15 @@ const partnersApp = {
         hintColumns.innerHTML = html;
     },
 
-    // Download Excel template with example data
     downloadExcelTemplate() {
         const templateId = this.selectedImportTemplateId;
 
-        // Base columns
         const baseHeaders = ['Субагент', 'ID Субагента', 'Метод', 'DEP', 'WITH', 'COMP', 'Статус', 'Фото'];
 
-        // Add template fields if template selected
         let templateHeaders = [];
         let templateName = 'базовый';
         if (templateId) {
-            const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
-            const template = templates[templateId];
+            const template = this.cachedTemplates[templateId];
             if (template && template.fields) {
                 templateHeaders = template.fields.map(f => f.label);
                 templateName = template.name;
@@ -2084,29 +2035,24 @@ const partnersApp = {
 
         const allHeaders = [...baseHeaders, ...templateHeaders];
 
-        // Create example data rows
         const exampleData = [
             allHeaders,
             this.generateExampleRow(allHeaders, 1),
             this.generateExampleRow(allHeaders, 2)
         ];
 
-        // Create workbook
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(exampleData);
 
-        // Set column widths
         const colWidths = allHeaders.map(h => ({ wch: Math.max(h.length + 2, 15) }));
         ws['!cols'] = colWidths;
 
         XLSX.utils.book_append_sheet(wb, ws, 'Партнеры');
 
-        // Download
         const fileName = `partners_template_${templateName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.xlsx`;
         XLSX.writeFile(wb, fileName);
     },
 
-    // Generate example row for template
     generateExampleRow(headers, rowNum) {
         return headers.map(header => {
             switch (header) {
@@ -2127,15 +2073,12 @@ const partnersApp = {
                 case 'Фото':
                     return '';
                 default:
-                    // Custom field
                     return `Значение ${rowNum}`;
             }
         });
     },
 
-    // Setup import handler
     setupImportHandler() {
-        // JSON file handler
         const fileInput = document.getElementById('importFileInput');
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -2166,7 +2109,6 @@ const partnersApp = {
             reader.readAsText(file);
         });
 
-        // Excel file handler
         const excelInput = document.getElementById('importExcelInput');
         excelInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -2178,21 +2120,17 @@ const partnersApp = {
                     const data = new Uint8Array(event.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
 
-                    // Get first sheet
                     const sheetName = workbook.SheetNames[0];
                     const sheet = workbook.Sheets[sheetName];
 
-                    // Convert to JSON with headers
                     const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
                     if (jsonData.length < 2) {
                         throw new Error('Файл пустой или содержит только заголовки');
                     }
 
-                    // Get headers from first row
                     const headers = jsonData[0].map(h => String(h).trim());
 
-                    // Map column names to internal field names
                     const columnMapping = {
                         'Субагент': 'subagent',
                         'ID Субагента': 'subagentId',
@@ -2204,18 +2142,15 @@ const partnersApp = {
                         'Фото': 'avatar'
                     };
 
-                    // Find column indexes
                     const columnIndexes = {};
                     headers.forEach((header, index) => {
                         if (columnMapping[header]) {
                             columnIndexes[columnMapping[header]] = index;
                         } else {
-                            // Custom field
                             columnIndexes['custom_' + header] = index;
                         }
                     });
 
-                    // Check required columns
                     const requiredColumns = ['subagent', 'subagentId', 'method'];
                     const missingColumns = requiredColumns.filter(col => columnIndexes[col] === undefined);
                     if (missingColumns.length > 0) {
@@ -2225,7 +2160,6 @@ const partnersApp = {
                         throw new Error('Отсутствуют обязательные колонки: ' + missingNames.join(', '));
                     }
 
-                    // Parse data rows
                     const partners = [];
                     for (let i = 1; i < jsonData.length; i++) {
                         const row = jsonData[i];
@@ -2244,12 +2178,10 @@ const partnersApp = {
                             customFields: {}
                         };
 
-                        // Skip rows without required fields
                         if (!partner.subagent && !partner.subagentId && !partner.method) {
                             continue;
                         }
 
-                        // Add custom fields
                         Object.keys(columnIndexes).forEach(key => {
                             if (key.startsWith('custom_')) {
                                 const fieldName = key.replace('custom_', '');
@@ -2284,66 +2216,271 @@ const partnersApp = {
         });
     },
 
-    // Import data
-    importData() {
+    // Import state
+    importCancelled: false,
+
+    async importData() {
         if (!this.pendingImportData) return;
 
-        const currentData = this.getPartners();
-        const existingIds = new Set(currentData.map(p => p.id));
-
-        // Extract and add new methods from imported data
-        const existingMethods = this.getMethods();
-        const existingMethodNames = new Set(existingMethods.map(m => m.name.toLowerCase()));
+        this.importCancelled = false;
+        const total = this.pendingImportData.length;
+        let processed = 0;
+        let added = 0;
+        let failed = 0;
+        let skipped = 0;
         let methodsAdded = 0;
 
-        this.pendingImportData.forEach(partner => {
-            const method = (partner.method || '').trim();
-            if (method && !existingMethodNames.has(method.toLowerCase())) {
-                existingMethods.push({
-                    id: 'method_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                    name: method
-                });
-                existingMethodNames.add(method.toLowerCase());
-                methodsAdded++;
+        // Show progress UI
+        this.showImportProgress(0, total, 'Подготовка...');
+
+        try {
+            const currentData = this.getPartners();
+            // Create unique key from subagent + subagentId + method for duplicate detection
+            const createKey = (p) => `${(p.subagent || '').toLowerCase().trim()}|${(p.subagentId || '').toLowerCase().trim()}|${(p.method || '').toLowerCase().trim()}`;
+            const existingKeys = new Set(currentData.map(p => createKey(p)));
+
+            // Extract and add new methods first
+            const existingMethods = this.getMethods();
+            const existingMethodNames = new Set(existingMethods.map(m => m.name.toLowerCase()));
+
+            this.showImportProgress(0, total, 'Добавление методов...');
+
+            const newMethods = new Set();
+            for (const partner of this.pendingImportData) {
+                const method = (partner.method || '').trim();
+                if (method && !existingMethodNames.has(method.toLowerCase()) && !newMethods.has(method.toLowerCase())) {
+                    newMethods.add(method.toLowerCase());
+                    try {
+                        const result = await CloudStorage.addMethod({ name: method });
+                        this.cachedMethods.push({ id: result.id, name: method });
+                        existingMethodNames.add(method.toLowerCase());
+                        methodsAdded++;
+                    } catch (e) {
+                        console.warn('Failed to add method:', method, e);
+                    }
+                }
             }
-        });
 
-        if (methodsAdded > 0) {
-            this.saveMethods(existingMethods);
-        }
+            // Import partners
+            for (const partner of this.pendingImportData) {
+                if (this.importCancelled) {
+                    break;
+                }
 
-        let added = 0;
-        this.pendingImportData.forEach(partner => {
-            if (!existingIds.has(partner.id)) {
-                StorageManager.addItem('partners-data', {
-                    id: partner.id,
+                processed++;
+                this.showImportProgress(processed, total, `Импорт ${processed}/${total}: ${partner.subagent || 'партнер'}`);
+
+                // Skip if already exists (by subagent + subagentId + method)
+                const partnerKey = createKey(partner);
+                if (existingKeys.has(partnerKey)) {
+                    skipped++;
+                    continue;
+                }
+
+                const partnerData = {
                     subagent: partner.subagent,
                     subagentId: partner.subagentId,
                     method: partner.method,
                     dep: partner.dep || 0,
                     with: partner.with || 0,
                     comp: partner.comp || 0,
-                    status: partner.status,
-                    avatar: partner.avatar,
+                    status: partner.status || 'Открыт',
+                    avatar: partner.avatar || '',
                     customFields: partner.customFields || {}
-                });
-                added++;
+                };
+
+                // Try with retry
+                let success = false;
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        const result = await CloudStorage.addPartner(partnerData);
+                        partnerData.id = result.id;
+                        this.cachedPartners.push(partnerData);
+                        existingKeys.add(partnerKey);
+                        added++;
+                        success = true;
+                        break;
+                    } catch (e) {
+                        console.warn(`Attempt ${attempt} failed for partner:`, partner.subagent, e);
+                        if (attempt < 3) {
+                            // Wait before retry
+                            await new Promise(r => setTimeout(r, 1000 * attempt));
+                        }
+                    }
+                }
+
+                if (!success) {
+                    failed++;
+                }
+
+                // Small delay between requests to avoid rate limiting
+                await new Promise(r => setTimeout(r, 100));
             }
-        });
 
-        this.closeImportDialog();
-        this.renderColumnsMenu();
-        this.renderTableHeader();
-        this.render();
+            this.hideImportProgress();
+            this.closeImportDialog();
+            this.syncPartnersToLocalStorage();
+            this.renderColumnsMenu();
+            this.renderTableHeader();
+            this.render();
 
-        let message = `Импорт завершен. Добавлено партнеров: ${added}`;
-        if (methodsAdded > 0) {
-            message += `\nНовых методов добавлено: ${methodsAdded}`;
+            // Show result
+            let message = `Импорт завершен!\n\n`;
+            message += `Добавлено: ${added}\n`;
+            if (skipped > 0) message += `Пропущено (дубликаты): ${skipped}\n`;
+            if (failed > 0) message += `Ошибок: ${failed}\n`;
+            if (methodsAdded > 0) message += `Новых методов: ${methodsAdded}`;
+
+            if (this.importCancelled) {
+                message = `Импорт отменён.\n\nДобавлено до отмены: ${added}`;
+            }
+
+            alert(message);
+        } catch (error) {
+            this.hideImportProgress();
+            this.showError('Ошибка импорта: ' + error.message);
         }
-        alert(message);
     },
 
-    // Escape HTML
+    showImportProgress(current, total, status) {
+        let progressModal = document.getElementById('importProgressModal');
+
+        if (!progressModal) {
+            progressModal = document.createElement('div');
+            progressModal.id = 'importProgressModal';
+            progressModal.className = 'modal active';
+            progressModal.innerHTML = `
+                <div class="modal-dialog" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <h2 class="modal-title">Импорт данных</h2>
+                    </div>
+                    <div class="modal-body">
+                        <div class="import-progress-status" id="importProgressStatus">Подготовка...</div>
+                        <div class="import-progress-bar-container">
+                            <div class="import-progress-bar" id="importProgressBar"></div>
+                        </div>
+                        <div class="import-progress-count" id="importProgressCount">0 / 0</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" onclick="partnersApp.cancelImport()">Отмена</button>
+                    </div>
+                </div>
+            `;
+
+            // Add styles
+            const style = document.createElement('style');
+            style.textContent = `
+                .import-progress-status {
+                    font-size: 14px;
+                    margin-bottom: 12px;
+                    color: #666;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .import-progress-bar-container {
+                    width: 100%;
+                    height: 8px;
+                    background: rgba(0,0,0,0.1);
+                    border-radius: 4px;
+                    overflow: hidden;
+                    margin-bottom: 8px;
+                }
+                .import-progress-bar {
+                    height: 100%;
+                    background: #fdbe2f;
+                    border-radius: 4px;
+                    transition: width 0.3s ease;
+                    width: 0%;
+                }
+                .import-progress-count {
+                    font-size: 13px;
+                    color: #888;
+                    text-align: center;
+                }
+            `;
+            document.head.appendChild(style);
+            document.body.appendChild(progressModal);
+        }
+
+        const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+        document.getElementById('importProgressStatus').textContent = status;
+        document.getElementById('importProgressBar').style.width = percent + '%';
+        document.getElementById('importProgressCount').textContent = `${current} / ${total} (${percent}%)`;
+
+        progressModal.classList.add('active');
+    },
+
+    hideImportProgress() {
+        const progressModal = document.getElementById('importProgressModal');
+        if (progressModal) {
+            progressModal.classList.remove('active');
+        }
+    },
+
+    cancelImport() {
+        this.importCancelled = true;
+        this.hideImportProgress();
+    },
+
+    // Remove duplicate partners
+    async removeDuplicates() {
+        const partners = this.getPartners();
+
+        if (partners.length === 0) {
+            alert('Нет партнёров');
+            return;
+        }
+
+        // Find duplicates by subagent + subagentId + method
+        const createKey = (p) => `${(p.subagent || '').toLowerCase().trim()}|${(p.subagentId || '').toLowerCase().trim()}|${(p.method || '').toLowerCase().trim()}`;
+
+        const seen = new Map();
+        const duplicateIds = [];
+
+        for (const partner of partners) {
+            const key = createKey(partner);
+            if (seen.has(key)) {
+                // This is a duplicate - mark for deletion
+                duplicateIds.push(partner.id);
+            } else {
+                seen.set(key, partner.id);
+            }
+        }
+
+        if (duplicateIds.length === 0) {
+            alert('Дубликатов не найдено');
+            return;
+        }
+
+        if (!confirm(`Найдено дубликатов: ${duplicateIds.length}\n\nУдалить их?`)) {
+            return;
+        }
+
+        this.showLoading(true);
+
+        try {
+            let deleted = 0;
+            for (const id of duplicateIds) {
+                try {
+                    await CloudStorage.deletePartner(id);
+                    this.cachedPartners = this.cachedPartners.filter(p => p.id !== id);
+                    deleted++;
+                } catch (e) {
+                    console.warn('Failed to delete duplicate:', id, e);
+                }
+            }
+
+            this.syncPartnersToLocalStorage();
+            this.render();
+            alert(`Удалено дубликатов: ${deleted}`);
+        } catch (error) {
+            this.showError('Ошибка удаления: ' + error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    },
+
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -2365,7 +2502,6 @@ document.addEventListener('keydown', (e) => {
         if (document.getElementById('cropModal').classList.contains('active')) {
             partnersApp.closeCropModal();
         }
-        // Close status dropdowns
         document.getElementById('cardStatusDropdown').style.display = 'none';
         document.getElementById('formStatusDropdown').style.display = 'none';
     }
@@ -2403,7 +2539,6 @@ document.addEventListener('click', (e) => {
         const arrow = formStatusBadge.querySelector('.status-dropdown-icon');
         if (arrow) arrow.style.transform = 'rotate(-90deg)';
     }
-    // Close columns menu when clicking outside
     if (columnsSettings && columnsMenu && !columnsSettings.contains(e.target)) {
         columnsMenu.classList.remove('active');
     }
