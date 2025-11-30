@@ -36,8 +36,36 @@ const changelog = {
     // Эти данные используются только если не удалось загрузить JSON
     // ВАЖНО: При обновлении changelog.json нужно также обновить эти данные!
     fallbackData: {
-        "version": "2.8.1",
+        "version": "2.8.2",
         "updates": [
+            {
+                "version": "2.8.2",
+                "date": "2025-12-01",
+                "title": "Увеличение времени сессии и исправления документации",
+                "changes": [
+                    {
+                        "category": "Изменено",
+                        "items": [
+                            "Увеличено время жизни сессии с 1 часа до 8 часов"
+                        ]
+                    },
+                    {
+                        "category": "Исправлено",
+                        "items": [
+                            "Исправлено название SimpleAIAdminka → AIAdminka в документации",
+                            "Обновлена информация о времени сессии во всех разделах документации"
+                        ]
+                    },
+                    {
+                        "category": "Файлы",
+                        "items": [
+                            "shared/auth-guard.js - изменён таймаут сессии (28800000 мс)",
+                            "documentation/index.html - исправлены названия и время сессии",
+                            "documentation/README.md - исправлено название проекта"
+                        ]
+                    }
+                ]
+            },
             {
                 "version": "2.8.1",
                 "date": "2025-11-30",
@@ -1803,38 +1831,62 @@ const changelog = {
         ]
     },
     
+    selectedVersionIndex: 0,
+    searchQuery: '',
+
     show() {
-        // Используем загруженные данные или fallback
         const dataToUse = this.data || this.fallbackData;
 
         if (!dataToUse) {
             alert('Не удалось загрузить историю обновлений');
             return;
         }
-        
+
+        this.selectedVersionIndex = 0;
+        this.searchQuery = '';
+
         const modal = document.createElement('div');
         modal.className = 'changelog-modal';
+        modal.id = 'changelogModal';
         modal.innerHTML = `
-            <div class="changelog-dialog">
+            <div class="changelog-dialog changelog-dialog-split">
                 <div class="changelog-header">
                     <h2>История обновлений</h2>
+                    <div class="changelog-search">
+                        <input type="text" id="changelogSearch" placeholder="Поиск по версии или названию..." />
+                    </div>
                     <button class="changelog-close" onclick="this.closest('.changelog-modal').remove()">×</button>
                 </div>
-                <div class="changelog-body">
-                    ${this.renderTimeline()}
+                <div class="changelog-body-split">
+                    <div class="changelog-versions-list" id="versionsList">
+                        ${this.renderVersionsList()}
+                    </div>
+                    <div class="changelog-version-detail" id="versionDetail">
+                        ${this.renderVersionDetail(0)}
+                    </div>
                 </div>
             </div>
         `;
 
         document.body.appendChild(modal);
-        
+
+        // Поиск
+        const searchInput = document.getElementById('changelogSearch');
+        searchInput.addEventListener('input', (e) => {
+            this.searchQuery = e.target.value.toLowerCase();
+            document.getElementById('versionsList').innerHTML = this.renderVersionsList();
+            this.attachVersionClickHandlers();
+        });
+
+        this.attachVersionClickHandlers();
+
         // Закрытие по клику вне диалога
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 modal.remove();
             }
         });
-        
+
         // Закрытие по Escape
         const handleEscape = (e) => {
             if (e.key === 'Escape') {
@@ -1844,7 +1896,79 @@ const changelog = {
         };
         document.addEventListener('keydown', handleEscape);
     },
-    
+
+    attachVersionClickHandlers() {
+        document.querySelectorAll('.version-list-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const index = parseInt(item.dataset.index);
+                this.selectedVersionIndex = index;
+
+                // Обновить активный элемент
+                document.querySelectorAll('.version-list-item').forEach(el => el.classList.remove('active'));
+                item.classList.add('active');
+
+                // Обновить детали
+                document.getElementById('versionDetail').innerHTML = this.renderVersionDetail(index);
+            });
+        });
+    },
+
+    renderVersionsList() {
+        const dataToUse = this.data || this.fallbackData;
+        const updates = dataToUse.updates.filter(update => {
+            if (!this.searchQuery) return true;
+            return update.version.toLowerCase().includes(this.searchQuery) ||
+                   update.title.toLowerCase().includes(this.searchQuery);
+        });
+
+        if (updates.length === 0) {
+            return '<div class="no-results">Ничего не найдено</div>';
+        }
+
+        return updates.map((update, filteredIndex) => {
+            const realIndex = dataToUse.updates.indexOf(update);
+            const isLatest = realIndex === 0;
+            const isActive = realIndex === this.selectedVersionIndex;
+
+            return `
+                <div class="version-list-item ${isActive ? 'active' : ''} ${isLatest ? 'latest' : ''}" data-index="${realIndex}">
+                    <div class="version-list-header">
+                        <span class="version-list-number">v${update.version}</span>
+                        ${isLatest ? '<span class="version-list-badge">NEW</span>' : ''}
+                    </div>
+                    <div class="version-list-title">${update.title}</div>
+                    <div class="version-list-date">${Utils.formatDate(update.date)}</div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    renderVersionDetail(index) {
+        const dataToUse = this.data || this.fallbackData;
+        const update = dataToUse.updates[index];
+
+        if (!update) {
+            return '<div class="no-version-selected">Выберите версию из списка</div>';
+        }
+
+        const isLatest = index === 0;
+
+        return `
+            <div class="changelog-detail-header">
+                <div class="changelog-version">
+                    <span class="version-number">v${update.version}</span>
+                    ${isLatest ? '<span class="version-badge">Latest</span>' : ''}
+                </div>
+                <div class="changelog-date">${Utils.formatDate(update.date)}</div>
+            </div>
+            <h3 class="changelog-title">${update.title}</h3>
+            <div class="changelog-changes-list">
+                ${update.changes.map(change => this.renderChanges(change)).join('')}
+            </div>
+        `;
+    },
+
+    // Legacy метод для совместимости
     renderTimeline() {
         const dataToUse = this.data || this.fallbackData;
         return `
@@ -1853,11 +1977,11 @@ const changelog = {
             </div>
         `;
     },
-    
+
     renderUpdate(update, index) {
         const dataToUse = this.data || this.fallbackData;
         const isLatest = index === 0;
-        
+
         return `
             <div class="changelog-item ${isLatest ? 'latest' : ''}">
                 <div class="changelog-marker">

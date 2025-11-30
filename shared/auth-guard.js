@@ -25,8 +25,8 @@ const AuthGuard = {
 
         const auth = JSON.parse(authData);
 
-        // Проверяем срок токена (1 час)
-        if (Date.now() - auth.timestamp > 3600000) {
+        // Проверяем срок токена (8 часов)
+        if (Date.now() - auth.timestamp > 28800000) {
             localStorage.removeItem('cloud-auth');
             if (redirect) {
                 this.redirectToLogin();
