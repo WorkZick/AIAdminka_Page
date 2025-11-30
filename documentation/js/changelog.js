@@ -36,8 +36,49 @@ const changelog = {
     // Эти данные используются только если не удалось загрузить JSON
     // ВАЖНО: При обновлении changelog.json нужно также обновить эти данные!
     fallbackData: {
-        "version": "2.8.0",
+        "version": "2.8.1",
         "updates": [
+            {
+                "version": "2.8.1",
+                "date": "2025-11-30",
+                "title": "Синхронизация аватаров партнёров с Google Drive",
+                "changes": [
+                    {
+                        "category": "Новое",
+                        "items": [
+                            "Загрузка аватаров партнёров в Google Drive (папка images)",
+                            "Синхронизация изображений между устройствами через облако",
+                            "Автоматическое удаление старого аватара при замене (без дубликатов)",
+                            "Функция deleteImage в Apps Script для удаления файлов из Drive"
+                        ]
+                    },
+                    {
+                        "category": "Изменено",
+                        "items": [
+                            "Аватары хранятся как avatarFileId (ссылка на Drive) вместо base64",
+                            "При logout очищаются все данные пользователя (расширенный список)",
+                            "Модальное окно обрезки теперь работает как предпросмотр"
+                        ]
+                    },
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "Изображения сохраняются в оригинальном разрешении без сжатия",
+                            "Визуальная обрезка через CSS object-fit: cover",
+                            "uploadImage в Apps Script удаляет старый файл если передан oldFileId"
+                        ]
+                    },
+                    {
+                        "category": "Файлы",
+                        "items": [
+                            "partners/js/partners.js - загрузка/удаление аватаров через CloudStorage",
+                            "shared/cloud-storage.js - методы uploadImage, deleteImage",
+                            "shared/auth-guard.js - расширенная очистка localStorage при logout",
+                            "Apps Script - добавлена функция deleteImage, улучшена uploadImage"
+                        ]
+                    }
+                ]
+            },
             {
                 "version": "2.8.0",
                 "date": "2025-11-30",

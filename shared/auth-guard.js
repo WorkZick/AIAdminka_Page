@@ -64,11 +64,28 @@ const AuthGuard = {
      * Выход из системы
      */
     logout() {
+        // Очищаем данные авторизации
         localStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
-        // Очищаем кэш данных пользователя
+
+        // Очищаем все кэшированные данные пользователя
         localStorage.removeItem('partners-data');
+        localStorage.removeItem('partnersColumnsConfig');
         localStorage.removeItem('traffic-analytics-temp');
+        localStorage.removeItem('trafficSettings');
+        localStorage.removeItem('team_info_data');
+        localStorage.removeItem('teamInfoTemplates');
+        localStorage.removeItem('team-name');
+        localStorage.removeItem('sync-data');
+        localStorage.removeItem('sync-logs');
+        localStorage.removeItem('sync-auth');
+        localStorage.removeItem('sync-access-status');
+
+        // Очищаем кэш CloudStorage
+        if (typeof CloudStorage !== 'undefined' && CloudStorage.clearCache) {
+            CloudStorage.clearCache();
+        }
+
         this.redirectToLogin();
     },
 

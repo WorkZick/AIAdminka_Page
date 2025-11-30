@@ -614,8 +614,9 @@ const partnersApp = {
 
             sortedData.forEach(partner => {
                 const statusClass = this.getStatusColor(partner.status || 'Открыт');
-                const avatar = partner.avatar || '';
-                const isValidAvatar = this.isValidImageUrl(avatar);
+                // Используем avatarFileId для получения URL из Google Drive
+                const avatar = partner.avatarFileId ? CloudStorage.getImageUrl(partner.avatarFileId) : '';
+                const isValidAvatar = !!avatar;
 
                 const tr = document.createElement('tr');
                 tr.className = this.selectedPartnerId === partner.id ? 'selected' : '';
@@ -726,8 +727,10 @@ const partnersApp = {
         document.getElementById('partnerForm').style.display = 'none';
 
         const cardAvatar = document.getElementById('cardAvatar');
-        if (partner.avatar && this.isValidImageUrl(partner.avatar)) {
-            cardAvatar.src = partner.avatar;
+        // Используем avatarFileId для получения URL из Google Drive
+        const avatarUrl = partner.avatarFileId ? CloudStorage.getImageUrl(partner.avatarFileId) : '';
+        if (avatarUrl) {
+            cardAvatar.src = avatarUrl;
             cardAvatar.style.display = 'block';
         } else {
             cardAvatar.src = '';
@@ -940,8 +943,10 @@ const partnersApp = {
 
         const formAvatar = document.getElementById('formAvatar');
         const placeholder = document.querySelector('.form-avatar-placeholder');
-        if (partner.avatar) {
-            formAvatar.src = partner.avatar;
+        // Используем avatarFileId для получения URL из Google Drive
+        const avatarUrl = partner.avatarFileId ? CloudStorage.getImageUrl(partner.avatarFileId) : '';
+        if (avatarUrl) {
+            formAvatar.src = avatarUrl;
             formAvatar.style.display = 'block';
             placeholder.style.display = 'none';
         } else {
@@ -1088,50 +1093,44 @@ const partnersApp = {
 
     updateCropTransform() {
         const cropImage = document.getElementById('cropImage');
-        if (!cropImage) return;
+        const cropPreview = document.getElementById('cropPreview');
+        if (!cropImage || !cropImage.complete) return;
 
-        cropImage.style.transform = `translate(${this.cropData.offsetX}px, ${this.cropData.offsetY}px) scale(${this.cropData.scale})`;
+        const scale = this.cropData.scale;
+        const translateX = this.cropData.offsetX;
+        const translateY = this.cropData.offsetY;
+
+        // Calculate initial size to cover container (like background-size: cover)
+        const previewWidth = cropPreview.clientWidth;
+        const previewHeight = cropPreview.clientHeight;
+        const imgWidth = cropImage.naturalWidth;
+        const imgHeight = cropImage.naturalHeight;
+
+        const scaleToFit = Math.max(
+            previewWidth / imgWidth,
+            previewHeight / imgHeight
+        );
+
+        // Set base size to cover the container
+        cropImage.style.width = imgWidth * scaleToFit + 'px';
+        cropImage.style.height = imgHeight * scaleToFit + 'px';
         cropImage.style.left = '50%';
         cropImage.style.top = '50%';
-        cropImage.style.marginLeft = `-${cropImage.naturalWidth / 2}px`;
-        cropImage.style.marginTop = `-${cropImage.naturalHeight / 2}px`;
+
+        // Apply transform: center image + user offset + user scale
+        cropImage.style.transform = `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(${scale})`;
     },
 
     applyCrop() {
-        const cropPreview = document.getElementById('cropPreview');
-        const cropImage = document.getElementById('cropImage');
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const size = 200;
-
-        canvas.width = size;
-        canvas.height = size;
-
-        const previewRect = cropPreview.getBoundingClientRect();
-        const imageRect = cropImage.getBoundingClientRect();
-
-        const scaleX = cropImage.naturalWidth / imageRect.width;
-        const scaleY = cropImage.naturalHeight / imageRect.height;
-
-        const cropX = (previewRect.left - imageRect.left) * scaleX;
-        const cropY = (previewRect.top - imageRect.top) * scaleY;
-        const cropWidth = previewRect.width * scaleX;
-        const cropHeight = previewRect.height * scaleY;
-
-        ctx.drawImage(
-            cropImage,
-            cropX, cropY, cropWidth, cropHeight,
-            0, 0, size, size
-        );
-
-        const croppedData = canvas.toDataURL('image/jpeg', 0.8);
+        // Сохраняем оригинальное изображение без обрезки
+        // Обрезка только визуальная (CSS object-fit: cover)
+        const originalData = this.cropData.originalSrc;
 
         const formAvatar = document.getElementById('formAvatar');
         const placeholder = document.querySelector('.form-avatar-placeholder');
-        formAvatar.src = croppedData;
+        formAvatar.src = originalData;
         formAvatar.style.display = 'block';
-        placeholder.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'none';
 
         this.closeCropModal();
     },
@@ -1170,6 +1169,16 @@ const partnersApp = {
             }
         });
 
+        // Проверяем, есть ли новый avatar (base64)
+        const isNewAvatar = avatar && avatar.startsWith('data:image/');
+
+        // Получаем текущий avatarFileId если редактируем
+        let currentAvatarFileId = '';
+        if (this.editingPartnerId) {
+            const existingPartner = this.cachedPartners.find(p => p.id === this.editingPartnerId);
+            currentAvatarFileId = existingPartner?.avatarFileId || '';
+        }
+
         const partnerData = {
             subagent,
             subagentId,
@@ -1178,13 +1187,32 @@ const partnersApp = {
             with: withVal,
             comp,
             status: this.formStatus,
-            avatar: avatar && avatar !== window.location.href ? avatar : '',
+            avatarFileId: currentAvatarFileId, // Будет обновлён если загружен новый аватар
             customFields
         };
 
         this.showLoading(true);
 
         try {
+            // Если есть новый avatar, загружаем в Google Drive
+            if (isNewAvatar) {
+                // Удаляем старый аватар, чтобы не было дубликатов
+                if (currentAvatarFileId) {
+                    try {
+                        await CloudStorage.deleteImage(currentAvatarFileId);
+                    } catch (e) {
+                        console.error('Failed to delete old avatar:', e);
+                    }
+                }
+
+                // Загружаем новый аватар
+                const fileName = `partner_avatar_${this.editingPartnerId || 'new'}_${Date.now()}.jpg`;
+                const uploadResult = await CloudStorage.uploadImage('partners', fileName, avatar);
+                if (uploadResult && uploadResult.fileId) {
+                    partnerData.avatarFileId = uploadResult.fileId;
+                }
+            }
+
             if (this.editingPartnerId) {
                 partnerData.id = this.editingPartnerId;
                 await CloudStorage.updatePartner(this.editingPartnerId, partnerData);
@@ -1196,6 +1224,7 @@ const partnersApp = {
 
                 this.selectedPartnerId = this.editingPartnerId;
                 this.editingPartnerId = null;
+                this.syncPartnersToLocalStorage();
                 this.renderColumnsMenu();
                 this.render();
                 this.showPartnerCard(this.selectedPartnerId);
@@ -1226,7 +1255,18 @@ const partnersApp = {
         this.showLoading(true);
 
         try {
+            const partnerToDelete = this.cachedPartners.find(p => p.id === this.selectedPartnerId);
             await CloudStorage.deletePartner(this.selectedPartnerId);
+
+            // Удаляем аватар из Google Drive если есть
+            if (partnerToDelete?.avatarFileId) {
+                try {
+                    await CloudStorage.deleteImage(partnerToDelete.avatarFileId);
+                } catch (e) {
+                    console.error('Failed to delete avatar from Drive:', e);
+                }
+            }
+
             this.cachedPartners = this.cachedPartners.filter(p => p.id !== this.selectedPartnerId);
             this.syncPartnersToLocalStorage();
             this.selectedPartnerId = null;
@@ -1248,7 +1288,18 @@ const partnersApp = {
         this.showLoading(true);
 
         try {
+            const partnerToDelete = this.cachedPartners.find(p => p.id === this.editingPartnerId);
             await CloudStorage.deletePartner(this.editingPartnerId);
+
+            // Удаляем аватар из Google Drive если есть
+            if (partnerToDelete?.avatarFileId) {
+                try {
+                    await CloudStorage.deleteImage(partnerToDelete.avatarFileId);
+                } catch (e) {
+                    console.error('Failed to delete avatar from Drive:', e);
+                }
+            }
+
             this.cachedPartners = this.cachedPartners.filter(p => p.id !== this.editingPartnerId);
             this.syncPartnersToLocalStorage();
             this.editingPartnerId = null;

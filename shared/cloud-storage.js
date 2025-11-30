@@ -143,8 +143,9 @@ const CloudStorage = {
         try {
             const response = await fetch(this.SCRIPT_URL, {
                 method: 'POST',
+                redirect: 'follow',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'text/plain'
                 },
                 body: JSON.stringify({
                     action: action,
