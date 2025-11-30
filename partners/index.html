@@ -54,9 +54,12 @@
 
             <div class="menu-separator"></div>
 
-            <div class="version-info">
-                О разработке<br>
-                <span id="versionText">Загрузка...</span>
+            <div class="version-info" onclick="showAboutModal()">
+                <span class="version-text-full">О разработке</span>
+                <span id="versionText" class="version-number"></span>
+                <span class="version-icon" title="О разработке">
+                    <img src="../shared/icons/info.svg" alt="О разработке">
+                </span>
             </div>
         </aside>
 
@@ -352,8 +355,37 @@
         </div>
     </div>
 
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">О разработке</h2>
+                <button class="modal-close" onclick="closeAboutModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Это проект <strong>Vadim P</strong></p>
+                <p>Reddy ID для связи: <strong>62219492522</strong></p>
+                <p>Ссылка на чат с актуальной версией:<br>
+                <a href="https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_" target="_blank">https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_</a></p>
+            </div>
+        </div>
+    </div>
+
     <script src="../shared/version.js"></script>
     <script src="../shared/storage.js"></script>
     <script src="js/partners.js"></script>
+    <script>
+        function showAboutModal() {
+            document.getElementById('aboutModal').classList.add('active');
+        }
+        function closeAboutModal() {
+            document.getElementById('aboutModal').classList.remove('active');
+        }
+        document.getElementById('aboutModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAboutModal();
+        });
+    </script>
 </body>
 </html>
