@@ -54,9 +54,12 @@
 
             <div class="menu-separator"></div>
 
-            <div class="version-info">
-                О разработке<br>
-                <span id="versionText">Загрузка...</span>
+            <div class="version-info" onclick="showAboutModal()">
+                <span class="version-text-full">О разработке</span>
+                <span id="versionText" class="version-number"></span>
+                <span class="version-icon" title="О разработке">
+                    <img src="../shared/icons/info.svg" alt="О разработке">
+                </span>
             </div>
         </aside>
 
@@ -99,12 +102,12 @@
                         <div class="panel-content">
                             <nav class="toc-nav">
                                 <a href="#overview" class="toc-link active">1. Что это?</a>
-                                <a href="#team-info" class="toc-link">2. Team Info</a>
+                                <a href="#team-info" class="toc-link">2. Сотрудники</a>
                                 <a href="#traffic-calc" class="toc-link">3. Расчет трафика</a>
-                                <a href="#excel-reports" class="toc-link">4. Excel отчёты</a>
+                                <a href="#excel-reports" class="toc-link">4. Отчеты</a>
                                 <a href="#partners" class="toc-link">5. Партнеры</a>
-                                <a href="#sync" class="toc-link">6. Синхронизация</a>
-                                <a href="#home" class="toc-link">7. Главная страница</a>
+                                <a href="#sync" class="toc-link">6. Настройки</a>
+                                <a href="#home" class="toc-link">7. Главная</a>
                                 <a href="#troubleshooting" class="toc-link">8. Проблемы</a>
                                 <a href="#architecture" class="toc-link">9. Архитектура</a>
                             </nav>
@@ -134,12 +137,12 @@
 
                             <h3>Модули:</h3>
                             <ul>
-                                <li><strong>Team Info</strong> — карточки сотрудников с настраиваемыми полями</li>
+                                <li><strong>Сотрудники</strong> — карточки сотрудников с настраиваемыми полями</li>
                                 <li><strong>Расчет трафика</strong> — управление партнерами и аналитика</li>
-                                <li><strong>Excel отчёты</strong> — обработка файлов по шаблонам</li>
+                                <li><strong>Отчеты</strong> — обработка файлов по шаблонам</li>
                                 <li><strong>Партнеры</strong> — управление информацией о партнерах</li>
-                                <li><strong>Синхронизация</strong> — облачное хранение через Google Sheets</li>
-                                <li><strong>Главная страница</strong> — сетка модулей с навигацией (NEW v2.5.0)</li>
+                                <li><strong>Настройки</strong> — облачное хранение через Google Sheets</li>
+                                <li><strong>Главная</strong> — сетка модулей с навигацией</li>
                                 <li><strong>Документация</strong> — справочное руководство</li>
                             </ul>
 
@@ -164,9 +167,9 @@
                             </div>
                         </section>
 
-                        <!-- 2. Team Info -->
+                        <!-- 2. Сотрудники -->
                         <section class="doc-section" id="team-info">
-                            <h2>2. Team Info</h2>
+                            <h2>2. Сотрудники</h2>
 
                             <p><strong>Новый дизайн (v2.0.0):</strong> Полностью переработанный интерфейс в современном минималистичном стиле с табличным представлением данных.</p>
 
@@ -306,9 +309,9 @@
                             </ul>
                         </section>
 
-                        <!-- 4. Excel отчёты -->
+                        <!-- 4. Отчеты -->
                         <section class="doc-section" id="excel-reports">
-                            <h2>4. Excel отчёты</h2>
+                            <h2>4. Отчеты</h2>
 
                             <p>Обработка файлов по шаблонам. Работает с .xlsx файлами.</p>
 
@@ -339,7 +342,7 @@
                         <section class="doc-section" id="partners">
                             <h2>5. Партнеры</h2>
 
-                            <p><strong>Новый дизайн (v2.3.0):</strong> Полностью переработанный интерфейс в современном минималистичном стиле, аналогичный Team Info.</p>
+                            <p><strong>Новый дизайн (v2.3.0):</strong> Полностью переработанный интерфейс в современном минималистичном стиле, аналогичный Сотрудникам.</p>
 
                             <h3>Интерфейс:</h3>
                             <ul>
@@ -378,9 +381,9 @@
                             </ul>
                         </section>
 
-                        <!-- 6. Синхронизация -->
+                        <!-- 6. Настройки -->
                         <section class="doc-section" id="sync">
-                            <h2>6. Синхронизация (NEW v2.4.0)</h2>
+                            <h2>6. Настройки</h2>
 
                             <p><strong>Облачная синхронизация данных</strong> через Google Sheets с системой контроля доступа. Позволяет обмениваться данными между пользователями.</p>
 
@@ -428,11 +431,11 @@
                             </ul>
                         </section>
 
-                        <!-- 7. Главная страница -->
+                        <!-- 7. Главная -->
                         <section class="doc-section" id="home">
-                            <h2>7. Главная страница (NEW v2.5.0)</h2>
+                            <h2>7. Главная</h2>
 
-                            <p><strong>Полностью переработанный дизайн</strong> в едином стиле с Team Info, Партнерами и Синхронизацией. Минималистичный тёмный интерфейс.</p>
+                            <p><strong>Полностью переработанный дизайн</strong> в едином стиле со всеми модулями. Минималистичный тёмный интерфейс.</p>
 
                             <h3>Интерфейс:</h3>
                             <ul>
@@ -444,12 +447,12 @@
 
                             <h3>Модули на главной:</h3>
                             <ul>
-                                <li><strong>Excel отчеты:</strong> Работа с отчетами и таблицами</li>
-                                <li><strong>Team Info:</strong> Управление командой</li>
+                                <li><strong>Отчеты:</strong> Работа с отчетами и таблицами</li>
+                                <li><strong>Сотрудники:</strong> Управление командой</li>
                                 <li><strong>Расчет трафика:</strong> Калькулятор трафика</li>
-                                <li><strong>Документация:</strong> Справка и руководства</li>
                                 <li><strong>Партнеры:</strong> База партнеров</li>
-                                <li><strong>Синхронизация:</strong> Облачное хранение данных</li>
+                                <li><strong>Документация:</strong> Справка и руководства</li>
+                                <li><strong>Настройки:</strong> Облачное хранение данных</li>
                             </ul>
 
                             <h3>Сайдбар:</h3>
@@ -615,6 +618,36 @@
 
         document.querySelectorAll('.doc-section[id]').forEach(section => {
             observer.observe(section);
+        });
+    </script>
+
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">О разработке</h2>
+                <button class="modal-close" onclick="closeAboutModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Это проект <strong>Vadim P</strong></p>
+                <p>Reddy ID для связи: <strong>62219492522</strong></p>
+                <p>Ссылка на чат с актуальной версией:<br>
+                <a href="https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_" target="_blank">https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showAboutModal() {
+            document.getElementById('aboutModal').classList.add('active');
+        }
+        function closeAboutModal() {
+            document.getElementById('aboutModal').classList.remove('active');
+        }
+        document.getElementById('aboutModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAboutModal();
         });
     </script>
 </body>
