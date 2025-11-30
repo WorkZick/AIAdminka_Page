@@ -64,6 +64,11 @@ body {
     transition: width 0.3s ease;
 }
 
+.sidebar.no-transition,
+.sidebar.no-transition * {
+    transition: none !important;
+}
+
 .sidebar.collapsed {
     width: 60px;
 }
@@ -111,16 +116,20 @@ body {
     display: block;
     padding: 16px 20px;
     color: var(--black);
+    text-decoration: none;
     font-size: 14px;
+    transition: background 0.2s;
     cursor: pointer;
     border: none;
     background: transparent;
     width: 100%;
     text-align: center;
     font-family: 'TT Firs Neue', sans-serif;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
     height: 48px;
     position: relative;
-    transition: background 0.2s;
 }
 
 .menu-item span {
@@ -258,7 +267,6 @@ body {
 
 /* Panels */
 .config-panel,
-.help-panel,
 .data-panel,
 .log-panel {
     background: var(--white);
@@ -279,33 +287,6 @@ body {
 
 .panel-content {
     padding: 20px;
-}
-
-/* Config panel */
-.config-field {
-    margin-bottom: 16px;
-}
-
-.config-field label {
-    display: block;
-    font-size: 12px;
-    color: var(--gray);
-    margin-bottom: 6px;
-}
-
-.config-field input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
-    font-family: 'TT Firs Neue', sans-serif;
-    font-size: 12px;
-    color: var(--black);
-}
-
-.config-field input:focus {
-    outline: none;
-    border-color: var(--black);
 }
 
 .btn-login {
@@ -445,18 +426,6 @@ body {
 
 .info-value.error {
     color: var(--status-red);
-}
-
-/* Help panel */
-.help-list {
-    padding-left: 20px;
-    font-size: 12px;
-    color: var(--black);
-    line-height: 1.8;
-}
-
-.help-list li {
-    margin-bottom: 4px;
 }
 
 /* Actions panel */
@@ -744,29 +713,6 @@ body {
     word-wrap: break-word;
     max-height: 200px;
     overflow-y: auto;
-}
-
-/* Result textarea */
-.result-textarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
-    font-family: 'Consolas', monospace;
-    font-size: 12px;
-    color: var(--black);
-    resize: vertical;
-    min-height: 100px;
-    box-sizing: border-box;
-}
-
-.result-textarea:focus {
-    outline: none;
-    border-color: var(--black);
-}
-
-.result-textarea::placeholder {
-    color: var(--gray);
 }
 
 /* Users list */

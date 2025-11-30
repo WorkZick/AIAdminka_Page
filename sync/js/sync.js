@@ -76,14 +76,19 @@ const syncApp = {
             const auth = JSON.parse(authData);
             // Проверяем, не истёк ли токен (1 час)
             if (Date.now() - auth.timestamp < 3600000) {
-                this.currentUser = {
-                    email: auth.email,
-                    name: auth.name,
-                    picture: auth.picture,
-                    accessToken: auth.accessToken
-                };
-                // Загружаем статус доступа
-                this.loadAccessStatus();
+                // Если нужно получить данные пользователя
+                if (auth.needsUserInfo) {
+                    this.fetchUserInfo(auth.accessToken);
+                } else {
+                    this.currentUser = {
+                        email: auth.email,
+                        name: auth.name,
+                        picture: auth.picture,
+                        accessToken: auth.accessToken
+                    };
+                    // Загружаем статус доступа
+                    this.loadAccessStatus();
+                }
             } else {
                 localStorage.removeItem('sync-auth');
                 localStorage.removeItem('sync-access-status');
@@ -91,7 +96,50 @@ const syncApp = {
         }
     },
 
+    async fetchUserInfo(accessToken) {
+        try {
+            const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            });
+            const userInfo = await response.json();
+
+            // Обновляем authData с данными пользователя
+            const authData = {
+                accessToken: accessToken,
+                email: userInfo.email,
+                name: userInfo.name,
+                picture: userInfo.picture,
+                timestamp: Date.now()
+            };
+            localStorage.setItem('sync-auth', JSON.stringify(authData));
+
+            this.currentUser = {
+                email: userInfo.email,
+                name: userInfo.name,
+                picture: userInfo.picture,
+                accessToken: accessToken
+            };
+
+            this.addLog('success', 'Авторизован как ' + userInfo.email);
+            this.updateUI();
+            this.checkAccessStatus();
+        } catch (err) {
+            this.addLog('error', 'Ошибка получения данных пользователя: ' + err.message);
+            localStorage.removeItem('sync-auth');
+        }
+    },
+
     checkAuthCallback() {
+        // Проверяем pending токен от callback.html
+        const pendingData = localStorage.getItem('sync-auth-pending');
+        if (pendingData && !this.currentUser) {
+            const pending = JSON.parse(pendingData);
+            localStorage.removeItem('sync-auth-pending');
+            this.fetchUserInfo(pending.accessToken);
+            return;
+        }
+
+        // Проверяем обычный auth
         const authData = localStorage.getItem('sync-auth');
         if (authData && !this.currentUser) {
             const auth = JSON.parse(authData);
@@ -102,8 +150,6 @@ const syncApp = {
                 accessToken: auth.accessToken
             };
             this.addLog('success', 'Авторизован как ' + auth.email);
-
-            // Проверяем доступ после авторизации
             this.checkAccessStatus();
         }
     },
@@ -301,12 +347,6 @@ const syncApp = {
         const btnLogin = document.getElementById('btnLogin');
         const btnLogout = document.getElementById('btnLogout');
         const btnRequestAccess = document.getElementById('btnRequestAccess');
-        const configField = document.querySelector('.config-field');
-
-        // Скрываем поле URL (оно теперь автоматическое)
-        if (configField) {
-            configField.style.display = 'none';
-        }
 
         if (!this.currentUser) {
             // Не авторизован

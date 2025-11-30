@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com; frame-ancestors 'self'">
     <title>Синхронизация - AIAdminka</title>
     <link rel="stylesheet" href="css/sync.css">
 </head>
@@ -16,18 +17,18 @@
 
             <div class="sidebar-menu">
                 <div class="menu-item" onclick="window.location.href='../index.html'">
-                    <span>Главная страница</span>
+                    <span>Главная</span>
                     <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../excel-reports/index.html'">
-                    <span>Excel отчеты</span>
-                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Excel">
+                    <span>Отчеты</span>
+                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Отчеты">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../team-info/index.html'">
-                    <span>Team Info</span>
-                    <img src="icons/team_info.svg" width="20" height="20" alt="Team Info">
+                    <span>Сотрудники</span>
+                    <img src="icons/team_info.svg" width="20" height="20" alt="Сотрудники">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../traffic-calculation/index.html'">
@@ -35,19 +36,19 @@
                     <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
                 </div>
 
-                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
-                    <span>Документация</span>
-                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
-                </div>
-
                 <div class="menu-item" onclick="window.location.href='../partners/index.html'">
                     <span>Партнеры</span>
                     <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
                 </div>
 
+                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
+                    <span>Документация</span>
+                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
+                </div>
+
                 <div class="menu-item active">
-                    <span>Синхронизация</span>
-                    <img src="icons/sync.svg" width="20" height="20" alt="Синхронизация">
+                    <span>Настройки</span>
+                    <img src="icons/sync.svg" width="20" height="20" alt="Настройки">
                 </div>
             </div>
 
@@ -55,16 +56,22 @@
 
             <div class="version-info">
                 О разработке<br>
-                Version 1.0.0
+                <span id="versionText">Загрузка...</span>
             </div>
         </aside>
 
         <script>
             (function() {
-                const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
-                if (collapsed) {
-                    document.getElementById('sidebar').classList.add('collapsed');
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.add('no-transition');
+                if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                    sidebar.classList.add('collapsed');
                 }
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        sidebar.classList.remove('no-transition');
+                    });
+                });
             })();
         </script>
 
@@ -88,10 +95,6 @@
                             <span>Подключение</span>
                         </div>
                         <div class="panel-content">
-                            <div class="config-field">
-                                <label>URL Google Apps Script:</label>
-                                <input type="text" id="configScriptUrl" placeholder="https://script.google.com/macros/s/..." oninput="syncApp.saveConfig()">
-                            </div>
                             <button class="btn-login" id="btnLogin" onclick="syncApp.login()">
                                 Войти через Google
                             </button>
@@ -121,20 +124,6 @@
                         </div>
                     </div>
 
-                    <div class="help-panel">
-                        <div class="panel-header">
-                            <span>Как настроить?</span>
-                        </div>
-                        <div class="panel-content">
-                            <ol class="help-list">
-                                <li>Создайте Google Таблицу</li>
-                                <li>Расширения → Apps Script</li>
-                                <li>Вставьте код из документации</li>
-                                <li>Разверните как веб-приложение</li>
-                                <li>Скопируйте URL сюда</li>
-                            </ol>
-                        </div>
-                    </div>
                 </aside>
 
                 <!-- Main section -->
@@ -278,31 +267,7 @@
         </div>
     </div>
 
-    <!-- Result Modal (для ввода результата из вкладки) -->
-    <div class="modal" id="resultModal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h2 class="modal-title">Вставьте результат</h2>
-                <button class="modal-close" onclick="syncApp.closeModal('resultModal')">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-            <div class="modal-body">
-                <p class="modal-info">
-                    1. В открывшейся вкладке Google покажет JSON-результат<br>
-                    2. Скопируйте весь текст (Ctrl+A, Ctrl+C)<br>
-                    3. Вставьте сюда (Ctrl+V)
-                </p>
-                <input type="hidden" id="resultAction" value="">
-                <textarea id="resultInput" class="result-textarea" rows="6" placeholder='{"success":true,...}'></textarea>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="syncApp.closeModal('resultModal')">Отмена</button>
-                <button class="btn-primary" onclick="syncApp.applyResult()">Применить</button>
-            </div>
-        </div>
-    </div>
-
+    <script src="../shared/version.js"></script>
     <script src="js/sync.js"></script>
 </body>
 </html>

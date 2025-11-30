@@ -4,11 +4,11 @@ const GRID_PADDING = { x: 20, y: 20 };
 
 // Конфигурация иконок по умолчанию (выровнены по сетке)
 const DEFAULT_ICONS = [
-    { id: 'excel', label: 'Excel отчеты', icon: 'file-spreadsheet', url: 'excel-reports/index.html', x: 20, y: 20, locked: false },
-    { id: 'team', label: 'Team Info', icon: 'users', url: 'team-info/index.html', x: 20, y: 140, locked: false },
+    { id: 'excel', label: 'Отчеты', icon: 'file-spreadsheet', url: 'excel-reports/index.html', x: 20, y: 20, locked: false },
+    { id: 'team', label: 'Сотрудники', icon: 'users', url: 'team-info/index.html', x: 20, y: 140, locked: false },
     { id: 'traffic', label: 'Расчет трафика', icon: 'trending-up', url: 'traffic-calculation/index.html', x: 20, y: 260, locked: false },
-    { id: 'docs', label: 'Документация', icon: 'book-open', url: 'documentation/index.html', x: 20, y: 380, locked: false },
-    { id: 'partners', label: 'Партнеры', icon: 'handshake', url: 'partners/index.html', x: 20, y: 500, locked: false },
+    { id: 'partners', label: 'Партнеры', icon: 'handshake', url: 'partners/index.html', x: 20, y: 380, locked: false },
+    { id: 'docs', label: 'Документация', icon: 'book-open', url: 'documentation/index.html', x: 20, y: 500, locked: false },
     { id: 'about', label: 'О разработке', icon: 'info', url: null, x: 500, y: 300, special: 'about', locked: false }
 ];
 

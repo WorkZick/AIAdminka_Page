@@ -125,38 +125,54 @@ const teamInfo = {
         table.style.display = 'table';
         emptyState.style.display = 'none';
 
-        tbody.innerHTML = this.data.map(employee => {
+        // Clear tbody and build rows with safe event listeners
+        tbody.innerHTML = '';
+
+        this.data.forEach(employee => {
             const statusClass = this.getStatusClass(employee.status || 'Работает');
             const statusText = employee.status || 'Работает';
             const reddyId = employee.reddyId || employee.predefinedFields?.['Reddy'] || '';
             const birthday = employee.birthday ? this.formatDate(employee.birthday) : '';
             const crmLogin = employee.crmLogin || '';
             const avatar = employee.avatar || '';
+            const isValidAvatar = this.isValidImageUrl(avatar);
             const formattedName = this.formatFullNameForTable(employee.fullName || '');
 
-            return `
-                <tr onclick="teamInfo.openCard(${employee.id})" class="${this.currentEmployeeId === employee.id ? 'selected' : ''}">
-                    <td>
-                        <span class="status-badge ${statusClass}">${this.escapeHtml(statusText)}</span>
-                    </td>
-                    <td>
-                        <div class="employee-info">
-                            <div class="employee-avatar">
-                                ${avatar ? `<img src="${avatar}" alt="">` : ''}
-                            </div>
-                        </div>
-                    </td>
-                    <td><div class="employee-name">${formattedName}</div></td>
-                    <td>${this.escapeHtml(employee.position || '')}</td>
-                    <td>${this.escapeHtml(crmLogin)}</td>
-                    <td>${this.escapeHtml(reddyId)}</td>
-                    <td>${birthday}</td>
-                    <td>
-                        <svg class="row-arrow" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    </td>
-                </tr>
+            const tr = document.createElement('tr');
+            tr.className = this.currentEmployeeId === employee.id ? 'selected' : '';
+            tr.dataset.employeeId = employee.id;
+            tr.addEventListener('click', () => this.openCard(employee.id));
+
+            tr.innerHTML = `
+                <td>
+                    <span class="status-badge ${this.escapeHtml(statusClass)}">${this.escapeHtml(statusText)}</span>
+                </td>
+                <td>
+                    <div class="employee-info">
+                        <div class="employee-avatar"></div>
+                    </div>
+                </td>
+                <td><div class="employee-name">${formattedName}</div></td>
+                <td>${this.escapeHtml(employee.position || '')}</td>
+                <td>${this.escapeHtml(crmLogin)}</td>
+                <td>${this.escapeHtml(reddyId)}</td>
+                <td>${birthday}</td>
+                <td>
+                    <svg class="row-arrow" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </td>
             `;
-        }).join('');
+
+            // Safely set avatar image
+            if (isValidAvatar) {
+                const avatarDiv = tr.querySelector('.employee-avatar');
+                const img = document.createElement('img');
+                img.src = avatar;
+                img.alt = '';
+                avatarDiv.appendChild(img);
+            }
+
+            tbody.appendChild(tr);
+        });
     },
 
     getStatusClass(status) {
@@ -293,11 +309,13 @@ const teamInfo = {
         statusText.textContent = currentStatus;
         statusText.className = `status-badge ${statusClass}`;
 
+        // Set avatar with URL validation
         const cardAvatar = document.getElementById('cardAvatar');
-        if (employee.avatar) {
+        if (employee.avatar && this.isValidImageUrl(employee.avatar)) {
             cardAvatar.src = employee.avatar;
             cardAvatar.style.display = 'block';
         } else {
+            cardAvatar.src = '';
             cardAvatar.style.display = 'none';
         }
 
@@ -721,35 +739,6 @@ const teamInfo = {
         img.src = this.tempImageData;
     },
 
-    showEditModal(id) {
-        const employee = this.data.find(e => e.id === id);
-        if (!employee) return;
-
-        this.currentEmployeeId = id;
-        document.getElementById('modalTitle').textContent = 'Редактировать сотрудника';
-        document.getElementById('saveEmployeeBtn').textContent = 'Сохранить изменения';
-
-        document.getElementById('fullNameInput').value = employee.fullName || '';
-        document.getElementById('positionInput').value = employee.position || '';
-        document.getElementById('statusSelect').value = employee.status || 'Работает';
-        document.getElementById('reddyInput').value = employee.reddyId || employee.predefinedFields?.['Reddy'] || '';
-        document.getElementById('corpTelegramInput').value = employee.corpTelegram || employee.predefinedFields?.['Корп. Telegram'] || '';
-        document.getElementById('personalTelegramInput').value = employee.personalTelegram || '';
-        document.getElementById('birthdayInput').value = employee.birthday || '';
-        document.getElementById('corpEmailInput').value = employee.corpEmail || employee.predefinedFields?.['Корп. e-mail'] || '';
-        document.getElementById('personalEmailInput').value = employee.personalEmail || '';
-        document.getElementById('corpPhoneInput').value = employee.corpPhone || employee.predefinedFields?.['Корп. телефон'] || '';
-        document.getElementById('personalPhoneInput').value = employee.personalPhone || '';
-        document.getElementById('officeInput').value = employee.office || '';
-        document.getElementById('startDateInput').value = employee.startDate || '';
-        document.getElementById('companyInput').value = employee.company || '';
-        document.getElementById('crmLoginInput').value = employee.crmLogin || '';
-        document.getElementById('commentInput').value = employee.comment || '';
-
-        document.getElementById('employeeModal').classList.add('active');
-        document.getElementById('fullNameInput').focus();
-    },
-
     editFromCard() {
         if (this.currentEmployeeId) {
             this.showEditForm(this.currentEmployeeId);
@@ -909,11 +898,13 @@ const teamInfo = {
                 statusText.textContent = currentStatus;
                 statusText.className = `status-badge ${statusClass}`;
 
+                // Set avatar with URL validation
                 const cardAvatar = document.getElementById('cardAvatar');
-                if (employee.avatar) {
+                if (employee.avatar && this.isValidImageUrl(employee.avatar)) {
                     cardAvatar.src = employee.avatar;
                     cardAvatar.style.display = 'block';
                 } else {
+                    cardAvatar.src = '';
                     cardAvatar.style.display = 'none';
                 }
 
@@ -1557,102 +1548,6 @@ const teamInfo = {
         }
     },
 
-    closeEmployeeModal() {
-        document.getElementById('employeeModal').classList.remove('active');
-    },
-
-    async saveEmployee() {
-        const fullName = document.getElementById('fullNameInput').value.trim();
-        const position = document.getElementById('positionInput').value.trim();
-        const status = document.getElementById('statusSelect').value;
-        const reddyId = document.getElementById('reddyInput').value.trim();
-        const corpTelegram = document.getElementById('corpTelegramInput').value.trim();
-        const personalTelegram = document.getElementById('personalTelegramInput').value.trim();
-        const birthday = document.getElementById('birthdayInput').value;
-        const corpEmail = document.getElementById('corpEmailInput').value.trim();
-        const personalEmail = document.getElementById('personalEmailInput').value.trim();
-        const corpPhone = document.getElementById('corpPhoneInput').value.trim();
-        const personalPhone = document.getElementById('personalPhoneInput').value.trim();
-        const office = document.getElementById('officeInput').value.trim();
-        const startDate = document.getElementById('startDateInput').value;
-        const company = document.getElementById('companyInput').value.trim();
-        const crmLogin = document.getElementById('crmLoginInput').value.trim();
-        const comment = document.getElementById('commentInput').value.trim();
-
-        if (!fullName) {
-            alert('Введите ФИО');
-            return;
-        }
-
-        if (!position) {
-            alert('Введите должность');
-            return;
-        }
-
-        const employeeData = {
-            fullName,
-            position,
-            status,
-            reddyId,
-            corpTelegram,
-            personalTelegram,
-            birthday,
-            corpEmail,
-            personalEmail,
-            corpPhone,
-            personalPhone,
-            office,
-            startDate,
-            company,
-            crmLogin,
-            comment,
-            avatar: this.currentAvatar || '',
-            predefinedFields: {}
-        };
-
-        // Store in predefinedFields for compatibility
-        if (reddyId) employeeData.predefinedFields['Reddy'] = reddyId;
-        if (corpTelegram) employeeData.predefinedFields['Корп. Telegram'] = corpTelegram;
-        if (corpEmail) employeeData.predefinedFields['Корп. e-mail'] = corpEmail;
-        if (corpPhone) employeeData.predefinedFields['Корп. телефон'] = corpPhone;
-
-        if (this.currentEmployeeId) {
-            // Edit existing
-            const employee = this.data.find(e => e.id === this.currentEmployeeId);
-            if (employee) {
-                Object.assign(employee, employeeData);
-                employee.updatedAt = new Date().toISOString();
-
-                if (await storage.saveData(this.data)) {
-                    this.closeEmployeeModal();
-                    this.render();
-                    this.updateStats();
-                    if (this.currentEmployeeId && document.getElementById('employeeCard').style.display !== 'none') {
-                        this.openCard(this.currentEmployeeId);
-                    }
-                    alert('Сотрудник обновлен!');
-                } else {
-                    alert('Ошибка сохранения');
-                }
-            }
-        } else {
-            // Add new
-            employeeData.id = Date.now();
-            employeeData.createdAt = new Date().toISOString();
-
-            this.data.unshift(employeeData);
-
-            if (await storage.saveData(this.data)) {
-                this.closeEmployeeModal();
-                this.render();
-                this.updateStats();
-                alert('Сотрудник добавлен!');
-            } else {
-                alert('Ошибка сохранения');
-            }
-        }
-    },
-
     async deleteFromCard() {
         if (!this.currentEmployeeId) return;
 
@@ -1747,6 +1642,15 @@ const teamInfo = {
         return div.innerHTML;
     },
 
+    // Validate URL for safe usage in img src
+    isValidImageUrl(url) {
+        if (!url) return false;
+        // Allow data URLs and http/https URLs only
+        return url.startsWith('data:image/') ||
+               url.startsWith('http://') ||
+               url.startsWith('https://');
+    },
+
     formatDate(isoString) {
         if (!isoString) return '';
         const date = new Date(isoString);
@@ -1780,7 +1684,7 @@ const teamInfo = {
 
     attachFormChangeListeners() {
         const formFields = [
-            'formFullName', 'formPosition', 'formStatus', 'formReddyId',
+            'formFullName', 'formPosition', 'formReddyId',
             'formCorpTelegram', 'formPersonalTelegram', 'formBirthday',
             'formCorpEmail', 'formPersonalEmail', 'formCorpPhone',
             'formPersonalPhone', 'formOffice', 'formStartDate',
@@ -1841,9 +1745,6 @@ document.addEventListener('keydown', (e) => {
         if (document.getElementById('cropModal').classList.contains('active')) {
             teamInfo.closeCropModal();
         }
-        if (document.getElementById('employeeModal').classList.contains('active')) {
-            teamInfo.closeEmployeeModal();
-        }
         if (document.getElementById('importModal').classList.contains('active')) {
             teamInfo.closeImportDialog();
         }
@@ -1884,12 +1785,6 @@ document.addEventListener('click', (e) => {
 });
 
 // Close modals on backdrop click
-document.getElementById('employeeModal').addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        teamInfo.closeEmployeeModal();
-    }
-});
-
 document.getElementById('importModal').addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
         teamInfo.closeImportDialog();
@@ -1900,11 +1795,6 @@ document.getElementById('cropModal').addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
         teamInfo.closeCropModal();
     }
-});
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    teamInfo.init();
 });
 
 console.log('✅ Team Info script loaded');
