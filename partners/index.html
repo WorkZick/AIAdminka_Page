@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://accounts.google.com; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://accounts.google.com; frame-ancestors 'self'">
     <title>Партнеры - AIAdminka</title>
     <link rel="stylesheet" href="css/partners.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -82,7 +83,7 @@
         <div class="main-wrapper">
             <!-- Global header (top right) -->
             <header class="global-header">
-                <button class="export-btn" onclick="partnersApp.exportJSON()">
+                <button class="export-btn" onclick="partnersApp.showExportDialog()">
                     <img src="icons/export.svg" width="14" height="14" alt="Экспорт">
                     Экспорт списка
                 </button>
@@ -237,7 +238,14 @@
                                 <div class="form-info-section">
                                     <textarea class="form-name-input" id="formSubagent" placeholder="Субагент" rows="1"></textarea>
                                     <textarea class="form-position-input" id="formSubagentId" placeholder="ID Субагента" rows="1"></textarea>
-                                    <input type="text" class="form-method-input" id="formMethod" placeholder="Метод">
+                                    <div class="form-method-wrapper">
+                                        <select class="form-method-select" id="formMethod">
+                                            <option value="">Выберите метод</option>
+                                        </select>
+                                        <button class="form-method-settings-btn" onclick="partnersApp.showMethodsDialog()" title="Управление методами">
+                                            <img src="icons/settings.svg" width="14" height="14" alt="Настройки">
+                                        </button>
+                                    </div>
                                     <div class="form-status-badge" id="formStatusBadge" onclick="partnersApp.toggleFormStatusDropdown()">
                                         <span class="status-badge green" id="formStatusText">Открыт</span>
                                         <img class="status-dropdown-icon" src="icons/arrow.svg" width="12" height="12" alt="Выбрать" style="transform: rotate(-90deg);">
@@ -304,9 +312,91 @@
         </div>
     </div>
 
+    <!-- Methods Modal -->
+    <div class="modal" id="methodsModal">
+        <div class="modal-dialog" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Управление методами</h2>
+                <button class="modal-close" onclick="partnersApp.closeMethodsDialog()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Добавление нового метода -->
+                <div class="method-add-form">
+                    <input type="text" class="form-input" id="newMethodInput" placeholder="Название нового метода">
+                    <button class="btn-primary" onclick="partnersApp.addMethod()">Добавить</button>
+                </div>
+
+                <!-- Список методов -->
+                <div class="methods-list" id="methodsList">
+                    <!-- Генерируется JS -->
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="partnersApp.closeMethodsDialog()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal" id="exportModal">
+        <div class="modal-dialog" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Экспорт данных</h2>
+                <button class="modal-close" onclick="partnersApp.closeExportDialog()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Выбор типа экспорта -->
+                <div class="import-type-selector">
+                    <button class="import-type-btn active" data-type="json" onclick="partnersApp.setExportType('json')">
+                        <img src="icons/export.svg" width="20" height="20" alt="JSON">
+                        JSON
+                    </button>
+                    <button class="import-type-btn" data-type="excel" onclick="partnersApp.setExportType('excel')">
+                        <img src="icons/excel_reports.svg" width="20" height="20" alt="Excel">
+                        Excel
+                    </button>
+                </div>
+
+                <!-- JSON экспорт -->
+                <div id="jsonExportSection">
+                    <div class="export-info">
+                        Будут экспортированы все партнеры со всеми полями в формате JSON.
+                    </div>
+                </div>
+
+                <!-- Excel экспорт -->
+                <div id="excelExportSection" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">Выберите шаблон колонок</label>
+                        <select class="form-select" id="exportTemplateSelect" onchange="partnersApp.updateExportPreview()">
+                            <option value="">Без шаблона (базовые поля)</option>
+                        </select>
+                    </div>
+                    <div class="export-info" id="exportPreviewInfo">
+                        <!-- Генерируется JS -->
+                    </div>
+                </div>
+
+                <div class="export-count" id="exportCount"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="partnersApp.closeExportDialog()">Отмена</button>
+                <button class="btn-primary" onclick="partnersApp.doExport()" id="exportBtn">Экспортировать</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Import Modal -->
     <div class="modal" id="importModal">
-        <div class="modal-dialog" style="max-width: 400px;">
+        <div class="modal-dialog" style="max-width: 480px;">
             <div class="modal-header">
                 <h2 class="modal-title">Импорт данных</h2>
                 <button class="modal-close" onclick="partnersApp.closeImportDialog()">
@@ -315,10 +405,57 @@
             </div>
 
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">Выберите JSON файл</label>
-                    <input type="file" class="form-input" id="importFileInput" accept=".json">
+                <!-- Выбор типа импорта -->
+                <div class="import-type-selector">
+                    <button class="import-type-btn active" data-type="json" onclick="partnersApp.setImportType('json')">
+                        <img src="icons/import.svg" width="20" height="20" alt="JSON">
+                        JSON
+                    </button>
+                    <button class="import-type-btn" data-type="excel" onclick="partnersApp.setImportType('excel')">
+                        <img src="icons/excel_reports.svg" width="20" height="20" alt="Excel">
+                        Excel
+                    </button>
                 </div>
+
+                <!-- JSON импорт -->
+                <div id="jsonImportSection">
+                    <div class="form-group">
+                        <label class="form-label">Выберите JSON файл</label>
+                        <input type="file" class="form-input" id="importFileInput" accept=".json">
+                    </div>
+                </div>
+
+                <!-- Excel импорт -->
+                <div id="excelImportSection" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">Выберите шаблон</label>
+                        <select class="form-select" id="importTemplateSelect" onchange="partnersApp.updateExcelHint()">
+                            <option value="">Без шаблона (базовые поля)</option>
+                        </select>
+                    </div>
+
+                    <div class="excel-hint" id="excelHint">
+                        <div class="excel-hint-header">
+                            <div class="excel-hint-title">Структура Excel файла:</div>
+                            <button class="excel-download-template-btn" onclick="partnersApp.downloadExcelTemplate()">
+                                <img src="icons/export.svg" width="14" height="14" alt="Скачать">
+                                Скачать пример
+                            </button>
+                        </div>
+                        <div class="excel-hint-columns" id="excelHintColumns">
+                            <!-- Генерируется JS -->
+                        </div>
+                        <div class="excel-hint-note">
+                            <strong>Важно:</strong> Первая строка должна содержать названия колонок точно как указано выше.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Выберите Excel файл (.xlsx)</label>
+                        <input type="file" class="form-input" id="importExcelInput" accept=".xlsx,.xls">
+                    </div>
+                </div>
+
                 <div id="importPreview" style="display: none; padding: 12px; background: #f0e8d8; border-radius: 4px; margin-top: 12px; font-size: 13px;"></div>
             </div>
 

@@ -1902,6 +1902,282 @@ body {
     margin-bottom: 30px;
 }
 
+/* Import type selector */
+.import-type-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.import-type-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: transparent;
+    border: 1px solid var(--border-gray);
+    border-radius: 6px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 14px;
+    color: var(--black);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.import-type-btn:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.import-type-btn.active {
+    background: var(--black);
+    color: #fff;
+    border-color: var(--black);
+}
+
+.import-type-btn.active img {
+    filter: brightness(0) invert(1);
+}
+
+/* Excel hint */
+.excel-hint {
+    background: #f8f8f8;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.excel-hint-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.excel-hint-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--black);
+}
+
+.excel-download-template-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--black);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.excel-download-template-btn:hover {
+    opacity: 0.8;
+}
+
+.excel-download-template-btn img {
+    filter: brightness(0) invert(1);
+}
+
+.excel-hint-columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.excel-hint-column {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    background: var(--white);
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--black);
+}
+
+.excel-hint-column.required {
+    border-color: var(--yellow);
+    background: rgba(253, 190, 47, 0.1);
+}
+
+.excel-hint-column.optional {
+    border-color: #b0b0b0;
+    background: rgba(0, 0, 0, 0.02);
+    font-style: italic;
+}
+
+.excel-hint-note {
+    font-size: 11px;
+    color: var(--gray);
+    line-height: 1.4;
+}
+
+.excel-hint-note strong {
+    color: var(--black);
+}
+
+/* Export info */
+.export-info {
+    background: #f8f8f8;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--gray);
+    line-height: 1.5;
+}
+
+.export-count {
+    margin-top: 16px;
+    padding: 10px 16px;
+    background: rgba(253, 190, 47, 0.1);
+    border: 1px solid var(--yellow);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--black);
+    text-align: center;
+}
+
+/* Method select wrapper */
+.form-method-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.form-method-select {
+    flex: 1;
+    padding: 4px 0;
+    border: none;
+    border-bottom: 1px solid #e0e0e0;
+    border-radius: 0;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 12px;
+    color: var(--gray);
+    background: transparent;
+    cursor: pointer;
+    outline: none;
+}
+
+.form-method-select:focus {
+    border-bottom-color: var(--yellow);
+}
+
+.form-method-settings-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.2s;
+}
+
+.form-method-settings-btn:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Methods management modal */
+.method-add-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.method-add-form .form-input {
+    flex: 1;
+}
+
+.method-add-form .btn-primary {
+    padding: 10px 16px;
+    white-space: nowrap;
+}
+
+.methods-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.method-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #f8f8f8;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+}
+
+.method-item-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--black);
+}
+
+.method-item-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid var(--yellow);
+    border-radius: 4px;
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    color: var(--black);
+    background: var(--white);
+}
+
+.method-item-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+
+.method-item-btn:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.method-item-btn.delete:hover {
+    background: rgba(254, 0, 0, 0.1);
+}
+
+.method-item-btn img {
+    width: 16px;
+    height: 16px;
+}
+
+.methods-empty {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--gray);
+    font-size: 13px;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;

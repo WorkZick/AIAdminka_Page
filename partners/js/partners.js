@@ -5,12 +5,176 @@ const partnersApp = {
     sortField: null,
     sortDirection: 'asc',
     pendingImportData: null,
+    importType: 'json', // 'json' or 'excel'
+    selectedImportTemplateId: null,
 
     // Template system
     isTemplateMode: false,
     editingTemplateId: null,
     currentTemplateId: null,
     templateFields: [],
+
+    // ==================== METHODS MANAGEMENT ====================
+
+    // Get methods from localStorage
+    getMethods() {
+        return JSON.parse(localStorage.getItem('partnersMethods') || '[]');
+    },
+
+    // Save methods to localStorage
+    saveMethods(methods) {
+        localStorage.setItem('partnersMethods', JSON.stringify(methods));
+    },
+
+    // Show methods dialog
+    showMethodsDialog() {
+        document.getElementById('methodsModal').classList.add('active');
+        document.getElementById('newMethodInput').value = '';
+        this.renderMethodsList();
+    },
+
+    // Close methods dialog
+    closeMethodsDialog() {
+        document.getElementById('methodsModal').classList.remove('active');
+        this.populateMethodsSelect();
+    },
+
+    // Add new method
+    addMethod() {
+        const input = document.getElementById('newMethodInput');
+        const name = input.value.trim();
+
+        if (!name) {
+            alert('Введите название метода');
+            return;
+        }
+
+        const methods = this.getMethods();
+
+        if (methods.some(m => m.name.toLowerCase() === name.toLowerCase())) {
+            alert('Метод с таким названием уже существует');
+            return;
+        }
+
+        methods.push({
+            id: 'method_' + Date.now(),
+            name: name
+        });
+
+        this.saveMethods(methods);
+        input.value = '';
+        this.renderMethodsList();
+    },
+
+    // Delete method
+    deleteMethod(methodId) {
+        if (!confirm('Удалить этот метод?')) return;
+
+        const methods = this.getMethods().filter(m => m.id !== methodId);
+        this.saveMethods(methods);
+        this.renderMethodsList();
+    },
+
+    // Start editing method
+    startEditMethod(methodId) {
+        const methods = this.getMethods();
+        const method = methods.find(m => m.id === methodId);
+        if (!method) return;
+
+        const item = document.querySelector(`[data-method-id="${methodId}"]`);
+        if (!item) return;
+
+        item.innerHTML = `
+            <input type="text" class="method-item-input" id="editMethodInput_${methodId}" value="${this.escapeHtml(method.name)}">
+            <button class="method-item-btn" onclick="partnersApp.saveEditMethod('${methodId}')" title="Сохранить">
+                <img src="icons/done.svg" width="16" height="16" alt="Сохранить">
+            </button>
+            <button class="method-item-btn" onclick="partnersApp.renderMethodsList()" title="Отмена">
+                <img src="icons/cross.svg" width="16" height="16" alt="Отмена">
+            </button>
+        `;
+
+        document.getElementById(`editMethodInput_${methodId}`).focus();
+    },
+
+    // Save edited method
+    saveEditMethod(methodId) {
+        const input = document.getElementById(`editMethodInput_${methodId}`);
+        const newName = input.value.trim();
+
+        if (!newName) {
+            alert('Название не может быть пустым');
+            return;
+        }
+
+        const methods = this.getMethods();
+        const methodIndex = methods.findIndex(m => m.id === methodId);
+
+        if (methodIndex === -1) return;
+
+        if (methods.some((m, i) => i !== methodIndex && m.name.toLowerCase() === newName.toLowerCase())) {
+            alert('Метод с таким названием уже существует');
+            return;
+        }
+
+        const oldName = methods[methodIndex].name;
+        methods[methodIndex].name = newName;
+        this.saveMethods(methods);
+
+        // Update all partners with this method
+        const partners = this.getPartners();
+        partners.forEach(partner => {
+            if (partner.method === oldName) {
+                partner.method = newName;
+                StorageManager.updateItem('partners-data', partner.id, partner);
+            }
+        });
+
+        this.renderMethodsList();
+    },
+
+    // Render methods list
+    renderMethodsList() {
+        const container = document.getElementById('methodsList');
+        const methods = this.getMethods();
+
+        if (methods.length === 0) {
+            container.innerHTML = '<div class="methods-empty">Нет добавленных методов</div>';
+            return;
+        }
+
+        container.innerHTML = methods.map(method => `
+            <div class="method-item" data-method-id="${method.id}">
+                <span class="method-item-name">${this.escapeHtml(method.name)}</span>
+                <button class="method-item-btn" onclick="partnersApp.startEditMethod('${method.id}')" title="Редактировать">
+                    <img src="icons/pen.svg" width="16" height="16" alt="Редактировать">
+                </button>
+                <button class="method-item-btn delete" onclick="partnersApp.deleteMethod('${method.id}')" title="Удалить">
+                    <img src="icons/cross.svg" width="16" height="16" alt="Удалить">
+                </button>
+            </div>
+        `).join('');
+    },
+
+    // Populate methods select in form
+    populateMethodsSelect(selectedValue = '') {
+        const select = document.getElementById('formMethod');
+        if (!select) return;
+
+        const methods = this.getMethods();
+
+        select.innerHTML = '<option value="">Выберите метод</option>';
+
+        methods.forEach(method => {
+            const option = document.createElement('option');
+            option.value = method.name;
+            option.textContent = method.name;
+            if (method.name === selectedValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    },
 
     // Avatar/crop system
     cropData: {
@@ -663,7 +827,9 @@ const partnersApp = {
         // Clear header fields
         document.getElementById('formSubagent').value = '';
         document.getElementById('formSubagentId').value = '';
-        document.getElementById('formMethod').value = '';
+
+        // Populate methods select
+        this.populateMethodsSelect('');
 
         // Clear counters
         document.getElementById('formDep').value = '';
@@ -723,7 +889,9 @@ const partnersApp = {
         // Fill header fields
         document.getElementById('formSubagent').value = partner.subagent || '';
         document.getElementById('formSubagentId').value = partner.subagentId || '';
-        document.getElementById('formMethod').value = partner.method || '';
+
+        // Populate methods select with current value
+        this.populateMethodsSelect(partner.method || '');
 
         // Fill counters
         document.getElementById('formDep').value = partner.dep || '';
@@ -1594,14 +1762,114 @@ const partnersApp = {
 
     // ==================== EXPORT/IMPORT ====================
 
-    // Export JSON
-    exportJSON() {
+    // Export type
+    exportType: 'json',
+    selectedExportTemplateId: null,
+
+    // Show export dialog
+    showExportDialog() {
         const partners = this.getPartners();
         if (partners.length === 0) {
             alert('Нет данных для экспорта');
             return;
         }
 
+        document.getElementById('exportModal').classList.add('active');
+        this.exportType = 'json';
+        this.selectedExportTemplateId = null;
+
+        // Reset to JSON mode
+        this.setExportType('json');
+
+        // Populate template select
+        this.populateExportTemplateSelect();
+
+        // Update count
+        document.getElementById('exportCount').textContent = `Партнеров для экспорта: ${partners.length}`;
+    },
+
+    // Close export dialog
+    closeExportDialog() {
+        document.getElementById('exportModal').classList.remove('active');
+    },
+
+    // Set export type
+    setExportType(type) {
+        this.exportType = type;
+
+        // Update buttons
+        document.querySelectorAll('#exportModal .import-type-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.type === type);
+        });
+
+        // Show/hide sections
+        document.getElementById('jsonExportSection').style.display = type === 'json' ? 'block' : 'none';
+        document.getElementById('excelExportSection').style.display = type === 'excel' ? 'block' : 'none';
+
+        if (type === 'excel') {
+            this.updateExportPreview();
+        }
+    },
+
+    // Populate export template select
+    populateExportTemplateSelect() {
+        const select = document.getElementById('exportTemplateSelect');
+        const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
+
+        select.innerHTML = '<option value="">Без шаблона (базовые поля)</option>';
+
+        Object.values(templates).forEach(template => {
+            const option = document.createElement('option');
+            option.value = template.id;
+            const isDefault = template.isDefault ? ' (основной)' : '';
+            option.textContent = template.name + isDefault;
+            select.appendChild(option);
+        });
+
+        // Auto-select default template if exists
+        const defaultTemplate = Object.values(templates).find(t => t.isDefault);
+        if (defaultTemplate) {
+            select.value = defaultTemplate.id;
+            this.selectedExportTemplateId = defaultTemplate.id;
+        }
+    },
+
+    // Update export preview for Excel
+    updateExportPreview() {
+        const select = document.getElementById('exportTemplateSelect');
+        const templateId = select.value;
+        this.selectedExportTemplateId = templateId || null;
+
+        const previewInfo = document.getElementById('exportPreviewInfo');
+
+        // Base columns
+        let columns = ['Субагент', 'ID Субагента', 'Метод', 'DEP', 'WITH', 'COMP', 'Статус', 'Фото'];
+
+        // Add template fields if template selected
+        if (templateId) {
+            const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
+            const template = templates[templateId];
+            if (template && template.fields) {
+                columns = columns.concat(template.fields.map(f => f.label));
+            }
+        }
+
+        previewInfo.innerHTML = `<strong>Колонки:</strong> ${columns.join(', ')}`;
+    },
+
+    // Do export
+    doExport() {
+        if (this.exportType === 'json') {
+            this.exportAsJSON();
+        } else {
+            this.exportAsExcel();
+        }
+        this.closeExportDialog();
+    },
+
+    // Export as JSON
+    exportAsJSON() {
+        const partners = this.getPartners();
         const exportData = {
             type: 'partners-export',
             version: '1.0',
@@ -1620,23 +1888,254 @@ const partnersApp = {
         URL.revokeObjectURL(url);
     },
 
+    // Export as Excel
+    exportAsExcel() {
+        const partners = this.getPartners();
+        const templateId = this.selectedExportTemplateId;
+
+        // Base headers
+        const baseHeaders = ['Субагент', 'ID Субагента', 'Метод', 'DEP', 'WITH', 'COMP', 'Статус', 'Фото'];
+
+        // Add template fields if template selected
+        let templateHeaders = [];
+        let templateName = 'базовый';
+        if (templateId) {
+            const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
+            const template = templates[templateId];
+            if (template && template.fields) {
+                templateHeaders = template.fields.map(f => f.label);
+                templateName = template.name;
+            }
+        }
+
+        const allHeaders = [...baseHeaders, ...templateHeaders];
+
+        // Create data rows
+        const data = [allHeaders];
+        partners.forEach(partner => {
+            const row = [
+                partner.subagent || '',
+                partner.subagentId || '',
+                partner.method || '',
+                partner.dep || 0,
+                partner.with || 0,
+                partner.comp || 0,
+                partner.status || 'Открыт',
+                partner.avatar || ''
+            ];
+
+            // Add custom fields
+            templateHeaders.forEach(header => {
+                row.push(partner.customFields?.[header] || '');
+            });
+
+            data.push(row);
+        });
+
+        // Create workbook
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(data);
+
+        // Set column widths
+        const colWidths = allHeaders.map(h => ({ wch: Math.max(h.length + 2, 15) }));
+        ws['!cols'] = colWidths;
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Партнеры');
+
+        // Download
+        const fileName = `partners_${templateName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    },
+
     // Show import dialog
     showImportDialog() {
         document.getElementById('importModal').classList.add('active');
         document.getElementById('importFileInput').value = '';
+        document.getElementById('importExcelInput').value = '';
         document.getElementById('importPreview').style.display = 'none';
         document.getElementById('importBtn').disabled = true;
         this.pendingImportData = null;
+        this.importType = 'json';
+        this.selectedImportTemplateId = null;
+
+        // Reset to JSON mode
+        this.setImportType('json');
+
+        // Populate template select for Excel import
+        this.populateImportTemplateSelect();
+
+        // Update Excel hint
+        this.updateExcelHint();
     },
 
     // Close import dialog
     closeImportDialog() {
         document.getElementById('importModal').classList.remove('active');
         this.pendingImportData = null;
+        this.importType = 'json';
+        this.selectedImportTemplateId = null;
+    },
+
+    // Set import type (json or excel)
+    setImportType(type) {
+        this.importType = type;
+        this.pendingImportData = null;
+        document.getElementById('importPreview').style.display = 'none';
+        document.getElementById('importBtn').disabled = true;
+
+        // Update buttons
+        document.querySelectorAll('.import-type-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.type === type);
+        });
+
+        // Show/hide sections
+        document.getElementById('jsonImportSection').style.display = type === 'json' ? 'block' : 'none';
+        document.getElementById('excelImportSection').style.display = type === 'excel' ? 'block' : 'none';
+
+        // Clear file inputs
+        document.getElementById('importFileInput').value = '';
+        document.getElementById('importExcelInput').value = '';
+    },
+
+    // Populate import template select
+    populateImportTemplateSelect() {
+        const select = document.getElementById('importTemplateSelect');
+        const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
+
+        select.innerHTML = '<option value="">Без шаблона (базовые поля)</option>';
+
+        Object.values(templates).forEach(template => {
+            const option = document.createElement('option');
+            option.value = template.id;
+            const isDefault = template.isDefault ? ' (основной)' : '';
+            option.textContent = template.name + isDefault;
+            select.appendChild(option);
+        });
+
+        // Auto-select default template if exists
+        const defaultTemplate = Object.values(templates).find(t => t.isDefault);
+        if (defaultTemplate) {
+            select.value = defaultTemplate.id;
+            this.selectedImportTemplateId = defaultTemplate.id;
+        }
+    },
+
+    // Update Excel hint based on selected template
+    updateExcelHint() {
+        const select = document.getElementById('importTemplateSelect');
+        const templateId = select.value;
+        this.selectedImportTemplateId = templateId || null;
+
+        const hintColumns = document.getElementById('excelHintColumns');
+
+        // Base columns (always required)
+        const baseColumns = [
+            { name: 'Субагент', required: true },
+            { name: 'ID Субагента', required: true },
+            { name: 'Метод', required: true },
+            { name: 'DEP', required: false },
+            { name: 'WITH', required: false },
+            { name: 'COMP', required: false },
+            { name: 'Статус', required: false },
+            { name: 'Фото', required: false }
+        ];
+
+        // Add template fields if template selected
+        let templateColumns = [];
+        if (templateId) {
+            const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
+            const template = templates[templateId];
+            if (template && template.fields) {
+                templateColumns = template.fields.map(f => ({
+                    name: f.label,
+                    required: false
+                }));
+            }
+        }
+
+        // Generate hint HTML
+        let html = '';
+        [...baseColumns, ...templateColumns].forEach(col => {
+            const className = col.required ? 'required' : 'optional';
+            html += `<span class="excel-hint-column ${className}">${this.escapeHtml(col.name)}</span>`;
+        });
+
+        hintColumns.innerHTML = html;
+    },
+
+    // Download Excel template with example data
+    downloadExcelTemplate() {
+        const templateId = this.selectedImportTemplateId;
+
+        // Base columns
+        const baseHeaders = ['Субагент', 'ID Субагента', 'Метод', 'DEP', 'WITH', 'COMP', 'Статус', 'Фото'];
+
+        // Add template fields if template selected
+        let templateHeaders = [];
+        let templateName = 'базовый';
+        if (templateId) {
+            const templates = JSON.parse(localStorage.getItem('partnersTemplates') || '{}');
+            const template = templates[templateId];
+            if (template && template.fields) {
+                templateHeaders = template.fields.map(f => f.label);
+                templateName = template.name;
+            }
+        }
+
+        const allHeaders = [...baseHeaders, ...templateHeaders];
+
+        // Create example data rows
+        const exampleData = [
+            allHeaders,
+            this.generateExampleRow(allHeaders, 1),
+            this.generateExampleRow(allHeaders, 2)
+        ];
+
+        // Create workbook
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(exampleData);
+
+        // Set column widths
+        const colWidths = allHeaders.map(h => ({ wch: Math.max(h.length + 2, 15) }));
+        ws['!cols'] = colWidths;
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Партнеры');
+
+        // Download
+        const fileName = `partners_template_${templateName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    },
+
+    // Generate example row for template
+    generateExampleRow(headers, rowNum) {
+        return headers.map(header => {
+            switch (header) {
+                case 'Субагент':
+                    return `Субагент ${rowNum}`;
+                case 'ID Субагента':
+                    return `SA-${String(rowNum).padStart(4, '0')}`;
+                case 'Метод':
+                    return rowNum === 1 ? 'Метод A' : 'Метод B';
+                case 'DEP':
+                    return rowNum * 10;
+                case 'WITH':
+                    return rowNum * 5;
+                case 'COMP':
+                    return rowNum * 2;
+                case 'Статус':
+                    return 'Открыт';
+                case 'Фото':
+                    return '';
+                default:
+                    // Custom field
+                    return `Значение ${rowNum}`;
+            }
+        });
     },
 
     // Setup import handler
     setupImportHandler() {
+        // JSON file handler
         const fileInput = document.getElementById('importFileInput');
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -1666,6 +2165,123 @@ const partnersApp = {
             };
             reader.readAsText(file);
         });
+
+        // Excel file handler
+        const excelInput = document.getElementById('importExcelInput');
+        excelInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+
+                    // Get first sheet
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+
+                    // Convert to JSON with headers
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                    if (jsonData.length < 2) {
+                        throw new Error('Файл пустой или содержит только заголовки');
+                    }
+
+                    // Get headers from first row
+                    const headers = jsonData[0].map(h => String(h).trim());
+
+                    // Map column names to internal field names
+                    const columnMapping = {
+                        'Субагент': 'subagent',
+                        'ID Субагента': 'subagentId',
+                        'Метод': 'method',
+                        'DEP': 'dep',
+                        'WITH': 'with',
+                        'COMP': 'comp',
+                        'Статус': 'status',
+                        'Фото': 'avatar'
+                    };
+
+                    // Find column indexes
+                    const columnIndexes = {};
+                    headers.forEach((header, index) => {
+                        if (columnMapping[header]) {
+                            columnIndexes[columnMapping[header]] = index;
+                        } else {
+                            // Custom field
+                            columnIndexes['custom_' + header] = index;
+                        }
+                    });
+
+                    // Check required columns
+                    const requiredColumns = ['subagent', 'subagentId', 'method'];
+                    const missingColumns = requiredColumns.filter(col => columnIndexes[col] === undefined);
+                    if (missingColumns.length > 0) {
+                        const missingNames = missingColumns.map(col => {
+                            return Object.keys(columnMapping).find(key => columnMapping[key] === col) || col;
+                        });
+                        throw new Error('Отсутствуют обязательные колонки: ' + missingNames.join(', '));
+                    }
+
+                    // Parse data rows
+                    const partners = [];
+                    for (let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || row.length === 0) continue;
+
+                        const partner = {
+                            id: 'partner_' + Date.now() + '_' + i,
+                            subagent: String(row[columnIndexes.subagent] || '').trim(),
+                            subagentId: String(row[columnIndexes.subagentId] || '').trim(),
+                            method: String(row[columnIndexes.method] || '').trim(),
+                            dep: parseInt(row[columnIndexes.dep]) || 0,
+                            with: parseInt(row[columnIndexes.with]) || 0,
+                            comp: parseInt(row[columnIndexes.comp]) || 0,
+                            status: String(row[columnIndexes.status] || 'Открыт').trim(),
+                            avatar: String(row[columnIndexes.avatar] || '').trim(),
+                            customFields: {}
+                        };
+
+                        // Skip rows without required fields
+                        if (!partner.subagent && !partner.subagentId && !partner.method) {
+                            continue;
+                        }
+
+                        // Add custom fields
+                        Object.keys(columnIndexes).forEach(key => {
+                            if (key.startsWith('custom_')) {
+                                const fieldName = key.replace('custom_', '');
+                                const value = String(row[columnIndexes[key]] || '').trim();
+                                if (value) {
+                                    partner.customFields[fieldName] = value;
+                                }
+                            }
+                        });
+
+                        partners.push(partner);
+                    }
+
+                    if (partners.length === 0) {
+                        throw new Error('Не найдено данных для импорта');
+                    }
+
+                    this.pendingImportData = partners;
+
+                    const preview = document.getElementById('importPreview');
+                    preview.style.display = 'block';
+                    preview.innerHTML = `<strong>Найдено партнеров:</strong> ${partners.length}<br><small>Файл: ${file.name}</small>`;
+
+                    document.getElementById('importBtn').disabled = false;
+                } catch (err) {
+                    alert('Ошибка чтения файла: ' + err.message);
+                    document.getElementById('importPreview').style.display = 'none';
+                    document.getElementById('importBtn').disabled = true;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
     },
 
     // Import data
@@ -1674,6 +2290,27 @@ const partnersApp = {
 
         const currentData = this.getPartners();
         const existingIds = new Set(currentData.map(p => p.id));
+
+        // Extract and add new methods from imported data
+        const existingMethods = this.getMethods();
+        const existingMethodNames = new Set(existingMethods.map(m => m.name.toLowerCase()));
+        let methodsAdded = 0;
+
+        this.pendingImportData.forEach(partner => {
+            const method = (partner.method || '').trim();
+            if (method && !existingMethodNames.has(method.toLowerCase())) {
+                existingMethods.push({
+                    id: 'method_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    name: method
+                });
+                existingMethodNames.add(method.toLowerCase());
+                methodsAdded++;
+            }
+        });
+
+        if (methodsAdded > 0) {
+            this.saveMethods(existingMethods);
+        }
 
         let added = 0;
         this.pendingImportData.forEach(partner => {
@@ -1695,8 +2332,15 @@ const partnersApp = {
         });
 
         this.closeImportDialog();
+        this.renderColumnsMenu();
+        this.renderTableHeader();
         this.render();
-        alert(`Импорт завершен. Добавлено партнеров: ${added}`);
+
+        let message = `Импорт завершен. Добавлено партнеров: ${added}`;
+        if (methodsAdded > 0) {
+            message += `\nНовых методов добавлено: ${methodsAdded}`;
+        }
+        alert(message);
     },
 
     // Escape HTML
