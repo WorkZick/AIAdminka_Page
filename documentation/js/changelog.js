@@ -56,7 +56,8 @@ const changelog = {
                         "category": "Исправлено",
                         "items": [
                             "Убраны лаги при открытии/закрытии сайдбара (удалены transitions и will-change)",
-                            "Конфликт CSS-селекторов .version-number в документации"
+                            "Конфликт CSS-селекторов .version-number в документации",
+                            "Добавлено поле id при импорте партнёров (partners.js)"
                         ]
                     }
                 ]

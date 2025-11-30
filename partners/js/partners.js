@@ -1679,6 +1679,7 @@ const partnersApp = {
         this.pendingImportData.forEach(partner => {
             if (!existingIds.has(partner.id)) {
                 StorageManager.addItem('partners-data', {
+                    id: partner.id,
                     subagent: partner.subagent,
                     subagentId: partner.subagentId,
                     method: partner.method,
