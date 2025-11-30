@@ -397,6 +397,70 @@ const CloudStorage = {
         return result;
     },
 
+    // ============ TICKETS (Предложения/Баги) ============
+
+    /**
+     * Получить все тикеты
+     */
+    async getTickets(useCache = true) {
+        if (useCache) {
+            const cached = this.getFromCache('tickets');
+            if (cached) return cached;
+        }
+
+        const result = await this.callApi('getTickets');
+        const tickets = result.tickets || [];
+
+        this.setCache('tickets', tickets);
+        return tickets;
+    },
+
+    /**
+     * Создать тикет
+     * @param {Object} data - { title, description, images: [fileId, ...] }
+     */
+    async createTicket(data) {
+        const result = await this.postApi('createTicket', { data: data });
+        this.clearCache('tickets');
+        return result;
+    },
+
+    /**
+     * Обновить статус тикета (только админ)
+     * @param {string} id - ID тикета
+     * @param {string} status - новый статус (new, in_progress, need_info, resolved, closed)
+     */
+    async updateTicketStatus(id, status) {
+        const result = await this.callApi('updateTicketStatus', { id: id, status: status });
+        this.clearCache('tickets');
+        return result;
+    },
+
+    /**
+     * Добавить комментарий к тикету
+     * @param {string} id - ID тикета
+     * @param {string} comment - текст комментария
+     */
+    async addTicketComment(id, comment) {
+        const result = await this.callApi('addTicketComment', { id: id, comment: comment });
+        this.clearCache('tickets');
+        return result;
+    },
+
+    /**
+     * Проверить, является ли текущий пользователь админом
+     */
+    async checkIsAdmin() {
+        const cached = this.getFromCache('isAdmin');
+        if (cached !== null) return cached;
+
+        const result = await this.callApi('checkIsAdmin');
+        const isAdmin = result.isAdmin || false;
+
+        this.setCache('isAdmin', isAdmin);
+        return isAdmin;
+    },
+
     // ============ LOGS ============
 
     /**
