@@ -85,7 +85,7 @@ const settingsApp = {
         const sessionExpiryEl = document.getElementById('sessionExpiry');
 
         if (this.currentUser && this.currentUser.timestamp) {
-            const expiryTime = new Date(this.currentUser.timestamp + 3600000); // +1 час
+            const expiryTime = new Date(this.currentUser.timestamp + 28800000); // +8 часов
             sessionExpiryEl.textContent = this.formatDateTime(expiryTime);
         } else {
             sessionExpiryEl.textContent = '-';

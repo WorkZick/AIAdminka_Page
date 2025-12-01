@@ -1,7 +1,7 @@
-// Модуль для работы с данными партнёров (read-only из вкладки "Партнеры")
+// Модуль для работы с данными партнёров (read-only из CloudStorage)
 const storage = {
-    PARTNERS_KEY: 'partners-data', // Данные из вкладки "Партнеры"
     ANALYTICS_KEY: 'traffic-analytics-temp', // Временные данные аналитики
+    cachedPartners: [], // Кэш партнёров из облака
 
     // Маппинг статусов из формата "Партнеры" в формат "Расчет трафика"
     mapStatus(status) {
@@ -9,9 +9,21 @@ const storage = {
         return 'новый'; // 'Открыт' и другие -> 'новый'
     },
 
+    // Загрузить партнёров из облака (вызывать при инициализации)
+    async loadPartners() {
+        try {
+            if (typeof CloudStorage !== 'undefined') {
+                this.cachedPartners = await CloudStorage.getPartners();
+            }
+        } catch (e) {
+            console.error('Ошибка загрузки партнёров:', e);
+            this.cachedPartners = [];
+        }
+    },
+
     // Получить всех партнеров (адаптированных под формат расчета трафика)
     getPartners() {
-        const partners = StorageManager.getArray(this.PARTNERS_KEY);
+        const partners = this.cachedPartners;
         const analyticsData = this.getAnalyticsData();
 
         // Адаптируем формат данных и объединяем с временными данными аналитики
@@ -95,8 +107,7 @@ const storage = {
 
     // Получить методы (уникальные из партнеров)
     getMethods() {
-        const partners = StorageManager.getArray(this.PARTNERS_KEY);
-        const methods = [...new Set(partners.map(p => p.method).filter(Boolean))];
+        const methods = [...new Set(this.cachedPartners.map(p => p.method).filter(Boolean))];
         return methods.length > 0 ? methods : [];
     },
 

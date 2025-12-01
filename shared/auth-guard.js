@@ -4,8 +4,18 @@
  */
 
 const AuthGuard = {
-    // URL страницы входа
-    LOGIN_URL: '/SimpleAIAdminka/login/index.html',
+    // Определяем базовый путь динамически (для локальной разработки и GitHub Pages)
+    getBasePath() {
+        const path = window.location.pathname;
+        // Ищем первый сегмент пути (SimpleAIAdminka или AIAdminka_Page)
+        const match = path.match(/^\/([^\/]+)\//);
+        return match ? '/' + match[1] : '';
+    },
+
+    // URL страницы входа (динамический)
+    get LOGIN_URL() {
+        return this.getBasePath() + '/login/index.html';
+    },
 
     /**
      * Проверка авторизации
@@ -26,7 +36,17 @@ const AuthGuard = {
         const auth = JSON.parse(authData);
 
         // Проверяем срок токена (8 часов)
-        if (Date.now() - auth.timestamp > 28800000) {
+        const sessionExpired = Date.now() - auth.timestamp > 28800000;
+
+        if (sessionExpired) {
+            // Если идёт синхронизация - продлеваем сессию автоматически
+            if (typeof SyncManager !== 'undefined' && SyncManager.hasPendingSync()) {
+                auth.timestamp = Date.now();
+                localStorage.setItem('cloud-auth', JSON.stringify(auth));
+                console.log('⏳ Сессия продлена - идёт синхронизация');
+                return true;
+            }
+
             localStorage.removeItem('cloud-auth');
             if (redirect) {
                 this.redirectToLogin();
@@ -64,6 +84,20 @@ const AuthGuard = {
      * Выход из системы
      */
     logout() {
+        // Проверяем, идёт ли синхронизация
+        if (typeof SyncManager !== 'undefined' && SyncManager.hasPendingSync()) {
+            const canLogout = SyncManager.canLogout();
+            if (canLogout !== true) {
+                alert(canLogout);
+                return false;
+            }
+        }
+
+        // Очищаем очередь синхронизации
+        if (typeof SyncManager !== 'undefined') {
+            localStorage.removeItem('sync-queue');
+        }
+
         // Очищаем данные авторизации
         localStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
@@ -104,7 +138,7 @@ const AuthGuard = {
      * Получить URL для редиректа после логина
      */
     getRedirectUrl() {
-        return sessionStorage.getItem('auth-redirect') || '/SimpleAIAdminka/index.html';
+        return sessionStorage.getItem('auth-redirect') || (this.getBasePath() + '/index.html');
     },
 
     /**

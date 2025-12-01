@@ -36,8 +36,75 @@ const changelog = {
     // Эти данные используются только если не удалось загрузить JSON
     // ВАЖНО: При обновлении changelog.json нужно также обновить эти данные!
     fallbackData: {
-        "version": "2.9.0",
+        "version": "2.9.2",
         "updates": [
+            {
+                "version": "2.9.2",
+                "date": "2025-12-02",
+                "title": "Очистка кода синхронизации",
+                "changes": [
+                    {
+                        "category": "Удалено",
+                        "items": [
+                            "sync-keeper.html - бесполезный iframe (SharedWorker работает без него)",
+                            "Неиспользуемые методы backup очереди из SyncManager",
+                            "mergeWithUnsynced() из CloudStorage - не использовался",
+                            "getOperationKey(), addBatchToQueue(), getPendingCount() из SyncManager",
+                            "clearQueue(), reset() - мёртвый код"
+                        ]
+                    },
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "Уменьшен размер sync-manager.js на ~80 строк",
+                            "Уменьшен размер cloud-storage.js на ~25 строк"
+                        ]
+                    }
+                ]
+            },
+            {
+                "version": "2.9.1",
+                "date": "2025-12-02",
+                "title": "Исправление дубликатов при синхронизации",
+                "changes": [
+                    {
+                        "category": "Исправлено",
+                        "items": [
+                            "Устранена проблема с дубликатами партнёров при переключении вкладок во время синхронизации",
+                            "Исправлено отображение счётчика оставшихся операций в индикаторе синхронизации",
+                            "Устранены ложные 404 ошибки при загрузке версии из changelog.json"
+                        ]
+                    },
+                    {
+                        "category": "Новое",
+                        "items": [
+                            "SharedWorker для фоновой синхронизации между вкладками",
+                            "SyncManager - клиент для управления синхронизацией",
+                            "Автоматическая очистка дубликатов в облаке после завершения синхронизации",
+                            "Проверка облачных данных перед восстановлением очереди из localStorage",
+                            "Автообновление страницы после синхронизации (только при неактивности пользователя)",
+                            "Отслеживание активности пользователя для предотвращения прерывания работы"
+                        ]
+                    },
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "Добавлены флаги защиты от race condition при синхронизации",
+                            "Улучшено определение пути к changelog.json на основе URL страницы"
+                        ]
+                    },
+                    {
+                        "category": "Файлы",
+                        "items": [
+                            "shared/sync-manager.js - НОВЫЙ: клиент SharedWorker с очисткой дубликатов",
+                            "shared/sync-shared-worker.js - НОВЫЙ: SharedWorker для фоновой синхронизации",
+                            "shared/cloud-storage.js - метод fetchPartnersFromCloud",
+                            "shared/version.js - исправлен путь к changelog.json",
+                            "traffic-calculation/js/storage.js - адаптирован для CloudStorage"
+                        ]
+                    }
+                ]
+            },
             {
                 "version": "2.9.0",
                 "date": "2025-12-01",

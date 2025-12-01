@@ -56,8 +56,8 @@ const CloudStorage = {
 
         const auth = JSON.parse(authData);
 
-        // Проверяем срок токена (1 час)
-        if (Date.now() - auth.timestamp > 3600000) {
+        // Проверяем срок токена (8 часов)
+        if (Date.now() - auth.timestamp > 28800000) {
             localStorage.removeItem('cloud-auth');
             return null;
         }
@@ -208,6 +208,31 @@ const CloudStorage = {
     // ============ PARTNERS ============
 
     /**
+     * Получить локальные несинхронизированные элементы
+     * @param {string} storageKey - ключ в localStorage
+     * @returns {Array} массив элементов с _synced: false
+     */
+    getLocalUnsynced(storageKey) {
+        try {
+            const data = localStorage.getItem(storageKey);
+            if (!data) return [];
+            const items = JSON.parse(data);
+            return items.filter(item => item._synced === false);
+        } catch (e) {
+            return [];
+        }
+    },
+
+    /**
+     * Получить партнёров ТОЛЬКО из облака (без локальных)
+     * Используется для проверки дубликатов при восстановлении
+     */
+    async fetchPartnersFromCloud() {
+        const result = await this.callApi('getPartners');
+        return result.partners || [];
+    },
+
+    /**
      * Получить всех партнёров
      */
     async getPartners(useCache = true) {
@@ -217,9 +242,9 @@ const CloudStorage = {
         }
 
         const result = await this.callApi('getPartners');
-        const partners = result.partners || [];
+        let partners = result.partners || [];
 
-        // Парсим customFields
+        // Парсим customFields и маппим поля из Google Sheets формата
         partners.forEach(p => {
             if (p.customFields && typeof p.customFields === 'string') {
                 try {
@@ -228,7 +253,40 @@ const CloudStorage = {
                     p.customFields = {};
                 }
             }
+            // Маппинг полей: Google Sheets → локальный формат
+            p.dep = p.deposits || p.dep || 0;
+            p.with = p.withdrawals || p.with || 0;
+            p.comp = p.compensation || p.comp || 0;
+            // Помечаем облачные данные как синхронизированные
+            p._synced = true;
         });
+
+        // Объединяем с локальными несинхронизированными
+        const localUnsynced = this.getLocalUnsynced('partners-data');
+        if (localUnsynced.length > 0) {
+            const getKey = (p) => `${String(p.subagent || '').toLowerCase().trim()}|${String(p.subagentId || '').toLowerCase().trim()}|${String(p.method || '').toLowerCase().trim()}`;
+
+            // Создаём Set ключей из облачных данных
+            const cloudKeys = new Set(partners.map(getKey));
+
+            // Фильтруем локальные - оставляем только те, которых НЕТ в облаке
+            const reallyUnsynced = localUnsynced.filter(local => !cloudKeys.has(getKey(local)));
+
+            if (reallyUnsynced.length !== localUnsynced.length) {
+                // Есть стейл-данные, которые уже в облаке - очищаем localStorage
+                console.log(`🧹 Очистка: ${localUnsynced.length - reallyUnsynced.length} партнёров уже в облаке`);
+                if (reallyUnsynced.length === 0) {
+                    localStorage.removeItem('partners-data');
+                } else {
+                    localStorage.setItem('partners-data', JSON.stringify(reallyUnsynced));
+                }
+            }
+
+            if (reallyUnsynced.length > 0) {
+                console.log(`📦 Найдено ${reallyUnsynced.length} несинхронизированных партнёров`);
+                partners = [...partners, ...reallyUnsynced];
+            }
+        }
 
         this.setCache('partners', partners);
         return partners;
@@ -496,7 +554,15 @@ const CloudStorage = {
      * Редирект на страницу входа
      */
     redirectToLogin() {
-        window.location.href = '/SimpleAIAdminka/login/index.html';
+        // Используем AuthGuard если доступен, иначе вычисляем путь
+        if (typeof AuthGuard !== 'undefined' && AuthGuard.LOGIN_URL) {
+            window.location.href = AuthGuard.LOGIN_URL;
+        } else {
+            // Fallback: определяем базовый путь из текущего URL
+            const match = window.location.pathname.match(/^\/([^\/]+)\//);
+            const basePath = match ? '/' + match[1] : '';
+            window.location.href = basePath + '/login/index.html';
+        }
     }
 };
 

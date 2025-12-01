@@ -5,12 +5,19 @@
 const loginApp = {
     // OAuth Config (используем те же данные что в sync)
     CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
-    REDIRECT_URI: 'http://127.0.0.1:5500/SimpleAIAdminka/login/callback.html',
+
+    // Динамический REDIRECT_URI в зависимости от окружения
+    get REDIRECT_URI() {
+        const host = window.location.hostname;
+        if (host === '127.0.0.1' || host === 'localhost') {
+            return 'http://127.0.0.1:5500/SimpleAIAdminka/login/callback.html';
+        }
+        // GitHub Pages
+        return 'https://workzick.github.io/AIAdminka_Page/login/callback.html';
+    },
     SCOPES: [
         'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive.file'
+        'https://www.googleapis.com/auth/userinfo.profile'
     ].join(' '),
 
     // Apps Script URL
@@ -38,8 +45,8 @@ const loginApp = {
 
         const auth = JSON.parse(authData);
 
-        // Проверяем срок токена (1 час)
-        if (Date.now() - auth.timestamp > 3600000) {
+        // Проверяем срок токена (8 часов)
+        if (Date.now() - auth.timestamp > 28800000) {
             localStorage.removeItem('cloud-auth');
             this.showLoginForm();
             return;

@@ -10,30 +10,41 @@ const AppVersion = {
     },
 
     async loadVersion() {
-        // Определяем путь к changelog.json в зависимости от расположения страницы
-        const paths = [
-            'documentation/data/changelog.json',      // для главной
-            '../documentation/data/changelog.json',   // для подпапок (team-info, partners и т.д.)
-            '../../documentation/data/changelog.json' // для вложенных подпапок
-        ];
+        // Определяем путь к changelog.json на основе текущего URL
+        const path = this.getChangelogPath();
 
-        for (const path of paths) {
-            try {
-                const response = await fetch(path);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.version) {
-                        this.version = data.version;
-                        console.log(`✅ Версия загружена: ${this.version}`);
-                        return;
-                    }
+        try {
+            const response = await fetch(path);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.version) {
+                    this.version = data.version;
+                    return;
                 }
-            } catch (e) {
-                // Пробуем следующий путь
+            }
+        } catch (e) {
+            console.warn('⚠️ Не удалось загрузить версию из changelog.json');
+        }
+    },
+
+    getChangelogPath() {
+        const pathname = window.location.pathname;
+
+        // Находим базовый путь до SimpleAIAdminka
+        const match = pathname.match(/(.*SimpleAIAdminka)/);
+        if (match) {
+            return match[1] + '/documentation/data/changelog.json';
+        }
+
+        // Fallback: определяем глубину вложенности
+        const folders = ['partners', 'methods', 'team-info', 'traffic-calculation', 'documentation', 'feedback', 'login'];
+        for (const folder of folders) {
+            if (pathname.includes('/' + folder + '/')) {
+                return '../documentation/data/changelog.json';
             }
         }
 
-        console.warn('⚠️ Не удалось загрузить версию из changelog.json');
+        return 'documentation/data/changelog.json';
     },
 
     updateAllElements() {

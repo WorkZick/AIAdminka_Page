@@ -54,6 +54,12 @@ const partnersApp = {
         } finally {
             this.showLoading(false);
         }
+
+        // Слушаем завершение синхронизации для обновления данных
+        window.addEventListener('sync-complete', () => {
+            console.log('🔄 Синхронизация завершена, обновляем данные...');
+            this.loadDataFromCloud();
+        });
     },
 
     async loadAllData() {
@@ -78,11 +84,30 @@ const partnersApp = {
     },
 
     // Sync partners to localStorage for other modules
+    // ВАЖНО: сохраняем ТОЛЬКО несинхронизированных партнёров
+    // Облачные данные всегда доступны из облака, не нужно их дублировать
     syncPartnersToLocalStorage() {
         try {
-            localStorage.setItem('partners-data', JSON.stringify(this.cachedPartners));
+            // Фильтруем только несинхронизированных
+            const unsyncedPartners = this.cachedPartners.filter(p => p._synced === false);
+            localStorage.setItem('partners-data', JSON.stringify(unsyncedPartners));
         } catch (e) {
             console.error('Failed to sync partners to localStorage:', e);
+        }
+    },
+
+    // Перезагрузить данные с сервера (после фоновой синхронизации)
+    async loadDataFromCloud() {
+        try {
+            // Очищаем кэш и загружаем свежие данные
+            CloudStorage.clearCache();
+            await this.loadAllData();
+            this.renderColumnsMenu();
+            this.renderTableHeader();
+            this.render();
+            console.log('✅ Данные обновлены с сервера');
+        } catch (e) {
+            console.error('Ошибка обновления данных с сервера:', e);
         }
     },
 
@@ -1183,9 +1208,9 @@ const partnersApp = {
             subagent,
             subagentId,
             method,
-            dep,
-            with: withVal,
-            comp,
+            deposits: dep,
+            withdrawals: withVal,
+            compensation: comp,
             status: this.formStatus,
             avatarFileId: currentAvatarFileId, // Будет обновлён если загружен новый аватар
             customFields
@@ -1212,6 +1237,11 @@ const partnersApp = {
                     partnerData.avatarFileId = uploadResult.fileId;
                 }
             }
+
+            // Добавляем локальные поля для UI (dep/with/comp)
+            partnerData.dep = partnerData.deposits || 0;
+            partnerData.with = partnerData.withdrawals || 0;
+            partnerData.comp = partnerData.compensation || 0;
 
             if (this.editingPartnerId) {
                 partnerData.id = this.editingPartnerId;
@@ -1968,7 +1998,8 @@ const partnersApp = {
 
         XLSX.utils.book_append_sheet(wb, ws, 'Партнеры');
 
-        const fileName = `partners_${templateName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const safeTemplateName = String(templateName || 'базовый').replace(/[^a-zA-Zа-яА-Я0-9]/g, '_');
+        const fileName = `partners_${safeTemplateName}_${new Date().toISOString().split('T')[0]}.xlsx`;
         XLSX.writeFile(wb, fileName);
     },
 
@@ -2270,125 +2301,154 @@ const partnersApp = {
     // Import state
     importCancelled: false,
 
+    /**
+     * Импорт данных с фоновой синхронизацией
+     * Данные сразу сохраняются локально и отображаются,
+     * синхронизация с облаком происходит в фоне
+     */
     async importData() {
         if (!this.pendingImportData) return;
 
-        this.importCancelled = false;
         const total = this.pendingImportData.length;
-        let processed = 0;
         let added = 0;
-        let failed = 0;
-        let skipped = 0;
+        let updated = 0;
         let methodsAdded = 0;
-
-        // Show progress UI
-        this.showImportProgress(0, total, 'Подготовка...');
 
         try {
             const currentData = this.getPartners();
-            // Create unique key from subagent + subagentId + method for duplicate detection
-            const createKey = (p) => `${(p.subagent || '').toLowerCase().trim()}|${(p.subagentId || '').toLowerCase().trim()}|${(p.method || '').toLowerCase().trim()}`;
-            const existingKeys = new Set(currentData.map(p => createKey(p)));
+            const createKey = (p) => `${String(p.subagent || '').toLowerCase().trim()}|${String(p.subagentId || '').toLowerCase().trim()}|${String(p.method || '').toLowerCase().trim()}`;
+            const existingPartnersMap = new Map(currentData.map(p => [createKey(p), p]));
 
-            // Extract and add new methods first
+            // Собираем новые методы
             const existingMethods = this.getMethods();
             const existingMethodNames = new Set(existingMethods.map(m => m.name.toLowerCase()));
+            const newMethodsToSync = [];
 
-            this.showImportProgress(0, total, 'Добавление методов...');
-
-            const newMethods = new Set();
             for (const partner of this.pendingImportData) {
                 const method = (partner.method || '').trim();
-                if (method && !existingMethodNames.has(method.toLowerCase()) && !newMethods.has(method.toLowerCase())) {
-                    newMethods.add(method.toLowerCase());
-                    try {
-                        const result = await CloudStorage.addMethod({ name: method });
-                        this.cachedMethods.push({ id: result.id, name: method });
-                        existingMethodNames.add(method.toLowerCase());
-                        methodsAdded++;
-                    } catch (e) {
-                        console.warn('Failed to add method:', method, e);
-                    }
+                if (method && !existingMethodNames.has(method.toLowerCase())) {
+                    existingMethodNames.add(method.toLowerCase());
+                    const tempId = 'temp_method_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    const methodData = { id: tempId, name: method, _synced: false };
+                    this.cachedMethods.push(methodData);
+                    newMethodsToSync.push({ tempId, data: { name: method } });
+                    methodsAdded++;
                 }
             }
 
-            // Import partners
+            // Подготавливаем партнёров для локального сохранения и синхронизации
+            const partnersToAdd = [];
+            const partnersToUpdate = [];
+
             for (const partner of this.pendingImportData) {
-                if (this.importCancelled) {
-                    break;
-                }
-
-                processed++;
-                this.showImportProgress(processed, total, `Импорт ${processed}/${total}: ${partner.subagent || 'партнер'}`);
-
-                // Skip if already exists (by subagent + subagentId + method)
                 const partnerKey = createKey(partner);
-                if (existingKeys.has(partnerKey)) {
-                    skipped++;
-                    continue;
-                }
+                const existingPartner = existingPartnersMap.get(partnerKey);
 
-                const partnerData = {
-                    subagent: partner.subagent,
-                    subagentId: partner.subagentId,
-                    method: partner.method,
-                    dep: partner.dep || 0,
-                    with: partner.with || 0,
-                    comp: partner.comp || 0,
-                    status: partner.status || 'Открыт',
-                    avatar: partner.avatar || '',
-                    customFields: partner.customFields || {}
-                };
+                if (existingPartner) {
+                    // Обновляем существующего партнёра
+                    const updateData = {
+                        id: existingPartner.id,
+                        deposits: partner.dep || partner.deposits || existingPartner.deposits || 0,
+                        withdrawals: partner.with || partner.withdrawals || existingPartner.withdrawals || 0,
+                        compensation: partner.comp || partner.compensation || existingPartner.compensation || 0,
+                        status: partner.status || existingPartner.status || 'Открыт',
+                        avatar: partner.avatar || existingPartner.avatar || '',
+                        customFields: { ...(existingPartner.customFields || {}), ...(partner.customFields || {}) }
+                    };
 
-                // Try with retry
-                let success = false;
-                for (let attempt = 1; attempt <= 3; attempt++) {
-                    try {
-                        const result = await CloudStorage.addPartner(partnerData);
-                        partnerData.id = result.id;
-                        this.cachedPartners.push(partnerData);
-                        existingKeys.add(partnerKey);
-                        added++;
-                        success = true;
-                        break;
-                    } catch (e) {
-                        console.warn(`Attempt ${attempt} failed for partner:`, partner.subagent, e);
-                        if (attempt < 3) {
-                            // Wait before retry
-                            await new Promise(r => setTimeout(r, 1000 * attempt));
-                        }
+                    // Обновляем в кэше сразу
+                    const cacheIndex = this.cachedPartners.findIndex(p => p.id === existingPartner.id);
+                    if (cacheIndex !== -1) {
+                        Object.assign(this.cachedPartners[cacheIndex], updateData);
+                        this.cachedPartners[cacheIndex].dep = updateData.deposits || 0;
+                        this.cachedPartners[cacheIndex].with = updateData.withdrawals || 0;
+                        this.cachedPartners[cacheIndex].comp = updateData.compensation || 0;
+                        this.cachedPartners[cacheIndex]._synced = false;
                     }
-                }
 
-                if (!success) {
-                    failed++;
-                }
+                    partnersToUpdate.push({ id: existingPartner.id, data: updateData });
+                    updated++;
+                } else {
+                    // Новый партнёр - создаём с временным ID
+                    const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    const partnerData = {
+                        id: tempId,
+                        subagent: partner.subagent,
+                        subagentId: partner.subagentId,
+                        method: partner.method,
+                        deposits: partner.dep || partner.deposits || 0,
+                        withdrawals: partner.with || partner.withdrawals || 0,
+                        compensation: partner.comp || partner.compensation || 0,
+                        status: partner.status || 'Открыт',
+                        avatar: partner.avatar || '',
+                        customFields: partner.customFields || {},
+                        _synced: false
+                    };
 
-                // Small delay between requests to avoid rate limiting
-                await new Promise(r => setTimeout(r, 100));
+                    partnerData.dep = partnerData.deposits || 0;
+                    partnerData.with = partnerData.withdrawals || 0;
+                    partnerData.comp = partnerData.compensation || 0;
+
+                    this.cachedPartners.push(partnerData);
+                    existingPartnersMap.set(partnerKey, partnerData);
+
+                    partnersToAdd.push({ tempId, data: partnerData });
+                    added++;
+                }
             }
 
-            this.hideImportProgress();
-            this.closeImportDialog();
+            // Сохраняем в localStorage сразу
             this.syncPartnersToLocalStorage();
+
+            // Закрываем диалог и обновляем UI мгновенно
+            this.closeImportDialog();
             this.renderColumnsMenu();
             this.renderTableHeader();
             this.render();
 
-            // Show result
+            // Показываем результат
             let message = `Импорт завершен!\n\n`;
             message += `Добавлено: ${added}\n`;
-            if (skipped > 0) message += `Пропущено (дубликаты): ${skipped}\n`;
-            if (failed > 0) message += `Ошибок: ${failed}\n`;
-            if (methodsAdded > 0) message += `Новых методов: ${methodsAdded}`;
+            if (updated > 0) message += `Обновлено: ${updated}\n`;
+            if (methodsAdded > 0) message += `Новых методов: ${methodsAdded}\n`;
+            message += `\nСинхронизация с облаком идёт в фоне...`;
+            alert(message);
 
-            if (this.importCancelled) {
-                message = `Импорт отменён.\n\nДобавлено до отмены: ${added}`;
+            // Добавляем операции в очередь фоновой синхронизации
+            if (typeof SyncManager !== 'undefined') {
+                // Сначала методы
+                for (const method of newMethodsToSync) {
+                    SyncManager.addToQueue('add', 'method', method.data, method.tempId);
+                }
+
+                // Затем партнёры
+                for (const partner of partnersToAdd) {
+                    SyncManager.addToQueue('add', 'partner', partner.data, partner.tempId);
+                }
+
+                for (const partner of partnersToUpdate) {
+                    SyncManager.addToQueue('update', 'partner', partner.data);
+                }
+
+                // Устанавливаем callback для обновления UI после синхронизации
+                SyncManager.onSyncComplete = (result) => {
+                    console.log('Синхронизация импорта завершена:', result);
+                    // Перезагружаем данные с сервера для получения актуальных ID
+                    this.loadDataFromCloud();
+                };
+
+                SyncManager.onSyncError = (errors) => {
+                    console.error('Ошибки синхронизации:', errors);
+                    if (errors.length > 0) {
+                        this.showError(`Ошибки синхронизации: ${errors.length}. Проверьте консоль.`);
+                    }
+                };
+            } else {
+                console.warn('SyncManager не найден, синхронизация не будет выполнена');
             }
 
-            alert(message);
         } catch (error) {
-            this.hideImportProgress();
+            console.error('Ошибка импорта:', error);
             this.showError('Ошибка импорта: ' + error.message);
         }
     },
@@ -2484,7 +2544,7 @@ const partnersApp = {
         }
 
         // Find duplicates by subagent + subagentId + method
-        const createKey = (p) => `${(p.subagent || '').toLowerCase().trim()}|${(p.subagentId || '').toLowerCase().trim()}|${(p.method || '').toLowerCase().trim()}`;
+        const createKey = (p) => `${String(p.subagent || '').toLowerCase().trim()}|${String(p.subagentId || '').toLowerCase().trim()}|${String(p.method || '').toLowerCase().trim()}`;
 
         const seen = new Map();
         const duplicateIds = [];

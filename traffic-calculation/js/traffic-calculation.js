@@ -728,7 +728,9 @@ const trafficCalc = {
     },
 
     // Инициализация
-    init() {
+    async init() {
+        // Загружаем партнёров из облака
+        await storage.loadPartners();
         this.setupEventListeners();
         this.renderAnalytics();
     },
@@ -1241,7 +1243,7 @@ const trafficCalc = {
 
             // Обновляем данные партнеров
             allPartners.forEach(partner => {
-                const comments = commentsData[partner.subagentId] || { back: 0, cringe: 0 };
+                const comments = commentsData[String(partner.subagentId)] || { back: 0, cringe: 0 };
                 partner.backCount = comments.back;
                 partner.cringeCount = comments.cringe;
             });
@@ -1281,8 +1283,8 @@ const trafficCalc = {
             // Шаг 1: Получаем всех партнеров из системы
             const allPartners = storage.getPartners();
 
-            // Шаг 2: Собираем список наших Субагент ID
-            this.ourPartnerIds = allPartners.map(p => p.subagentId);
+            // Шаг 2: Собираем список наших Субагент ID (приводим к строкам для сравнения)
+            this.ourPartnerIds = allPartners.map(p => String(p.subagentId));
 
             // Шаг 3: Создаем объект для хранения счетчиков автоотключений
             // Формат: { "ID": количество }
@@ -1299,7 +1301,7 @@ const trafficCalc = {
             allPartners.forEach(partner => {
                 // Берем количество автоотключений для данного ID
                 // Если в файле не нашли - ставим 0
-                partner.autoDisableCount = autoDisableCounters[partner.subagentId] || 0;
+                partner.autoDisableCount = autoDisableCounters[String(partner.subagentId)] || 0;
             });
 
             // Шаг 6: Сохраняем обновленные данные
@@ -1339,8 +1341,8 @@ const trafficCalc = {
             // Шаг 1: Получаем всех партнеров из системы
             const allPartners = storage.getPartners();
 
-            // Шаг 2: Собираем список наших Субагент ID
-            this.ourPartnerIds = allPartners.map(p => p.subagentId);
+            // Шаг 2: Собираем список наших Субагент ID (приводим к строкам для сравнения)
+            this.ourPartnerIds = allPartners.map(p => String(p.subagentId));
 
             // Шаг 3: Создаем объект для хранения данных контроля качества
             // Формат: { "ID": { depositTransactionsCount: 0, withdrawalTransactionsCount: 0, ... } }
@@ -1355,7 +1357,7 @@ const trafficCalc = {
 
             // Шаг 5: Обновляем данные каждого партнера
             allPartners.forEach(partner => {
-                const data = qualityData[partner.subagentId] || {};
+                const data = qualityData[String(partner.subagentId)] || {};
 
                 // Кол-во пополнений
                 partner.depositTransactionsCount = data.depositTransactionsCount || 0;
@@ -2025,7 +2027,11 @@ const trafficCalc = {
         if (!data || data.length < 2) return; // Нет данных или только заголовки
 
         const headers = data[0];
-        const subagentIdIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('id субагент'));
+        const subagentIdIndex = headers.findIndex(h => {
+            if (!h) return false;
+            const header = h.toString().toLowerCase();
+            return header.includes('субагент') && header.includes('id');
+        });
         const paramsIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('доп. параметры №'));
 
         if (subagentIdIndex === -1 || paramsIndex === -1) {
@@ -2170,11 +2176,11 @@ const trafficCalc = {
         // Шаг 1: Находим индексы всех нужных колонок по точным названиям
         const headerRow = excelData[0];
         
-        // Ищем колонку "ID cубагента" (с учетом возможных вариантов написания)
+        // Ищем колонку с ID субагента (с учетом возможных вариантов написания)
         const subagentIdIndex = headerRow.findIndex(header => {
             if (!header) return false;
-            const h = header.toString().trim();
-            return h === 'ID cубагента' || h === 'ID субагента' || h === 'id cубагента' || h === 'id субагента';
+            const h = header.toString().trim().toLowerCase();
+            return h === 'субагент id' || h === 'id субагента' || h === 'id cубагента' || h.includes('субагент') && h.includes('id');
         });
         
         // Ищем целевые колонки с данными (точные названия)

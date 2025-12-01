@@ -6,7 +6,16 @@
 const syncApp = {
     // OAuth Config
     CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
-    REDIRECT_URI: 'http://127.0.0.1:5500/SimpleAIAdminka/sync/callback.html',
+
+    // Динамический REDIRECT_URI в зависимости от окружения
+    get REDIRECT_URI() {
+        const host = window.location.hostname;
+        if (host === '127.0.0.1' || host === 'localhost') {
+            return 'http://127.0.0.1:5500/SimpleAIAdminka/sync/callback.html';
+        }
+        // GitHub Pages
+        return 'https://workzick.github.io/AIAdminka_Page/sync/callback.html';
+    },
     SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
 
     // URL скрипта (базовый для проверки доступа)
@@ -74,8 +83,8 @@ const syncApp = {
         const authData = localStorage.getItem('sync-auth');
         if (authData) {
             const auth = JSON.parse(authData);
-            // Проверяем, не истёк ли токен (1 час)
-            if (Date.now() - auth.timestamp < 3600000) {
+            // Проверяем, не истёк ли токен (8 часов)
+            if (Date.now() - auth.timestamp < 28800000) {
                 // Если нужно получить данные пользователя
                 if (auth.needsUserInfo) {
                     this.fetchUserInfo(auth.accessToken);
