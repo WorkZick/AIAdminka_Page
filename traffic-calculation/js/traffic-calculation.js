@@ -6,6 +6,7 @@ const trafficCalc = {
     currentReportData: null,
     currentStep: 1,
     completedSteps: [],
+    dataLoaded: false, // Флаг: данные загружены из облака
     filesUploaded: {
         deposits: false,
         quality: false,
@@ -731,6 +732,7 @@ const trafficCalc = {
     async init() {
         // Загружаем партнёров из облака
         await storage.loadPartners();
+        this.dataLoaded = true;
         this.setupEventListeners();
         this.renderAnalytics();
     },
@@ -1096,10 +1098,23 @@ const trafficCalc = {
         const allPartners = storage.getPartners();
         const selected = allPartners.filter(p => this.selectedPartners.includes(p.id));
 
-        // Показываем/скрываем подсказку "Нет партнёров"
+        // Элементы UI
+        const loadingSpinner = document.getElementById('loadingSpinner');
         const noPartnersHint = document.getElementById('noPartnersHint');
         const selectionToolbar = document.getElementById('selectionToolbar');
         const partnersPreview = document.querySelector('.partners-preview');
+
+        // Пока данные не загружены - показываем спиннер
+        if (!this.dataLoaded) {
+            if (loadingSpinner) loadingSpinner.style.display = 'flex';
+            if (selectionToolbar) selectionToolbar.style.display = 'none';
+            if (partnersPreview) partnersPreview.style.display = 'none';
+            if (noPartnersHint) noPartnersHint.style.display = 'none';
+            return;
+        }
+
+        // Данные загружены - скрываем спиннер
+        if (loadingSpinner) loadingSpinner.style.display = 'none';
 
         if (allPartners.length === 0) {
             // Нет партнёров вообще - показываем подсказку, скрываем остальное

@@ -54,14 +54,6 @@ function handleMessage(data, senderPort) {
         case 'CANCEL':
             cancelSync();
             break;
-
-        case 'GET_STATUS':
-            senderPort.postMessage({
-                type: 'STATUS',
-                queue: queue,
-                isSyncing: isSyncing
-            });
-            break;
     }
 }
 

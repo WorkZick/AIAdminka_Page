@@ -87,9 +87,7 @@ const SyncManager = {
                 this.port.postMessage({ type: 'SET_EMAIL', email: email });
             }
 
-            // Запрашиваем текущий статус
-            this.port.postMessage({ type: 'GET_STATUS' });
-
+            // Статус приходит автоматически при подключении (onconnect в воркере)
             console.log('✅ Подключено к SharedWorker');
 
         } catch (e) {

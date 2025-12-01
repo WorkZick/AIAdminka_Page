@@ -146,8 +146,8 @@
                             </div>
                             <div class="section-body" style="flex: 1; display: flex; flex-direction: column;">
 
-                                <!-- Toolbar с кнопками выбора -->
-                                <div id="selectionToolbar" class="selection-toolbar">
+                                <!-- Toolbar с кнопками выбора (скрыт до загрузки данных) -->
+                                <div id="selectionToolbar" class="selection-toolbar" style="display: none;">
                                     <div class="toolbar-group">
                                         <span class="toolbar-label">Выбрать:</span>
                                         <button class="toolbar-btn" onclick="trafficCalc.selectAll()" title="Выбрать всех партнёров">
@@ -169,6 +169,12 @@
                                             <span>Очистить</span>
                                         </button>
                                     </div>
+                                </div>
+
+                                <!-- Спиннер загрузки -->
+                                <div id="loadingSpinner" class="loading-spinner">
+                                    <div class="spinner"></div>
+                                    <div class="loading-text">Загрузка партнёров...</div>
                                 </div>
 
                                 <!-- Подсказка: нет партнёров -->
@@ -218,8 +224,8 @@
                                     </div>
                                 </div>
 
-                                <!-- Таблица выбранных партнёров -->
-                                <div class="partners-preview">
+                                <!-- Таблица выбранных партнёров (скрыта до загрузки данных) -->
+                                <div class="partners-preview" style="display: none;">
                                     <div class="preview-header">
                                         <span class="preview-title">Выбранные партнёры</span>
                                         <span class="partner-count-badge" id="selectedCount">0</span>

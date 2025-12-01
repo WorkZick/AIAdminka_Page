@@ -115,52 +115,17 @@ const partnersApp = {
 
     showLoading(show) {
         this.isLoading = show;
-        let overlay = document.getElementById('loadingOverlay');
+        const loadingState = document.getElementById('loadingState');
+        const table = document.querySelector('.partners-table');
+        const emptyState = document.getElementById('emptyState');
 
         if (show) {
-            if (!overlay) {
-                overlay = document.createElement('div');
-                overlay.id = 'loadingOverlay';
-                overlay.innerHTML = `
-                    <div class="loading-spinner"></div>
-                    <div class="loading-text">Загрузка...</div>
-                `;
-                overlay.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(26, 26, 26, 0.9);
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 9999;
-                `;
-                const style = document.createElement('style');
-                style.textContent = `
-                    .loading-spinner {
-                        width: 40px;
-                        height: 40px;
-                        border: 3px solid rgba(255,255,255,0.1);
-                        border-top-color: #fdbe2f;
-                        border-radius: 50%;
-                        animation: spin 1s linear infinite;
-                    }
-                    .loading-text {
-                        margin-top: 16px;
-                        color: #f2f2f2;
-                        font-size: 14px;
-                    }
-                    @keyframes spin { to { transform: rotate(360deg); } }
-                `;
-                document.head.appendChild(style);
-                document.body.appendChild(overlay);
-            }
-            overlay.style.display = 'flex';
-        } else if (overlay) {
-            overlay.style.display = 'none';
+            if (loadingState) loadingState.style.display = 'flex';
+            if (table) table.style.display = 'none';
+            if (emptyState) emptyState.style.display = 'none';
+        } else {
+            if (loadingState) loadingState.style.display = 'none';
+            // Table visibility will be set by render()
         }
     },
 
