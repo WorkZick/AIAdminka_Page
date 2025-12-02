@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com; frame-ancestors 'self'">
     <title>Отчеты - AIAdminka</title>
     <link rel="stylesheet" href="css/excel-reports.css">
-    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -84,12 +84,6 @@
             <!-- Global header -->
             <header class="global-header">
                 <div class="header-title">Отчеты</div>
-                <div class="header-actions">
-                    <button class="btn-reset" onclick="excelApp.reset()">
-                        <img src="icons/sync.svg" width="14" height="14" alt="Сброс">
-                        Начать заново
-                    </button>
-                </div>
             </header>
 
             <!-- Content area -->
@@ -116,73 +110,109 @@
 
                     <!-- Template selection -->
                     <div class="panel template-panel" id="templateSection">
-                        <div class="panel-header">
+                        <div class="panel-header panel-header-nav">
+                            <div class="header-nav-left"></div>
                             <span>Выберите шаблон обработки</span>
+                            <div class="header-nav-right">
+                                <button class="btn-header-nav btn-next" id="confirmTemplateBtn" disabled onclick="excelApp.showStep1()">
+                                    Далее
+                                    <img src="icons/arrow.svg" width="16" height="16" alt="Далее">
+                                </button>
+                            </div>
                         </div>
                         <div class="panel-content">
-                            <div class="templates-grid" id="templatesContainer">
+                            <div class="templates-list" id="templatesContainer">
                                 <!-- Templates will be rendered by JS -->
-                            </div>
-                            <div class="panel-actions">
-                                <button class="btn-primary" id="confirmTemplateBtn" disabled onclick="excelApp.showStep1()">
-                                    Продолжить
-                                </button>
                             </div>
                         </div>
                     </div>
 
                     <!-- Step 1: File upload -->
                     <div class="panel files-panel hidden" id="step1Section">
-                        <div class="panel-header">
+                        <div class="panel-header panel-header-nav">
+                            <div class="header-nav-left">
+                                <button class="btn-header-nav btn-back" onclick="excelApp.goBackFromStep1()">
+                                    <img src="icons/arrow.svg" width="16" height="16" alt="Назад">
+                                    Назад
+                                </button>
+                            </div>
                             <span id="step1Title">Загрузка файлов</span>
+                            <div class="header-nav-right">
+                                <button class="btn-header-nav btn-next" id="step1NextBtn" disabled onclick="excelApp.completeStep1()">
+                                    Далее
+                                    <img src="icons/arrow.svg" width="16" height="16" alt="Далее">
+                                </button>
+                            </div>
                         </div>
                         <div class="panel-content">
-                            <div class="upload-area" onclick="document.getElementById('step1Input').click()">
+                            <div class="step-info" id="step1Info">
+                                <div class="step-counter">Шаг <span id="step1Current">1</span> из <span id="step1Total">2</span></div>
+                                <div class="step-description" id="step1Description"></div>
+                            </div>
+                            <div class="upload-area" id="step1UploadArea" onclick="document.getElementById('step1Input').click()">
                                 <img src="icons/download_photo.svg" width="48" height="48" alt="Upload">
                                 <div class="upload-text">Нажмите для выбора файлов</div>
                                 <div class="upload-hint">или перетащите файлы сюда</div>
                             </div>
                             <input type="file" id="step1Input" multiple accept=".xlsx" style="display:none;">
-                            <div class="files-list" id="step1Files"></div>
-                            <div class="panel-actions">
-                                <button class="btn-secondary" onclick="excelApp.goBackFromStep1()">
-                                    Назад
-                                </button>
-                                <button class="btn-primary" id="step1NextBtn" disabled onclick="excelApp.completeStep1()">
-                                    Далее
-                                </button>
+                            <div class="upload-status hidden" id="step1Status">
+                                <img src="icons/done.svg" width="20" height="20" alt="OK">
+                                <span>Загружено файлов: <strong id="step1Count">0</strong></span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Step 2: Additional files -->
                     <div class="panel files-panel hidden" id="step2Section">
-                        <div class="panel-header">
+                        <div class="panel-header panel-header-nav">
+                            <div class="header-nav-left">
+                                <button class="btn-header-nav btn-back" onclick="excelApp.goBackFromStep2()">
+                                    <img src="icons/arrow.svg" width="16" height="16" alt="Назад">
+                                    Назад
+                                </button>
+                            </div>
                             <span id="step2Title">Дополнительные файлы</span>
+                            <div class="header-nav-right">
+                                <button class="btn-header-nav btn-next" id="step2NextBtn" disabled onclick="excelApp.completeStep2()">
+                                    Далее
+                                    <img src="icons/arrow.svg" width="16" height="16" alt="Далее">
+                                </button>
+                            </div>
                         </div>
                         <div class="panel-content">
-                            <div class="upload-area" onclick="document.getElementById('step2Input').click()">
+                            <div class="step-info" id="step2Info">
+                                <div class="step-counter">Шаг <span id="step2Current">2</span> из <span id="step2Total">2</span></div>
+                                <div class="step-description" id="step2Description"></div>
+                            </div>
+                            <div class="upload-area" id="step2UploadArea" onclick="document.getElementById('step2Input').click()">
                                 <img src="icons/download_photo.svg" width="48" height="48" alt="Upload">
                                 <div class="upload-text">Нажмите для выбора файлов</div>
                                 <div class="upload-hint">или перетащите файлы сюда</div>
                             </div>
                             <input type="file" id="step2Input" multiple accept=".xlsx" style="display:none;">
-                            <div class="files-list" id="step2Files"></div>
-                            <div class="panel-actions">
-                                <button class="btn-secondary" onclick="excelApp.goBackFromStep2()">
-                                    Назад
-                                </button>
-                                <button class="btn-primary" id="step2NextBtn" disabled onclick="excelApp.completeStep2()">
-                                    Далее
-                                </button>
+                            <div class="upload-status hidden" id="step2Status">
+                                <img src="icons/done.svg" width="20" height="20" alt="OK">
+                                <span>Загружено файлов: <strong id="step2Count">0</strong></span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Process section -->
                     <div class="panel process-panel hidden" id="processSection">
-                        <div class="panel-header">
+                        <div class="panel-header panel-header-nav">
+                            <div class="header-nav-left">
+                                <button class="btn-header-nav btn-back" onclick="excelApp.goBackFromProcess()">
+                                    <img src="icons/arrow.svg" width="16" height="16" alt="Назад">
+                                    Назад
+                                </button>
+                            </div>
                             <span>Обработка данных</span>
+                            <div class="header-nav-right">
+                                <button class="btn-header-nav" onclick="excelApp.reset()">
+                                    <img src="icons/sync.svg" width="14" height="14" alt="Сброс">
+                                    Начать заново
+                                </button>
+                            </div>
                         </div>
                         <div class="panel-content">
                             <div class="process-info">
@@ -195,10 +225,7 @@
                                     <span class="info-value" id="processFilesCount">0</span>
                                 </div>
                             </div>
-                            <div class="panel-actions process-actions">
-                                <button class="btn-secondary" onclick="excelApp.goBackFromProcess()">
-                                    Назад
-                                </button>
+                            <div class="process-buttons">
                                 <button class="btn-primary btn-process" id="processBtn" onclick="excelApp.processFiles()">
                                     <img src="icons/done.svg" width="16" height="16" alt="Process">
                                     Обработать
@@ -254,9 +281,12 @@
     </div>
 
     <!-- Load templates -->
+    <script src="templates/combined-report.js"></script>
     <script src="templates/deposits-withdrawals.js"></script>
-    <script src="templates/merge-files.js"></script>
     <script src="templates/registrations.js"></script>
+    <script src="templates/btag.js"></script>
+    <script src="templates/analytics-t9.js"></script>
+    <script src="templates/active-users.js"></script>
     <script src="templates/templates-loader.js"></script>
 
     <!-- Main scripts -->
