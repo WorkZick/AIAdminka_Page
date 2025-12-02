@@ -101,10 +101,16 @@ const SyncManager = {
         const origin = window.location.origin;
         const path = window.location.pathname;
 
-        // Находим путь до SimpleAIAdminka
-        const match = path.match(/(.*SimpleAIAdminka)/);
-        if (match) {
-            return origin + match[1] + '/shared/sync-shared-worker.js';
+        // Находим путь до SimpleAIAdminka (локальный)
+        const localMatch = path.match(/(.*SimpleAIAdminka)/);
+        if (localMatch) {
+            return origin + localMatch[1] + '/shared/sync-shared-worker.js';
+        }
+
+        // Находим путь до AIAdminka_Page (GitHub Pages)
+        const prodMatch = path.match(/(.*AIAdminka_Page)/);
+        if (prodMatch) {
+            return origin + prodMatch[1] + '/shared/sync-shared-worker.js';
         }
 
         // Fallback: относительный путь
@@ -120,7 +126,7 @@ const SyncManager = {
             return match[1];
         }
         // Fallback - используем относительный путь
-        const folders = ['partners', 'methods', 'team-info', 'traffic-calculation', 'documentation', 'feedback', 'login'];
+        const folders = ['partners', 'methods', 'team-info', 'traffic-calculation', 'documentation', 'feedback', 'login', 'excel-reports', 'sync'];
         for (const folder of folders) {
             if (path.includes('/' + folder + '/')) return '../';
         }

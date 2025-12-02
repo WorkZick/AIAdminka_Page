@@ -37,7 +37,7 @@ const AppVersion = {
         }
 
         // Fallback: определяем глубину вложенности
-        const folders = ['partners', 'methods', 'team-info', 'traffic-calculation', 'documentation', 'feedback', 'login'];
+        const folders = ['partners', 'methods', 'team-info', 'traffic-calculation', 'documentation', 'feedback', 'login', 'excel-reports', 'sync'];
         for (const folder of folders) {
             if (pathname.includes('/' + folder + '/')) {
                 return '../documentation/data/changelog.json';
