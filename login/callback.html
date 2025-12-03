@@ -48,6 +48,7 @@
                 var hash = window.location.hash.substring(1);
                 var params = new URLSearchParams(hash);
                 var accessToken = params.get('access_token');
+                var returnedState = params.get('state');
                 var error = params.get('error');
 
                 if (error) {
@@ -57,6 +58,14 @@
                 if (!accessToken) {
                     throw new Error('Токен не получен');
                 }
+
+                // CSRF защита: проверяем state параметр
+                var savedState = sessionStorage.getItem('oauth_state');
+                if (!savedState || savedState !== returnedState) {
+                    sessionStorage.removeItem('oauth_state');
+                    throw new Error('Ошибка безопасности: неверный state параметр');
+                }
+                sessionStorage.removeItem('oauth_state');
 
                 // Сохраняем токен для login.js
                 localStorage.setItem('cloud-auth-pending', JSON.stringify({
@@ -68,6 +77,9 @@
                 message.textContent = 'Авторизация успешна!';
                 message.className = 'message success';
                 sub.textContent = 'Перенаправление...';
+
+                // Очищаем URL от токена (безопасность - токен не останется в истории)
+                history.replaceState(null, '', window.location.pathname);
 
                 // Редирект на страницу входа
                 setTimeout(function() {

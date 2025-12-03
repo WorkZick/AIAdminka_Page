@@ -27,6 +27,27 @@ const loginApp = {
     currentUser: null,
     storageReady: false,
 
+    // ============ SECURITY HELPERS ============
+
+    /**
+     * Генерация криптографически безопасного state параметра для CSRF защиты
+     */
+    generateState() {
+        const array = new Uint8Array(32);
+        crypto.getRandomValues(array);
+        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    },
+
+    /**
+     * Безопасное экранирование HTML для предотвращения XSS
+     */
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    },
+
     // ============ INITIALIZATION ============
 
     init() {
@@ -77,11 +98,16 @@ const loginApp = {
     // ============ OAUTH ============
 
     login() {
+        // Генерируем state параметр для CSRF защиты
+        const state = this.generateState();
+        sessionStorage.setItem('oauth_state', state);
+
         const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
             '?client_id=' + encodeURIComponent(this.CLIENT_ID) +
             '&redirect_uri=' + encodeURIComponent(this.REDIRECT_URI) +
             '&response_type=token' +
             '&scope=' + encodeURIComponent(this.SCOPES) +
+            '&state=' + encodeURIComponent(state) +
             '&prompt=consent';
 
         // Открываем в том же окне для лучшего UX
@@ -139,14 +165,31 @@ const loginApp = {
 
     // ============ ACCESS CONTROL ============
 
+    /**
+     * Безопасный запрос к API с токеном
+     * Данные отправляются в URL параметрах (GAS теряет POST body при редиректе)
+     */
+    async secureApiCall(action, params = {}) {
+        const url = new URL(this.SCRIPT_URL);
+        url.searchParams.set('action', action);
+        url.searchParams.set('accessToken', this.currentUser.accessToken);
+
+        // Добавляем остальные параметры
+        for (const [key, value] of Object.entries(params)) {
+            if (value !== undefined && value !== null) {
+                url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
+            }
+        }
+
+        const response = await fetch(url.toString(), {
+            method: 'GET'
+        });
+        return response.json();
+    },
+
     async checkAccess() {
         try {
-            const url = this.SCRIPT_URL +
-                '?action=checkAccess' +
-                '&email=' + encodeURIComponent(this.currentUser.email);
-
-            const response = await fetch(url);
-            const result = await response.json();
+            const result = await this.secureApiCall('checkAccess');
 
             if (result.error) {
                 throw new Error(result.error);
@@ -165,7 +208,6 @@ const loginApp = {
             }
 
         } catch (error) {
-            console.error('checkAccess error:', error);
             this.showError('Ошибка проверки доступа: ' + error.message);
         }
     },
@@ -176,14 +218,10 @@ const loginApp = {
         btn.textContent = 'Отправка...';
 
         try {
-            const url = this.SCRIPT_URL +
-                '?action=requestAccess' +
-                '&email=' + encodeURIComponent(this.currentUser.email) +
-                '&name=' + encodeURIComponent(this.currentUser.name || '') +
-                '&picture=' + encodeURIComponent(this.currentUser.picture || '');
-
-            const response = await fetch(url);
-            const result = await response.json();
+            const result = await this.secureApiCall('requestAccess', {
+                name: this.currentUser.name || '',
+                picture: this.currentUser.picture || ''
+            });
 
             if (result.error) {
                 throw new Error(result.error);
@@ -194,7 +232,6 @@ const loginApp = {
             }
 
         } catch (error) {
-            console.error('requestAccess error:', error);
             btn.disabled = false;
             btn.textContent = 'Запросить доступ';
             this.showError('Ошибка отправки запроса: ' + error.message);
@@ -205,12 +242,7 @@ const loginApp = {
 
     async checkStorage() {
         try {
-            const url = this.SCRIPT_URL +
-                '?action=checkStorage' +
-                '&email=' + encodeURIComponent(this.currentUser.email);
-
-            const response = await fetch(url);
-            const result = await response.json();
+            const result = await this.secureApiCall('checkStorage');
 
             if (result.error) {
                 throw new Error(result.error);
@@ -230,7 +262,6 @@ const loginApp = {
             }
 
         } catch (error) {
-            console.error('checkStorage error:', error);
             this.showError('Ошибка проверки хранилища: ' + error.message);
         }
     },
@@ -241,12 +272,7 @@ const loginApp = {
         btn.textContent = 'Создание...';
 
         try {
-            const url = this.SCRIPT_URL +
-                '?action=init' +
-                '&email=' + encodeURIComponent(this.currentUser.email);
-
-            const response = await fetch(url);
-            const result = await response.json();
+            const result = await this.secureApiCall('init');
 
             if (result.error) {
                 throw new Error(result.error);
@@ -263,7 +289,6 @@ const loginApp = {
             }
 
         } catch (error) {
-            console.error('initStorage error:', error);
             btn.disabled = false;
             btn.textContent = 'Создать хранилище';
             this.showError('Ошибка создания хранилища: ' + error.message);
@@ -328,7 +353,22 @@ const loginApp = {
         const emailEl = document.getElementById('userEmail');
 
         if (this.currentUser.picture) {
-            avatarEl.innerHTML = '<img src="' + this.currentUser.picture + '" alt="">';
+            // Безопасное создание img элемента (защита от XSS)
+            avatarEl.innerHTML = '';
+            const img = document.createElement('img');
+            // Валидируем URL - только HTTPS от Google
+            const pictureUrl = this.currentUser.picture;
+            if (pictureUrl && (pictureUrl.startsWith('https://lh3.googleusercontent.com/') ||
+                              pictureUrl.startsWith('https://lh4.googleusercontent.com/') ||
+                              pictureUrl.startsWith('https://lh5.googleusercontent.com/') ||
+                              pictureUrl.startsWith('https://lh6.googleusercontent.com/'))) {
+                img.src = pictureUrl;
+                img.alt = '';
+                img.onerror = () => { avatarEl.textContent = this.getInitials(this.currentUser.name); };
+                avatarEl.appendChild(img);
+            } else {
+                avatarEl.textContent = this.getInitials(this.currentUser.name);
+            }
         } else {
             avatarEl.textContent = this.getInitials(this.currentUser.name);
         }

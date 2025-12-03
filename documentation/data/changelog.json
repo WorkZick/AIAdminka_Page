@@ -1,6 +1,52 @@
 {
-  "version": "2.10.0",
+  "version": "2.11.0",
   "updates": [
+    {
+      "version": "2.11.0",
+      "date": "2025-12-03",
+      "title": "Безопасность: защита авторизации и данных",
+      "changes": [
+        {
+          "category": "Новое",
+          "items": [
+            "CSRF защита OAuth через криптографический state параметр",
+            "Валидация access token через Google API на сервере",
+            "Rate limiting: 30 запросов за 30 секунд на пользователя",
+            "XSS защита при отображении аватаров пользователей",
+            "SRI хеши для CDN скриптов (xlsx.js, SheetJS)"
+          ]
+        },
+        {
+          "category": "Изменено",
+          "items": [
+            "API запросы переведены на GET с URL параметрами (GAS теряет POST body при редиректе)",
+            "Авторизация использует accessToken вместо email для идентификации",
+            "Сессия унифицирована: 8 часов во всех модулях"
+          ]
+        },
+        {
+          "category": "Исправлено",
+          "items": [
+            "Устранена возможность подмены email в запросах к API",
+            "Устранена уязвимость XSS через picture URL в профиле"
+          ]
+        },
+        {
+          "category": "Файлы",
+          "items": [
+            "APPS_SCRIPT.js — валидация токенов, rate limiting",
+            "login/js/login.js — CSRF, безопасный вывод аватаров",
+            "login/callback.html — проверка state параметра",
+            "shared/cloud-storage.js — GET запросы с токеном",
+            "shared/sync-shared-worker.js — GET запросы с токеном",
+            "sync/js/sync.js — GET запросы с токеном",
+            "partners/index.html — SRI хеши",
+            "excel-reports/index.html — SRI хеши",
+            "traffic-calculation/index.html — SRI хеши"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.10.0",
       "date": "2025-12-02",

@@ -89,31 +89,43 @@ const CloudStorage = {
     // ============ API CALLS ============
 
     /**
-     * Вызов Apps Script API
+     * Получение access token для авторизации запросов
+     */
+    getAccessToken() {
+        const auth = this.getAuthData();
+        return auth ? auth.accessToken : null;
+    },
+
+    /**
+     * Вызов Apps Script API (GET с URL параметрами)
+     * GAS теряет POST body при редиректе, поэтому используем GET
      */
     async callApi(action, params = {}) {
         if (!this.isOnline) {
             throw new Error('Нет подключения к интернету');
         }
 
-        const email = this.getUserEmail();
-        if (!email) {
+        const accessToken = this.getAccessToken();
+        if (!accessToken) {
             throw new Error('Требуется авторизация');
         }
 
-        let url = this.SCRIPT_URL + '?action=' + action + '&email=' + encodeURIComponent(email);
-
-        // Добавляем параметры
-        for (const [key, value] of Object.entries(params)) {
-            if (value !== undefined && value !== null) {
-                url += '&' + key + '=' + encodeURIComponent(
-                    typeof value === 'object' ? JSON.stringify(value) : value
-                );
-            }
-        }
-
         try {
-            const response = await fetch(url);
+            const url = new URL(this.SCRIPT_URL);
+            url.searchParams.set('action', action);
+            url.searchParams.set('accessToken', accessToken);
+
+            // Добавляем остальные параметры
+            for (const [key, value] of Object.entries(params)) {
+                if (value !== undefined && value !== null) {
+                    url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
+                }
+            }
+
+            const response = await fetch(url.toString(), {
+                method: 'GET'
+            });
+
             const result = await response.json();
 
             if (result.error) {
@@ -128,43 +140,10 @@ const CloudStorage = {
     },
 
     /**
-     * POST запрос для больших данных
+     * POST запрос для больших данных (legacy, использует callApi)
      */
     async postApi(action, data) {
-        if (!this.isOnline) {
-            throw new Error('Нет подключения к интернету');
-        }
-
-        const email = this.getUserEmail();
-        if (!email) {
-            throw new Error('Требуется авторизация');
-        }
-
-        try {
-            const response = await fetch(this.SCRIPT_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: {
-                    'Content-Type': 'text/plain'
-                },
-                body: JSON.stringify({
-                    action: action,
-                    email: email,
-                    ...data
-                })
-            });
-
-            const result = await response.json();
-
-            if (result.error) {
-                throw new Error(result.error);
-            }
-
-            return result;
-        } catch (error) {
-            console.error('CloudStorage POST error:', error);
-            throw error;
-        }
+        return this.callApi(action, data);
     },
 
     // ============ CACHE ============

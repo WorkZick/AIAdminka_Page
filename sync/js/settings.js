@@ -47,7 +47,22 @@ const settingsApp = {
             emailEl.textContent = this.currentUser.email;
 
             if (this.currentUser.picture) {
-                avatarEl.innerHTML = '<img src="' + this.currentUser.picture + '" alt="">';
+                // Безопасное создание img элемента (защита от XSS)
+                avatarEl.innerHTML = '';
+                const img = document.createElement('img');
+                // Валидируем URL - только HTTPS от Google
+                const pictureUrl = this.currentUser.picture;
+                if (pictureUrl && (pictureUrl.startsWith('https://lh3.googleusercontent.com/') ||
+                                  pictureUrl.startsWith('https://lh4.googleusercontent.com/') ||
+                                  pictureUrl.startsWith('https://lh5.googleusercontent.com/') ||
+                                  pictureUrl.startsWith('https://lh6.googleusercontent.com/'))) {
+                    img.src = pictureUrl;
+                    img.alt = '';
+                    img.onerror = () => { avatarEl.textContent = this.getInitials(this.currentUser.name); };
+                    avatarEl.appendChild(img);
+                } else {
+                    avatarEl.textContent = this.getInitials(this.currentUser.name);
+                }
             } else {
                 avatarEl.textContent = this.getInitials(this.currentUser.name);
             }

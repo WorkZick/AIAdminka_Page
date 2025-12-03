@@ -165,6 +165,30 @@ const syncApp = {
 
     // =============== Access Control ===============
 
+    /**
+     * Безопасный запрос с токеном (GET с URL параметрами)
+     * GAS теряет POST body при редиректе, поэтому используем GET
+     */
+    secureApiCall(scriptUrl, action, params = {}) {
+        const url = new URL(scriptUrl);
+        url.searchParams.set('action', action);
+        url.searchParams.set('accessToken', this.currentUser ? this.currentUser.accessToken : '');
+
+        // Добавляем остальные параметры
+        for (const key in params) {
+            if (params[key] !== undefined && params[key] !== null) {
+                const value = params[key];
+                url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
+            }
+        }
+
+        return fetch(url.toString(), {
+            method: 'GET'
+        }).then(function(response) {
+            return response.json();
+        });
+    },
+
     loadAccessStatus() {
         const statusData = localStorage.getItem('sync-access-status');
         if (statusData) {
@@ -185,7 +209,7 @@ const syncApp = {
     },
 
     checkAccessStatus(force) {
-        if (!this.currentUser || !this.currentUser.email) {
+        if (!this.currentUser || !this.currentUser.accessToken) {
             return;
         }
 
@@ -200,13 +224,9 @@ const syncApp = {
 
         this.addLog('info', 'Проверка доступа...');
 
-        const url = this.BASE_SCRIPT_URL + '?action=checkAccess&email=' + encodeURIComponent(this.currentUser.email);
         const self = this;
 
-        fetch(url)
-            .then(function(response) {
-                return response.json();
-            })
+        this.secureApiCall(this.BASE_SCRIPT_URL, 'checkAccess')
             .then(function(result) {
                 if (result.error) {
                     self.addLog('error', 'Ошибка: ' + result.error);
@@ -241,24 +261,18 @@ const syncApp = {
     },
 
     requestAccess() {
-        if (!this.currentUser || !this.currentUser.email) {
+        if (!this.currentUser || !this.currentUser.accessToken) {
             alert('Сначала авторизуйтесь через Google');
             return;
         }
 
         this.addLog('info', 'Отправка запроса на доступ...');
 
-        const url = this.BASE_SCRIPT_URL +
-            '?action=requestAccess' +
-            '&email=' + encodeURIComponent(this.currentUser.email) +
-            '&name=' + encodeURIComponent(this.currentUser.name || '');
-
         const self = this;
 
-        fetch(url)
-            .then(function(response) {
-                return response.json();
-            })
+        this.secureApiCall(this.BASE_SCRIPT_URL, 'requestAccess', {
+            name: this.currentUser.name || ''
+        })
             .then(function(result) {
                 if (result.error) {
                     self.addLog('error', 'Ошибка: ' + result.error);
@@ -429,25 +443,15 @@ const syncApp = {
             return Promise.reject('No script URL');
         }
 
-        if (!this.currentUser || !this.currentUser.email) {
+        if (!this.currentUser || !this.currentUser.accessToken) {
             alert('Необходимо авторизоваться');
             return Promise.reject('Not authorized');
         }
 
-        let url = this.scriptUrl + '?action=' + action + '&email=' + encodeURIComponent(this.currentUser.email);
-
-        if (params) {
-            Object.keys(params).forEach(function(key) {
-                url += '&' + key + '=' + encodeURIComponent(params[key]);
-            });
-        }
-
         const self = this;
 
-        return fetch(url)
-            .then(function(response) {
-                return response.json();
-            })
+        // Используем POST вместо GET для безопасности
+        return this.secureApiCall(this.scriptUrl, action, params || {})
             .then(function(result) {
                 if (result.error) {
                     self.addLog('error', 'Ошибка: ' + result.error);
