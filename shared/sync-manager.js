@@ -244,8 +244,6 @@ const SyncManager = {
             const localPartners = JSON.parse(partnersData);
             if (!localPartners || localPartners.length === 0) return;
 
-            console.log(`📦 Проверяем ${localPartners.length} локальных партнёров...`);
-
             // Загружаем данные из облака для сравнения
             let cloudPartners = [];
             if (typeof CloudStorage !== 'undefined') {
@@ -275,9 +273,6 @@ const SyncManager = {
 
             // Очищаем уже синхронизированные из localStorage
             if (unsyncedPartners.length !== localPartners.length) {
-                const cleaned = localPartners.length - unsyncedPartners.length;
-                console.log(`🧹 Очищено ${cleaned} уже синхронизированных партнёров`);
-
                 if (unsyncedPartners.length === 0) {
                     localStorage.removeItem('partners-data');
                 } else {
@@ -287,8 +282,6 @@ const SyncManager = {
 
             // Если есть несинхронизированные - добавляем в очередь
             if (unsyncedPartners.length > 0) {
-                console.log(`📤 Добавляем ${unsyncedPartners.length} партнёров в очередь синхронизации`);
-
                 const operations = unsyncedPartners.map(partner => ({
                     type: 'add',
                     entity: 'partner',
