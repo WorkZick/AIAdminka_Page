@@ -56,8 +56,8 @@ const CloudStorage = {
 
         const auth = JSON.parse(authData);
 
-        // Проверяем срок токена (8 часов)
-        if (Date.now() - auth.timestamp > 28800000) {
+        // Проверяем срок токена (~58 минут, Silent Refresh обновляет автоматически)
+        if (Date.now() - auth.timestamp > 3500000) {
             localStorage.removeItem('cloud-auth');
             return null;
         }

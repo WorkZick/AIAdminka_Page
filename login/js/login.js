@@ -66,8 +66,9 @@ const loginApp = {
 
         const auth = JSON.parse(authData);
 
-        // Проверяем срок токена (8 часов)
-        if (Date.now() - auth.timestamp > 28800000) {
+        // Проверяем срок токена (~58 минут, Google токен живёт 60 мин)
+        // Silent refresh будет обновлять токен автоматически
+        if (Date.now() - auth.timestamp > 3500000) {
             localStorage.removeItem('cloud-auth');
             this.showLoginForm();
             return;
@@ -85,13 +86,24 @@ const loginApp = {
     },
 
     checkAuthCallback() {
-        // Проверяем pending токен от callback
-        const pendingData = localStorage.getItem('cloud-auth-pending');
-        if (pendingData) {
-            const pending = JSON.parse(pendingData);
-            localStorage.removeItem('cloud-auth-pending');
-            this.showLoading('Получение данных пользователя...');
-            this.fetchUserInfo(pending.accessToken);
+        // Callback теперь сам сохраняет полные данные в cloud-auth
+        // Проверяем, был ли свежий логин (токен получен менее 10 секунд назад)
+        const authData = localStorage.getItem('cloud-auth');
+        if (authData) {
+            const auth = JSON.parse(authData);
+            const isRecent = Date.now() - auth.timestamp < 10000; // Менее 10 сек назад
+
+            if (isRecent && !this.currentUser) {
+                // Свежий логин - загружаем пользователя
+                this.currentUser = {
+                    email: auth.email,
+                    name: auth.name,
+                    picture: auth.picture,
+                    accessToken: auth.accessToken
+                };
+                this.showLoading('Проверка доступа...');
+                this.checkAccess();
+            }
         }
     },
 

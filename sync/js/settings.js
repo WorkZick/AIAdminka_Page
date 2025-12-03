@@ -100,7 +100,8 @@ const settingsApp = {
         const sessionExpiryEl = document.getElementById('sessionExpiry');
 
         if (this.currentUser && this.currentUser.timestamp) {
-            const expiryTime = new Date(this.currentUser.timestamp + 28800000); // +8 часов
+            // Токен живёт ~58 мин, но Silent Refresh обновляет автоматически
+            const expiryTime = new Date(this.currentUser.timestamp + 3500000);
             sessionExpiryEl.textContent = this.formatDateTime(expiryTime);
         } else {
             sessionExpiryEl.textContent = '-';
