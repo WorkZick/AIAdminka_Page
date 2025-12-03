@@ -8,12 +8,14 @@ const TokenManager = {
 
     // Временные параметры
     TOKEN_LIFETIME: 3500000,       // ~58 минут (Google токен живёт 60 мин, обновляем раньше)
-    REFRESH_BEFORE: 300000,        // Обновлять за 5 минут до истечения
-    CHECK_INTERVAL: 60000,         // Проверять каждую минуту
+    REFRESH_BEFORE: 600000,        // Обновлять за 10 минут до истечения (более безопасно)
+    CHECK_INTERVAL: 30000,         // Проверять каждые 30 секунд (чаще)
 
     // Состояние
     refreshInProgress: false,
     refreshTimer: null,
+    visibilityHandler: null,
+    failedRefreshCount: 0,
 
     /**
      * Получить REDIRECT_URI в зависимости от окружения
@@ -175,14 +177,65 @@ const TokenManager = {
             clearInterval(this.refreshTimer);
         }
 
+        // Сбрасываем счётчик неудач
+        this.failedRefreshCount = 0;
+
+        // Периодическая проверка
         this.refreshTimer = setInterval(async () => {
-            if (this.needsRefresh()) {
-                const refreshed = await this.silentRefresh();
-                if (refreshed) {
-                    console.log('🔄 Токен автоматически обновлён');
+            await this.tryRefreshIfNeeded();
+        }, this.CHECK_INTERVAL);
+
+        // Обработчик возврата на вкладку
+        if (!this.visibilityHandler) {
+            this.visibilityHandler = async () => {
+                if (document.visibilityState === 'visible') {
+                    // При возврате на вкладку - сразу проверяем токен
+                    await this.tryRefreshIfNeeded();
+                }
+            };
+            document.addEventListener('visibilitychange', this.visibilityHandler);
+        }
+    },
+
+    /**
+     * Попытка обновить токен если нужно
+     */
+    async tryRefreshIfNeeded() {
+        if (!localStorage.getItem('cloud-auth')) {
+            return;
+        }
+
+        // Если токен уже истёк - редирект на логин
+        if (this.isExpired()) {
+            this.handleExpiredToken();
+            return;
+        }
+
+        // Если нужно обновить
+        if (this.needsRefresh()) {
+            const refreshed = await this.silentRefresh();
+            if (refreshed) {
+                this.failedRefreshCount = 0;
+            } else {
+                this.failedRefreshCount++;
+                // После 3 неудачных попыток - редирект на логин
+                if (this.failedRefreshCount >= 3) {
+                    this.handleExpiredToken();
                 }
             }
-        }, this.CHECK_INTERVAL);
+        }
+    },
+
+    /**
+     * Обработка истёкшего токена
+     */
+    handleExpiredToken() {
+        localStorage.removeItem('cloud-auth');
+        // Сохраняем текущий URL для возврата
+        const currentPath = window.location.pathname + window.location.search;
+        sessionStorage.setItem('auth-redirect', currentPath);
+        // Редирект на логин
+        window.location.href = AuthGuard.LOGIN_URL;
     },
 
     /**
@@ -193,6 +246,11 @@ const TokenManager = {
             clearInterval(this.refreshTimer);
             this.refreshTimer = null;
         }
+        if (this.visibilityHandler) {
+            document.removeEventListener('visibilitychange', this.visibilityHandler);
+            this.visibilityHandler = null;
+        }
+        this.failedRefreshCount = 0;
     }
 };
 
