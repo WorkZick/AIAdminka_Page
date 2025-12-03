@@ -107,6 +107,8 @@ const CloudStorage = {
 
         const accessToken = this.getAccessToken();
         if (!accessToken) {
+            // Токен истёк или отсутствует - редирект на логин
+            this.redirectToLogin();
             throw new Error('Требуется авторизация');
         }
 
