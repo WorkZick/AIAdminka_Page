@@ -2561,8 +2561,7 @@ const partnersApp = {
                 }
 
                 // Устанавливаем callback для обновления UI после синхронизации
-                SyncManager.onSyncComplete = (result) => {
-                    console.log('Синхронизация импорта завершена:', result);
+                SyncManager.onSyncComplete = () => {
                     // Перезагружаем данные с сервера для получения актуальных ID
                     this.loadDataFromCloud();
                 };

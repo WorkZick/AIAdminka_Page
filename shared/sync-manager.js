@@ -63,13 +63,11 @@ const SyncManager = {
         try {
             // Используем абсолютный URL для SharedWorker
             const workerUrl = this.getWorkerUrl();
-            console.log('🔗 SharedWorker URL:', workerUrl);
 
             this.worker = new SharedWorker(workerUrl);
             this.port = this.worker.port;
 
             this.port.onmessage = (event) => {
-                console.log('📨 От воркера:', event.data.type);
                 this.handleWorkerMessage(event.data);
             };
 
@@ -150,7 +148,6 @@ const SyncManager = {
             case 'STATUS':
                 this.queue = data.queue || [];
                 this.isSyncing = data.isSyncing;
-                console.log(`📊 Статус от воркера ${data.workerId}: очередь=${this.queue.length}, синхронизация=${this.isSyncing}`);
 
                 // Если воркер пустой и синхронизация не завершилась только что
                 // пробуем восстановить из localStorage (только один раз)
@@ -357,12 +354,8 @@ const SyncManager = {
                 try {
                     await CloudStorage.deletePartner(dup.id);
                     deleted++;
-                    console.log(`   Удалён: ${dup.subagent} / ${dup.subagentId}`);
                 } catch (e) {
                     // Игнорируем "not found" - значит уже удалён
-                    if (!e.message.includes('not found')) {
-                        console.warn(`   Пропущен ${dup.id}: ${e.message}`);
-                    }
                 }
             }
 
@@ -436,7 +429,6 @@ const SyncManager = {
             if (index !== -1) {
                 items.splice(index, 1);
                 localStorage.setItem(storageKey, JSON.stringify(items));
-                console.log(`🗑️ Удалён из localStorage: ${tempId}`);
             }
         } catch (e) {
             console.error('Ошибка удаления из localStorage:', e);

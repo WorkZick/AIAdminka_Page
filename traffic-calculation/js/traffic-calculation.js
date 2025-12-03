@@ -2240,17 +2240,6 @@ const trafficCalc = {
             return;
         }
 
-        // Логируем что нашли и что не нашли
-        console.log('Найденные колонки:', {
-            subagentId: subagentIdIndex,
-            depositTransactions: depositTransactionsIndex,
-            withdrawalTransactions: withdrawalTransactionsIndex,
-            depositAppeals: depositAppealsIndex,
-            delayedAppeals: delayedAppealsIndex,
-            depositSuccess: depositSuccessIndex,
-            withdrawalSuccess: withdrawalSuccessIndex
-        });
-
         // Шаг 2: Проходим по всем строкам (кроме заголовков)
         for (let rowIndex = 1; rowIndex < excelData.length; rowIndex++) {
             const row = excelData[rowIndex];

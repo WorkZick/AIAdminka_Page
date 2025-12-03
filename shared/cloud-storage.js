@@ -255,7 +255,6 @@ const CloudStorage = {
 
             if (reallyUnsynced.length !== localUnsynced.length) {
                 // Есть стейл-данные, которые уже в облаке - очищаем localStorage
-                console.log(`🧹 Очистка: ${localUnsynced.length - reallyUnsynced.length} партнёров уже в облаке`);
                 if (reallyUnsynced.length === 0) {
                     localStorage.removeItem('partners-data');
                 } else {
@@ -264,7 +263,6 @@ const CloudStorage = {
             }
 
             if (reallyUnsynced.length > 0) {
-                console.log(`📦 Найдено ${reallyUnsynced.length} несинхронизированных партнёров`);
                 partners = [...partners, ...reallyUnsynced];
             }
         }
