@@ -1635,12 +1635,11 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--bg-dark-white);
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
     background: var(--gray);
-    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {

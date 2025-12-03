@@ -1,6 +1,29 @@
 {
-  "version": "2.12.1",
+  "version": "2.12.2",
   "updates": [
+    {
+      "version": "2.12.2",
+      "date": "2025-12-04",
+      "title": "Единый стиль скроллбаров",
+      "changes": [
+        {
+          "category": "Улучшено",
+          "items": [
+            "Единый стиль скроллбаров во всех модулях",
+            "Квадратный дизайн скроллбаров (без закруглений)",
+            "Прозрачный фон скроллбара (адаптируется под любой фон)"
+          ]
+        },
+        {
+          "category": "Файлы",
+          "items": [
+            "home.css, team-info.css, partners.css",
+            "traffic-calculation.css, excel-reports.css",
+            "sync.css, documentation.css, login.css"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.12.1",
       "date": "2025-12-04",

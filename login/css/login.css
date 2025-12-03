@@ -447,6 +447,24 @@ body {
     color: var(--gray);
 }
 
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #5e5e5e;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
     .login-card {
