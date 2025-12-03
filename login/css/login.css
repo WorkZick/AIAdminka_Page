@@ -1,0 +1,477 @@
+/* Login Page Styles */
+
+@font-face {
+    font-family: 'TT Firs Neue';
+    src: url('../../sync/fonts/TTFirsNeue-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'TT Firs Neue';
+    src: url('../../sync/fonts/TTFirsNeue-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --white: #f2f2f2;
+    --black: #1a1a1a;
+    --gray: #8d8d8d;
+    --bg-dark: #1a1a1a;
+    --bg-card: #2e2e2e;
+    --yellow: #fdbe2f;
+    --yellow-hover: #e5ab2a;
+    --status-green: #27ae60;
+    --status-red: #e74c3c;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'TT Firs Neue', 'Segoe UI', sans-serif;
+    font-weight: 400;
+    background: var(--bg-dark);
+    color: var(--white);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Container */
+.login-container {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Card */
+.login-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 40px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Logo */
+.login-logo {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-logo img {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+}
+
+.login-logo h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--white);
+}
+
+/* Status */
+.login-status {
+    text-align: center;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.login-status .status-text {
+    font-size: 14px;
+    color: var(--gray);
+}
+
+.login-status.success {
+    background: rgba(39, 174, 96, 0.15);
+}
+
+.login-status.success .status-text {
+    color: var(--status-green);
+}
+
+.login-status.error {
+    background: rgba(231, 76, 60, 0.15);
+}
+
+.login-status.error .status-text {
+    color: var(--status-red);
+}
+
+/* Content */
+.login-content {
+    text-align: center;
+}
+
+.login-description {
+    font-size: 14px;
+    color: var(--gray);
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+/* Google Button */
+.login-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 24px;
+    background: var(--white);
+    color: var(--black);
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.login-button:hover {
+    background: #e0e0e0;
+    transform: translateY(-1px);
+}
+
+.login-button:active {
+    transform: translateY(0);
+}
+
+.google-icon {
+    width: 20px;
+    height: 20px;
+}
+
+/* Loading */
+.login-loading {
+    text-align: center;
+    padding: 20px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--yellow);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.login-loading p {
+    font-size: 14px;
+    color: var(--gray);
+}
+
+/* User Info */
+.login-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.user-avatar {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--yellow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--black);
+    overflow: hidden;
+}
+
+.user-avatar img {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    object-fit: cover;
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 2px;
+}
+
+.user-email {
+    font-size: 13px;
+    color: var(--gray);
+}
+
+.logout-button {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--gray);
+    color: var(--gray);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.logout-button:hover {
+    border-color: var(--status-red);
+    color: var(--status-red);
+}
+
+/* Init Storage */
+.login-actions {
+    text-align: center;
+}
+
+.init-description {
+    font-size: 14px;
+    color: var(--gray);
+    margin-bottom: 16px;
+}
+
+.init-button {
+    width: 100%;
+    padding: 14px 24px;
+    background: var(--yellow);
+    color: var(--black);
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.init-button:hover {
+    background: var(--yellow-hover);
+}
+
+.init-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Continue */
+.login-continue {
+    text-align: center;
+}
+
+.continue-button {
+    display: block;
+    width: 100%;
+    padding: 14px 24px;
+    background: var(--yellow);
+    color: var(--black);
+    text-decoration: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.continue-button:hover {
+    background: var(--yellow-hover);
+}
+
+/* Error */
+.login-error {
+    text-align: center;
+    padding: 20px;
+    background: rgba(231, 76, 60, 0.1);
+    border-radius: 8px;
+}
+
+.login-error p {
+    font-size: 14px;
+    color: var(--status-red);
+    margin-bottom: 16px;
+}
+
+.login-error button {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--status-red);
+    color: var(--status-red);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.login-error button:hover {
+    background: var(--status-red);
+    color: var(--white);
+}
+
+/* Access Denied & Pending */
+.login-access-denied,
+.login-access-pending {
+    text-align: center;
+    padding: 20px;
+}
+
+.access-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    background: rgba(231, 76, 60, 0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.access-icon svg {
+    width: 32px;
+    height: 32px;
+    color: var(--status-red);
+}
+
+.access-icon.pending {
+    background: rgba(253, 190, 47, 0.15);
+}
+
+.access-icon.pending svg {
+    color: var(--yellow);
+}
+
+.access-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 8px;
+}
+
+.access-description {
+    font-size: 14px;
+    color: var(--gray);
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.request-button {
+    width: 100%;
+    padding: 14px 24px;
+    background: var(--yellow);
+    color: var(--black);
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.request-button:hover {
+    background: var(--yellow-hover);
+}
+
+.request-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.retry-button {
+    padding: 12px 24px;
+    background: transparent;
+    border: 1px solid var(--gray);
+    color: var(--gray);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.retry-button:hover {
+    border-color: var(--yellow);
+    color: var(--yellow);
+}
+
+/* Status pending */
+.login-status.pending {
+    background: rgba(253, 190, 47, 0.15);
+}
+
+.login-status.pending .status-text {
+    color: var(--yellow);
+}
+
+/* Footer */
+.login-footer {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.login-footer span {
+    font-size: 12px;
+    color: var(--gray);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #5e5e5e;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 30px 24px;
+    }
+
+    .login-logo h1 {
+        font-size: 24px;
+    }
+}

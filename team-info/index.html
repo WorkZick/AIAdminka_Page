@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team Info - AIAdminka</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com; frame-ancestors 'self'">
+    <title>Сотрудники - AIAdminka</title>
     <link rel="stylesheet" href="css/team-info.css">
 </head>
 <body>
@@ -16,18 +17,18 @@
 
             <div class="sidebar-menu">
                 <div class="menu-item" onclick="window.location.href='../index.html'">
-                    <span>Главная страница</span>
+                    <span>Главная</span>
                     <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../excel-reports/index.html'">
-                    <span>Excel отчеты</span>
-                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Excel">
+                    <span>Отчеты</span>
+                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Отчеты">
                 </div>
 
                 <div class="menu-item active">
-                    <span>Team Info</span>
-                    <img src="icons/team_info.svg" width="20" height="20" alt="Team Info">
+                    <span>Сотрудники</span>
+                    <img src="icons/team_info.svg" width="20" height="20" alt="Сотрудники">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../traffic-calculation/index.html'">
@@ -35,37 +36,45 @@
                     <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
                 </div>
 
-                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
-                    <span>Документация</span>
-                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
-                </div>
-
                 <div class="menu-item" onclick="window.location.href='../partners/index.html'">
                     <span>Партнеры</span>
                     <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
                 </div>
 
+                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
+                    <span>Документация</span>
+                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
+                </div>
+
                 <div class="menu-item" onclick="window.location.href='../sync/index.html'">
-                    <span>Синхронизация</span>
-                    <img src="icons/sync.svg" width="20" height="20" alt="Синхронизация">
+                    <span>Настройки</span>
+                    <img src="icons/sync.svg" width="20" height="20" alt="Настройки">
                 </div>
             </div>
 
             <div class="menu-separator"></div>
 
-            <div class="version-info">
-                О разработке<br>
-                Version 0.0.01
+            <div class="version-info" onclick="showAboutModal()">
+                <span class="version-text-full">О разработке</span>
+                <span id="versionText" class="version-number"></span>
+                <span class="version-icon" title="О разработке">
+                    <img src="../shared/icons/info.svg" alt="О разработке">
+                </span>
             </div>
         </aside>
 
         <script>
-            // Immediately set sidebar state to prevent flashing
             (function() {
-                const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
-                if (collapsed) {
-                    document.getElementById('sidebar').classList.add('collapsed');
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.add('no-transition');
+                if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                    sidebar.classList.add('collapsed');
                 }
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        sidebar.classList.remove('no-transition');
+                    });
+                });
             })();
         </script>
 
@@ -387,113 +396,6 @@
         </div>
     </div>
 
-    <!-- Add/Edit Employee Modal -->
-    <div class="modal" id="employeeModal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h2 class="modal-title" id="modalTitle">Добавить сотрудника</h2>
-                <button class="modal-close" onclick="teamInfo.closeEmployeeModal()">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <form id="employeeForm">
-                    <div class="form-group">
-                        <label class="form-label">Ф.И.О.</label>
-                        <input type="text" class="form-input" id="fullNameInput" placeholder="Иванов Иван Иванович" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Должность</label>
-                        <input type="text" class="form-input" id="positionInput" placeholder="Менеджер" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Статус</label>
-                        <select class="form-select" id="statusSelect">
-                            <option value="Работает">Работает</option>
-                            <option value="В отпуске">В отпуске</option>
-                            <option value="Командировка">Командировка</option>
-                            <option value="Уволен">Уволен</option>
-                            <option value="Болеет">Болеет</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">ID Reddy</label>
-                        <input type="text" class="form-input" id="reddyInput" placeholder="40182221672">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Рабочий Telegram</label>
-                        <input type="text" class="form-input" id="corpTelegramInput" placeholder="@username">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Личный Telegram</label>
-                        <input type="text" class="form-input" id="personalTelegramInput" placeholder="@username">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">День рождения</label>
-                        <input type="date" class="form-input" id="birthdayInput">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Рабочая почта</label>
-                        <input type="email" class="form-input" id="corpEmailInput" placeholder="example@company.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Личная почта</label>
-                        <input type="email" class="form-input" id="personalEmailInput" placeholder="example@gmail.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Рабочий телефон</label>
-                        <input type="tel" class="form-input" id="corpPhoneInput" placeholder="+7 (xxx) xxx-xx-xx">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Личный телефон</label>
-                        <input type="tel" class="form-input" id="personalPhoneInput" placeholder="+7 (xxx) xxx-xx-xx">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Офис</label>
-                        <input type="text" class="form-input" id="officeInput" placeholder="тут">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Начало работы по Wolan</label>
-                        <input type="date" class="form-input" id="startDateInput">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Название компании</label>
-                        <input type="text" class="form-input" id="companyInput" placeholder='ООО "ТУРЕЦ"'>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Логин CRM</label>
-                        <input type="text" class="form-input" id="crmLoginInput" placeholder="abobus.i">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Примечание</label>
-                        <textarea class="form-textarea" id="commentInput" placeholder="Дополнительная информация..."></textarea>
-                    </div>
-                </form>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="teamInfo.closeEmployeeModal()">Отменить</button>
-                <button class="btn-primary" onclick="teamInfo.saveEmployee()" id="saveEmployeeBtn">Добавить сотрудника</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Import Modal -->
     <div class="modal" id="importModal">
         <div class="modal-dialog" style="max-width: 400px;">
@@ -545,9 +447,41 @@
         </div>
     </div>
 
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">О разработке</h2>
+                <button class="modal-close" onclick="closeAboutModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Это проект <strong>Vadim P</strong></p>
+                <p>Reddy ID для связи: <strong>62219492522</strong></p>
+                <p>Ссылка на чат с актуальной версией:<br>
+                <a href="https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_" target="_blank">https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../shared/version.js"></script>
     <script src="../shared/storage.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/auth-guard.js"></script>
     <script src="js/storage.js"></script>
-    <script src="js/export-manager.js"></script>
     <script src="js/team-info.js"></script>
+    <script>
+        function showAboutModal() {
+            document.getElementById('aboutModal').classList.add('active');
+        }
+        function closeAboutModal() {
+            document.getElementById('aboutModal').classList.remove('active');
+        }
+        document.getElementById('aboutModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAboutModal();
+        });
+    </script>
 </body>
 </html>

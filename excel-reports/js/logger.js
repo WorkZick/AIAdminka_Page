@@ -1,81 +1,49 @@
-// Минимальная система логирования
-class Logger {
-    constructor() {
-        this.logs = [];
-        this.element = document.getElementById('logs');
-        this.init();
-    }
+// Logger for Excel Reports
+const logger = {
+    element: null,
 
     init() {
-        this.log('Система логирования запущена');
-        this.setupButtons();
-        this.setupToggle();
-    }
-
-    setupButtons() {
-        const clearBtn = document.getElementById('clearLogsBtn');
-        if (clearBtn) {
-            clearBtn.onclick = () => this.clear();
-        }
-    }
+        this.element = document.getElementById('logs');
+        this.log('Система логирования запущена', 'info');
+    },
 
     log(message, type = 'info') {
-        const time = new Date().toLocaleTimeString();
-        const icons = { 
-            info: 'ℹ️', 
-            success: '✅', 
-            error: '❌', 
-            warn: '⚠️' 
-        };
-        const entry = `${icons[type] || 'ℹ️'} [${time}] ${message}`;
-        
-        this.logs.push({ time, message, type, entry });
-        this.element.textContent += entry + '\n';
-        this.element.scrollTop = this.element.scrollHeight;
-        
-        console.log(`[ExcelReports] ${entry}`);
-        
-        // Автооткрытие логов при ошибке
-        if (type === 'error') {
-            const content = document.getElementById('logsContent');
-            const toggle = document.getElementById('logsToggle');
-            if (content && toggle && !content.classList.contains('show')) {
-                content.classList.add('show');
-                toggle.classList.add('expanded');
-                setTimeout(() => {
-                    this.element.scrollTop = this.element.scrollHeight;
-                }, 100);
-            }
+        if (!this.element) {
+            this.element = document.getElementById('logs');
         }
-    }
+
+        const time = new Date().toLocaleTimeString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+
+        // Remove empty state message
+        const emptyState = this.element.querySelector('.log-empty');
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        const item = document.createElement('div');
+        item.className = `log-item ${type}`;
+        item.innerHTML = `
+            <div class="log-time">${time}</div>
+            <div class="log-message">${message}</div>
+        `;
+        this.element.appendChild(item);
+        this.element.scrollTop = this.element.scrollHeight;
+
+        console.log(`[ExcelReports] [${time}] ${message}`);
+    },
 
     clear() {
-        this.logs = [];
-        this.element.textContent = '';
-        this.log('Логи очищены');
-    }
-
-    setupToggle() {
-        const toggle = document.getElementById('logsToggle');
-        const content = document.getElementById('logsContent');
-        
-        if (toggle && content) {
-            toggle.onclick = () => {
-                const isExpanded = content.classList.contains('show');
-                
-                if (isExpanded) {
-                    content.classList.remove('show');
-                    toggle.classList.remove('expanded');
-                } else {
-                    content.classList.add('show');
-                    toggle.classList.add('expanded');
-                    setTimeout(() => {
-                        this.element.scrollTop = this.element.scrollHeight;
-                    }, 100);
-                }
-            };
+        if (this.element) {
+            this.element.innerHTML = '<div class="log-empty">Нет записей</div>';
         }
     }
-}
+};
 
-const logger = new Logger();
+// Initialize logger when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    logger.init();
+});

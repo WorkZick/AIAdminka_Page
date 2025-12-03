@@ -3,863 +3,839 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Расчет трафика - Windows XP</title>
-    <link rel="stylesheet" href="../css/xp-module.css">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com; frame-ancestors 'self'">
+    <title>Расчет трафика - AIAdminka</title>
     <link rel="stylesheet" href="css/traffic-calculation.css">
-    <script src="https://unpkg.com/lucide@0.548.0/dist/umd/lucide.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+            integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
 </head>
 <body>
-    <div class="container">
-        <nav>
-            <a href="../index.html">← Главная</a>
-        </nav>
-        
-        <header>
-            <h1><i data-lucide="trending-up"></i> Расчет трафика</h1>
-            <p>Управление партнерами и аналитика</p>
-        </header>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button class="back-button" onclick="trafficCalc.toggleSidebar()">
+                <img src="icons/arrow.svg" width="30" height="30" alt="Toggle">
+            </button>
 
-        <!-- Вкладки -->
-        <div class="tabs">
-            <button class="tab-btn active" onclick="trafficCalc.switchTab('partners')">
-                <i data-lucide="users"></i> Управление партнерами
-            </button>
-            <button class="tab-btn" onclick="trafficCalc.switchTab('analytics')">
-                <i data-lucide="bar-chart"></i> Аналитика
-            </button>
-            <button class="tab-btn" onclick="trafficCalc.switchTab('report')">
-                <i data-lucide="file-text"></i> Отчет
-            </button>
-        </div>
+            <div class="sidebar-menu">
+                <div class="menu-item" onclick="window.location.href='../index.html'">
+                    <span>Главная</span>
+                    <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
+                </div>
 
-        <!-- Вкладка: Управление партнерами -->
-        <div id="partnersTab" class="tab-content active">
-            <div class="section">
-                <h2>Добавить партнера</h2>
-                <form id="partnerForm" class="partner-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="methodSelect">Метод</label>
-                            <div class="method-input-wrapper">
-                                <select id="methodSelect" required>
-                                    <option value="">Выберите метод</option>
-                                </select>
-                                <button type="button" class="btn-icon" onclick="trafficCalc.showMethodModal()" title="Управление методами">
-                                    <i data-lucide="settings"></i>
+                <div class="menu-item" onclick="window.location.href='../excel-reports/index.html'">
+                    <span>Отчеты</span>
+                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Отчеты">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../team-info/index.html'">
+                    <span>Сотрудники</span>
+                    <img src="icons/team_info.svg" width="20" height="20" alt="Сотрудники">
+                </div>
+
+                <div class="menu-item active">
+                    <span>Расчет трафика</span>
+                    <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../partners/index.html'">
+                    <span>Партнеры</span>
+                    <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
+                    <span>Документация</span>
+                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../sync/index.html'">
+                    <span>Настройки</span>
+                    <img src="icons/sync.svg" width="20" height="20" alt="Настройки">
+                </div>
+            </div>
+
+            <div class="menu-separator"></div>
+
+            <div class="version-info" onclick="showAboutModal()">
+                <span class="version-text-full">О разработке</span>
+                <span id="versionText" class="version-number"></span>
+                <span class="version-icon" title="О разработке">
+                    <img src="../shared/icons/info.svg" alt="О разработке">
+                </span>
+            </div>
+        </aside>
+
+        <script>
+            (function() {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.add('no-transition');
+                if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                    sidebar.classList.add('collapsed');
+                }
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        sidebar.classList.remove('no-transition');
+                    });
+                });
+            })();
+        </script>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header -->
+            <header class="global-header">
+                <div class="header-title">Расчет трафика</div>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Tabs -->
+                <div class="tabs-container">
+                    <button class="tab-btn active" onclick="trafficCalc.switchTab('analytics')">
+                        <img src="icons/filter.svg" alt="">
+                        Аналитика
+                    </button>
+                    <button class="tab-btn" onclick="trafficCalc.switchTab('report')">
+                        <img src="icons/documents.svg" alt="">
+                        Отчет
+                    </button>
+                </div>
+
+                <!-- Tab: Аналитика -->
+                <div id="analyticsTab" class="tab-content active">
+                    <!-- Steps indicator -->
+                    <div class="steps-container">
+                        <div class="steps-indicator">
+                            <div class="step active" data-step="1" onclick="trafficCalc.navigateToStep(1)">
+                                <div class="step-number">1</div>
+                                <div class="step-title">Выбор партнеров</div>
+                            </div>
+                            <div class="step" data-step="2" onclick="trafficCalc.navigateToStep(2)">
+                                <div class="step-number">2</div>
+                                <div class="step-title">Пополнения и выводы</div>
+                            </div>
+                            <div class="step" data-step="3" onclick="trafficCalc.navigateToStep(3)">
+                                <div class="step-number">3</div>
+                                <div class="step-title">Контроль качества</div>
+                            </div>
+                            <div class="step" data-step="4" onclick="trafficCalc.navigateToStep(4)">
+                                <div class="step-number">4</div>
+                                <div class="step-title">% Времени работы</div>
+                            </div>
+                            <div class="step" data-step="5" onclick="trafficCalc.navigateToStep(5)">
+                                <div class="step-number">5</div>
+                                <div class="step-title">Автоотключения</div>
+                            </div>
+                            <div class="step" data-step="6" onclick="trafficCalc.navigateToStep(6)">
+                                <div class="step-number">6</div>
+                                <div class="step-title">Нарушения</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 1: Выбор партнеров -->
+                    <div id="step1" class="analytics-step active">
+                        <div class="main-section" style="flex: 1; display: flex; flex-direction: column;">
+                            <div class="section-header">
+                                <div class="section-title">Шаг 1: Выбор партнеров для анализа</div>
+                                <div class="section-actions">
+                                    <button class="btn-reset" onclick="trafficCalc.confirmResetAnalytics()" title="Сбросить все данные аналитики">
+                                        <img src="icons/cross.svg" alt="">
+                                        <span>Сбросить всё</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="section-body" style="flex: 1; display: flex; flex-direction: column;">
+
+                                <!-- Toolbar с кнопками выбора (скрыт до загрузки данных) -->
+                                <div id="selectionToolbar" class="selection-toolbar" style="display: none;">
+                                    <div class="toolbar-group">
+                                        <span class="toolbar-label">Выбрать:</span>
+                                        <button class="toolbar-btn" onclick="trafficCalc.selectAll()" title="Выбрать всех партнёров">
+                                            <img src="icons/done.svg" alt="">
+                                            <span>Всех</span>
+                                        </button>
+                                        <button class="toolbar-btn" onclick="trafficCalc.showMethodSelection()" title="Выбрать по методу работы">
+                                            <img src="icons/filter.svg" alt="">
+                                            <span>По методу</span>
+                                        </button>
+                                        <button class="toolbar-btn" onclick="trafficCalc.showManualSelection()" title="Выбрать вручную">
+                                            <img src="icons/pen.svg" alt="">
+                                            <span>Вручную</span>
+                                        </button>
+                                    </div>
+                                    <div class="toolbar-group">
+                                        <button class="toolbar-btn toolbar-btn-clear" onclick="trafficCalc.clearSelection()" title="Очистить выбор">
+                                            <img src="icons/cross.svg" alt="">
+                                            <span>Очистить</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Спиннер загрузки -->
+                                <div id="loadingSpinner" class="loading-spinner">
+                                    <div class="spinner"></div>
+                                    <div class="loading-text">Загрузка партнёров...</div>
+                                </div>
+
+                                <!-- Подсказка: нет партнёров -->
+                                <div id="noPartnersHint" class="no-partners-hint" style="display: none;">
+                                    <img src="icons/partners.svg" alt="" class="no-partners-hint-icon">
+                                    <div class="no-partners-hint-text">Нет партнёров для анализа</div>
+                                    <div class="no-partners-hint-subtext">Сначала добавьте партнёров на вкладке "Партнёры"</div>
+                                    <a href="../partners/index.html" class="no-partners-hint-link">
+                                        <img src="icons/partners.svg" alt="">
+                                        Перейти к партнёрам
+                                    </a>
+                                </div>
+
+                                <!-- Панель выбора по методу -->
+                                <div id="methodSelectionPanel" class="selection-panel-modern" style="display: none;">
+                                    <div class="panel-header">
+                                        <h3>Выберите методы</h3>
+                                        <button class="panel-close" onclick="trafficCalc.hideAllPanels()">
+                                            <img src="icons/cross.svg" alt="Закрыть">
+                                        </button>
+                                    </div>
+                                    <div id="methodCheckboxes" class="checkbox-grid"></div>
+                                    <div class="panel-actions">
+                                        <button class="btn btn-secondary" onclick="trafficCalc.hideAllPanels()">Отмена</button>
+                                        <button class="btn btn-primary" onclick="trafficCalc.applyMethodSelection()">
+                                            <img src="icons/done.svg" alt="" style="filter: brightness(0) invert(1);">
+                                            Применить
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Панель ручного выбора -->
+                                <div id="manualSelectionPanel" class="selection-panel-modern" style="display: none;">
+                                    <div class="panel-header">
+                                        <h3>Выберите партнеров</h3>
+                                        <button class="panel-close" onclick="trafficCalc.hideAllPanels()">
+                                            <img src="icons/cross.svg" alt="Закрыть">
+                                        </button>
+                                    </div>
+                                    <div id="partnerCheckboxes" class="checkbox-grid"></div>
+                                    <div class="panel-actions">
+                                        <button class="btn btn-secondary" onclick="trafficCalc.hideAllPanels()">Отмена</button>
+                                        <button class="btn btn-primary" onclick="trafficCalc.applyManualSelection()">
+                                            <img src="icons/done.svg" alt="" style="filter: brightness(0) invert(1);">
+                                            Применить
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Таблица выбранных партнёров (скрыта до загрузки данных) -->
+                                <div class="partners-preview" style="display: none;">
+                                    <div class="preview-header">
+                                        <span class="preview-title">Выбранные партнёры</span>
+                                        <span class="partner-count-badge" id="selectedCount">0</span>
+                                    </div>
+                                    <div class="table-container" style="flex: 1;">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Метод</th>
+                                                    <th>Субагент</th>
+                                                    <th>Субагент ID</th>
+                                                    <th>Статус</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="selectedPartnersTableBody">
+                                                <tr>
+                                                    <td colspan="4" class="empty-state">Партнеры не выбраны</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <div></div>
+                                <button id="step1NextBtn" class="nav-btn nav-btn-next" onclick="trafficCalc.goToStep(2)" disabled>
+                                    <span>Далее</span>
+                                    <img src="icons/arrow.svg" alt="">
                                 </button>
                             </div>
                         </div>
-                        
-                        <div class="form-group">
-                            <label for="subagentInput">Субагент</label>
-                            <input type="text" id="subagentInput" placeholder="Название субагента" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="subagentIdInput">Субагент ID</label>
-                            <input type="text" id="subagentIdInput" placeholder="ID субагента" required>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="plus"></i> Добавить партнера
-                    </button>
-                </form>
-            </div>
-
-            <div class="section">
-                <div class="section-header">
-                    <h2>Список партнеров</h2>
-                    <div class="filter-controls">
-                        <select id="methodFilter" onchange="trafficCalc.filterPartners()">
-                            <option value="">Все методы</option>
-                        </select>
-                        <button class="btn btn-success" onclick="trafficCalc.exportPartners()" title="Экспортировать список партнеров">
-                            <i data-lucide="download"></i> Экспорт
-                        </button>
-                        <button class="btn btn-warning" onclick="trafficCalc.showImportModal()" title="Импортировать список партнеров">
-                            <i data-lucide="upload"></i> Импорт
-                        </button>
-                        <span class="partner-count">Всего: <strong id="partnerCount">0</strong></span>
-                    </div>
-                </div>
-                
-                <div class="table-wrapper">
-                    <table class="partners-table">
-                        <thead>
-                            <tr>
-                                <th>Метод</th>
-                                <th>Субагент</th>
-                                <th>Субагент ID</th>
-                                <th>Статус</th>
-                                <th>Дата добавления</th>
-                                <th>Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody id="partnersTableBody">
-                            <tr>
-                                <td colspan="6" class="empty-state">Партнеры не добавлены</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Вкладка: Аналитика -->
-        <div id="analyticsTab" class="tab-content">
-            <!-- Индикатор шагов -->
-            <div class="steps-indicator">
-                <div class="step active clickable" data-step="1" onclick="trafficCalc.navigateToStep(1)">
-                    <div class="step-number">1</div>
-                    <div class="step-title">Выбор партнеров</div>
-                </div>
-                <div class="step clickable" data-step="2" onclick="trafficCalc.navigateToStep(2)">
-                    <div class="step-number">2</div>
-                    <div class="step-title">Пополнения и выводы</div>
-                </div>
-                <div class="step clickable" data-step="3" onclick="trafficCalc.navigateToStep(3)">
-                    <div class="step-number">3</div>
-                    <div class="step-title">Контроль качества</div>
-                </div>
-                <div class="step clickable" data-step="4" onclick="trafficCalc.navigateToStep(4)">
-                    <div class="step-number">4</div>
-                    <div class="step-title">% Времени работы</div>
-                </div>
-                <div class="step clickable" data-step="5" onclick="trafficCalc.navigateToStep(5)">
-                    <div class="step-number">5</div>
-                    <div class="step-title">Автоотключения</div>
-                </div>
-                <div class="step clickable" data-step="6" onclick="trafficCalc.navigateToStep(6)">
-                    <div class="step-number">6</div>
-                    <div class="step-title">Нарушения</div>
-                </div>
-            </div>
-
-            <!-- Шаг 1: Выбор партнеров -->
-            <div id="step1" class="analytics-step active">
-                <div class="section">
-                    <h2>Шаг 1: Выбор партнеров для анализа</h2>
-                    
-                    <div class="selection-controls">
-                        <button class="btn btn-secondary" onclick="trafficCalc.selectAll()">
-                            <i data-lucide="check-square"></i> Все
-                        </button>
-                        <button class="btn btn-secondary" onclick="trafficCalc.showMethodSelection()">
-                            <i data-lucide="filter"></i> По методу
-                        </button>
-                        <button class="btn btn-secondary" onclick="trafficCalc.showManualSelection()">
-                            <i data-lucide="mouse-pointer"></i> Выборочно
-                        </button>
-                        <button class="btn btn-secondary" onclick="trafficCalc.clearSelection()">
-                            <i data-lucide="x"></i> Очистить выбор
-                        </button>
-                        <button class="btn btn-danger" onclick="trafficCalc.confirmResetAnalytics()" style="margin-left: auto;">
-                            <i data-lucide="rotate-ccw"></i> Сбросить всё
-                        </button>
                     </div>
 
-                    <!-- Панель выбора по методу -->
-                    <div id="methodSelectionPanel" class="selection-panel" style="display: none;">
-                        <h3>Выберите методы</h3>
-                        <div id="methodCheckboxes" class="checkbox-group"></div>
-                        <button class="btn btn-primary" onclick="trafficCalc.applyMethodSelection()">Применить</button>
-                    </div>
-
-                    <!-- Панель ручного выбора -->
-                    <div id="manualSelectionPanel" class="selection-panel" style="display: none;">
-                        <h3>Выберите партнеров</h3>
-                        <div id="partnerCheckboxes" class="checkbox-group"></div>
-                        <button class="btn btn-primary" onclick="trafficCalc.applyManualSelection()">Применить</button>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-header">
-                        <h2>Предпросмотр выбранных партнеров</h2>
-                        <span class="partner-count">Выбрано: <strong id="selectedCount">0</strong></span>
-                    </div>
-                    
-                    <div class="table-wrapper">
-                        <table class="partners-table">
-                            <thead>
-                                <tr>
-                                    <th>Метод</th>
-                                    <th>Субагент</th>
-                                    <th>Субагент ID</th>
-                                    <th>Статус</th>
-                                </tr>
-                            </thead>
-                            <tbody id="selectedPartnersTableBody">
-                                <tr>
-                                    <td colspan="4" class="empty-state">Партнеры не выбраны</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="step-navigation">
-                        <button id="step1NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(2)" disabled>
-                            Далее <i data-lucide="arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Шаг 2: Пополнения и выводы (обязательный) -->
-            <div id="step2" class="analytics-step">
-                <div class="section">
-                    <h2>Шаг 2: Загрузка отчета "Пополнения и выводы" <span class="required-badge">Обязательный</span></h2>
-                    <p class="step-description">Загрузите файлы с данными о пополнениях и выводах для подсчета комментариев "back" и "cringe"</p>
-                    
-                    <div class="file-upload-section">
-                        <label for="depositsFileInput" class="btn btn-secondary">
-                            <i data-lucide="upload"></i> Загрузить файлы
-                        </label>
-                        <input type="file" id="depositsFileInput" accept=".xlsx" multiple style="display: none;" onchange="trafficCalc.handleDepositsUpload(event)">
-                        <div id="depositsStatus" class="upload-status"></div>
-                    </div>
-
-                    <div class="step-navigation">
-                        <button class="btn btn-secondary" onclick="trafficCalc.goToStep(1)">
-                            <i data-lucide="arrow-left"></i> Назад
-                        </button>
-                        <button id="step2NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(3)" disabled>
-                            Далее <i data-lucide="arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Шаг 3: Контроль качества (обязательный) -->
-            <div id="step3" class="analytics-step">
-                <div class="section">
-                    <h2>Шаг 3: Загрузка отчета "Контроль качества работы" <span class="required-badge">Обязательный</span></h2>
-                    <p class="step-description">Загрузите файлы с данными о контроле качества</p>
-                    
-                    <div class="file-upload-section">
-                        <label for="qualityFileInput" class="btn btn-secondary">
-                            <i data-lucide="upload"></i> Загрузить файлы
-                        </label>
-                        <input type="file" id="qualityFileInput" accept=".xlsx" multiple style="display: none;" onchange="trafficCalc.handleQualityUpload(event)">
-                        <div id="qualityStatus" class="upload-status"></div>
-                    </div>
-
-                    <div class="step-navigation">
-                        <button class="btn btn-secondary" onclick="trafficCalc.goToStep(2)">
-                            <i data-lucide="arrow-left"></i> Назад
-                        </button>
-                        <button id="step3NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(4)" disabled>
-                            Далее <i data-lucide="arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Шаг 4: % Времени работы (обязательный) -->
-            <div id="step4" class="analytics-step">
-                <div class="section">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <div>
-                            <h2 style="margin: 0 0 4px 0;">Шаг 4: % Времени работы <span class="required-badge">Обязательный</span></h2>
-                            <p class="step-description" style="margin: 0;">Выберите субагента и укажите процент времени работы на пополнения и вывод</p>
-                        </div>
-                        <button class="btn btn-danger" onclick="trafficCalc.resetAllWorkTimeData()" title="Сбросить данные для всех субагентов">
-                            <i data-lucide="rotate-ccw"></i> Сбросить всё
-                        </button>
-                    </div>
-
-                    <div class="manual-data-layout">
-                        <!-- Левая часть: Форма с данными -->
-                        <div class="manual-data-form-container">
-                            <div id="manualDataForm" style="display: none;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                    <h3 style="margin: 0;">Данные по времени работы: <span id="selectedPartnerName"></span></h3>
-                                    <button class="btn btn-danger btn-small" onclick="trafficCalc.resetWorkTimeData()">
-                                        <i data-lucide="rotate-ccw"></i> Сбросить
+                    <!-- Step 2: Пополнения и выводы -->
+                    <div id="step2" class="analytics-step">
+                        <div class="main-section" style="flex: 1;">
+                            <div class="section-header">
+                                <div class="section-title">Шаг 2: Пополнения и выводы</div>
+                                <div class="section-actions">
+                                    <button class="btn-reset" onclick="trafficCalc.resetDepositsData()" title="Сбросить данные пополнений и выводов">
+                                        <img src="icons/cross.svg" alt="">
+                                        <span>Сбросить</span>
                                     </button>
                                 </div>
-
-                                <div class="table-wrapper">
-                                    <table class="partners-table manual-data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Параметр</th>
-                                                <th>Значение</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>% Времени работы на пополнения</td>
-                                                <td>
-                                                    <div class="number-input-group">
-                                                        <input type="number" id="depositWorkTimePercent" value="0" min="0" max="100" placeholder="%" onchange="trafficCalc.saveCurrentManualData()">
-                                                        <span class="percent-label">%</span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>% Времени работы на вывод</td>
-                                                <td>
-                                                    <div class="number-input-group">
-                                                        <input type="number" id="withdrawalWorkTimePercent" value="0" min="0" max="100" placeholder="%" onchange="trafficCalc.saveCurrentManualData()">
-                                                        <span class="percent-label">%</span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                            </div>
+                            <div class="section-body">
+                                <div class="step-hint">
+                                    <img src="icons/filter.svg" alt="">
+                                    <span>Загрузите Excel-файлы с данными о пополнениях и выводах для подсчета "back" и "cringe"</span>
                                 </div>
+
+                                <div class="upload-zone" onclick="document.getElementById('depositsFileInput').click()">
+                                    <img src="icons/import.svg" class="upload-zone-icon" alt="">
+                                    <div class="upload-zone-text">Перетащите файлы сюда</div>
+                                    <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
+                                    <input type="file" id="depositsFileInput" accept=".xlsx" multiple style="display: none;" onchange="trafficCalc.handleDepositsUpload(event)">
+                                </div>
+                                <div id="depositsStatus" class="upload-status"></div>
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <button class="nav-btn nav-btn-back" onclick="trafficCalc.goToStep(1)">
+                                    <img src="icons/arrow.svg" alt="">
+                                    <span>Назад</span>
+                                </button>
+                                <button id="step2NextBtn" class="nav-btn nav-btn-next" onclick="trafficCalc.goToStep(3)" disabled>
+                                    <span>Далее</span>
+                                    <img src="icons/arrow.svg" alt="">
+                                </button>
                             </div>
                         </div>
-
-                        <!-- Правая часть: Выбор субагента -->
-                        <div class="manual-data-selector">
-                            <div class="form-group">
-                                <label for="partnerSearchInput">Поиск субагента</label>
-                                <input type="text" id="partnerSearchInput" placeholder="Введите название субагента" oninput="trafficCalc.filterPartnersList()">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="partnerSelectList">Выберите субагента</label>
-                                <select id="partnerSelectList" size="10" onchange="trafficCalc.loadPartnerManualData()">
-                                    <option value="">Сначала выберите партнеров на шаге 1</option>
-                                </select>
-                            </div>
-                        </div>
                     </div>
 
-                    <div class="step-navigation">
-                        <button class="btn btn-secondary" onclick="trafficCalc.goToStep(3)">
-                            <i data-lucide="arrow-left"></i> Назад
-                        </button>
-                        <button id="step4NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(5)" disabled>
-                            Далее <i data-lucide="arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Шаг 5: Автоотключения (обязательный) -->
-            <div id="step5" class="analytics-step">
-                <div class="section">
-                    <h2>Шаг 5: Загрузка отчета "Автоотключения" <span class="required-badge">Обязательный</span></h2>
-                    <p class="step-description">Загрузите файлы с данными о процентовках для подсчета автоотключений</p>
-
-                    <div class="file-upload-section">
-                        <label for="percentFileInput" class="btn btn-secondary">
-                            <i data-lucide="upload"></i> Загрузить файлы
-                        </label>
-                        <input type="file" id="percentFileInput" accept=".xlsx" multiple style="display: none;" onchange="trafficCalc.handlePercentUpload(event)">
-                        <div id="percentStatus" class="upload-status"></div>
-                    </div>
-
-                    <div class="step-navigation">
-                        <button class="btn btn-secondary" onclick="trafficCalc.goToStep(4)">
-                            <i data-lucide="arrow-left"></i> Назад
-                        </button>
-                        <button id="step5NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(6)" disabled>
-                            Далее <i data-lucide="arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Шаг 6: Нарушения -->
-            <div id="step6" class="analytics-step">
-                <div class="section">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <div>
-                            <h2 style="margin: 0 0 4px 0;">Шаг 6: Нарушения</h2>
-                            <p class="step-description" style="margin: 0;">Выберите субагента и укажите ручные данные по нарушениям</p>
-                        </div>
-                        <button class="btn btn-danger" onclick="trafficCalc.resetAllViolationsData()" title="Сбросить данные для всех субагентов">
-                            <i data-lucide="rotate-ccw"></i> Сбросить всё
-                        </button>
-                    </div>
-
-                    <div class="manual-data-layout">
-                        <!-- Левая часть: Форма с данными -->
-                        <div class="manual-data-form-container">
-                            <div id="manualDataForm6" style="display: none;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                    <h3 style="margin: 0;">Данные по нарушениям: <span id="selectedPartnerName6"></span></h3>
-                                    <button class="btn btn-danger btn-small" onclick="trafficCalc.resetViolationsData()">
-                                        <i data-lucide="rotate-ccw"></i> Сбросить
+                    <!-- Step 3: Контроль качества -->
+                    <div id="step3" class="analytics-step">
+                        <div class="main-section" style="flex: 1;">
+                            <div class="section-header">
+                                <div class="section-title">Шаг 3: Контроль качества</div>
+                                <div class="section-actions">
+                                    <button class="btn-reset" onclick="trafficCalc.resetQualityData()" title="Сбросить данные контроля качества">
+                                        <img src="icons/cross.svg" alt="">
+                                        <span>Сбросить</span>
                                     </button>
                                 </div>
+                            </div>
+                            <div class="section-body">
+                                <div class="step-hint">
+                                    <img src="icons/filter.svg" alt="">
+                                    <span>Загрузите Excel-файлы с данными о контроле качества работы</span>
+                                </div>
 
-                                <div class="table-wrapper">
-                                    <table class="partners-table manual-data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Нарушение</th>
-                                                <th>Количество</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>Игнорирование чатов</td>
-                                                <td>
+                                <div class="upload-zone" onclick="document.getElementById('qualityFileInput').click()">
+                                    <img src="icons/import.svg" class="upload-zone-icon" alt="">
+                                    <div class="upload-zone-text">Перетащите файлы сюда</div>
+                                    <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
+                                    <input type="file" id="qualityFileInput" accept=".xlsx" multiple style="display: none;" onchange="trafficCalc.handleQualityUpload(event)">
+                                </div>
+                                <div id="qualityStatus" class="upload-status"></div>
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <button class="nav-btn nav-btn-back" onclick="trafficCalc.goToStep(2)">
+                                    <img src="icons/arrow.svg" alt="">
+                                    <span>Назад</span>
+                                </button>
+                                <button id="step3NextBtn" class="nav-btn nav-btn-next" onclick="trafficCalc.goToStep(4)" disabled>
+                                    <span>Далее</span>
+                                    <img src="icons/arrow.svg" alt="">
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: % Времени работы -->
+                    <div id="step4" class="analytics-step">
+                        <div class="main-section" style="flex: 1;">
+                            <div class="section-header">
+                                <div class="section-title">Шаг 4: % Времени работы</div>
+                                <div class="section-actions">
+                                    <button class="btn-reset" onclick="trafficCalc.resetAllWorkTimeData()" title="Сбросить все данные по времени работы">
+                                        <img src="icons/cross.svg" alt="">
+                                        <span>Сбросить</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="section-body">
+                                <div class="step-hint">
+                                    <img src="icons/pen.svg" alt="">
+                                    <span>Выберите субагента слева и укажите % времени работы</span>
+                                </div>
+
+                                <div class="worktime-layout">
+                                    <!-- Левая колонка: выбор субагента -->
+                                    <div class="worktime-selector">
+                                        <div class="form-group">
+                                            <label for="partnerSearchInput">Поиск</label>
+                                            <input type="text" id="partnerSearchInput" placeholder="Поиск..." oninput="trafficCalc.filterPartnersList()">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="partnerSelectList">Субагент</label>
+                                            <select id="partnerSelectList" size="8" onchange="trafficCalc.loadPartnerManualData()">
+                                                <option value="">Выберите на шаге 1</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Правая колонка: форма времени работы -->
+                                    <div class="worktime-form-container">
+                                        <div id="manualDataForm" style="display: none;">
+                                            <div class="worktime-form-header">
+                                                <h3 class="worktime-form-title">% Времени: <span id="selectedPartnerName"></span></h3>
+                                                <button class="btn-reset btn-reset-small" onclick="trafficCalc.resetWorkTimeData()" title="Сбросить">
+                                                    <img src="icons/cross.svg" alt="">
+                                                    <span>Сбросить</span>
+                                                </button>
+                                            </div>
+
+                                            <div class="worktime-grid">
+                                                <div class="worktime-item">
+                                                    <span class="worktime-label">На пополнения</span>
+                                                    <div class="worktime-input-group">
+                                                        <input type="number" id="depositWorkTimePercent" value="0" min="0" max="100" onchange="trafficCalc.saveCurrentManualData()">
+                                                        <span class="percent-sign">%</span>
+                                                    </div>
+                                                </div>
+                                                <div class="worktime-item">
+                                                    <span class="worktime-label">На вывод</span>
+                                                    <div class="worktime-input-group">
+                                                        <input type="number" id="withdrawalWorkTimePercent" value="0" min="0" max="100" onchange="trafficCalc.saveCurrentManualData()">
+                                                        <span class="percent-sign">%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <button class="nav-btn nav-btn-back" onclick="trafficCalc.goToStep(3)">
+                                    <img src="icons/arrow.svg" alt="">
+                                    <span>Назад</span>
+                                </button>
+                                <button id="step4NextBtn" class="nav-btn nav-btn-next" onclick="trafficCalc.goToStep(5)" disabled>
+                                    <span>Далее</span>
+                                    <img src="icons/arrow.svg" alt="">
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Автоотключения -->
+                    <div id="step5" class="analytics-step">
+                        <div class="main-section" style="flex: 1;">
+                            <div class="section-header">
+                                <div class="section-title">Шаг 5: Автоотключения</div>
+                                <div class="section-actions">
+                                    <button class="btn-reset" onclick="trafficCalc.resetPercentData()" title="Сбросить данные автоотключений">
+                                        <img src="icons/cross.svg" alt="">
+                                        <span>Сбросить</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="section-body">
+                                <div class="step-hint">
+                                    <img src="icons/filter.svg" alt="">
+                                    <span>Загрузите Excel-файлы с данными о процентовках для подсчета автоотключений</span>
+                                </div>
+
+                                <div class="upload-zone" onclick="document.getElementById('percentFileInput').click()">
+                                    <img src="icons/import.svg" class="upload-zone-icon" alt="">
+                                    <div class="upload-zone-text">Перетащите файлы сюда</div>
+                                    <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
+                                    <input type="file" id="percentFileInput" accept=".xlsx" multiple style="display: none;" onchange="trafficCalc.handlePercentUpload(event)">
+                                </div>
+                                <div id="percentStatus" class="upload-status"></div>
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <button class="nav-btn nav-btn-back" onclick="trafficCalc.goToStep(4)">
+                                    <img src="icons/arrow.svg" alt="">
+                                    <span>Назад</span>
+                                </button>
+                                <button id="step5NextBtn" class="nav-btn nav-btn-next" onclick="trafficCalc.goToStep(6)" disabled>
+                                    <span>Далее</span>
+                                    <img src="icons/arrow.svg" alt="">
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 6: Нарушения -->
+                    <div id="step6" class="analytics-step">
+                        <div class="main-section" style="flex: 1;">
+                            <div class="section-header">
+                                <div class="section-title">Шаг 6: Нарушения</div>
+                                <div class="section-actions">
+                                    <button class="btn-reset" onclick="trafficCalc.resetAllViolationsData()" title="Сбросить все данные по нарушениям">
+                                        <img src="icons/cross.svg" alt="">
+                                        <span>Сбросить</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="section-body">
+                                <div class="step-hint">
+                                    <img src="icons/pen.svg" alt="">
+                                    <span>Выберите субагента слева и укажите данные по нарушениям. Этот шаг опционален.</span>
+                                </div>
+
+                                <div class="violations-layout">
+                                    <!-- Левая колонка: выбор субагента -->
+                                    <div class="violations-selector">
+                                        <div class="form-group">
+                                            <label for="partnerSearchInput6">Поиск</label>
+                                            <input type="text" id="partnerSearchInput6" placeholder="Поиск..." oninput="trafficCalc.filterPartnersListStep6()">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="partnerSelectList6">Субагент</label>
+                                            <select id="partnerSelectList6" size="8" onchange="trafficCalc.loadPartnerManualDataStep6()">
+                                                <option value="">Выберите на шаге 1</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Правая колонка: форма нарушений -->
+                                    <div class="violations-form-container">
+                                        <div id="manualDataForm6" style="display: none;">
+                                            <div class="violations-form-header">
+                                                <h3 class="violations-form-title">Нарушения: <span id="selectedPartnerName6"></span></h3>
+                                                <button class="btn-reset btn-reset-small" onclick="trafficCalc.resetViolationsData()" title="Сбросить">
+                                                    <img src="icons/cross.svg" alt="">
+                                                    <span>Сбросить</span>
+                                                </button>
+                                            </div>
+
+                                            <div class="violations-grid">
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Игнорирование чатов</span>
                                                     <div class="number-input-group">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('chatIgnoring')">
-                                                            <i data-lucide="minus"></i>
+                                                            <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
                                                         <input type="number" id="chatIgnoring" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('chatIgnoring')">
-                                                            <i data-lucide="plus"></i>
+                                                            <img src="icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Игнор Webmanagement</td>
-                                                <td>
+                                                </div>
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Игнор Webmanagement</span>
                                                     <div class="number-input-group">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('webmanagementIgnore')">
-                                                            <i data-lucide="minus"></i>
+                                                            <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
                                                         <input type="number" id="webmanagementIgnore" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('webmanagementIgnore')">
-                                                            <i data-lucide="plus"></i>
+                                                            <img src="icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Очереди на пополнение</td>
-                                                <td>
+                                                </div>
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Очереди на пополнение</span>
                                                     <div class="number-input-group">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('depositQueues')">
-                                                            <i data-lucide="minus"></i>
+                                                            <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
                                                         <input type="number" id="depositQueues" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('depositQueues')">
-                                                            <i data-lucide="plus"></i>
+                                                            <img src="icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Очереди на вывод</td>
-                                                <td>
+                                                </div>
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Очереди на вывод</span>
                                                     <div class="number-input-group">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('withdrawalQueues')">
-                                                            <i data-lucide="minus"></i>
+                                                            <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
                                                         <input type="number" id="withdrawalQueues" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('withdrawalQueues')">
-                                                            <i data-lucide="plus"></i>
+                                                            <img src="icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Зачисление вне лимитов</td>
-                                                <td>
+                                                </div>
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Зачисление вне лимитов</span>
                                                     <div class="number-input-group">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('creditsOutsideLimits')">
-                                                            <i data-lucide="minus"></i>
+                                                            <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
                                                         <input type="number" id="creditsOutsideLimits" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('creditsOutsideLimits')">
-                                                            <i data-lucide="plus"></i>
+                                                            <img src="icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Одобрение неверной суммы</td>
-                                                <td>
+                                                </div>
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Одобрение неверной суммы</span>
                                                     <div class="number-input-group">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('wrongAmountApproval')">
-                                                            <i data-lucide="minus"></i>
+                                                            <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
                                                         <input type="number" id="wrongAmountApproval" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('wrongAmountApproval')">
-                                                            <i data-lucide="plus"></i>
+                                                            <img src="icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Другие нарушения</td>
-                                                <td>
+                                                </div>
+                                            </div>
+
+                                            <div class="other-violations-section">
+                                                <div class="other-violations-header">
+                                                    <span class="violation-label">Другие нарушения</span>
                                                     <div class="number-input-group">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('otherViolations')">
-                                                            <i data-lucide="minus"></i>
+                                                            <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
                                                         <input type="number" id="otherViolations" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
                                                         <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('otherViolations')">
-                                                            <i data-lucide="plus"></i>
+                                                            <img src="icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
-                                                    <textarea id="otherViolationsDescription" placeholder="Опишите нарушения..." rows="2" style="width: 100%; margin-top: 8px; resize: vertical;" onchange="trafficCalc.saveCurrentManualDataStep6()"></textarea>
-                                                </td>
+                                                </div>
+                                                <textarea id="otherViolationsDescription" class="violations-description-large" placeholder="Опишите нарушения подробно..." onchange="trafficCalc.saveCurrentManualDataStep6()"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <button class="nav-btn nav-btn-back" onclick="trafficCalc.goToStep(5)">
+                                    <img src="icons/arrow.svg" alt="">
+                                    <span>Назад</span>
+                                </button>
+                                <button id="step6NextBtn" class="nav-btn nav-btn-complete" onclick="trafficCalc.completeAnalytics()">
+                                    <img src="icons/done.svg" alt="">
+                                    <span>Завершить</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Отчет -->
+                <div id="reportTab" class="tab-content">
+                    <div class="main-section" style="flex: 1; display: flex; flex-direction: column;">
+                        <div class="section-header">
+                            <div class="section-title">Формирование отчета</div>
+                            <div class="section-actions">
+                                <button class="btn btn-primary" onclick="trafficCalc.generateReport()">
+                                    <img src="icons/documents.svg" alt="" style="filter: brightness(0) invert(1);">
+                                    Сформировать отчет
+                                </button>
+                            </div>
+                        </div>
+                        <div class="section-body" style="flex: 1; display: flex; flex-direction: column;">
+                            <div id="reportNotGenerated" class="report-placeholder">
+                                <div class="report-placeholder-content">
+                                    <img src="icons/documents.svg" alt="">
+                                    <p>Отчет не сформирован</p>
+                                    <p class="report-hint">Перейдите на вкладку "Аналитика", выберите партнеров и вернитесь сюда для формирования отчета</p>
+                                </div>
+                            </div>
+
+                            <div id="reportGenerated" class="report-generated" style="display: none;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <span style="font-size: 14px; font-weight: 700; color: var(--black);">Детальный отчет</span>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-success" onclick="trafficCalc.exportReportToExcel()">
+                                            <img src="icons/export.svg" alt="">
+                                            Экспорт в Excel
+                                        </button>
+                                        <button class="btn btn-primary" onclick="trafficCalc.openTrafficCalculator()">
+                                            <img src="icons/settings.svg" alt="" style="filter: brightness(0) invert(1);">
+                                            Рассчитать % трафика
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="table-container" style="flex: 1;">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Метод</th>
+                                                <th>Субагент</th>
+                                                <th>Субагент ID</th>
+                                                <th>Статус</th>
+                                                <th>Дата добавления</th>
+                                                <th>Back</th>
+                                                <th>Cringe</th>
+                                                <th>Автоотключение</th>
+                                                <th>Кол-во пополнений</th>
+                                                <th>Кол-во выводов</th>
+                                                <th>Обращений по пополнениям</th>
+                                                <th>Обращения 15+ мин</th>
+                                                <th>% успешных пополнений</th>
+                                                <th>% успешных выводов</th>
+                                                <th>% Времени работы на пополнения</th>
+                                                <th>% Времени работы на вывод</th>
+                                                <th>Игнорирование чатов</th>
+                                                <th>Игнор Webmanagement</th>
+                                                <th>Очереди на пополнение</th>
+                                                <th>Очереди на вывод</th>
+                                                <th>Зачисление вне лимитов</th>
+                                                <th>Одобрение неверной суммы</th>
+                                                <th>Другие нарушения</th>
                                             </tr>
+                                        </thead>
+                                        <tbody id="reportTableBody">
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Правая часть: Выбор субагента -->
-                        <div class="manual-data-selector">
-                            <div class="form-group">
-                                <label for="partnerSearchInput6">Поиск субагента</label>
-                                <input type="text" id="partnerSearchInput6" placeholder="Введите название субагента" oninput="trafficCalc.filterPartnersListStep6()">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="partnerSelectList6">Выберите субагента</label>
-                                <select id="partnerSelectList6" size="10" onchange="trafficCalc.loadPartnerManualDataStep6()">
-                                    <option value="">Сначала выберите партнеров на шаге 1</option>
-                                </select>
-                            </div>
-                        </div>
                     </div>
-
-                    <div class="step-navigation">
-                        <button class="btn btn-secondary" onclick="trafficCalc.goToStep(5)">
-                            <i data-lucide="arrow-left"></i> Назад
-                        </button>
-                        <button id="step6NextBtn" class="btn btn-success" onclick="trafficCalc.completeAnalytics()">
-                            <i data-lucide="check"></i> Завершить
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-
-        </div>
-
-        <!-- Вкладка: Отчет -->
-        <div id="reportTab" class="tab-content">
-            <div class="section">
-                <div class="section-header">
-                    <h2>Формирование отчета</h2>
-                    <button class="btn btn-primary" onclick="trafficCalc.generateReport()">
-                        <i data-lucide="file-plus"></i> Сформировать отчет
-                    </button>
-                </div>
-                
-                <div id="reportNotGenerated" class="report-placeholder">
-                    <div class="report-placeholder-content">
-                        <i data-lucide="file-text" style="width: 48px; height: 48px; color: #999;"></i>
-                        <p>Отчет не сформирован</p>
-                        <p class="report-hint">Перейдите на вкладку "Аналитика", выберите партнеров и вернитесь сюда для формирования отчета</p>
-                    </div>
-                </div>
-
-                <div id="reportGenerated" class="report-generated" style="display: none;">
-                    <div class="report-summary">
-                        <h3>Сводка</h3>
-                        <div class="report-stats">
-                            <div class="stat-card">
-                                <div class="stat-value" id="reportTotalCount">0</div>
-                                <div class="stat-label">Всего субагентов</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="reportNewCount">0</div>
-                                <div class="stat-label">Новых</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="reportOldCount">0</div>
-                                <div class="stat-label">Старых</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="reportClosedCount">0</div>
-                                <div class="stat-label">Закрытых</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section-header">
-                        <h3>Детальный отчет</h3>
-                        <div>
-                            <button class="btn btn-success" onclick="trafficCalc.exportReportToExcel()">
-                                <i data-lucide="download"></i> Экспорт в Excel
-                            </button>
-                            <button class="btn btn-primary" onclick="trafficCalc.openTrafficCalculator()">
-                                <i data-lucide="calculator"></i> Рассчитать % трафика
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="table-wrapper">
-                        <table class="partners-table">
-                            <thead>
-                                <tr>
-                                    <th>Метод</th>
-                                    <th>Субагент</th>
-                                    <th>Субагент ID</th>
-                                    <th>Статус</th>
-                                    <th>Дата добавления</th>
-                                    <th>Back</th>
-                                    <th>Cringe</th>
-                                    <th>Автоотключение</th>
-                                    <th>Кол-во пополнений</th>
-                                    <th>Кол-во выводов</th>
-                                    <th>Обращений по пополнениям</th>
-                                    <th>Обращения 15+ мин</th>
-                                    <th>% успешных пополнений</th>
-                                    <th>% успешных выводов</th>
-                                    <th>% Времени работы на пополнения</th>
-                                    <th>% Времени работы на вывод</th>
-                                    <th>Игнорирование чатов</th>
-                                    <th>Игнор Webmanagement</th>
-                                    <th>Очереди на пополнение</th>
-                                    <th>Очереди на вывод</th>
-                                    <th>Зачисление вне лимитов</th>
-                                    <th>Одобрение неверной суммы</th>
-                                    <th>Другие нарушения</th>
-                                </tr>
-                            </thead>
-                            <tbody id="reportTableBody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Модальное окно детального отчета -->
-        <div id="detailedReportModal" class="modal modal-large">
-            <div class="modal-dialog modal-dialog-large">
-                <div class="modal-header">
-                    <h2>Детальный отчет</h2>
-                    <button class="modal-close" onclick="trafficCalc.closeDetailedReport()">
-                        <i data-lucide="x"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="table-wrapper">
-                        <table class="partners-table">
-                            <thead>
-                                <tr>
-                                    <th>Метод</th>
-                                    <th>Субагент</th>
-                                    <th>Субагент ID</th>
-                                    <th>Статус</th>
-                                    <th>Дата добавления</th>
-                                    <th>Back</th>
-                                    <th>Cringe</th>
-                                    <th>Автоотключение</th>
-                                    <th>Кол-во пополнений</th>
-                                    <th>Кол-во выводов</th>
-                                    <th>Обращений по пополнениям</th>
-                                    <th>Обращения 15+ мин</th>
-                                    <th>% успешных пополнений</th>
-                                    <th>% успешных выводов</th>
-                                    <th>% Времени работы на пополнения</th>
-                                    <th>% Времени работы на вывод</th>
-                                    <th>Игнорирование чатов</th>
-                                    <th>Игнор Webmanagement</th>
-                                    <th>Очереди на пополнение</th>
-                                    <th>Очереди на вывод</th>
-                                    <th>Зачисление вне лимитов</th>
-                                    <th>Одобрение неверной суммы</th>
-                                    <th>Другие нарушения</th>
-                                </tr>
-                            </thead>
-                            <tbody id="detailedReportTableBody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="trafficCalc.closeDetailedReport()">Закрыть</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Модальное окно редактирования партнера -->
-        <div id="editModal" class="modal">
-            <div class="modal-dialog">
-                <div class="modal-header">
-                    <h2>Редактировать партнера</h2>
-                    <button class="modal-close" onclick="trafficCalc.closeEditModal()">
-                        <i data-lucide="x"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="editForm">
-                        <input type="hidden" id="editPartnerId">
-                        
-                        <div class="form-group">
-                            <label for="editMethodSelect">Метод</label>
-                            <select id="editMethodSelect" required>
-                                <option value="">Выберите метод</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="editSubagentInput">Субагент</label>
-                            <input type="text" id="editSubagentInput" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="editSubagentIdInput">Субагент ID</label>
-                            <input type="text" id="editSubagentIdInput" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="editStatusSelect">Статус</label>
-                            <select id="editStatusSelect" required>
-                                <option value="новый">Новый</option>
-                                <option value="старый">Старый</option>
-                                <option value="закрыт">Закрыт</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="trafficCalc.closeEditModal()">Отмена</button>
-                    <button class="btn btn-primary" onclick="trafficCalc.saveEdit()">Сохранить</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Модальное окно управления методами -->
-        <div id="methodModal" class="modal">
-            <div class="modal-dialog">
-                <div class="modal-header">
-                    <h2>Управление методами</h2>
-                    <button class="modal-close" onclick="trafficCalc.closeMethodModal()">
-                        <i data-lucide="x"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="newMethodInput">Добавить новый метод</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" id="newMethodInput" placeholder="Название метода">
-                            <button class="btn btn-primary" onclick="trafficCalc.addMethod()">
-                                <i data-lucide="plus"></i> Добавить
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Существующие методы</label>
-                        <div id="methodsList" class="methods-list"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="trafficCalc.closeMethodModal()">Закрыть</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Модальное окно калькулятора трафика -->
-        <div id="trafficCalculatorModal" class="modal modal-xlarge">
-            <div class="modal-dialog modal-dialog-xlarge">
-                <div class="modal-header">
-                    <h2>Настройки расчета % трафика</h2>
-                    <button class="modal-close" onclick="trafficCalc.closeTrafficCalculator()">
-                        <i data-lucide="x"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <p class="modal-description">Укажите диапазоны значений и баллы для каждого параметра</p>
-                    
-                    <div id="trafficSettingsForm" class="traffic-settings-form">
-                        <!-- Параметры будут добавлены динамически через JS -->
-                    </div>
-                </div>
-                <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn" style="background: #ff9800; color: white; border: 1px solid #f57c00;" onclick="trafficCalc.exportTrafficSettings()" title="Экспортировать настройки">
-                            <i data-lucide="download"></i> Экспорт настроек
-                        </button>
-                        <button class="btn" style="background: #2196f3; color: white; border: 1px solid #1976d2;" onclick="trafficCalc.importTrafficSettings()" title="Импортировать настройки">
-                            <i data-lucide="upload"></i> Импорт настроек
-                        </button>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn btn-secondary" onclick="trafficCalc.closeTrafficCalculator()">Отмена</button>
-                        <button class="btn btn-success" onclick="trafficCalc.calculateTraffic()">
-                            <i data-lucide="play"></i> Рассчитать
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Модальное окно результатов расчета -->
-        <div id="trafficResultsModal" class="modal modal-large">
-            <div class="modal-dialog modal-dialog-large">
-                <div class="modal-header">
-                    <h2>Результаты расчета % трафика</h2>
-                    <button class="modal-close" onclick="trafficCalc.closeTrafficResults()">
-                        <i data-lucide="x"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="table-wrapper">
-                        <table class="partners-table traffic-results-table">
-                            <thead>
-                                <tr>
-                                    <th>Метод</th>
-                                    <th>Субагент</th>
-                                    <th>ID Субагента</th>
-                                    <th class="score-good">Хороший</th>
-                                    <th class="score-normal">Нормальный</th>
-                                    <th class="score-bad">Плохой</th>
-                                    <th class="score-terrible">Ужасный</th>
-                                    <th class="score-total">Всего</th>
-                                    <th class="traffic-percent-header">% Трафика</th>
-                                </tr>
-                            </thead>
-                            <tbody id="trafficResultsTableBody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="trafficCalc.closeTrafficResults()">Закрыть</button>
-                    <button class="btn btn-primary" onclick="trafficCalc.exportTrafficResults()">
-                        <i data-lucide="download"></i> Экспорт в Excel
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Модальное окно импорта партнеров -->
-        <div id="importPartnersModal" class="modal">
-            <div class="modal-dialog">
-                <div class="modal-header">
-                    <h2>Импорт списка партнеров</h2>
-                    <button class="modal-close" onclick="trafficCalc.closeImportModal()">
-                        <i data-lucide="x"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <p style="margin-bottom: 12px; color: #666;">Выберите JSON файл с данными партнеров для импорта:</p>
-                    <input type="file" id="importPartnersFileInput" accept=".json" style="margin-bottom: 12px;">
-                    <div id="importPartnersPreview" style="display: none; padding: 8px; background: #f0f0f0; border-radius: 4px; margin-bottom: 12px; font-size: 0.875rem;"></div>
-                    <div style="padding: 12px; background: #fff3cd; border-radius: 4px; margin-top: 12px;">
-                        <p style="margin: 0; font-size: 0.875rem; color: #856404;">
-                            <strong>Важно:</strong> При импорте все текущие партнеры будут заменены на данные из файла. Рекомендуется сначала создать резервную копию через экспорт.
-                        </p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="trafficCalc.closeImportModal()">Отмена</button>
-                    <button class="btn btn-primary" onclick="trafficCalc.importPartners()" id="importPartnersBtn" disabled>Импортировать</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Modal: Traffic Calculator -->
+    <div id="trafficCalculatorModal" class="modal modal-xlarge">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2>Настройки расчета % трафика</h2>
+                <button class="modal-close" onclick="trafficCalc.closeTrafficCalculator()">
+                    <img src="icons/cross.svg" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-description-row">
+                    <p class="modal-description">Укажите диапазоны и баллы. Чем больше баллов — тем меньше % трафика.</p>
+                    <button class="help-toggle-btn" onclick="trafficCalc.toggleHelp()">
+                        <img src="../shared/icons/info.svg" alt="Справка">
+                        Справка
+                    </button>
+                </div>
+
+                <div id="trafficHelpContent" class="traffic-help-content" style="display: none;">
+                    <h4>Формула расчета % трафика</h4>
+                    <p><strong>Общий балл партнёра</strong> = сумма баллов по всем параметрам</p>
+                    <p>Каждый параметр имеет 4 уровня оценки:</p>
+                    <ul>
+                        <li><span class="score-good">Хороший</span> — лучший результат, минимальные баллы</li>
+                        <li><span class="score-normal">Нормальный</span> — приемлемый результат</li>
+                        <li><span class="score-bad">Плохой</span> — результат ниже нормы</li>
+                        <li><span class="score-terrible">Ужасный</span> — критически плохой результат</li>
+                    </ul>
+                    <p><strong>Как заполнять настройки:</strong></p>
+                    <ul>
+                        <li>Для каждого параметра укажите диапазон значений (от-до)</li>
+                        <li>Укажите количество баллов за попадание в этот диапазон</li>
+                        <li>Чем больше баллов — тем хуже результат партнёра</li>
+                    </ul>
+                    <p><strong>Как рассчитывается % трафика:</strong></p>
+                    <ul>
+                        <li>Партнёры группируются по методу работы</li>
+                        <li>Внутри каждого метода распределяется 100% трафика</li>
+                        <li>Трафик распределяется обратно пропорционально баллам</li>
+                        <li>Чем больше баллов (хуже работа) — тем меньше % трафика</li>
+                    </ul>
+                    <p><strong>Пример:</strong> В методе 2 партнёра с баллами 10 и 30. Первый (меньше баллов, лучше) получит 75%, второй (больше баллов, хуже) — 25%.</p>
+                </div>
+
+                <div id="trafficSettingsForm" class="traffic-settings-form">
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-small btn-warning" onclick="trafficCalc.exportTrafficSettings()">
+                        <img src="icons/export.svg" alt="">
+                        Экспорт
+                    </button>
+                    <button class="btn btn-small btn-secondary" onclick="trafficCalc.importTrafficSettings()">
+                        <img src="icons/import.svg" alt="">
+                        Импорт
+                    </button>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-small btn-secondary" onclick="trafficCalc.closeTrafficCalculator()">Отмена</button>
+                    <button class="btn btn-success" onclick="trafficCalc.calculateTraffic()">
+                        <img src="icons/done.svg" alt="">
+                        Рассчитать
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Traffic Results -->
+    <div id="trafficResultsModal" class="modal modal-large">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2>Результаты расчета % трафика</h2>
+                <button class="modal-close" onclick="trafficCalc.closeTrafficResults()">
+                    <img src="icons/cross.svg" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table class="data-table traffic-results-table">
+                        <thead>
+                            <tr>
+                                <th>Метод</th>
+                                <th>Субагент</th>
+                                <th>ID Субагента</th>
+                                <th class="score-good">Хороший</th>
+                                <th class="score-normal">Нормальный</th>
+                                <th class="score-bad">Плохой</th>
+                                <th class="score-terrible">Ужасный</th>
+                                <th class="score-total">Всего</th>
+                                <th class="traffic-percent-header">% Трафика</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trafficResultsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="trafficCalc.closeTrafficResults()">Закрыть</button>
+                <button class="btn btn-success" onclick="trafficCalc.exportTrafficResults()">
+                    <img src="icons/export.svg" alt="">
+                    Экспорт в Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">О разработке</h2>
+                <button class="modal-close" onclick="closeAboutModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Это проект <strong>Vadim P</strong></p>
+                <p>Reddy ID для связи: <strong>62219492522</strong></p>
+                <p>Ссылка на чат с актуальной версией:<br>
+                <a href="https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_" target="_blank">https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../shared/version.js"></script>
     <script src="../shared/storage.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/auth-guard.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/traffic-calculation.js"></script>
     <script>
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
+        function showAboutModal() {
+            document.getElementById('aboutModal').classList.add('active');
         }
+        function closeAboutModal() {
+            document.getElementById('aboutModal').classList.remove('active');
+        }
+        document.getElementById('aboutModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAboutModal();
+        });
     </script>
 </body>
 </html>

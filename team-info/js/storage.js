@@ -64,7 +64,6 @@ const storage = {
                                 ...item,
                                 fullName: item.title,
                                 position: item.position || '',
-                                grade: item.grade || 'Middle',
                                 predefinedFields: item.predefinedFields || {},
                                 customFields: item.customFields || {},
                                 comment: item.comment || ''

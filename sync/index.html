@@ -3,31 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Синхронизация - AIAdminka</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com; frame-ancestors 'self'">
+    <title>Настройки - AIAdminka</title>
     <link rel="stylesheet" href="css/sync.css">
 </head>
 <body>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
-            <button class="back-button" onclick="syncApp.toggleSidebar()">
+            <button class="back-button" onclick="settingsApp.toggleSidebar()">
                 <img src="icons/arrow.svg" width="30" height="30" alt="Toggle">
             </button>
 
             <div class="sidebar-menu">
                 <div class="menu-item" onclick="window.location.href='../index.html'">
-                    <span>Главная страница</span>
+                    <span>Главная</span>
                     <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../excel-reports/index.html'">
-                    <span>Excel отчеты</span>
-                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Excel">
+                    <span>Отчеты</span>
+                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Отчеты">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../team-info/index.html'">
-                    <span>Team Info</span>
-                    <img src="icons/team_info.svg" width="20" height="20" alt="Team Info">
+                    <span>Сотрудники</span>
+                    <img src="icons/team_info.svg" width="20" height="20" alt="Сотрудники">
                 </div>
 
                 <div class="menu-item" onclick="window.location.href='../traffic-calculation/index.html'">
@@ -35,36 +36,45 @@
                     <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
                 </div>
 
-                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
-                    <span>Документация</span>
-                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
-                </div>
-
                 <div class="menu-item" onclick="window.location.href='../partners/index.html'">
                     <span>Партнеры</span>
                     <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
                 </div>
 
+                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
+                    <span>Документация</span>
+                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
+                </div>
+
                 <div class="menu-item active">
-                    <span>Синхронизация</span>
-                    <img src="icons/sync.svg" width="20" height="20" alt="Синхронизация">
+                    <span>Настройки</span>
+                    <img src="icons/sync.svg" width="20" height="20" alt="Настройки">
                 </div>
             </div>
 
             <div class="menu-separator"></div>
 
-            <div class="version-info">
-                О разработке<br>
-                Version 1.0.0
+            <div class="version-info" onclick="showAboutModal()">
+                <span class="version-text-full">О разработке</span>
+                <span id="versionText" class="version-number"></span>
+                <span class="version-icon" title="О разработке">
+                    <img src="../shared/icons/info.svg" alt="О разработке">
+                </span>
             </div>
         </aside>
 
         <script>
             (function() {
-                const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
-                if (collapsed) {
-                    document.getElementById('sidebar').classList.add('collapsed');
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.add('no-transition');
+                if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                    sidebar.classList.add('collapsed');
                 }
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        sidebar.classList.remove('no-transition');
+                    });
+                });
             })();
         </script>
 
@@ -72,237 +82,194 @@
         <div class="main-wrapper">
             <!-- Global header -->
             <header class="global-header">
-                <div class="header-title">Облачная синхронизация</div>
+                <div class="header-title">Настройки</div>
                 <div class="header-status" id="connectionStatus">
                     <span class="status-dot"></span>
-                    <span class="status-text">Не настроено</span>
+                    <span class="status-text">Подключено</span>
                 </div>
             </header>
 
             <!-- Content area -->
             <div class="content-area">
-                <!-- Left panel - Config -->
-                <aside class="left-panel">
-                    <div class="config-panel">
-                        <div class="panel-header">
-                            <span>Подключение</span>
-                        </div>
-                        <div class="panel-content">
-                            <div class="config-field">
-                                <label>URL Google Apps Script:</label>
-                                <input type="text" id="configScriptUrl" placeholder="https://script.google.com/macros/s/..." oninput="syncApp.saveConfig()">
-                            </div>
-                            <button class="btn-login" id="btnLogin" onclick="syncApp.login()">
-                                Войти через Google
-                            </button>
-                            <button class="btn-request-access" id="btnRequestAccess" onclick="syncApp.requestAccess()" style="display:none;">
-                                Запросить доступ
-                            </button>
-                            <button class="btn-check-access" id="btnCheckAccess" onclick="syncApp.checkAccessStatus()" style="display:none;">
-                                Проверить доступ
-                            </button>
-                            <button class="btn-logout" id="btnLogout" onclick="syncApp.logout()" style="display:none;">
-                                Выйти
-                            </button>
-                            <div class="config-info" id="configInfo">
-                                <div class="info-row">
-                                    <span class="info-label">Статус:</span>
-                                    <span class="info-value" id="statusValue">-</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">Ваш email:</span>
-                                    <span class="info-value" id="userEmail">-</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">Имя:</span>
-                                    <span class="info-value" id="userName">-</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="help-panel">
-                        <div class="panel-header">
-                            <span>Как настроить?</span>
-                        </div>
-                        <div class="panel-content">
-                            <ol class="help-list">
-                                <li>Создайте Google Таблицу</li>
-                                <li>Расширения → Apps Script</li>
-                                <li>Вставьте код из документации</li>
-                                <li>Разверните как веб-приложение</li>
-                                <li>Скопируйте URL сюда</li>
-                            </ol>
-                        </div>
-                    </div>
-                </aside>
-
                 <!-- Main section -->
-                <main class="main-section">
-                    <!-- Actions panel -->
-                    <div class="actions-panel">
-                        <button class="action-btn export-btn" onclick="syncApp.showExportModal()" id="btnExport" disabled>
-                            <img src="icons/export.svg" width="32" height="32" alt="Экспорт">
-                            <div class="action-text">
-                                <span class="action-title">Экспорт в облако</span>
-                                <span class="action-desc">Сохранить данные в Google Sheets</span>
-                            </div>
-                        </button>
+                <main class="main-section settings-layout">
 
-                        <button class="action-btn import-btn" onclick="syncApp.showImportModal()" id="btnImport" disabled>
-                            <img src="icons/import.svg" width="32" height="32" alt="Импорт">
-                            <div class="action-text">
-                                <span class="action-title">Импорт из облака</span>
-                                <span class="action-desc">Загрузить данные от коллеги</span>
+                    <!-- Account Section -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <div class="card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
                             </div>
-                        </button>
-
-                        <button class="action-btn settings-btn" onclick="syncApp.showAccessModal()" id="btnAccess" disabled>
-                            <img src="icons/settings.svg" width="32" height="32" alt="Настройки">
-                            <div class="action-text">
-                                <span class="action-title">Настройки доступа</span>
-                                <span class="action-desc">Кому видны мои обновления</span>
-                            </div>
-                        </button>
-                    </div>
-
-                    <!-- Data panel -->
-                    <div class="data-panel">
-                        <div class="panel-header">
-                            <span>Данные для синхронизации</span>
-                            <button class="btn-reset" onclick="syncApp.resetData()">Сбросить</button>
+                            <span>Аккаунт</span>
                         </div>
-                        <div class="panel-content">
-                            <div class="data-field">
-                                <label>Название проекта:</label>
-                                <input type="text" id="dataProjectName" value="AIAdminka" oninput="syncApp.saveData()">
+                        <div class="card-content">
+                            <div class="user-profile" id="userProfile">
+                                <div class="user-avatar" id="userAvatar"></div>
+                                <div class="user-details">
+                                    <div class="user-name" id="userName">-</div>
+                                    <div class="user-email" id="userEmail">-</div>
+                                </div>
                             </div>
-                            <div class="data-field">
-                                <label>Версия:</label>
-                                <input type="text" id="dataVersion" value="2.3.0" oninput="syncApp.saveData()">
-                            </div>
-                            <div class="data-field">
-                                <label>Автор:</label>
-                                <input type="text" id="dataAuthor" oninput="syncApp.saveData()">
-                            </div>
-                            <div class="data-field">
-                                <label>Заметка:</label>
-                                <textarea id="dataNote" rows="3" oninput="syncApp.saveData()">Тестовые данные для проверки синхронизации.</textarea>
+                            <div class="card-actions">
+                                <button class="btn-logout" onclick="settingsApp.logout()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                        <polyline points="16,17 21,12 16,7"/>
+                                        <line x1="21" y1="12" x2="9" y2="12"/>
+                                    </svg>
+                                    Выйти из аккаунта
+                                </button>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Cloud Storage Section -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <div class="card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+                                </svg>
+                            </div>
+                            <span>Облачное хранилище</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Статус</span>
+                                    <span class="info-value status-ok" id="storageStatus">Подключено</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Тип хранилища</span>
+                                    <span class="info-value">Google Sheets</span>
+                                </div>
+                            </div>
+                            <p class="info-text">
+                                Данные партнёров, шаблоны и методы автоматически синхронизируются с облаком.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Local Data Section -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <div class="card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17,8 12,3 7,8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                            </div>
+                            <span>Локальные данные</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Настройки интерфейса</span>
+                                    <span class="info-value" id="localSettingsSize">-</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Кэш данных</span>
+                                    <span class="info-value" id="localCacheSize">-</span>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button class="btn-secondary" onclick="settingsApp.clearCache()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3,6 5,6 21,6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    Очистить кэш
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session Info Section -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <div class="card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12,6 12,12 16,14"/>
+                                </svg>
+                            </div>
+                            <span>Сессия</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Авторизация действует до</span>
+                                    <span class="info-value" id="sessionExpiry">-</span>
+                                </div>
+                            </div>
+                            <p class="info-text">
+                                Сессия автоматически продлевается при использовании системы.
+                            </p>
+                        </div>
+                    </div>
+
                 </main>
-
-                <!-- Right panel - Log -->
-                <aside class="right-panel">
-                    <div class="log-panel">
-                        <div class="panel-header">
-                            <span>Журнал операций</span>
-                            <button class="btn-clear" onclick="syncApp.clearLog()">Очистить</button>
-                        </div>
-                        <div class="panel-content">
-                            <div class="log-list" id="logList">
-                                <div class="log-empty">Нет записей</div>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
             </div>
         </div>
     </div>
 
-    <!-- Export Modal -->
-    <div class="modal" id="exportModal">
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
         <div class="modal-dialog">
             <div class="modal-header">
-                <h2 class="modal-title">Экспорт в облако</h2>
-                <button class="modal-close" onclick="syncApp.closeModal('exportModal')">
+                <h2 class="modal-title">О разработке</h2>
+                <button class="modal-close" onclick="closeAboutModal()">
                     <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
                 </button>
             </div>
             <div class="modal-body">
-                <p class="modal-info">Ваши данные будут сохранены в облако. Коллеги с разрешением смогут их импортировать.</p>
-                <div class="data-preview">
-                    <div class="preview-header">Данные для экспорта:</div>
-                    <pre id="exportPreview"></pre>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="syncApp.closeModal('exportModal')">Отмена</button>
-                <button class="btn-primary" onclick="syncApp.doExport()" id="btnDoExport">Экспортировать</button>
+                <p>Это проект <strong>Vadim P</strong></p>
+                <p>Reddy ID для связи: <strong>62219492522</strong></p>
+                <p>Ссылка на чат с актуальной версией:<br>
+                <a href="https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_" target="_blank">https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_</a></p>
             </div>
         </div>
     </div>
 
-    <!-- Import Modal -->
-    <div class="modal" id="importModal">
-        <div class="modal-dialog modal-lg">
+    <!-- Confirm Logout Modal -->
+    <div class="modal" id="logoutModal">
+        <div class="modal-dialog modal-sm">
             <div class="modal-header">
-                <h2 class="modal-title">Импорт из облака</h2>
-                <button class="modal-close" onclick="syncApp.closeModal('importModal')">
+                <h2 class="modal-title">Выход из аккаунта</h2>
+                <button class="modal-close" onclick="settingsApp.closeModal('logoutModal')">
                     <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
                 </button>
             </div>
             <div class="modal-body">
-                <p class="modal-info">Выберите коллегу, от которого хотите импортировать данные:</p>
-                <div class="users-list" id="importUsersList">
-                    <div class="loading">Загрузка...</div>
-                </div>
+                <p>Вы уверены, что хотите выйти из аккаунта?</p>
+                <p class="text-muted">Вам потребуется повторная авторизация через Google.</p>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" onclick="syncApp.closeModal('importModal')">Отмена</button>
-                <button class="btn-primary" onclick="syncApp.doImport()" id="btnDoImport" disabled>Импортировать</button>
+                <button class="btn-secondary" onclick="settingsApp.closeModal('logoutModal')">Отмена</button>
+                <button class="btn-danger" onclick="settingsApp.confirmLogout()">Выйти</button>
             </div>
         </div>
     </div>
 
-    <!-- Access Settings Modal -->
-    <div class="modal" id="accessModal">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-header">
-                <h2 class="modal-title">Настройки доступа</h2>
-                <button class="modal-close" onclick="syncApp.closeModal('accessModal')">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-            <div class="modal-body">
-                <p class="modal-info">Выберите, кому будут видны ваши данные при импорте:</p>
-                <div class="users-list" id="accessUsersList">
-                    <div class="loading">Загрузка...</div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="syncApp.closeModal('accessModal')">Отмена</button>
-                <button class="btn-primary" onclick="syncApp.saveAccess()" id="btnSaveAccess">Сохранить</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Result Modal (для ввода результата из вкладки) -->
-    <div class="modal" id="resultModal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h2 class="modal-title">Вставьте результат</h2>
-                <button class="modal-close" onclick="syncApp.closeModal('resultModal')">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-            <div class="modal-body">
-                <p class="modal-info">
-                    1. В открывшейся вкладке Google покажет JSON-результат<br>
-                    2. Скопируйте весь текст (Ctrl+A, Ctrl+C)<br>
-                    3. Вставьте сюда (Ctrl+V)
-                </p>
-                <input type="hidden" id="resultAction" value="">
-                <textarea id="resultInput" class="result-textarea" rows="6" placeholder='{"success":true,...}'></textarea>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="syncApp.closeModal('resultModal')">Отмена</button>
-                <button class="btn-primary" onclick="syncApp.applyResult()">Применить</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="js/sync.js"></script>
+    <script src="../shared/version.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/auth-guard.js"></script>
+    <script src="js/settings.js"></script>
+    <script>
+        function showAboutModal() {
+            document.getElementById('aboutModal').classList.add('active');
+        }
+        function closeAboutModal() {
+            document.getElementById('aboutModal').classList.remove('active');
+        }
+        document.getElementById('aboutModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAboutModal();
+        });
+    </script>
 </body>
 </html>

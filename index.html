@@ -3,127 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SimpleAIAdminka - Windows XP</title>
-    <link rel="stylesheet" href="css/xp-style.css">
-    <script src="https://unpkg.com/lucide@0.548.0/dist/umd/lucide.min.js"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com; frame-ancestors 'self'">
+    <title>AIAdminka</title>
+    <link rel="stylesheet" href="css/home.css">
 </head>
 <body>
-    <!-- Desktop (Рабочий стол) -->
-    <div class="desktop" id="desktop">
-        <!-- Прозрачная сетка при перетаскивании -->
-        <div class="desktop-grid"></div>
-        <div class="desktop-icons" id="desktopIcons">
-            <!-- Иконки будут добавлены динамически через JavaScript -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button class="back-button" onclick="homeApp.toggleSidebar()">
+                <img src="icons/arrow.svg" width="30" height="30" alt="Toggle">
+            </button>
+
+            <div class="sidebar-menu">
+                <div class="menu-item active">
+                    <span>Главная</span>
+                    <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='excel-reports/index.html'">
+                    <span>Отчеты</span>
+                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Отчеты">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='team-info/index.html'">
+                    <span>Сотрудники</span>
+                    <img src="icons/team_info.svg" width="20" height="20" alt="Сотрудники">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='traffic-calculation/index.html'">
+                    <span>Расчет трафика</span>
+                    <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='partners/index.html'">
+                    <span>Партнеры</span>
+                    <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='documentation/index.html'">
+                    <span>Документация</span>
+                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='sync/index.html'">
+                    <span>Настройки</span>
+                    <img src="icons/sync.svg" width="20" height="20" alt="Настройки">
+                </div>
+            </div>
+
+            <div class="menu-separator"></div>
+
+            <div class="version-info" onclick="homeApp.showAbout()">
+                <span class="version-text-full">О разработке</span>
+                <span id="versionText" class="version-number"></span>
+                <span class="version-icon" title="О разработке">
+                    <img src="shared/icons/info.svg" alt="О разработке">
+                </span>
+            </div>
+        </aside>
+
+        <script>
+            (function() {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.add('no-transition');
+                if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                    sidebar.classList.add('collapsed');
+                }
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        sidebar.classList.remove('no-transition');
+                    });
+                });
+            })();
+        </script>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header -->
+            <header class="global-header">
+                <div class="header-title">AIAdminka</div>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <div class="modules-grid">
+                    <!-- Отчеты -->
+                    <a href="excel-reports/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/excel_reports.svg" alt="Отчеты">
+                        </div>
+                        <div class="module-title">Отчеты</div>
+                        <div class="module-desc">Работа с отчетами и таблицами</div>
+                    </a>
+
+                    <!-- Сотрудники -->
+                    <a href="team-info/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/team_info.svg" alt="Сотрудники">
+                        </div>
+                        <div class="module-title">Сотрудники</div>
+                        <div class="module-desc">Управление командой</div>
+                    </a>
+
+                    <!-- Расчет трафика -->
+                    <a href="traffic-calculation/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/Traffic calculation.svg" alt="Трафик">
+                        </div>
+                        <div class="module-title">Расчет трафика</div>
+                        <div class="module-desc">Калькулятор трафика</div>
+                    </a>
+
+                    <!-- Партнеры -->
+                    <a href="partners/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/partners.svg" alt="Партнеры">
+                        </div>
+                        <div class="module-title">Партнеры</div>
+                        <div class="module-desc">База партнеров</div>
+                    </a>
+
+                    <!-- Документация -->
+                    <a href="documentation/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/documents.svg" alt="Документация">
+                        </div>
+                        <div class="module-title">Документация</div>
+                        <div class="module-desc">Справка и руководства</div>
+                    </a>
+
+                    <!-- Настройки -->
+                    <a href="sync/index.html" class="module-card">
+                        <div class="module-icon">
+                            <img src="icons/sync.svg" alt="Настройки">
+                        </div>
+                        <div class="module-title">Настройки</div>
+                        <div class="module-desc">Облачное хранение данных</div>
+                    </a>
+
+                    <!-- Предложить улучшение -->
+                    <div class="module-card module-card-accent" onclick="homeApp.showTicketModal()">
+                        <div class="module-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                            </svg>
+                        </div>
+                        <div class="module-title">Предложить улучшение</div>
+                        <div class="module-desc">Идеи, баги, пожелания</div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 
-    <!-- Context Menu (Контекстное меню) -->
-    <div class="context-menu" id="contextMenu">
-        <div class="context-menu-item" onclick="contextMenuAction('open')">
-            <span class="context-menu-item-icon"><i data-lucide="folder-open"></i></span>
-            Открыть
+    <!-- Tickets Drawer -->
+    <div class="tickets-drawer-overlay" id="ticketsOverlay" onclick="homeApp.toggleTicketsDrawer()"></div>
+    <button class="tickets-drawer-toggle" id="ticketsToggle" onclick="homeApp.toggleTicketsDrawer()" title="Обратная связь">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+        </svg>
+        <span class="tickets-badge" id="ticketsBadge" style="display: none;">0</span>
+    </button>
+    <div class="tickets-drawer-panel" id="ticketsPanel">
+        <div class="tickets-drawer-header">
+            <h3>Обратная связь</h3>
+            <div class="tickets-drawer-actions">
+                <button class="btn-refresh" onclick="homeApp.loadTickets()" title="Обновить">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6"/>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                    </svg>
+                </button>
+                <button class="btn-close-drawer" onclick="homeApp.toggleTicketsDrawer()" title="Закрыть">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
         </div>
-        <div class="context-menu-separator"></div>
-        <div class="context-menu-item" id="contextLockItem" onclick="contextMenuAction('lock')">
-            <span class="context-menu-item-icon" id="contextLockIcon"><i data-lucide="unlock"></i></span>
-            <span id="contextLockText">Заблокировать</span>
-        </div>
-        <div class="context-menu-item" id="contextDeleteItem" onclick="contextMenuAction('delete')">
-            <span class="context-menu-item-icon"><i data-lucide="trash-2"></i></span>
-            Удалить
-        </div>
-    </div>
-
-    <!-- Taskbar (Панель задач) -->
-    <div class="taskbar">
-        <!-- Кнопка Пуск -->
-        <button class="start-button" onclick="toggleStartMenu()">
-            <div class="start-icon"><i data-lucide="menu"></i></div>
-            <span>Пуск</span>
-        </button>
-
-        <!-- Quick Launch -->
-        <div class="quick-launch"></div>
-
-        <!-- System Tray (Область уведомлений) -->
-        <div class="system-tray">
-            <div class="system-tray-icon"><i data-lucide="volume-2"></i></div>
-            <div class="clock" id="clock">12:00</div>
+        <div class="tickets-list" id="ticketsList">
+            <div class="tickets-empty">Загрузка...</div>
         </div>
     </div>
 
-    <!-- Start Menu (Меню Пуск) -->
-    <div class="start-menu" id="startMenu">
-        <div class="start-menu-header">
-            <div class="start-menu-user">Администратор</div>
-        </div>
-        
-        <div class="start-menu-content">
-            <div class="start-menu-item" onclick="openModule('excel-reports/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="file-spreadsheet"></i></div>
-                <div>Excel отчеты</div>
-            </div>
-            
-            <div class="start-menu-item" onclick="openModule('team-info/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="users"></i></div>
-                <div>Team Info</div>
-            </div>
-            
-            <div class="start-menu-item" onclick="openModule('traffic-calculation/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="trending-up"></i></div>
-                <div>Расчет трафика</div>
-            </div>
-            
-            <div class="start-menu-item" onclick="openModule('documentation/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="book-open"></i></div>
-                <div>Документация</div>
-            </div>
-
-            <div class="start-menu-item" onclick="openModule('partners/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="handshake"></i></div>
-                <div>Партнеры</div>
-            </div>
-
-            <div class="start-menu-item" onclick="openModule('sync/index.html'); toggleStartMenu();">
-                <div class="start-menu-item-icon"><i data-lucide="cloud-sync"></i></div>
-                <div>Синхронизация</div>
-            </div>
-
-            <div class="start-menu-separator"></div>
-            
-            <div class="start-menu-item" style="opacity: 0.5; cursor: default;">
-                <div class="start-menu-item-icon"><i data-lucide="file-text"></i></div>
-                <div>Гайды (в разработке)</div>
-            </div>
-        </div>
-        
-        <div class="start-menu-footer">
-            <div class="start-menu-footer-item" onclick="desktop.alignToGrid(); toggleStartMenu();">
-                <span><i data-lucide="grid-3x3"></i></span>
-                <span>Выровнять по сетке</span>
-            </div>
-            <div class="start-menu-footer-item" onclick="desktop.lockAll(); toggleStartMenu();">
-                <span><i data-lucide="lock"></i></span>
-                <span>Заблокировать все</span>
-            </div>
-            <div class="start-menu-footer-item" onclick="desktop.unlockAll(); toggleStartMenu();">
-                <span><i data-lucide="unlock"></i></span>
-                <span>Разблокировать все</span>
-            </div>
-            <div class="start-menu-separator"></div>
-            <div class="start-menu-footer-item" onclick="resetDesktop()">
-                <span><i data-lucide="rotate-ccw"></i></span>
-                <span>Сбросить</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- About Modal (Модальное окно "О разработке") -->
-    <div class="modal" id="aboutModal" onclick="if(event.target === this) closeAboutModal()">
-        <div class="modal-content">
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-dialog">
             <div class="modal-header">
-                <span class="modal-title">О разработке</span>
-                <button class="modal-close" onclick="closeAboutModal()">&times;</button>
+                <h2 class="modal-title">О разработке</h2>
+                <button class="modal-close" onclick="homeApp.closeAbout()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
             </div>
             <div class="modal-body">
                 <p>Это проект <strong>Vadim P</strong></p>
@@ -134,7 +206,69 @@
         </div>
     </div>
 
-    <script src="shared/storage.js"></script>
-    <script src="js/main.js"></script>
+    <!-- Ticket Create Modal -->
+    <div class="modal" id="ticketModal">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-header">
+                <h2 class="modal-title">Предложить улучшение</h2>
+                <button class="modal-close" onclick="homeApp.closeTicketModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="ticketTitle">Заголовок <span class="required">*</span></label>
+                    <input type="text" id="ticketTitle" class="form-input" placeholder="Кратко опишите идею или проблему" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="ticketDescription">Описание</label>
+                    <textarea id="ticketDescription" class="form-textarea" placeholder="Подробное описание..." rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Скриншоты (до 3 шт.)</label>
+                    <div class="image-upload-area" id="imageUploadArea">
+                        <div class="image-previews" id="imagePreviews"></div>
+                        <label class="image-upload-btn" id="imageUploadBtn">
+                            <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <polyline points="21,15 16,10 5,21"/>
+                            </svg>
+                            <span>Добавить фото</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="homeApp.closeTicketModal()">Отмена</button>
+                <button class="btn-primary" onclick="homeApp.submitTicket()" id="btnSubmitTicket">Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ticket View Modal -->
+    <div class="modal" id="ticketViewModal">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-header">
+                <h2 class="modal-title" id="ticketViewTitle">Тикет</h2>
+                <button class="modal-close" onclick="homeApp.closeTicketViewModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body" id="ticketViewBody">
+                <!-- Динамический контент -->
+            </div>
+            <div class="modal-footer" id="ticketViewFooter" style="display: none;">
+                <!-- Админ-панель -->
+            </div>
+        </div>
+    </div>
+
+    <script src="shared/cloud-storage.js"></script>
+    <script src="shared/sync-manager.js"></script>
+    <script src="shared/auth-guard.js"></script>
+    <script src="shared/version.js"></script>
+    <script src="js/home.js"></script>
 </body>
 </html>

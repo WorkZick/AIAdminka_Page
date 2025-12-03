@@ -3,684 +3,719 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Документация - Windows XP</title>
-    <link rel="stylesheet" href="../css/xp-module.css">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com; frame-ancestors 'self'">
+    <title>Документация - AIAdminka</title>
     <link rel="stylesheet" href="css/documentation.css">
-    <script src="https://unpkg.com/lucide@0.548.0/dist/umd/lucide.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <nav class="doc-nav">
-            <a href="../index.html" class="back-link"><i data-lucide="arrow-left"></i> Главная</a>
-            <button class="btn-changelog" onclick="changelog.show()"><i data-lucide="git-branch"></i> История обновлений</button>
-        </nav>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button class="back-button" onclick="docApp.toggleSidebar()">
+                <img src="icons/arrow.svg" width="30" height="30" alt="Toggle">
+            </button>
 
-        <div class="documentation-content" id="documentationContent">
-            <header class="doc-header">
-                <h1><i data-lucide="book-open"></i> Документация SimpleAIAdminka</h1>
-                <p class="doc-subtitle">Полное руководство по использованию модулей</p>
-                <div class="doc-meta">
-                    <span>Версия: 2.4.0</span>
-                    <span>•</span>
-                    <span id="currentDate"></span>
+            <div class="sidebar-menu">
+                <div class="menu-item" onclick="window.location.href='../index.html'">
+                    <span>Главная</span>
+                    <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../excel-reports/index.html'">
+                    <span>Отчеты</span>
+                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Отчеты">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../team-info/index.html'">
+                    <span>Сотрудники</span>
+                    <img src="icons/team_info.svg" width="20" height="20" alt="Сотрудники">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../traffic-calculation/index.html'">
+                    <span>Расчет трафика</span>
+                    <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../partners/index.html'">
+                    <span>Партнеры</span>
+                    <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
+                </div>
+
+                <div class="menu-item active">
+                    <span>Документация</span>
+                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
+                </div>
+
+                <div class="menu-item" onclick="window.location.href='../sync/index.html'">
+                    <span>Настройки</span>
+                    <img src="icons/sync.svg" width="20" height="20" alt="Настройки">
+                </div>
+            </div>
+
+            <div class="menu-separator"></div>
+
+            <div class="version-info" onclick="showAboutModal()">
+                <span class="version-text-full">О разработке</span>
+                <span id="versionText" class="version-number"></span>
+                <span class="version-icon" title="О разработке">
+                    <img src="../shared/icons/info.svg" alt="О разработке">
+                </span>
+            </div>
+        </aside>
+
+        <script>
+            (function() {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.add('no-transition');
+                if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                    sidebar.classList.add('collapsed');
+                }
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        sidebar.classList.remove('no-transition');
+                    });
+                });
+            })();
+        </script>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header -->
+            <header class="global-header">
+                <div class="header-title">Документация</div>
+                <div class="header-actions">
+                    <button class="btn-changelog" onclick="changelog.show()">
+                        <img src="icons/filter.svg" width="14" height="14" alt="История">
+                        История обновлений
+                    </button>
                 </div>
             </header>
 
-            <!-- Содержание -->
-            <div class="toc">
-                <h2><i data-lucide="list"></i> Содержание</h2>
-                <ul>
-                    <li><a href="#overview">1. Что это?</a></li>
-                    <li><a href="#team-info">2. Team Info</a></li>
-                    <li><a href="#traffic-calc">3. Расчет трафика</a></li>
-                    <li><a href="#excel-reports">4. Excel отчёты</a></li>
-                    <li><a href="#partners">5. Партнеры</a></li>
-                    <li><a href="#sync">6. Синхронизация</a></li>
-                    <li><a href="#desktop">7. Рабочий стол</a></li>
-                    <li><a href="#troubleshooting">8. Проблемы</a></li>
-                </ul>
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Left panel - Table of Contents -->
+                <aside class="left-panel">
+                    <div class="toc-panel">
+                        <div class="panel-header">
+                            <span>Содержание</span>
+                        </div>
+                        <div class="panel-content">
+                            <nav class="toc-nav">
+                                <a href="#overview" class="toc-link active">1. Что это?</a>
+                                <a href="#auth" class="toc-link">2. Авторизация</a>
+                                <a href="#partners" class="toc-link">3. Партнеры</a>
+                                <a href="#team-info" class="toc-link">4. Сотрудники</a>
+                                <a href="#traffic-calc" class="toc-link">5. Расчет трафика</a>
+                                <a href="#excel-reports" class="toc-link">6. Отчеты</a>
+                                <a href="#sync" class="toc-link">7. Настройки</a>
+                                <a href="#home" class="toc-link">8. Главная</a>
+                                <a href="#troubleshooting" class="toc-link">9. Проблемы</a>
+                                <a href="#architecture" class="toc-link">10. Архитектура</a>
+                            </nav>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Main section - Documentation content -->
+                <main class="main-section">
+                    <div class="doc-container">
+                        <!-- Header -->
+                        <div class="doc-header">
+                            <h1>Документация AIAdminka</h1>
+                            <p class="doc-subtitle">Полное руководство по использованию модулей</p>
+                            <div class="doc-meta">
+                                <span class="app-version" data-format="russian">Версия: ...</span>
+                                <span class="meta-separator">•</span>
+                                <span id="currentDate"></span>
+                            </div>
+                        </div>
+
+                        <!-- 1. Обзор -->
+                        <section class="doc-section" id="overview">
+                            <h2>1. Что это?</h2>
+
+                            <p>AIAdminka — административная панель для работы с партнёрами, командой и аналитикой. Современный минималистичный дизайн с облачной синхронизацией через Google Drive.</p>
+
+                            <h3>Модули:</h3>
+                            <ul>
+                                <li><strong>Партнеры</strong> — управление партнёрами с аватарами, статусами и методами</li>
+                                <li><strong>Сотрудники</strong> — карточки сотрудников с настраиваемыми полями</li>
+                                <li><strong>Расчет трафика</strong> — аналитика и калькулятор % трафика на основе данных партнёров</li>
+                                <li><strong>Отчеты</strong> — обработка Excel файлов по шаблонам</li>
+                                <li><strong>Настройки</strong> — профиль, облачное хранение, управление сессией</li>
+                                <li><strong>Документация</strong> — справочное руководство и история обновлений</li>
+                            </ul>
+
+                            <h3>Особенности:</h3>
+                            <div class="advantages">
+                                <div class="advantage">
+                                    <h4>Облачная синхронизация</h4>
+                                    <p>Данные и аватары хранятся в Google Drive</p>
+                                </div>
+                                <div class="advantage">
+                                    <h4>Авторизация</h4>
+                                    <p>Вход через Google OAuth с контролем доступа</p>
+                                </div>
+                                <div class="advantage">
+                                    <h4>Автономность</h4>
+                                    <p>Работает без установки программ</p>
+                                </div>
+                                <div class="advantage">
+                                    <h4>Безопасность</h4>
+                                    <p>OAuth 2.0, CSP заголовки, валидация данных</p>
+                                </div>
+                            </div>
+
+                            <h3>Быстрый старт:</h3>
+                            <ol>
+                                <li>Откройте <a href="https://workzick.github.io/AIAdminka_Page/" target="_blank">https://workzick.github.io/AIAdminka_Page/</a></li>
+                                <li>Нажмите "Войти через Google" и авторизуйтесь</li>
+                                <li>Если это первый вход — нажмите "Запросить доступ"</li>
+                                <li>После одобрения администратором — полный доступ ко всем модулям</li>
+                            </ol>
+                        </section>
+
+                        <!-- 2. Авторизация -->
+                        <section class="doc-section" id="auth">
+                            <h2>2. Авторизация</h2>
+
+                            <p>Система контроля доступа через Google OAuth. Новые пользователи должны получить одобрение администратора.</p>
+
+                            <h3>Как войти:</h3>
+                            <ol>
+                                <li><strong>Откройте приложение</strong> — вы попадёте на страницу входа</li>
+                                <li><strong>Нажмите "Войти через Google"</strong> — откроется окно авторизации Google</li>
+                                <li><strong>Выберите аккаунт</strong> — используйте корпоративный email</li>
+                                <li><strong>Дайте разрешение</strong> — приложению нужен доступ к вашему профилю</li>
+                            </ol>
+
+                            <h3>Статусы доступа:</h3>
+                            <ul>
+                                <li><strong>Не авторизован</strong> — требуется вход через Google</li>
+                                <li><strong>Ожидание (жёлтый)</strong> — запрос отправлен, ожидает одобрения администратора</li>
+                                <li><strong>Подключено (зелёный)</strong> — полный доступ к системе</li>
+                            </ul>
+
+                            <h3>Первый вход (новый пользователь):</h3>
+                            <ol>
+                                <li>После авторизации Google вы увидите "Доступ запрещён"</li>
+                                <li>Нажмите <strong>"Запросить доступ"</strong></li>
+                                <li>Ваш запрос будет отправлен администратору</li>
+                                <li>Нажмите <strong>"Проверить доступ"</strong> (раз в 10 сек) или подождите уведомления</li>
+                                <li>После одобрения вы автоматически получите доступ</li>
+                            </ol>
+
+                            <h3>Сессия:</h3>
+                            <ul>
+                                <li><strong>Время жизни:</strong> 8 часов после авторизации</li>
+                                <li><strong>Автопродление:</strong> нет, требуется повторный вход</li>
+                                <li><strong>Выход:</strong> кнопка "Выйти" в разделе Настройки</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Что делать если статус "Ожидание"?</h4>
+                                <p>Это нормально для новых пользователей. Подождите одобрения или свяжитесь с администратором через Reddy ID: 62219492522</p>
+                            </div>
+                        </section>
+
+                        <!-- 3. Партнеры -->
+                        <section class="doc-section" id="partners">
+                            <h2>3. Партнеры</h2>
+
+                            <p>Центральный модуль для управления партнёрами. Данные партнёров используются в модуле "Расчет трафика" для аналитики.</p>
+
+                            <h3>Интерфейс:</h3>
+                            <ul>
+                                <li><strong>Таблица партнёров:</strong> DEP|WITH|COMP, Фото, Субагент, ID, Метод, Статус</li>
+                                <li><strong>Правая панель:</strong> Статистика или карточка выбранного партнёра</li>
+                                <li><strong>Поиск:</strong> Быстрый поиск по всем полям в реальном времени</li>
+                                <li><strong>Сортировка:</strong> Клик по заголовку колонки</li>
+                                <li><strong>Настройка колонок:</strong> Кнопка фильтра → выбор видимых колонок (макс. 5)</li>
+                            </ul>
+
+                            <h3>Как добавить партнёра:</h3>
+                            <ol>
+                                <li>Нажмите <strong>"+ Добавить"</strong> в шапке</li>
+                                <li>Заполните обязательные поля: <strong>Субагент, ID Субагента, Метод</strong></li>
+                                <li>Загрузите аватар (опционально) — будет сохранён в Google Drive</li>
+                                <li>Заполните дополнительные поля из шаблона</li>
+                                <li>Нажмите <strong>"Сохранить"</strong></li>
+                            </ol>
+
+                            <h3>Колонки таблицы:</h3>
+                            <ul>
+                                <li><strong>DEP | WITH | COMP:</strong> Счётчики (редактируются в карточке партнёра)</li>
+                                <li><strong>Фото:</strong> Аватар партнёра (хранится в Google Drive)</li>
+                                <li><strong>Субагент:</strong> Название компании/партнёра</li>
+                                <li><strong>ID Субагента:</strong> Уникальный идентификатор</li>
+                                <li><strong>Метод:</strong> Способ работы (выбирается из списка)</li>
+                                <li><strong>Статус:</strong> Открыт / Закрыт</li>
+                            </ul>
+
+                            <h3>Статусы партнёров:</h3>
+                            <ul>
+                                <li><strong>Открыт (зелёный):</strong> Активный партнёр</li>
+                                <li><strong>Закрыт (красный):</strong> Неактивный партнёр</li>
+                            </ul>
+
+                            <h3>Управление методами:</h3>
+                            <ol>
+                                <li>Нажмите иконку <strong>шестерёнки</strong> рядом с полем "Метод"</li>
+                                <li>Добавьте новый метод или удалите существующий</li>
+                                <li>Методы автоматически добавляются при импорте данных</li>
+                            </ol>
+
+                            <h3>Импорт/Экспорт:</h3>
+                            <ul>
+                                <li><strong>JSON:</strong> Полный экспорт/импорт всех данных</li>
+                                <li><strong>Excel:</strong> Экспорт/импорт с выбором шаблона колонок</li>
+                                <li><strong>Пример файла:</strong> Кнопка "Скачать пример" для Excel импорта</li>
+                            </ul>
+
+                            <h3>Аватары и облако:</h3>
+                            <ul>
+                                <li>Аватары загружаются в Google Drive (папка images)</li>
+                                <li>При замене аватара старый файл автоматически удаляется</li>
+                                <li>Изображения сохраняются без сжатия</li>
+                                <li>Обрезка — только визуальная (CSS object-fit: cover)</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Как настроить колонки таблицы?</h4>
+                                <p>Нажмите иконку фильтра в заголовке таблицы → отметьте нужные колонки → перетащите для изменения порядка → "Применить"</p>
+                            </div>
+                        </section>
+
+                        <!-- 4. Сотрудники -->
+                        <section class="doc-section" id="team-info">
+                            <h2>4. Сотрудники</h2>
+
+                            <p>Модуль для управления информацией о команде с гибкой системой шаблонов полей.</p>
+
+                            <h3>Интерфейс:</h3>
+                            <ul>
+                                <li><strong>Таблица сотрудников:</strong> Аватары, ФИО, должность, статус</li>
+                                <li><strong>Правая панель:</strong> Статистика команды или карточка сотрудника</li>
+                                <li><strong>Поиск:</strong> Быстрый поиск в реальном времени</li>
+                                <li><strong>Сортировка:</strong> По любому столбцу таблицы</li>
+                            </ul>
+
+                            <h3>Как добавить сотрудника:</h3>
+                            <ol>
+                                <li>Нажмите <strong>"+ Добавить"</strong></li>
+                                <li>Выберите <strong>шаблон</strong> (определяет набор полей)</li>
+                                <li>Заполните <strong>ФИО, Должность, Грейд</strong></li>
+                                <li>Загрузите аватар (опционально)</li>
+                                <li>Заполните остальные поля по шаблону</li>
+                                <li>Нажмите <strong>"Сохранить"</strong></li>
+                            </ol>
+
+                            <h3>Обязательные поля:</h3>
+                            <ul>
+                                <li><strong>ФИО:</strong> Полное имя сотрудника</li>
+                                <li><strong>Должность:</strong> Позиция в компании</li>
+                                <li><strong>Грейд:</strong> Junior / Middle / Senior / Lead</li>
+                            </ul>
+
+                            <h3>Предзаполненные поля (по умолчанию):</h3>
+                            <ul>
+                                <li>Логин УРС, Reddy ID, Корп. e-mail</li>
+                                <li>Корп. Telegram, Корп. телефон</li>
+                                <li>Дата рождения, Дата устройства</li>
+                            </ul>
+
+                            <h3>Статусы сотрудников:</h3>
+                            <ul>
+                                <li><strong>Работает (зелёный):</strong> Активный сотрудник</li>
+                                <li><strong>В отпуске (жёлтый):</strong> Временно отсутствует</li>
+                                <li><strong>Командировка (синий):</strong> В рабочей поездке</li>
+                                <li><strong>Уволен (красный):</strong> Бывший сотрудник</li>
+                                <li><strong>Болеет (фиолетовый):</strong> На больничном</li>
+                            </ul>
+
+                            <h3>Система шаблонов:</h3>
+                            <ul>
+                                <li><strong>Создание:</strong> Настройте набор полей для разных типов сотрудников</li>
+                                <li><strong>Типы полей:</strong> Текст, Email, Телефон, Дата, Текстовая область</li>
+                                <li><strong>Основной шаблон:</strong> Применяется по умолчанию</li>
+                                <li><strong>Выбор:</strong> Селектор шаблона при добавлении сотрудника</li>
+                            </ul>
+
+                            <h3>Экспорт/импорт:</h3>
+                            <ul>
+                                <li><strong>Экспорт JSON:</strong> Полный список с аватарами (base64)</li>
+                                <li><strong>Импорт JSON:</strong> Загрузка из файла с миграцией старых форматов</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Как создать свой шаблон?</h4>
+                                <p>Нажмите "Шаблоны" → "Создать" → добавьте поля нужных типов → "Сохранить" → выберите "Сделать основным" если нужно</p>
+                            </div>
+                        </section>
+
+                        <!-- 5. Расчет трафика -->
+                        <section class="doc-section" id="traffic-calc">
+                            <h2>5. Расчет трафика</h2>
+
+                            <p>Модуль аналитики партнёров. <strong>Важно:</strong> данные партнёров берутся из модуля "Партнеры" (единый источник данных).</p>
+
+                            <h3>Источник данных:</h3>
+                            <ul>
+                                <li>Партнёры загружаются из модуля "Партнеры" (localStorage)</li>
+                                <li>Методы определяются автоматически из данных партнёров</li>
+                                <li>Статусы маппятся: Открыт → новый, Закрыт → закрыт</li>
+                                <li>Управление партнёрами — только через модуль "Партнеры"</li>
+                            </ul>
+
+                            <h3>Как провести аналитику:</h3>
+                            <ol>
+                                <li><strong>Шаг 1:</strong> Выберите партнёров (все / по методу / выборочно)</li>
+                                <li><strong>Шаг 2:</strong> Загрузите файлы пополнений и выводов (.xlsx)</li>
+                                <li><strong>Шаг 3:</strong> Загрузите отчёт "Контроль качества работы"</li>
+                                <li><strong>Шаг 4:</strong> Введите % времени работы (пополнения/выводы)</li>
+                                <li><strong>Шаг 5:</strong> Загрузите отчёт автоотключений</li>
+                                <li><strong>Шаг 6:</strong> Введите нарушения (опционально)</li>
+                                <li>Нажмите <strong>"Завершить"</strong> — перейдёте на вкладку Отчёт</li>
+                            </ol>
+
+                            <h3>Навигация по шагам:</h3>
+                            <ul>
+                                <li>Кликабельные индикаторы шагов — переход на любой шаг</li>
+                                <li>Зелёные галочки — завершённые шаги</li>
+                                <li>Данные сохраняются при переключении между шагами</li>
+                                <li>Кнопка "Сбросить всё" — начать новый анализ</li>
+                            </ul>
+
+                            <h3>Шаг 4 — % Времени работы:</h3>
+                            <ul>
+                                <li>Слева: выбор партнёра из списка</li>
+                                <li>Справа: карточки для ввода % на пополнения и вывод</li>
+                                <li>Кнопки +/- для изменения значений</li>
+                                <li>"Сбросить" — очистить данные текущего партнёра</li>
+                                <li>"Сбросить всё" — очистить данные всех партнёров</li>
+                            </ul>
+
+                            <h3>Шаг 6 — Нарушения:</h3>
+                            <ul>
+                                <li>8 типов нарушений с счётчиками</li>
+                                <li>"Другие нарушения" — с текстовым описанием</li>
+                                <li>Шаг необязательный — можно пропустить</li>
+                            </ul>
+
+                            <h3>Отчёт:</h3>
+                            <ul>
+                                <li>Детальная таблица с данными по каждому партнёру</li>
+                                <li>Экспорт в Excel (.xlsx)</li>
+                            </ul>
+
+                            <h3>Калькулятор % трафика:</h3>
+                            <ul>
+                                <li>Расчёт отдельно по каждому методу (100% на метод)</li>
+                                <li>16 параметров с 4 уровнями оценки</li>
+                                <li>Настройка баллов: больше баллов = меньше трафика</li>
+                                <li>Экспорт результатов в Excel</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Как настроить параметры калькулятора?</h4>
+                                <p>Кнопка "Настройки" → для каждого параметра задайте диапазоны и баллы → "Сохранить". Баллы: 0 = хорошо, 10 = плохо.</p>
+                            </div>
+                        </section>
+
+                        <!-- 6. Отчеты -->
+                        <section class="doc-section" id="excel-reports">
+                            <h2>6. Отчеты</h2>
+
+                            <p>Модуль для обработки Excel файлов по шаблонам. Поддерживает .xlsx формат.</p>
+
+                            <h3>Доступные шаблоны:</h3>
+                            <ul>
+                                <li><strong>Общий отчёт:</strong> Генерирует все таблицы T1-T9 за один проход (требует 7 файлов)</li>
+                                <li><strong>Пополнения и выводы:</strong> Отчёт по депозитам и выплатам (T1.1, T1.3, T2, T2.1, T5, К)</li>
+                                <li><strong>Регистрации:</strong> Статистика регистраций по типам и платформам (T3.1, T3.2, T6, T7)</li>
+                                <li><strong>B-TAG:</strong> Анализ транзакций по статусам (T3.4)</li>
+                                <li><strong>Аналитика T9:</strong> Статистика по типам продуктов (T9)</li>
+                                <li><strong>Активные пользователи:</strong> Анализ активности (T4, T4.1)</li>
+                            </ul>
+
+                            <h3>Как обработать файлы:</h3>
+                            <ol>
+                                <li><strong>Шаг 1:</strong> Выберите шаблон (Общий отчёт или один из dropdown)</li>
+                                <li><strong>Шаг 2:</strong> Загрузите файлы (drag & drop или клик по области)</li>
+                                <li><strong>Шаг 3:</strong> Дождитесь обработки (спиннер показывает прогресс)</li>
+                                <li><strong>Шаг 4:</strong> Нажмите "Далее" для перехода к следующему шагу</li>
+                                <li><strong>Шаг 5:</strong> Нажмите "Обработать" и скачайте результат</li>
+                            </ol>
+
+                            <h3>Интерфейс:</h3>
+                            <ul>
+                                <li><strong>Индикатор шагов:</strong> Показывает текущий этап (Шаблон → Файлы → Обработка)</li>
+                                <li><strong>Навигация:</strong> Кнопки "Назад" / "Далее" в заголовке каждой панели</li>
+                                <li><strong>Спиннер загрузки:</strong> Отображает прогресс обработки файлов</li>
+                                <li><strong>Статус загрузки:</strong> Галочка с количеством загруженных файлов</li>
+                                <li><strong>Журнал операций:</strong> Правая панель с логами обработки</li>
+                                <li><strong>Начать заново:</strong> Кнопка в header на этапе обработки</li>
+                            </ul>
+
+                            <h3>Требования к файлам:</h3>
+                            <ul>
+                                <li>Формат: только .xlsx (Excel 2007+)</li>
+                                <li>Заголовки в первой строке обязательны</li>
+                                <li>Структура колонок зависит от шаблона (см. описание при загрузке)</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Файл не обрабатывается?</h4>
+                                <p>Проверьте формат (.xlsx), откройте в Excel и убедитесь что заголовки в первой строке. Пересохраните файл.</p>
+                            </div>
+                        </section>
+
+                        <!-- 7. Настройки -->
+                        <section class="doc-section" id="sync">
+                            <h2>7. Настройки</h2>
+
+                            <p>Страница профиля, облачного хранения и управления сессией.</p>
+
+                            <h3>Секции страницы:</h3>
+                            <ul>
+                                <li><strong>Профиль:</strong> Имя и email авторизованного пользователя</li>
+                                <li><strong>Статус облака:</strong> Подключено / Не подключено</li>
+                                <li><strong>Сессия:</strong> Время до истечения токена</li>
+                                <li><strong>Управление:</strong> Кнопки действий</li>
+                            </ul>
+
+                            <h3>Доступные действия:</h3>
+                            <ul>
+                                <li><strong>Экспорт в облако:</strong> Сохранить данные в Google Drive</li>
+                                <li><strong>Импорт из облака:</strong> Загрузить данные из облака</li>
+                                <li><strong>Очистить кэш:</strong> Принудительная перезагрузка данных</li>
+                                <li><strong>Выйти:</strong> Завершить сессию и очистить данные</li>
+                            </ul>
+
+                            <h3>Облачное хранение:</h3>
+                            <ul>
+                                <li>Данные хранятся в Google Drive (Apps Script)</li>
+                                <li>Аватары партнёров — в папке images</li>
+                                <li>При выходе все кэшированные данные очищаются</li>
+                            </ul>
+
+                            <h3>Сессия:</h3>
+                            <ul>
+                                <li><strong>Время жизни:</strong> 8 часов после авторизации</li>
+                                <li><strong>Отображение:</strong> Время до истечения в секции "Сессия"</li>
+                                <li><strong>Истечение:</strong> Автоматический редирект на страницу входа</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Данные не синхронизируются?</h4>
+                                <p>Нажмите "Очистить кэш" → перезагрузите страницу → попробуйте снова. Проверьте статус облака (должен быть "Подключено").</p>
+                            </div>
+                        </section>
+
+                        <!-- 8. Главная -->
+                        <section class="doc-section" id="home">
+                            <h2>8. Главная</h2>
+
+                            <p>Стартовая страница с навигацией по всем модулям системы.</p>
+
+                            <h3>Интерфейс:</h3>
+                            <ul>
+                                <li><strong>Сетка модулей:</strong> 6 карточек (3x2 на десктопе)</li>
+                                <li><strong>Боковое меню:</strong> Навигация с возможностью сворачивания</li>
+                                <li><strong>Заголовок:</strong> "AIAdminka" в центре</li>
+                            </ul>
+
+                            <h3>Карточки модулей:</h3>
+                            <ul>
+                                <li><strong>Отчеты:</strong> Обработка Excel файлов</li>
+                                <li><strong>Сотрудники:</strong> Управление командой</li>
+                                <li><strong>Расчет трафика:</strong> Аналитика партнёров</li>
+                                <li><strong>Партнеры:</strong> База партнёров</li>
+                                <li><strong>Документация:</strong> Справка и changelog</li>
+                                <li><strong>Настройки:</strong> Профиль и синхронизация</li>
+                                <li><strong>Предложить улучшение:</strong> Обратная связь с администратором</li>
+                            </ul>
+
+                            <h3>Обратная связь (тикеты):</h3>
+                            <p>Система для отправки идей, багов и пожеланий администратору.</p>
+                            <ul>
+                                <li><strong>Создание тикета:</strong> Карточка "Предложить улучшение" → заполнить заголовок и описание</li>
+                                <li><strong>Скриншоты:</strong> До 3 изображений к каждому тикету</li>
+                                <li><strong>Просмотр:</strong> Секция "Обратная связь" отображает ваши тикеты</li>
+                                <li><strong>Статусы:</strong> Новый → В работе → Нужна информация → Решено → Закрыт</li>
+                                <li><strong>Комментарии:</strong> Администратор может отвечать и запрашивать информацию</li>
+                            </ul>
+                            <p><em>Примечание:</em> Пользователи видят только свои тикеты. Администратор видит все и может менять статусы.</p>
+
+                            <h3>Сайдбар:</h3>
+                            <ul>
+                                <li>Кнопка со стрелкой — сворачивание/разворачивание</li>
+                                <li>Активный пункт — подсвечен жёлтым</li>
+                                <li>"О разработке" — информация о проекте и контакты</li>
+                                <li>Версия — внизу сайдбара</li>
+                            </ul>
+
+                            <h3>Дизайн:</h3>
+                            <ul>
+                                <li><strong>Тема:</strong> Тёмная (#1a1a1a, #2e2e2e)</li>
+                                <li><strong>Сайдбар:</strong> Светлый (#e8e8e8)</li>
+                                <li><strong>Акцент:</strong> Жёлтый (#fdbe2f)</li>
+                                <li><strong>Шрифт:</strong> TT Firs Neue</li>
+                                <li><strong>Адаптивность:</strong> 3→2→1 колонки</li>
+                            </ul>
+                        </section>
+
+                        <!-- 9. Решение проблем -->
+                        <section class="doc-section" id="troubleshooting">
+                            <h2>9. Решение проблем</h2>
+
+                            <h3>Авторизация:</h3>
+                            <div class="troubleshooting-item">
+                                <h4>Не могу войти / "Доступ запрещён"</h4>
+                                <ul>
+                                    <li>Нажмите "Запросить доступ" и подождите одобрения</li>
+                                    <li>Проверьте статус через "Проверить доступ"</li>
+                                    <li>Свяжитесь с администратором (Reddy ID: 62219492522)</li>
+                                </ul>
+                            </div>
+
+                            <div class="troubleshooting-item">
+                                <h4>Сессия истекла</h4>
+                                <ul>
+                                    <li>Нажмите "Войти через Google" повторно</li>
+                                    <li>Сессия длится 8 часов</li>
+                                </ul>
+                            </div>
+
+                            <h3>Данные:</h3>
+                            <div class="troubleshooting-item">
+                                <h4>Данные не сохраняются</h4>
+                                <ul>
+                                    <li>Проверьте статус облака в Настройках</li>
+                                    <li>Нажмите "Очистить кэш" и перезагрузите</li>
+                                    <li>Проверьте свободное место в localStorage (F12 → Application)</li>
+                                </ul>
+                            </div>
+
+                            <div class="troubleshooting-item">
+                                <h4>Аватары не загружаются</h4>
+                                <ul>
+                                    <li>Проверьте подключение к интернету</li>
+                                    <li>Аватары хранятся в Google Drive</li>
+                                    <li>Попробуйте перезагрузить страницу</li>
+                                </ul>
+                            </div>
+
+                            <h3>Файлы:</h3>
+                            <div class="troubleshooting-item">
+                                <h4>Excel файл не обрабатывается</h4>
+                                <ul>
+                                    <li>Проверьте формат (.xlsx, не .xls)</li>
+                                    <li>Откройте в Excel → проверьте заголовки в 1 строке</li>
+                                    <li>Пересохраните файл</li>
+                                </ul>
+                            </div>
+
+                            <h3>Полный сброс:</h3>
+                            <ol>
+                                <li>Сначала экспортируйте данные!</li>
+                                <li>F12 → Application → Local Storage</li>
+                                <li>Удалите записи AIAdminka</li>
+                                <li>Перезагрузите страницу</li>
+                            </ol>
+
+                            <div class="warning">
+                                <h4>Внимание!</h4>
+                                <p>При сбросе ВСЕ локальные данные будут удалены. Данные в облаке сохранятся.</p>
+                            </div>
+
+                            <h3>Системные требования:</h3>
+                            <ul>
+                                <li>Chrome 80+, Firefox 75+, Safari 13+, Edge 80+</li>
+                                <li>JavaScript включён, Cookies разрешены</li>
+                                <li>Доступ к googleapis.com и accounts.google.com</li>
+                            </ul>
+                        </section>
+
+                        <!-- 10. Архитектура -->
+                        <section class="doc-section" id="architecture">
+                            <h2>10. Архитектура</h2>
+
+                            <p>Проект автономен — работает без установки программ (Node.js, Python и т.п.).</p>
+
+                            <h3>Структура:</h3>
+                            <ul>
+                                <li><strong>AIAdminka/</strong> — корневая папка проекта</li>
+                                <li><strong>shared/</strong> — общие модули для всех страниц</li>
+                                <li><strong>partners/, team-info/, ...</strong> — модули приложения</li>
+                                <li><strong>login/</strong> — страница авторизации</li>
+                                <li><strong>documentation/</strong> — документация и changelog</li>
+                            </ul>
+
+                            <h3>Папка shared/:</h3>
+                            <ul>
+                                <li><strong>auth-guard.js</strong> — проверка авторизации, редирект, logout</li>
+                                <li><strong>cloud-storage.js</strong> — работа с Google Drive (uploadImage, deleteImage)</li>
+                                <li><strong>storage.js</strong> — единый модуль для localStorage</li>
+                                <li><strong>utils.js</strong> — утилиты (escapeHtml, formatDate, loadJSON)</li>
+                                <li><strong>version.js</strong> — загрузка версии из changelog</li>
+                                <li><strong>icons.js</strong> — локальные SVG иконки</li>
+                                <li><strong>icons/</strong> — 32 SVG иконки</li>
+                            </ul>
+
+                            <h3>Хранение данных:</h3>
+                            <ul>
+                                <li><strong>localStorage:</strong> Локальный кэш (partners-data, team-info-data, ...)</li>
+                                <li><strong>Google Drive:</strong> Облачное хранение данных и аватаров</li>
+                                <li><strong>Apps Script:</strong> Бэкенд для обработки запросов</li>
+                            </ul>
+
+                            <h3>Безопасность (CSP):</h3>
+                            <ul>
+                                <li><strong>script-src 'self':</strong> только локальные скрипты</li>
+                                <li><strong>connect-src:</strong> self + Google APIs (script.google.com, accounts.google.com)</li>
+                                <li><strong>frame-ancestors 'self':</strong> защита от clickjacking</li>
+                            </ul>
+
+                            <h3>OAuth Flow:</h3>
+                            <ol>
+                                <li>Пользователь нажимает "Войти через Google"</li>
+                                <li>Редирект на accounts.google.com</li>
+                                <li>После авторизации — callback с токеном</li>
+                                <li>Токен сохраняется в localStorage (8 часов)</li>
+                                <li>AuthGuard проверяет токен на каждой странице</li>
+                            </ol>
+                        </section>
+                    </div>
+                </main>
             </div>
-
-            <!-- 1. Обзор -->
-            <section class="doc-section" id="overview">
-                <h2><i data-lucide="info"></i> 1. Что это?</h2>
-                
-                <p>SimpleAIAdminka — административная панель для работы с данными и командой. Интерфейс стилизован под Windows XP.</p>
-
-                <h3>Модули:</h3>
-                <ul>
-                    <li><strong>Team Info</strong> — карточки сотрудников с настраиваемыми полями</li>
-                    <li><strong>Расчет трафика</strong> — управление партнерами и аналитика</li>
-                    <li><strong>Excel отчёты</strong> — обработка файлов по шаблонам</li>
-                    <li><strong>Партнеры</strong> — управление информацией о партнерах</li>
-                    <li><strong>Синхронизация</strong> — облачное хранение через Google Sheets (NEW v2.4.0)</li>
-                    <li><strong>Рабочий стол</strong> — drag & drop иконок, сохранение позиций</li>
-                    <li><strong>Документация</strong> — справочное руководство</li>
-                </ul>
-
-                <h3>Особенности:</h3>
-                <div class="advantages">
-                    <div class="advantage">
-                        <h4>💾 Локальное хранение</h4>
-                        <p>Данные в браузере, нет серверов</p>
-                    </div>
-                    <div class="advantage">
-                        <h4>🚀 Простота</h4>
-                        <p>Понятный интерфейс без лишнего</p>
-                    </div>
-                    <div class="advantage">
-                        <h4>📱 Адаптивность</h4>
-                        <p>Работает на любых устройствах</p>
-                    </div>
-                    <div class="advantage">
-                        <h4>🔒 Безопасность</h4>
-                        <p>Данные не покидают устройство</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 2. Team Info -->
-            <section class="doc-section" id="team-info">
-                <h2><i data-lucide="users"></i> 2. Team Info</h2>
-
-                <p><strong>Новый дизайн (v2.0.0):</strong> Полностью переработанный интерфейс в современном минималистичном стиле с табличным представлением данных.</p>
-
-                <h3>Интерфейс:</h3>
-                <ul>
-                    <li><strong>Боковое меню:</strong> Навигация по всем модулям системы со сворачиванием</li>
-                    <li><strong>Таблица сотрудников:</strong> Табличное представление с аватарами (80x80px)</li>
-                    <li><strong>Правая панель:</strong> Статистика команды или карточка выбранного сотрудника</li>
-                    <li><strong>Поиск:</strong> Быстрый поиск сотрудников в реальном времени</li>
-                    <li><strong>Сортировка:</strong> По любому столбцу таблицы</li>
-                </ul>
-
-                <h3>Работа с сотрудниками:</h3>
-                <ul>
-                    <li><strong>Добавление:</strong> Кнопка "+ Добавить" → форма в правой панели</li>
-                    <li><strong>Редактирование:</strong> Клик по сотруднику → кнопка "Редактировать"</li>
-                    <li><strong>Удаление:</strong> Кнопка "Удалить" с подтверждением</li>
-                    <li><strong>Фото:</strong> Загрузка аватара при создании/редактировании</li>
-                    <li><strong>Статус:</strong> Dropdown выбор статуса прямо в карточке</li>
-                </ul>
-
-                <h3>Поля сотрудника:</h3>
-                <ul>
-                    <li><strong>ФИО:</strong> Полное имя сотрудника</li>
-                    <li><strong>Должность:</strong> Позиция в компании</li>
-                    <li><strong>Грейд:</strong> Junior / Middle / Senior / Lead</li>
-                    <li><strong>Статус:</strong> Работает / Отпуск / Больничный / Декрет / Уволен</li>
-                    <li><strong>Логин УРС:</strong> Системный логин</li>
-                    <li><strong>Reddy:</strong> ID в Reddy</li>
-                    <li><strong>Корп. e-mail:</strong> Корпоративная почта</li>
-                    <li><strong>Корп. Telegram:</strong> Telegram username</li>
-                    <li><strong>Корп. телефон:</strong> Рабочий номер</li>
-                    <li><strong>Дата рождения:</strong> ДД/ММ/ГГГГ</li>
-                    <li><strong>Дата устройства:</strong> ДД/ММ/ГГГГ</li>
-                    <li><strong>Комментарии:</strong> Дополнительная информация</li>
-                </ul>
-
-                <h3>Статусы:</h3>
-                <ul>
-                    <li><strong>Работает:</strong> Зелёный статус (активный сотрудник)</li>
-                    <li><strong>Отпуск:</strong> Жёлтый статус (временно отсутствует)</li>
-                    <li><strong>Больничный:</strong> Красный статус (на больничном)</li>
-                    <li><strong>Декрет:</strong> Фиолетовый статус (декретный отпуск)</li>
-                    <li><strong>Уволен:</strong> Синий статус (бывший сотрудник)</li>
-                </ul>
-
-                <h3>Статистика:</h3>
-                <ul>
-                    <li><strong>Общее количество:</strong> Счётчик всех сотрудников</li>
-                    <li><strong>По статусам:</strong> Разбивка по каждому статусу</li>
-                    <li><strong>Автообновление:</strong> При изменении данных</li>
-                </ul>
-
-                <h3>Система шаблонов (NEW v2.1.0):</h3>
-                <ul>
-                    <li><strong>Создание шаблонов:</strong> Настройте набор полей для разных типов сотрудников</li>
-                    <li><strong>Типы полей:</strong> Текст, Email, Телефон, Дата, Текстовая область</li>
-                    <li><strong>Основной шаблон:</strong> Автоматически применяется при добавлении нового сотрудника</li>
-                    <li><strong>Управление:</strong> Редактирование, переименование и удаление шаблонов</li>
-                    <li><strong>Гибкость:</strong> Неограниченное количество настраиваемых полей</li>
-                    <li><strong>Применение:</strong> Выбор шаблона через селектор при добавлении сотрудника</li>
-                </ul>
-
-                <h3>Экспорт/импорт:</h3>
-                <ul>
-                    <li><strong>Экспорт:</strong> Выгрузка всего списка в JSON</li>
-                    <li><strong>Импорт:</strong> Загрузка JSON файла с сотрудниками</li>
-                    <li><strong>Сохранение фото:</strong> Аватары сохраняются в base64</li>
-                    <li><strong>Шаблоны:</strong> Сохраняются в localStorage отдельно</li>
-                </ul>
-
-                <h3>Навигация (NEW v2.1.0):</h3>
-                <ul>
-                    <li><strong>История навигации:</strong> Возврат к предыдущему состоянию при закрытии формы</li>
-                    <li><strong>Toggle карточки:</strong> Повторный клик по сотруднику закрывает карточку</li>
-                    <li><strong>Автосохранение:</strong> Данные сохраняются при переключении между экранами</li>
-                    <li><strong>Защита данных:</strong> Предупреждение при закрытии формы с несохраненными изменениями</li>
-                </ul>
-
-                <h3>Дизайн:</h3>
-                <ul>
-                    <li><strong>Цветовая схема:</strong> Тёмный фон (#2e2e2e), светлые панели (#f2f2f2)</li>
-                    <li><strong>Шрифт:</strong> TT Firs Neue (минимализм)</li>
-                    <li><strong>Акцент:</strong> Жёлтый (#fdbe2f) для активных элементов</li>
-                    <li><strong>Адаптивность:</strong> Работает на мобильных устройствах</li>
-                </ul>
-            </section>
-
-            <!-- 3. Расчет трафика -->
-            <section class="doc-section" id="traffic-calc">
-                <h2><i data-lucide="trending-up"></i> 3. Расчет трафика</h2>
-                
-                <p>Модуль для управления партнерами, субагентами и аналитики трафика. Включает автоматическое отслеживание статусов и гибкую систему фильтрации.</p>
-
-                <h3>Управление партнерами:</h3>
-                <ul>
-                    <li><strong>Добавление:</strong> Форма с полями Метод, Субагент, Субагент ID</li>
-                    <li><strong>Методы:</strong> Выпадающий список с возможностью добавления/удаления методов</li>
-                    <li><strong>Статусы:</strong> Автоматические флаги 'новый', 'старый', 'закрыт'</li>
-                    <li><strong>Автообновление:</strong> Статус меняется на 'старый' через 30 дней</li>
-                    <li><strong>Экспорт:</strong> Выгрузка списка партнеров в JSON (только базовые данные, без аналитики)</li>
-                    <li><strong>Импорт:</strong> Загрузка списка партнеров из JSON с сохранением существующих данных аналитики</li>
-                </ul>
-
-                <h3>Импорт и экспорт партнеров (NEW):</h3>
-                <ul>
-                    <li><strong>Экспорт в JSON:</strong>
-                        <ul>
-                            <li>Кнопка "Экспорт" на вкладке "Управление партнерами"</li>
-                            <li>Сохраняет только базовые данные: метод, субагент, ID, статус, дата</li>
-                            <li>Исключает данные аналитики (back, cringe, нарушения и т.д.)</li>
-                            <li>Файл: partners_export_ГГГГ-ММ-ДД.json</li>
-                        </ul>
-                    </li>
-                    <li><strong>Импорт из JSON:</strong>
-                        <ul>
-                            <li>Кнопка "Импорт" на вкладке "Управление партнерами"</li>
-                            <li>Предпросмотр файла перед импортом</li>
-                            <li>Умное слияние: для существующих партнеров сохраняет данные аналитики</li>
-                            <li>Для новых партнеров игнорирует данные аналитики из файла</li>
-                            <li>Автоматическое обновление интерфейса после импорта</li>
-                        </ul>
-                    </li>
-                    <li><strong>Защита данных:</strong>
-                        <ul>
-                            <li>Данные аналитики не экспортируются и не могут быть перезаписаны при импорте</li>
-                            <li>Работает даже при изменении структуры данных (добавлении новых колонок)</li>
-                            <li>Предупреждение о замене данных при импорте</li>
-                        </ul>
-                    </li>
-                </ul>
-
-                <h3>Статусы партнеров:</h3>
-                <ul>
-                    <li><strong>Новый:</strong> Только что добавленный партнер (синий бейдж)</li>
-                    <li><strong>Старый:</strong> Партнер старше 30 дней или вручную изменен (оранжевый бейдж)</li>
-                    <li><strong>Закрыт:</strong> Неактивный партнер (красный бейдж)</li>
-                </ul>
-
-                <h3>Таблица партнеров:</h3>
-                <ul>
-                    <li><strong>Просмотр:</strong> Все партнеры в табличном виде</li>
-                    <li><strong>Фильтр:</strong> По методам для быстрого поиска</li>
-                    <li><strong>Счетчик:</strong> Общее количество субагентов с учетом фильтра</li>
-                    <li><strong>Действия:</strong> Редактирование и удаление партнеров</li>
-                </ul>
-
-                <h3>Аналитика (5 шагов):</h3>
-                <p><strong>Шаг 1: Выбор партнеров</strong></p>
-                <ul>
-                    <li><strong>Все:</strong> Выбор всех партнеров для анализа</li>
-                    <li><strong>По методу:</strong> Выбор одного или нескольких методов</li>
-                    <li><strong>Выборочно:</strong> Ручной выбор конкретных партнеров</li>
-                    <li><strong>Предпросмотр:</strong> Таблица выбранных партнеров</li>
-                    <li><strong>Сброс:</strong> Кнопка "Сбросить всё" для начала нового анализа</li>
-                </ul>
-
-                <p><strong>Шаг 2: Пополнения и выводы</strong></p>
-                <ul>
-                    <li><strong>Загрузка файлов:</strong> .xlsx файлы с данными о транзакциях</li>
-                    <li><strong>Автоподсчет:</strong> Back и Cringe из колонки "Доп. параметры №1"</li>
-                    <li><strong>Множественная загрузка:</strong> Поддержка нескольких файлов одновременно</li>
-                </ul>
-
-                <p><strong>Шаг 3: Контроль качества</strong></p>
-                <ul>
-                    <li><strong>Загрузка отчета:</strong> "Контроль качества работы" .xlsx файл</li>
-                    <li><strong>Автосбор данных:</strong> Количество пополнений/выводов, обращения, проценты успешности</li>
-                    <li><strong>Обработка:</strong> Данные автоматически привязываются к субагентам</li>
-                </ul>
-
-                <p><strong>Шаг 4: % Времени работы</strong></p>
-                <ul>
-                    <li><strong>Двухколоночный макет:</strong> Слева - форма для заполнения, справа - выбор субагента</li>
-                    <li><strong>Поиск субагента:</strong> Быстрый поиск по названию</li>
-                    <li><strong>Выбор:</strong> Список всех выбранных партнеров из шага 1 (10 видимых элементов)</li>
-                    <li><strong>Заполнение:</strong> Ручной ввод процентов времени работы:
-                        <ul>
-                            <li>% Времени работы на пополнения (0-100%)</li>
-                            <li>% Времени работы на вывод (0-100%)</li>
-                        </ul>
-                    </li>
-                    <li><strong>Автосохранение:</strong> Данные сохраняются при переключении между субагентами</li>
-                    <li><strong>Сброс данных:</strong>
-                        <ul>
-                            <li>Кнопка "Сбросить" - для текущего субагента</li>
-                            <li>Кнопка "Сбросить всё" - для всех выбранных субагентов</li>
-                        </ul>
-                    </li>
-                    <li><strong>Валидация:</strong> Кнопка "Далее" активна только при заполнении данных хотя бы для одного партнера</li>
-                </ul>
-
-                <p><strong>Шаг 5: Автоотключения</strong></p>
-                <ul>
-                    <li><strong>Загрузка файлов:</strong> "Отчет по процентовкам" .xlsx</li>
-                    <li><strong>Подсчет:</strong> Автоматическое определение количества автоотключений</li>
-                </ul>
-
-                <p><strong>Шаг 6: Нарушения (необязательный)</strong></p>
-                <ul>
-                    <li><strong>Двухколоночный макет:</strong> Слева - форма для заполнения, справа - выбор субагента</li>
-                    <li><strong>Поиск субагента:</strong> Быстрый поиск по названию</li>
-                    <li><strong>Выбор:</strong> Список всех выбранных партнеров из шага 1 (10 видимых элементов)</li>
-                    <li><strong>Заполнение:</strong> Ручной ввод данных по нарушениям с кнопками +/-:
-                        <ul>
-                            <li>Игнорирование чатов</li>
-                            <li>Игнор Webmanagement</li>
-                            <li>Очереди на пополнение</li>
-                            <li>Очереди на вывод</li>
-                            <li>Зачисление вне лимитов</li>
-                            <li>Одобрение неверной суммы</li>
-                            <li>Другие нарушения + текстовое поле для описания</li>
-                        </ul>
-                    </li>
-                    <li><strong>Описание нарушений:</strong> Для поля "Другие нарушения" можно добавить текстовое описание, которое отображается в итоговой таблице при наведении</li>
-                    <li><strong>Автосохранение:</strong> Данные сохраняются при переключении между субагентами</li>
-                    <li><strong>Сброс данных:</strong>
-                        <ul>
-                            <li>Кнопка "Сбросить" - для текущего субагента</li>
-                            <li>Кнопка "Сбросить всё" - для всех выбранных субагентов</li>
-                        </ul>
-                    </li>
-                </ul>
-
-                <h3>Навигация и редактирование (NEW):</h3>
-                <ul>
-                    <li><strong>Индикатор шагов:</strong> Кликабельные номера шагов для быстрого перехода</li>
-                    <li><strong>Завершенные шаги:</strong> Отмечаются зеленой галочкой</li>
-                    <li><strong>Редактирование после завершения:</strong> Возможность вернуться на любой шаг и изменить данные</li>
-                    <li><strong>Сохранение изменений:</strong> Все изменения автоматически применяются при повторном завершении</li>
-                </ul>
-
-                <h3>Отчет (ОБНОВЛЕНО):</h3>
-                <ul>
-                    <li><strong>Автоформирование:</strong> После нажатия "Завершить" на шаге 6, автоматически переключается на вкладку "Отчет" и формирует отчет</li>
-                    <li><strong>Статистика:</strong> Всего субагентов, новых, старых, закрытых</li>
-                    <li><strong>Детальный отчет:</strong> Полная таблица сразу на странице (без модального окна) с 23 колонками:
-                        <ul>
-                            <li>Метод, Субагент, Субагент ID, Статус, Дата добавления</li>
-                            <li>Back, Cringe, Автоотключение</li>
-                            <li>Количество пополнений/выводов</li>
-                            <li>Обращения (всего и 15+ мин)</li>
-                            <li>% успешных пополнений/выводов</li>
-                            <li>% времени работы (пополнения и вывод)</li>
-                            <li>Нарушения: игнорирование чатов, игнор Webmanagement</li>
-                            <li>Очереди (пополнение и вывод)</li>
-                            <li>Зачисление вне лимитов, одобрение неверной суммы</li>
-                            <li>Другие нарушения</li>
-                        </ul>
-                    </li>
-                    <li><strong>Экспорт в Excel:</strong>
-                        <ul>
-                            <li>Кнопка "Экспорт в Excel" вместо "Подробнее"</li>
-                            <li>Скачивание детального отчета в формате .xlsx</li>
-                            <li>Все 23 колонки с русскими названиями</li>
-                            <li>Файл: detailed_report_ГГГГ-ММ-ДД.xlsx</li>
-                        </ul>
-                    </li>
-                    <li><strong>Калькулятор трафика:</strong> Кнопка "Рассчитать % трафика" для оценки партнеров</li>
-                </ul>
-
-                <h3>Калькулятор % трафика (ОБНОВЛЕНО):</h3>
-                <ul>
-                    <li><strong>Расчет по методам:</strong> Проценты рассчитываются отдельно для каждого метода (100% на метод)</li>
-                    <li><strong>Группировка результатов:</strong> Таблица результатов группируется по методам с заголовками</li>
-                    <li><strong>Настройки параметров:</strong> 16 параметров для оценки с 4 уровнями (Хор., Норм., Плох., Ужас.)</li>
-                    <li><strong>Другие нарушения:</strong> Упрощенная настройка - только баллы за каждое нарушение (умножаются на количество)</li>
-                    <li><strong>Сортировка:</strong> Партнеры внутри метода отсортированы по проценту (от большего к меньшему)</li>
-                    <li><strong>Экспорт:</strong> Результаты можно выгрузить в Excel</li>
-                </ul>
-
-                <h3>Управление методами:</h3>
-                <ul>
-                    <li>Кнопка настроек рядом с выпадающим списком</li>
-                    <li>Добавление новых методов</li>
-                    <li>Удаление существующих методов</li>
-                    <li>Методы доступны во всех формах и фильтрах</li>
-                </ul>
-
-                <h3>Хранение данных:</h3>
-                <ul>
-                    <li>Все данные сохраняются в localStorage браузера</li>
-                    <li>Автоматическая проверка статусов при загрузке</li>
-                    <li>Данные не покидают ваше устройство</li>
-                </ul>
-            </section>
-
-            <!-- 4. Excel отчёты -->
-            <section class="doc-section" id="excel-reports">
-                <h2><i data-lucide="file-spreadsheet"></i> 4. Excel отчёты</h2>
-                
-                <p>Обработка файлов по шаблонам. Работает с .xlsx файлами.</p>
-
-                <h3>Доступные шаблоны:</h3>
-                <ul>
-                    <li><strong>Депозиты/Выводы:</strong> сопоставление транзакций из разных источников</li>
-                    <li><strong>Объединение файлов:</strong> слияние нескольких файлов в один</li>
-                    <li><strong>Регистрации:</strong> обработка данных регистраций</li>
-                </ul>
-
-                <h3>Как использовать:</h3>
-                <ol>
-                    <li>Выберите шаблон</li>
-                    <li>Загрузите файлы (кнопка "Выбрать файлы")</li>
-                    <li>Нажмите "Обработать"</li>
-                    <li>Скачайте результат</li>
-                </ol>
-
-                <h3>Требования к файлам:</h3>
-                <ul>
-                    <li>Формат: .xlsx</li>
-                    <li>Обязательны заголовки в первой строке</li>
-                    <li>Структура зависит от шаблона (см. логи)</li>
-                </ul>
-            </section>
-
-            <!-- 5. Партнеры -->
-            <section class="doc-section" id="partners">
-                <h2><i data-lucide="handshake"></i> 5. Партнеры</h2>
-
-                <p><strong>Новый дизайн (v2.3.0):</strong> Полностью переработанный интерфейс в современном минималистичном стиле, аналогичный Team Info, с табличным представлением данных и карточками партнеров.</p>
-
-                <h3>Интерфейс:</h3>
-                <ul>
-                    <li><strong>Боковое меню:</strong> Навигация по всем модулям системы со сворачиванием</li>
-                    <li><strong>Таблица партнеров:</strong> Табличное представление с аватарами, счётчиками и статусами</li>
-                    <li><strong>Правая панель:</strong> Статистика или карточка выбранного партнера</li>
-                    <li><strong>Поиск:</strong> Быстрый поиск партнеров в реальном времени</li>
-                    <li><strong>Сортировка:</strong> По любому столбцу таблицы</li>
-                </ul>
-
-                <h3>Колонки таблицы:</h3>
-                <ul>
-                    <li><strong>DEP | WITH | COMP:</strong> Счётчики (настраиваются в карточке)</li>
-                    <li><strong>Фото:</strong> Аватар партнера</li>
-                    <li><strong>Ф.И.О.:</strong> Полное имя партнера</li>
-                    <li><strong>Метод:</strong> Способ взаимодействия</li>
-                    <li><strong>Субагент:</strong> Название компании</li>
-                    <li><strong>ID Субагента:</strong> Уникальный идентификатор</li>
-                    <li><strong>Статус:</strong> Текущий статус партнера</li>
-                </ul>
-
-                <h3>Работа с партнерами:</h3>
-                <ul>
-                    <li><strong>Добавление:</strong> Кнопка "+ Добавить партнера" → форма в правой панели</li>
-                    <li><strong>Просмотр:</strong> Клик по строке → карточка партнера справа</li>
-                    <li><strong>Редактирование:</strong> Кнопка "Редактировать" в карточке</li>
-                    <li><strong>Удаление:</strong> Кнопка "Удалить" в карточке с подтверждением</li>
-                    <li><strong>Фото:</strong> Загрузка аватара с обрезкой при создании/редактировании</li>
-                    <li><strong>Статус:</strong> Dropdown выбор статуса прямо в карточке</li>
-                </ul>
-
-                <h3>Поля партнера:</h3>
-                <ul>
-                    <li><strong>Ф.И.О.:</strong> Полное имя партнера</li>
-                    <li><strong>Должность:</strong> Позиция партнера</li>
-                    <li><strong>DEP / WITH / COMP:</strong> Числовые счётчики</li>
-                    <li><strong>Метод:</strong> Способ взаимодействия (например: WebMoney, Qiwi)</li>
-                    <li><strong>Субагент:</strong> Название компании или организации-партнера</li>
-                    <li><strong>ID Субагента:</strong> Уникальный идентификатор партнера в системе</li>
-                    <li><strong>Статус:</strong> Работает / В отпуске / Командировка / Уволен / Болеет</li>
-                </ul>
-
-                <h3>Статусы:</h3>
-                <ul>
-                    <li><strong>Работает:</strong> Зелёный статус (активный партнер)</li>
-                    <li><strong>В отпуске:</strong> Жёлтый статус (временно отсутствует)</li>
-                    <li><strong>Командировка:</strong> Синий статус (в поездке)</li>
-                    <li><strong>Уволен:</strong> Красный статус (бывший партнер)</li>
-                    <li><strong>Болеет:</strong> Фиолетовый статус (на больничном)</li>
-                </ul>
-
-                <h3>Система шаблонов:</h3>
-                <ul>
-                    <li><strong>Создание шаблонов:</strong> Настройте набор полей для разных типов партнеров</li>
-                    <li><strong>Типы полей:</strong> Текст, Email, Телефон, Дата, Текстовая область</li>
-                    <li><strong>Основной шаблон:</strong> Автоматически применяется при добавлении нового партнера</li>
-                    <li><strong>Управление:</strong> Редактирование, переименование и удаление шаблонов</li>
-                    <li><strong>Disabled preview:</strong> При создании шаблона поля ФИО, должности и аватара заштрихованы</li>
-                </ul>
-
-                <h3>Анимация стрелки:</h3>
-                <ul>
-                    <li><strong>Закрытая карточка:</strong> Стрелка смотрит влево (0°)</li>
-                    <li><strong>Открытая карточка:</strong> Стрелка смотрит вправо (180°)</li>
-                    <li><strong>Плавный переход:</strong> Анимация 0.2s ease</li>
-                </ul>
-
-                <h3>Экспорт/импорт:</h3>
-                <ul>
-                    <li><strong>Экспорт:</strong> Выгрузка всего списка в JSON</li>
-                    <li><strong>Импорт:</strong> Загрузка JSON файла с партнерами</li>
-                    <li><strong>Сохранение фото:</strong> Аватары сохраняются в base64</li>
-                    <li><strong>Шаблоны:</strong> Сохраняются в localStorage отдельно</li>
-                </ul>
-
-                <h3>Хранение данных:</h3>
-                <ul>
-                    <li>Все данные сохраняются в localStorage браузера</li>
-                    <li>Данные не покидают ваше устройство</li>
-                    <li>Автоматическое сохранение при каждом изменении</li>
-                </ul>
-            </section>
-
-            <!-- 6. Синхронизация -->
-            <section class="doc-section" id="sync">
-                <h2><i data-lucide="cloud"></i> 6. Синхронизация (NEW v2.4.0)</h2>
-
-                <p><strong>Облачная синхронизация данных</strong> через Google Sheets с системой контроля доступа. Позволяет обмениваться данными между пользователями.</p>
-
-                <h3>Доступ к проекту:</h3>
-                <ul>
-                    <li><strong>GitHub Pages:</strong> <a href="https://workzick.github.io/AIAdminka_Page/" target="_blank">https://workzick.github.io/AIAdminka_Page/</a></li>
-                    <li><strong>Требуется:</strong> Google аккаунт для авторизации</li>
-                </ul>
-
-                <h3>Авторизация:</h3>
-                <ul>
-                    <li><strong>Войти через Google:</strong> OAuth авторизация с автоматическим получением email и имени</li>
-                    <li><strong>Запросить доступ:</strong> Отправка запроса администратору для новых пользователей</li>
-                    <li><strong>Проверить доступ:</strong> Проверка статуса запроса (защита от спама - 10 сек)</li>
-                    <li><strong>Выйти:</strong> Выход из аккаунта с очисткой данных сессии</li>
-                </ul>
-
-                <h3>Статусы подключения:</h3>
-                <ul>
-                    <li><strong>Не авторизован:</strong> Серый статус - требуется вход через Google</li>
-                    <li><strong>Ожидание:</strong> Жёлтый статус - запрос отправлен, ожидает одобрения</li>
-                    <li><strong>Подключено:</strong> Зелёный статус - полный доступ к функционалу</li>
-                </ul>
-
-                <h3>Экспорт данных:</h3>
-                <ul>
-                    <li><strong>Экспорт в облако:</strong> Сохранение локальных данных в Google Sheets</li>
-                    <li><strong>Данные:</strong> Название проекта, версия, автор, заметки</li>
-                    <li><strong>Автоматическое обновление:</strong> Данные перезаписываются при повторном экспорте</li>
-                </ul>
-
-                <h3>Импорт данных:</h3>
-                <ul>
-                    <li><strong>Выбор пользователя:</strong> Список доступных пользователей для импорта</li>
-                    <li><strong>Права доступа:</strong> Видны только данные тех, кто разрешил вам доступ</li>
-                    <li><strong>Предпросмотр:</strong> Просмотр данных перед импортом</li>
-                </ul>
-
-                <h3>Настройки доступа:</h3>
-                <ul>
-                    <li><strong>Кому видны данные:</strong> Выбор пользователей, которые могут импортировать ваши данные</li>
-                    <li><strong>Публичный доступ:</strong> Возможность сделать данные доступными всем</li>
-                    <li><strong>Приватный доступ:</strong> Ограничение доступа выбранным пользователям</li>
-                </ul>
-
-                <h3>Журнал операций:</h3>
-                <ul>
-                    <li><strong>Логирование:</strong> Запись всех действий с временными метками</li>
-                    <li><strong>Типы записей:</strong> Информация, успех, ошибка</li>
-                    <li><strong>Сохранение:</strong> Логи сохраняются в localStorage</li>
-                    <li><strong>Очистка:</strong> Возможность очистить журнал</li>
-                </ul>
-
-                <h3>Бэкенд (Google Apps Script):</h3>
-                <ul>
-                    <li><strong>Лист 'Approved':</strong> Список одобренных пользователей с их Script URL</li>
-                    <li><strong>Лист 'Requests':</strong> Запросы на доступ от новых пользователей</li>
-                    <li><strong>Лист 'Data':</strong> Хранение данных пользователей</li>
-                    <li><strong>Лист 'Access':</strong> Матрица прав доступа между пользователями</li>
-                </ul>
-
-                <h3>Безопасность:</h3>
-                <ul>
-                    <li><strong>OAuth 2.0:</strong> Безопасная авторизация через Google</li>
-                    <li><strong>Токен сессии:</strong> Автоматическое истечение через 1 час</li>
-                    <li><strong>Контроль доступа:</strong> Только одобренные пользователи имеют доступ</li>
-                    <li><strong>Защита от спама:</strong> Ограничение частоты запросов</li>
-                </ul>
-            </section>
-
-            <!-- 7. Рабочий стол -->
-            <section class="doc-section" id="desktop">
-                <h2><i data-lucide="layout-grid"></i> 7. Рабочий стол</h2>
-
-                <p>Главная страница с иконками модулей. Интерфейс Windows XP с функцией drag & drop.</p>
-
-                <h3>Управление иконками:</h3>
-                <ul>
-                    <li><strong>Перемещение:</strong> зажать иконку и перетащить</li>
-                    <li><strong>Открытие:</strong> клик по иконке</li>
-                    <li><strong>Контекстное меню:</strong> правый клик → опции</li>
-                </ul>
-
-                <h3>Специальные иконки:</h3>
-                <ul>
-                    <li><strong>О разработке:</strong> Красная иконка в центре экрана
-                        <ul>
-                            <li>При клике открывается информационное окно</li>
-                            <li>Автор проекта: Vadim P</li>
-                            <li>Reddy ID для связи: 62219492522</li>
-                            <li>Ссылка на чат с актуальной версией (кликабельная)</li>
-                        </ul>
-                    </li>
-                </ul>
-
-                <h3>Функции меню "Пуск":</h3>
-                <ul>
-                    <li><strong>Выровнять по сетке:</strong> упорядочить иконки</li>
-                    <li><strong>Заблокировать все:</strong> запретить перемещение</li>
-                    <li><strong>Разблокировать все:</strong> разрешить перемещение</li>
-                    <li><strong>Сбросить:</strong> вернуть исходные позиции</li>
-                </ul>
-
-                <h3>Контекстное меню иконок:</h3>
-                <ul>
-                    <li><strong>Открыть:</strong> запустить модуль</li>
-                    <li><strong>Заблокировать:</strong> фиксация позиции</li>
-                    <li><strong>Удалить:</strong> убрать с рабочего стола</li>
-                </ul>
-            </section>
-
-            <!-- 8. Решение проблем -->
-            <section class="doc-section" id="troubleshooting">
-                <h2><i data-lucide="help-circle"></i> 8. Решение проблем</h2>
-                
-                <h3>Типичные проблемы:</h3>
-                
-                <div class="troubleshooting-item">
-                    <h4>❌ Файлы не загружаются</h4>
-                    <p><strong>Решение:</strong></p>
-                    <ul>
-                        <li>Проверьте формат файла (.xlsx для Excel)</li>
-                        <li>Откройте файл в Excel, проверьте заголовки</li>
-                        <li>Пересохраните файл</li>
-                    </ul>
-                </div>
-
-                <div class="troubleshooting-item">
-                    <h4>❌ Данные не сохраняются</h4>
-                    <p><strong>Решение:</strong></p>
-                    <ul>
-                        <li>Очистите кэш браузера (сначала экспортируйте данные!)</li>
-                        <li>Проверьте свободное место в localStorage</li>
-                        <li>Используйте другой браузер</li>
-                    </ul>
-                </div>
-
-                <div class="troubleshooting-item">
-                    <h4>❌ Медленная работа</h4>
-                    <p><strong>Решение:</strong></p>
-                    <ul>
-                        <li>Закройте другие вкладки</li>
-                        <li>Разделите большие файлы на части</li>
-                        <li>Обновите браузер</li>
-                    </ul>
-                </div>
-
-                <div class="troubleshooting-item">
-                    <h4>❌ Drag & drop не работает</h4>
-                    <p><strong>Решение:</strong></p>
-                    <ul>
-                        <li>Обновите браузер</li>
-                        <li>Проверьте, что JavaScript включён</li>
-                        <li>На мобильных используйте кнопки редактирования</li>
-                    </ul>
-                </div>
-
-                <h3>Полный сброс:</h3>
-                <ol>
-                    <li>Откройте инструменты разработчика (F12)</li>
-                    <li>Вкладка "Application" → "Local Storage"</li>
-                    <li>Удалите записи SimpleAIAdminka</li>
-                    <li>Перезагрузите страницу</li>
-                </ol>
-
-                <div class="warning">
-                    <h4>⚠️ Внимание!</h4>
-                    <p>При сбросе ВСЕ данные будут удалены. Обязательно сделайте экспорт перед сбросом.</p>
-                </div>
-
-                <h3>Системные требования:</h3>
-                <ul>
-                    <li>Chrome 80+, Firefox 75+, Safari 13+, Edge 80+</li>
-                    <li>JavaScript включён</li>
-                    <li>LocalStorage: 50+ МБ свободно</li>
-                    <li>Для больших файлов: 4+ ГБ RAM</li>
-                </ul>
-            </section>
         </div>
     </div>
 
     <script src="../shared/utils.js"></script>
+    <script src="../shared/version.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/auth-guard.js"></script>
     <script src="js/changelog.js"></script>
     <script>
-        // Текущая дата
+        // Documentation app
+        const docApp = {
+            toggleSidebar() {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.toggle('collapsed');
+                localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+            }
+        };
+
+        // Current date
         document.getElementById('currentDate').textContent = new Date().toLocaleDateString('ru-RU', {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
         });
 
-        // Плавная прокрутка
+        // Smooth scrolling
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -691,14 +726,14 @@
             });
         });
 
-        // Подсветка активного раздела
+        // Highlight active TOC link on scroll
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 const id = entry.target.getAttribute('id');
-                const tocLink = document.querySelector(`.toc a[href="#${id}"]`);
-                
+                const tocLink = document.querySelector(`.toc-link[href="#${id}"]`);
+
                 if (entry.isIntersecting) {
-                    document.querySelectorAll('.toc a').forEach(link => {
+                    document.querySelectorAll('.toc-link').forEach(link => {
                         link.classList.remove('active');
                     });
                     if (tocLink) tocLink.classList.add('active');
@@ -709,11 +744,36 @@
         document.querySelectorAll('.doc-section[id]').forEach(section => {
             observer.observe(section);
         });
+    </script>
 
-        // Инициализация Lucide
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">О разработке</h2>
+                <button class="modal-close" onclick="closeAboutModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Это проект <strong>Vadim P</strong></p>
+                <p>Reddy ID для связи: <strong>62219492522</strong></p>
+                <p>Ссылка на чат с актуальной версией:<br>
+                <a href="https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_" target="_blank">https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showAboutModal() {
+            document.getElementById('aboutModal').classList.add('active');
         }
+        function closeAboutModal() {
+            document.getElementById('aboutModal').classList.remove('active');
+        }
+        document.getElementById('aboutModal').addEventListener('click', function(e) {
+            if (e.target === this) closeAboutModal();
+        });
     </script>
 </body>
 </html>
