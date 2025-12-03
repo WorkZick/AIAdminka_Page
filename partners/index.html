@@ -435,32 +435,58 @@
 
                 <!-- Excel импорт -->
                 <div id="excelImportSection" style="display: none;">
-                    <div class="form-group">
-                        <label class="form-label">Выберите шаблон</label>
-                        <select class="form-select" id="importTemplateSelect" onchange="partnersApp.updateExcelHint()">
-                            <option value="">Без шаблона (базовые поля)</option>
-                        </select>
+                    <!-- Шаг 1: Выбор шаблона -->
+                    <div id="excelImportStep1">
+                        <div class="import-step-header">
+                            <span class="import-step-number">1</span>
+                            <span class="import-step-title">Выберите шаблон</span>
+                        </div>
+                        <div class="form-group">
+                            <div class="template-select-row">
+                                <select class="form-select" id="importTemplateSelect" onchange="partnersApp.updateExcelHint()">
+                                    <option value="">Без шаблона (базовые поля)</option>
+                                </select>
+                                <button class="btn-add-template-import" onclick="partnersApp.openTemplateFromImport()" title="Создать новый шаблон">
+                                    <img src="icons/plus.svg" width="16" height="16" alt="Добавить">
+                                </button>
+                            </div>
+                        </div>
+                        <button class="btn-primary btn-next-step" onclick="partnersApp.goToImportStep2()">
+                            Далее
+                            <img src="icons/arrow-right.svg" width="16" height="16" alt="Далее" onerror="this.style.display='none'">
+                        </button>
                     </div>
 
-                    <div class="excel-hint" id="excelHint">
-                        <div class="excel-hint-header">
-                            <div class="excel-hint-title">Структура Excel файла:</div>
-                            <button class="excel-download-template-btn" onclick="partnersApp.downloadExcelTemplate()">
-                                <img src="icons/export.svg" width="14" height="14" alt="Скачать">
-                                Скачать пример
+                    <!-- Шаг 2: Структура и загрузка файла -->
+                    <div id="excelImportStep2" style="display: none;">
+                        <div class="import-step-header">
+                            <button class="btn-back-step" onclick="partnersApp.goToImportStep1()">
+                                <img src="icons/arrow-left.svg" width="16" height="16" alt="Назад" onerror="this.textContent='←'">
                             </button>
+                            <span class="import-step-number">2</span>
+                            <span class="import-step-title">Загрузите файл</span>
                         </div>
-                        <div class="excel-hint-columns" id="excelHintColumns">
-                            <!-- Генерируется JS -->
-                        </div>
-                        <div class="excel-hint-note">
-                            <strong>Важно:</strong> Первая строка должна содержать названия колонок точно как указано выше.
-                        </div>
-                    </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Выберите Excel файл (.xlsx)</label>
-                        <input type="file" class="form-input" id="importExcelInput" accept=".xlsx,.xls">
+                        <div class="excel-hint" id="excelHint">
+                            <div class="excel-hint-header">
+                                <div class="excel-hint-title">Структура Excel файла:</div>
+                                <button class="excel-download-template-btn" onclick="partnersApp.downloadExcelTemplate()">
+                                    <img src="icons/export.svg" width="14" height="14" alt="Скачать">
+                                    Скачать пример
+                                </button>
+                            </div>
+                            <div class="excel-hint-columns" id="excelHintColumns">
+                                <!-- Генерируется JS -->
+                            </div>
+                            <div class="excel-hint-note">
+                                <strong>Важно:</strong> Первая строка должна содержать названия колонок точно как указано выше.
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Выберите Excel файл (.xlsx)</label>
+                            <input type="file" class="form-input" id="importExcelInput" accept=".xlsx,.xls">
+                        </div>
                     </div>
                 </div>
 

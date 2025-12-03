@@ -703,10 +703,10 @@
             </div>
             <div class="modal-body">
                 <div class="modal-description-row">
-                    <p class="modal-description">Укажите диапазоны значений и баллы для каждого параметра</p>
+                    <p class="modal-description">Укажите диапазоны и баллы. Чем больше баллов — тем меньше % трафика.</p>
                     <button class="help-toggle-btn" onclick="trafficCalc.toggleHelp()">
                         <img src="../shared/icons/info.svg" alt="Справка">
-                        Как это работает?
+                        Справка
                     </button>
                 </div>
 
@@ -740,18 +740,18 @@
                 </div>
             </div>
             <div class="modal-footer" style="justify-content: space-between;">
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-warning" onclick="trafficCalc.exportTrafficSettings()">
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-small btn-warning" onclick="trafficCalc.exportTrafficSettings()">
                         <img src="icons/export.svg" alt="">
-                        Экспорт настроек
+                        Экспорт
                     </button>
-                    <button class="btn btn-secondary" onclick="trafficCalc.importTrafficSettings()">
+                    <button class="btn btn-small btn-secondary" onclick="trafficCalc.importTrafficSettings()">
                         <img src="icons/import.svg" alt="">
-                        Импорт настроек
+                        Импорт
                     </button>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-secondary" onclick="trafficCalc.closeTrafficCalculator()">Отмена</button>
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-small btn-secondary" onclick="trafficCalc.closeTrafficCalculator()">Отмена</button>
                     <button class="btn btn-success" onclick="trafficCalc.calculateTraffic()">
                         <img src="icons/done.svg" alt="">
                         Рассчитать

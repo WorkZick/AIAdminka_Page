@@ -5,6 +5,7 @@ const partnersApp = {
     sortField: null,
     sortDirection: 'asc',
     pendingImportData: null,
+    pendingExtraColumns: null,
     importType: 'json',
     selectedImportTemplateId: null,
 
@@ -871,7 +872,30 @@ const partnersApp = {
         document.getElementById('templateFieldsContainer').style.display = 'none';
         document.getElementById('formBody').style.display = 'block';
         document.getElementById('formCounters').style.display = 'flex';
+        document.getElementById('formCounters').classList.remove('disabled');
         document.querySelector('.form-partner-info').style.display = 'flex';
+
+        const subagentInput = document.getElementById('formSubagent');
+        const subagentIdInput = document.getElementById('formSubagentId');
+        const methodInput = document.getElementById('formMethod');
+        const methodWrapper = document.querySelector('.form-method-wrapper');
+        const formAvatar = document.querySelector('.form-avatar');
+
+        subagentInput.classList.remove('disabled');
+        subagentIdInput.classList.remove('disabled');
+        methodInput.classList.remove('disabled');
+        subagentInput.readOnly = false;
+        subagentIdInput.readOnly = false;
+        methodInput.disabled = false;
+
+        if (methodWrapper) {
+            methodWrapper.classList.remove('disabled');
+            methodWrapper.style.pointerEvents = '';
+        }
+        if (formAvatar) {
+            formAvatar.classList.remove('disabled');
+            formAvatar.style.pointerEvents = '';
+        }
 
         this.removeDynamicFields();
 
@@ -918,12 +942,35 @@ const partnersApp = {
         document.getElementById('templateFieldsContainer').style.display = 'none';
         document.getElementById('formBody').style.display = 'block';
         document.getElementById('formCounters').style.display = 'flex';
+        document.getElementById('formCounters').classList.remove('disabled');
         document.querySelector('.form-partner-info').style.display = 'flex';
+
+        const subagentInput = document.getElementById('formSubagent');
+        const subagentIdInput = document.getElementById('formSubagentId');
+        const methodInput = document.getElementById('formMethod');
+        const methodWrapper = document.querySelector('.form-method-wrapper');
+        const formAvatarWrapper = document.querySelector('.form-avatar');
+
+        subagentInput.classList.remove('disabled');
+        subagentIdInput.classList.remove('disabled');
+        methodInput.classList.remove('disabled');
+        subagentInput.readOnly = false;
+        subagentIdInput.readOnly = false;
+        methodInput.disabled = false;
+
+        if (methodWrapper) {
+            methodWrapper.classList.remove('disabled');
+            methodWrapper.style.pointerEvents = '';
+        }
+        if (formAvatarWrapper) {
+            formAvatarWrapper.classList.remove('disabled');
+            formAvatarWrapper.style.pointerEvents = '';
+        }
 
         this.removeDynamicFields();
 
-        document.getElementById('formSubagent').value = partner.subagent || '';
-        document.getElementById('formSubagentId').value = partner.subagentId || '';
+        subagentInput.value = partner.subagent || '';
+        subagentIdInput.value = partner.subagentId || '';
 
         this.populateMethodsSelect(partner.method || '');
 
@@ -1533,6 +1580,7 @@ const partnersApp = {
 
     showTemplateEditor(existingTemplate = null) {
         document.getElementById('formTemplateSelector').style.display = 'none';
+        document.getElementById('formTitle').textContent = existingTemplate ? 'Редактировать шаблон' : 'Добавить шаблон';
         document.getElementById('formSaveBtnText').textContent = 'Сохранить шаблон';
         document.getElementById('formBody').style.display = 'none';
 
@@ -1553,7 +1601,7 @@ const partnersApp = {
 
         subagentInput.value = 'Субагент';
         subagentIdInput.value = 'ID Субагента';
-        methodInput.value = 'Метод';
+        methodInput.innerHTML = '<option value="" selected>Метод</option>';
 
         subagentInput.classList.add('disabled');
         subagentIdInput.classList.add('disabled');
@@ -1562,7 +1610,13 @@ const partnersApp = {
 
         subagentInput.readOnly = true;
         subagentIdInput.readOnly = true;
-        methodInput.readOnly = true;
+        methodInput.disabled = true;
+
+        const methodWrapper = document.querySelector('.form-method-wrapper');
+        if (methodWrapper) {
+            methodWrapper.classList.add('disabled');
+            methodWrapper.style.pointerEvents = 'none';
+        }
 
         if (formAvatar) {
             formAvatar.classList.add('disabled');
@@ -1929,7 +1983,7 @@ const partnersApp = {
             const template = this.cachedTemplates[templateId];
             if (template && template.fields) {
                 templateHeaders = template.fields.map(f => f.label);
-                templateName = template.name;
+                templateName = String(template.name || 'custom');
             }
         }
 
@@ -2005,6 +2059,80 @@ const partnersApp = {
 
         document.getElementById('importFileInput').value = '';
         document.getElementById('importExcelInput').value = '';
+
+        if (type === 'excel') {
+            this.goToImportStep1();
+        }
+    },
+
+    goToImportStep1() {
+        document.getElementById('excelImportStep1').style.display = 'block';
+        document.getElementById('excelImportStep2').style.display = 'none';
+        document.getElementById('importPreview').style.display = 'none';
+        document.getElementById('importBtn').disabled = true;
+        document.getElementById('importExcelInput').value = '';
+        this.pendingImportData = null;
+        this.pendingExtraColumns = null;
+    },
+
+    goToImportStep2() {
+        document.getElementById('excelImportStep1').style.display = 'none';
+        document.getElementById('excelImportStep2').style.display = 'block';
+        this.updateExcelHint();
+    },
+
+    openTemplateFromImport() {
+        this.closeImportDialog();
+        this.showAddModal();
+        this.isTemplateMode = true;
+        this.showTemplateEditor();
+    },
+
+    createTemplateFromExtraColumns() {
+        if (!this.pendingExtraColumns || this.pendingExtraColumns.length === 0) return;
+
+        const extraColumns = [...this.pendingExtraColumns];
+
+        this.closeImportDialog();
+        this.showAddModal();
+        this.isTemplateMode = true;
+        this.showTemplateEditor();
+
+        extraColumns.forEach(colName => {
+            const fieldId = 'templateField_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
+            const field = {
+                id: fieldId,
+                label: colName,
+                type: 'text'
+            };
+            this.templateFields.push(field);
+
+            const fieldHtml = `
+                <div class="template-field-item" data-field-id="${fieldId}">
+                    <input type="text" class="template-field-input" placeholder="Название поля" value="${this.escapeHtml(colName)}"
+                        onchange="partnersApp.updateTemplateFieldLabel('${fieldId}', this.value)">
+                    <select class="template-field-type" onchange="partnersApp.updateTemplateFieldType('${fieldId}', this.value)">
+                        <option value="text" selected>Текст</option>
+                        <option value="email">Email</option>
+                        <option value="tel">Телефон</option>
+                        <option value="date">Дата</option>
+                        <option value="textarea">Текстовая область</option>
+                    </select>
+                    <button class="template-field-remove" onclick="partnersApp.removeTemplateField('${fieldId}')">
+                        <img src="icons/cross.svg" width="16" height="16" alt="Удалить">
+                    </button>
+                </div>
+            `;
+            document.getElementById('templateFieldsList').insertAdjacentHTML('beforeend', fieldHtml);
+        });
+    },
+
+    ignoreExtraColumns() {
+        const warning = document.querySelector('.extra-columns-warning');
+        if (warning) {
+            warning.remove();
+        }
+        this.pendingExtraColumns = null;
     },
 
     populateImportTemplateSelect() {
@@ -2076,7 +2204,7 @@ const partnersApp = {
             const template = this.cachedTemplates[templateId];
             if (template && template.fields) {
                 templateHeaders = template.fields.map(f => f.label);
-                templateName = template.name;
+                templateName = String(template.name || 'custom');
             }
         }
 
@@ -2178,6 +2306,7 @@ const partnersApp = {
 
                     const headers = jsonData[0].map(h => String(h).trim());
 
+                    const baseColumns = ['Субагент', 'ID Субагента', 'Метод', 'DEP', 'WITH', 'COMP', 'Статус', 'Фото'];
                     const columnMapping = {
                         'Субагент': 'subagent',
                         'ID Субагента': 'subagentId',
@@ -2188,6 +2317,20 @@ const partnersApp = {
                         'Статус': 'status',
                         'Фото': 'avatar'
                     };
+
+                    let expectedColumns = [...baseColumns];
+                    const templateId = this.selectedImportTemplateId;
+                    if (templateId) {
+                        const template = this.cachedTemplates[templateId];
+                        if (template && template.fields) {
+                            template.fields.forEach(f => {
+                                expectedColumns.push(f.label);
+                                columnMapping[f.label] = 'custom_' + f.label;
+                            });
+                        }
+                    }
+
+                    const extraColumns = headers.filter(h => !expectedColumns.includes(h));
 
                     const columnIndexes = {};
                     headers.forEach((header, index) => {
@@ -2247,10 +2390,32 @@ const partnersApp = {
                     }
 
                     this.pendingImportData = partners;
+                    this.pendingExtraColumns = extraColumns;
 
                     const preview = document.getElementById('importPreview');
                     preview.style.display = 'block';
-                    preview.innerHTML = `<strong>Найдено партнеров:</strong> ${partners.length}<br><small>Файл: ${file.name}</small>`;
+
+                    if (extraColumns.length > 0) {
+                        const extraColsTags = extraColumns.map(c => `<span class="extra-column-tag">${this.escapeHtml(c)}</span>`).join('');
+                        preview.innerHTML = `
+                            <strong>Найдено партнеров:</strong> ${partners.length}<br>
+                            <small>Файл: ${file.name}</small>
+                            <div class="extra-columns-warning">
+                                <div class="extra-columns-warning-title">Обнаружены дополнительные колонки:</div>
+                                <div class="extra-columns-list">${extraColsTags}</div>
+                                <div class="extra-columns-actions">
+                                    <button class="btn-create-template-from-import" onclick="partnersApp.createTemplateFromExtraColumns()">
+                                        Создать шаблон с этими полями
+                                    </button>
+                                    <button class="btn-ignore-extra-columns" onclick="partnersApp.ignoreExtraColumns()">
+                                        Игнорировать
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        preview.innerHTML = `<strong>Найдено партнеров:</strong> ${partners.length}<br><small>Файл: ${file.name}</small>`;
+                    }
 
                     document.getElementById('importBtn').disabled = false;
                 } catch (err) {

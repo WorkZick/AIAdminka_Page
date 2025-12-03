@@ -117,18 +117,18 @@ const trafficCalc = {
             if (param.type === 'text') {
                 // Для текстовых полей (например, статус)
                 settings[param.key] = {
-                    good: { value: 'новый', points: 0 },
-                    normal: { value: 'старый', points: 3 },
-                    bad: { value: 'закрыт', points: 7 },
-                    terrible: { value: '', points: 10 }
+                    good: { value: '', points: 1 },
+                    normal: { value: '', points: 2 },
+                    bad: { value: '', points: 3 },
+                    terrible: { value: '', points: 4 }
                 };
             } else if (param.type === 'percent') {
-                // Для процентов (80-100 = хорошо, меньше = хуже)
+                // Для процентов
                 settings[param.key] = {
-                    good: { min: 80, max: 100, points: 0 },
-                    normal: { min: 60, max: 79, points: 3 },
-                    bad: { min: 40, max: 59, points: 7 },
-                    terrible: { min: 0, max: 39, points: 10 }
+                    good: { min: 0, max: 0, points: 1 },
+                    normal: { min: 0, max: 0, points: 2 },
+                    bad: { min: 0, max: 0, points: 3 },
+                    terrible: { min: 0, max: 0, points: 4 }
                 };
             } else if (param.type === 'multiplier') {
                 // Для множителя (баллы за каждое нарушение)
@@ -136,12 +136,12 @@ const trafficCalc = {
                     pointsPerItem: 5
                 };
             } else {
-                // Для числовых полей (чем меньше значение = лучше)
+                // Для числовых полей
                 settings[param.key] = {
-                    good: { min: 0, max: 0, points: 0 },
-                    normal: { min: 1, max: 2, points: 3 },
-                    bad: { min: 3, max: 5, points: 7 },
-                    terrible: { min: 6, max: 9999, points: 10 }
+                    good: { min: 0, max: 0, points: 1 },
+                    normal: { min: 0, max: 0, points: 2 },
+                    bad: { min: 0, max: 0, points: 3 },
+                    terrible: { min: 0, max: 0, points: 4 }
                 };
             }
         });
@@ -240,7 +240,18 @@ const trafficCalc = {
         const container = document.getElementById('trafficSettingsForm');
         if (!container) return;
 
-        container.innerHTML = this.trafficParams.map(param => {
+        // Добавляем легенду
+        const legend = `
+            <div class="traffic-legend">
+                <span class="traffic-legend-title">Уровни:</span>
+                <div class="traffic-legend-item"><span class="traffic-legend-dot good"></span>Хороший</div>
+                <div class="traffic-legend-item"><span class="traffic-legend-dot normal"></span>Нормальный</div>
+                <div class="traffic-legend-item"><span class="traffic-legend-dot bad"></span>Плохой</div>
+                <div class="traffic-legend-item"><span class="traffic-legend-dot terrible"></span>Ужасный</div>
+            </div>
+        `;
+
+        container.innerHTML = legend + this.trafficParams.map(param => {
             const settings = this.trafficSettings[param.key];
             
             if (param.type === 'text') {
@@ -255,12 +266,12 @@ const trafficCalc = {
                             <div class="traffic-level-card good">
                                 <div class="traffic-level-title">Хор.</div>
                                 <div class="form-group">
-                                    <label>Значение</label>
+                                    <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.good.value)}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'value', this.value)">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.good.points}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'points', parseInt(this.value))">
                                 </div>
@@ -268,12 +279,12 @@ const trafficCalc = {
                             <div class="traffic-level-card normal">
                                 <div class="traffic-level-title">Норм.</div>
                                 <div class="form-group">
-                                    <label>Значение</label>
+                                    <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.normal.value)}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'value', this.value)">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.normal.points}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'points', parseInt(this.value))">
                                 </div>
@@ -281,12 +292,12 @@ const trafficCalc = {
                             <div class="traffic-level-card bad">
                                 <div class="traffic-level-title">Плох.</div>
                                 <div class="form-group">
-                                    <label>Значение</label>
+                                    <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.bad.value)}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'value', this.value)">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.bad.points}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'points', parseInt(this.value))">
                                 </div>
@@ -294,12 +305,12 @@ const trafficCalc = {
                             <div class="traffic-level-card terrible">
                                 <div class="traffic-level-title">Ужас.</div>
                                 <div class="form-group">
-                                    <label>Значение</label>
+                                    <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.terrible.value)}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'value', this.value)">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.terrible.points}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'points', parseInt(this.value))">
                                 </div>
@@ -341,17 +352,17 @@ const trafficCalc = {
                             <div class="traffic-level-card good">
                                 <div class="traffic-level-title">Хор.</div>
                                 <div class="traffic-range-group">
-                                    <label>От:</label>
+                                    <span>От:</span>
                                     <input type="number" value="${settings.good.min}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'min', parseFloat(this.value))">
                                 </div>
                                 <div class="traffic-range-group">
-                                    <label>До:</label>
+                                    <span>До:</span>
                                     <input type="number" value="${settings.good.max}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'max', parseFloat(this.value))">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.good.points}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'points', parseInt(this.value))">
                                 </div>
@@ -359,17 +370,17 @@ const trafficCalc = {
                             <div class="traffic-level-card normal">
                                 <div class="traffic-level-title">Норм.</div>
                                 <div class="traffic-range-group">
-                                    <label>От:</label>
+                                    <span>От:</span>
                                     <input type="number" value="${settings.normal.min}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'min', parseFloat(this.value))">
                                 </div>
                                 <div class="traffic-range-group">
-                                    <label>До:</label>
+                                    <span>До:</span>
                                     <input type="number" value="${settings.normal.max}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'max', parseFloat(this.value))">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.normal.points}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'points', parseInt(this.value))">
                                 </div>
@@ -377,17 +388,17 @@ const trafficCalc = {
                             <div class="traffic-level-card bad">
                                 <div class="traffic-level-title">Плох.</div>
                                 <div class="traffic-range-group">
-                                    <label>От:</label>
+                                    <span>От:</span>
                                     <input type="number" value="${settings.bad.min}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'min', parseFloat(this.value))">
                                 </div>
                                 <div class="traffic-range-group">
-                                    <label>До:</label>
+                                    <span>До:</span>
                                     <input type="number" value="${settings.bad.max}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'max', parseFloat(this.value))">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.bad.points}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'points', parseInt(this.value))">
                                 </div>
@@ -395,17 +406,17 @@ const trafficCalc = {
                             <div class="traffic-level-card terrible">
                                 <div class="traffic-level-title">Ужас.</div>
                                 <div class="traffic-range-group">
-                                    <label>От:</label>
+                                    <span>От:</span>
                                     <input type="number" value="${settings.terrible.min}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'min', parseFloat(this.value))">
                                 </div>
                                 <div class="traffic-range-group">
-                                    <label>До:</label>
+                                    <span>До:</span>
                                     <input type="number" value="${settings.terrible.max}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'max', parseFloat(this.value))">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.terrible.points}"
                                            onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'points', parseInt(this.value))">
                                 </div>

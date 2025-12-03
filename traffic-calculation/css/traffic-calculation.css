@@ -1694,49 +1694,150 @@ body {
 }
 
 .modal-footer {
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-top: 1px solid var(--border-gray);
     background: #f5f5f5;
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 6px;
 }
 
-/* Large modal */
+/* Компактные кнопки для модалки */
+.modal-footer .btn-small {
+    padding: 5px 10px;
+    font-size: 10px;
+}
+
+.modal-footer .btn-small img {
+    width: 11px;
+    height: 11px;
+}
+
+/* Large modal - DARK THEME */
 .modal-large .modal-dialog {
     max-width: 98%;
     width: 98%;
     max-height: 95vh;
+    background: var(--gray-dark);
+}
+
+.modal-large .modal-header {
+    background: var(--bg-black);
 }
 
 .modal-large .modal-body {
     max-height: calc(95vh - 100px);
     overflow: auto;
-}
-
-/* XLarge modal - компактная версия */
-.modal-xlarge .modal-dialog {
-    max-width: 900px;
-    width: 95%;
-    max-height: 90vh;
-}
-
-.modal-xlarge .modal-body {
-    max-height: calc(90vh - 140px);
-    overflow-y: auto;
-    overflow-x: hidden;
+    background: var(--gray-dark);
     padding: 12px;
 }
 
-.modal-description {
-    margin-bottom: 12px;
-    padding: 8px 10px;
-    background: rgba(253, 190, 47, 0.1);
+.modal-large .modal-footer {
+    background: var(--bg-black);
+    border-top: 1px solid #444;
+}
+
+/* Traffic results table - DARK THEME */
+.modal-large .table-container {
+    background: var(--bg-black);
+    border-radius: 4px;
+}
+
+.modal-large .data-table {
+    background: var(--bg-black);
+}
+
+.modal-large .data-table thead {
+    background: var(--gray-darker);
+}
+
+.modal-large .data-table th {
+    color: var(--white);
+    border-bottom: 1px solid #444;
+}
+
+.modal-large .data-table tbody tr {
+    border-bottom: 1px solid #333;
+}
+
+.modal-large .data-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.modal-large .data-table td {
+    color: var(--white);
+}
+
+/* XLarge modal - DARK THEME */
+.modal-xlarge .modal-dialog {
+    max-width: 95vw;
+    width: fit-content;
+    min-width: 800px;
+    max-height: 90vh;
+    background: var(--gray-dark);
+}
+
+.modal-xlarge .modal-header {
+    background: var(--bg-black);
+}
+
+.modal-xlarge .modal-body {
+    max-height: calc(90vh - 120px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px;
+    background: var(--gray-dark);
+}
+
+.modal-xlarge .modal-footer {
+    background: var(--bg-black);
+    border-top: 1px solid #444;
+}
+
+.modal-xlarge .modal-description {
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    background: rgba(253, 190, 47, 0.15);
     border-left: 3px solid var(--yellow);
     border-radius: 0 4px 4px 0;
-    color: var(--black);
-    font-size: 11px;
+    color: var(--white);
+    font-size: 10px;
 }
+
+/* Легенда уровней - тёмная */
+.traffic-legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 12px;
+    background: var(--bg-black);
+    border-radius: 4px;
+    margin-bottom: 10px;
+    font-size: 10px;
+}
+
+.traffic-legend-title {
+    color: var(--gray);
+    font-weight: 500;
+}
+
+.traffic-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--white);
+}
+
+.traffic-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.traffic-legend-dot.good { background: var(--status-green); }
+.traffic-legend-dot.normal { background: var(--status-blue); }
+.traffic-legend-dot.bad { background: var(--status-yellow); }
+.traffic-legend-dot.terrible { background: var(--status-red); }
 
 /* Methods list */
 .methods-list {
@@ -1779,223 +1880,278 @@ body {
     opacity: 0.7;
 }
 
-/* Traffic calculator settings */
+/* Traffic calculator settings - DARK COMPACT DESIGN */
 .traffic-settings-form {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 }
 
+/* Секция параметра - компактная строка */
 .traffic-param-section {
-    border: 1px solid var(--border-gray);
-    border-radius: 6px;
-    padding: 10px;
-    background-color: #fafafa;
+    background: var(--bg-black);
+    border-radius: 4px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .traffic-param-header {
-    font-size: 11px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--black);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--white);
+    width: 160px;
+    min-width: 160px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 6px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border-gray);
+    margin: 0;
 }
 
 .traffic-param-header img {
-    width: 14px;
-    height: 14px;
-    opacity: 0.6;
+    display: none;
 }
 
+/* Сетка уровней - горизонтальная строка */
 .traffic-param-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    display: flex;
+    gap: 6px;
+    flex: 1;
 }
 
+/* Карточка уровня - минималистичная */
 .traffic-level-card {
-    border: 1px solid var(--border-gray);
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: var(--gray-darker);
     border-radius: 4px;
-    padding: 8px;
-    background-color: var(--white);
+    border-left: 3px solid transparent;
 }
 
-.traffic-level-card.good {
-    border-top: 3px solid var(--status-green);
-}
+.traffic-level-card.good { border-left-color: var(--status-green); }
+.traffic-level-card.normal { border-left-color: var(--status-blue); }
+.traffic-level-card.bad { border-left-color: var(--status-yellow); }
+.traffic-level-card.terrible { border-left-color: var(--status-red); }
 
-.traffic-level-card.normal {
-    border-top: 3px solid var(--status-blue);
-}
+/* Убираем псевдоэлементы */
+.traffic-level-card::before { display: none; }
+.traffic-level-title { display: none; }
 
-.traffic-level-card.bad {
-    border-top: 3px solid var(--status-yellow);
-}
-
-.traffic-level-card.terrible {
-    border-top: 3px solid var(--status-red);
-}
-
-.traffic-level-title {
-    font-weight: 700;
-    margin-bottom: 6px;
-    font-size: 9px;
-    text-transform: uppercase;
-    text-align: center;
-}
-
-.traffic-level-card.good .traffic-level-title {
-    color: #2e7d32;
-}
-
-.traffic-level-card.normal .traffic-level-title {
-    color: #1565c0;
-}
-
-.traffic-level-card.bad .traffic-level-title {
-    color: #f57c00;
-}
-
-.traffic-level-card.terrible .traffic-level-title {
-    color: #c62828;
-}
-
+/* Группы полей inline */
 .traffic-range-group {
     display: flex;
-    gap: 4px;
     align-items: center;
-    margin-bottom: 4px;
+    gap: 3px;
+    margin: 0;
+    padding: 0;
 }
 
-.traffic-range-group label {
+.traffic-range-group span {
     font-size: 9px;
-    color: #666;
-    min-width: 22px;
-    font-weight: 500;
+    color: var(--gray);
+    min-width: 14px;
+    font-weight: 400;
 }
 
 .traffic-range-group input[type="number"] {
-    flex: 1;
-    padding: 4px 6px;
+    width: 40px;
+    padding: 4px 2px;
     font-size: 11px;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
+    border: 1px solid #444;
+    border-radius: 3px;
     font-family: 'TT Firs Neue', sans-serif;
-    min-width: 0;
-    width: 100%;
+    text-align: center;
+    background: var(--gray-dark);
+    color: var(--white);
+    -moz-appearance: textfield;
 }
 
+.traffic-range-group input[type="number"]::-webkit-outer-spin-button,
+.traffic-range-group input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.traffic-range-group input[type="number"]:focus {
+    outline: none;
+    border-color: var(--yellow);
+}
+
+/* Группа баллов */
 .traffic-points-group {
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin-top: 6px;
-    padding-top: 6px;
-    border-top: 1px dashed var(--border-gray);
+    gap: 3px;
+    margin: 0;
+    padding: 0;
+    padding-left: 6px;
+    border-left: 1px solid #444;
+    margin-left: 4px;
 }
 
-.traffic-points-group label {
+.traffic-points-group span {
     font-size: 9px;
-    color: #666;
-    font-weight: 500;
+    color: var(--gray);
+    font-weight: 400;
 }
 
 .traffic-points-group input[type="number"] {
-    flex: 1;
-    padding: 4px 6px;
+    width: 36px;
+    padding: 4px 2px;
     font-size: 11px;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
+    border: 1px solid var(--yellow);
+    border-radius: 3px;
     font-weight: 600;
-    min-width: 0;
-    width: 100%;
+    text-align: center;
+    background: rgba(253, 190, 47, 0.15);
+    color: var(--yellow);
+    -moz-appearance: textfield;
 }
 
-/* Traffic multiplier settings */
+.traffic-points-group input[type="number"]::-webkit-outer-spin-button,
+.traffic-points-group input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.traffic-points-group input[type="number"]:focus {
+    outline: none;
+    background: rgba(253, 190, 47, 0.25);
+}
+
+/* Текстовые поля */
+.traffic-level-card .form-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+}
+
+.traffic-level-card .form-group span {
+    font-size: 9px;
+    color: var(--gray);
+    margin: 0;
+}
+
+.traffic-level-card .form-group input[type="text"] {
+    width: 60px;
+    padding: 4px 6px;
+    font-size: 10px;
+    border: 1px solid #444;
+    border-radius: 3px;
+    font-family: 'TT Firs Neue', sans-serif;
+    background: var(--gray-dark);
+    color: var(--white);
+}
+
+.traffic-level-card .form-group input[type="text"]:focus {
+    outline: none;
+    border-color: var(--yellow);
+}
+
+/* Traffic multiplier settings - DARK */
 .traffic-multiplier-settings {
     padding: 0;
 }
 
 .traffic-multiplier-card {
-    background: rgba(253, 190, 47, 0.15);
-    border: 1px solid var(--yellow);
+    background: var(--bg-black);
+    border-left: 3px solid var(--yellow);
     border-radius: 4px;
-    padding: 12px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .traffic-multiplier-info {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .traffic-multiplier-info .multiplier-label {
-    font-weight: 600;
-    color: var(--black);
+    font-weight: 500;
+    color: var(--white);
     font-size: 11px;
 }
 
 .traffic-multiplier-info input {
-    width: 60px;
-    padding: 6px 8px;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
+    width: 50px;
+    padding: 4px 6px;
+    border: 1px solid var(--yellow);
+    border-radius: 3px;
     font-size: 11px;
     font-weight: 600;
     text-align: center;
     font-family: 'TT Firs Neue', sans-serif;
+    background: rgba(253, 190, 47, 0.15);
+    color: var(--yellow);
+    -moz-appearance: textfield;
+}
+
+.traffic-multiplier-info input::-webkit-outer-spin-button,
+.traffic-multiplier-info input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.traffic-multiplier-info input:focus {
+    outline: none;
+    background: rgba(253, 190, 47, 0.25);
 }
 
 .multiplier-example {
     font-size: 10px;
-    color: #666;
-    margin-top: 8px;
+    color: var(--gray);
+    margin: 0;
 }
 
-/* Traffic results table */
+/* Traffic results table - DARK THEME */
 .traffic-results-table th.score-good {
-    background-color: rgba(124, 203, 114, 0.3);
-    color: #2e7d32;
+    background-color: rgba(124, 203, 114, 0.25);
+    color: var(--status-green);
 }
 
 .traffic-results-table th.score-normal {
-    background-color: rgba(150, 184, 218, 0.3);
-    color: #1565c0;
+    background-color: rgba(150, 184, 218, 0.25);
+    color: var(--status-blue);
 }
 
 .traffic-results-table th.score-bad {
-    background-color: rgba(253, 190, 47, 0.3);
-    color: #f57c00;
+    background-color: rgba(253, 190, 47, 0.25);
+    color: var(--status-yellow);
 }
 
 .traffic-results-table th.score-terrible {
-    background-color: rgba(255, 139, 139, 0.3);
-    color: #c62828;
+    background-color: rgba(255, 139, 139, 0.25);
+    color: var(--status-red);
 }
 
 .traffic-results-table th.score-total {
-    background-color: rgba(150, 184, 218, 0.4);
-    color: #1a1a1a;
+    background-color: rgba(150, 184, 218, 0.35);
+    color: var(--status-blue);
     font-weight: 700;
 }
 
 .traffic-results-table th.traffic-percent-header {
-    background-color: rgba(253, 190, 47, 0.4);
-    color: #1a1a1a;
+    background-color: rgba(253, 190, 47, 0.35);
+    color: var(--yellow);
     font-weight: 700;
 }
 
 .traffic-results-table .score-positive {
-    color: #2e7d32;
+    color: var(--status-green);
 }
 
 .traffic-results-table .score-negative {
-    color: #c62828;
+    color: var(--status-red);
 }
 
 .traffic-results-table .score-zero {
@@ -2003,8 +2159,8 @@ body {
 }
 
 .traffic-results-table .traffic-percent {
-    background-color: rgba(253, 190, 47, 0.2);
-    color: #1a1a1a;
+    background-color: rgba(253, 190, 47, 0.15);
+    color: var(--yellow);
     font-weight: 700;
     text-align: center;
 }
@@ -2051,22 +2207,24 @@ body {
     visibility: visible;
 }
 
-/* Method header row */
+/* Method header row - DARK THEME */
 .method-header-row {
-    background: #2e2e2e !important;
+    background: var(--gray-darker) !important;
 }
 
 .method-header-row td {
-    color: var(--white) !important;
+    color: var(--yellow) !important;
     font-size: 11px;
-    padding: 8px !important;
+    font-weight: 600;
+    padding: 10px 8px !important;
+    border-bottom: 1px solid #444 !important;
 }
 
 .method-header-row .method-summary {
-    font-weight: normal;
+    font-weight: 400;
     font-size: 10px;
-    opacity: 0.8;
-    margin-left: 8px;
+    color: var(--gray);
+    margin-left: 10px;
 }
 
 /* Scrollbar */
@@ -2681,15 +2839,15 @@ body {
 }
 
 /* ========================================
-   ПОДСКАЗКА РАСЧЕТА ТРАФИКА
+   ПОДСКАЗКА РАСЧЕТА ТРАФИКА - DARK
    ======================================== */
 
 .modal-description-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 10px;
+    margin-bottom: 8px;
 }
 
 .modal-description-row .modal-description {
@@ -2701,40 +2859,48 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 6px 10px;
+    padding: 5px 10px;
     background: transparent;
-    border: 1px solid var(--border-gray);
-    border-radius: 4px;
+    border: 1px solid #555;
+    border-radius: 3px;
     font-family: 'TT Firs Neue', sans-serif;
     font-size: 10px;
     font-weight: 500;
-    color: var(--black);
+    color: var(--gray);
     cursor: pointer;
     transition: all 0.15s ease;
     white-space: nowrap;
 }
 
 .help-toggle-btn:hover {
-    background: rgba(253, 190, 47, 0.1);
-    border-color: var(--primary-yellow);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--white);
+    border-color: var(--gray);
 }
 
 .help-toggle-btn.active {
     background: rgba(253, 190, 47, 0.15);
-    border-color: var(--primary-yellow);
+    border-color: var(--yellow);
+    color: var(--yellow);
 }
 
 .help-toggle-btn img {
     width: 12px;
     height: 12px;
+    filter: brightness(0) invert(0.6);
+}
+
+.help-toggle-btn:hover img,
+.help-toggle-btn.active img {
+    filter: brightness(0) invert(1);
 }
 
 .traffic-help-content {
-    background: #f8f9fa;
-    border: 1px solid var(--border-gray);
-    border-radius: 6px;
+    background: var(--bg-black);
+    border: 1px solid #444;
+    border-radius: 4px;
     padding: 12px 14px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     font-size: 11px;
     line-height: 1.5;
 }
@@ -2743,22 +2909,26 @@ body {
     margin: 0 0 8px 0;
     font-size: 12px;
     font-weight: 700;
-    color: var(--black);
+    color: var(--yellow);
 }
 
 .traffic-help-content p {
     margin: 0 0 6px 0;
-    color: var(--black);
+    color: var(--white);
+}
+
+.traffic-help-content p:last-child {
+    margin-bottom: 0;
 }
 
 .traffic-help-content ul {
     margin: 0 0 8px 0;
     padding-left: 18px;
+    color: var(--white);
 }
 
 .traffic-help-content li {
     margin-bottom: 3px;
-    color: var(--black);
 }
 
 .traffic-help-content .score-good {
@@ -2767,12 +2937,12 @@ body {
 }
 
 .traffic-help-content .score-normal {
-    color: var(--primary-yellow);
+    color: var(--status-blue);
     font-weight: 600;
 }
 
 .traffic-help-content .score-bad {
-    color: #ff9800;
+    color: var(--status-yellow);
     font-weight: 600;
 }
 

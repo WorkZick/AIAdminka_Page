@@ -76,22 +76,38 @@ const homeApp = {
     },
 
     async loadTickets() {
-        const section = document.getElementById('ticketsSection');
         const listEl = document.getElementById('ticketsList');
+        const badge = document.getElementById('ticketsBadge');
 
         try {
             this.tickets = await CloudStorage.getTickets(false);
+            this.renderTickets();
 
-            if (this.tickets.length > 0) {
-                section.style.display = 'block';
-                this.renderTickets();
+            // Update badge with count of active tickets
+            const activeCount = this.tickets.filter(t =>
+                t.status !== 'closed' && t.status !== 'resolved'
+            ).length;
+
+            if (activeCount > 0) {
+                badge.textContent = activeCount > 99 ? '99+' : activeCount;
+                badge.style.display = 'flex';
             } else {
-                section.style.display = 'none';
+                badge.style.display = 'none';
             }
         } catch (e) {
             console.error('Error loading tickets:', e);
             listEl.innerHTML = '<div class="tickets-empty">Не удалось загрузить</div>';
         }
+    },
+
+    toggleTicketsDrawer() {
+        const panel = document.getElementById('ticketsPanel');
+        const overlay = document.getElementById('ticketsOverlay');
+        const toggle = document.getElementById('ticketsToggle');
+
+        panel.classList.toggle('open');
+        overlay.classList.toggle('open');
+        toggle.style.display = panel.classList.contains('open') ? 'none' : 'flex';
     },
 
     renderTickets() {
@@ -323,9 +339,13 @@ const homeApp = {
 
         document.getElementById('ticketViewBody').innerHTML = bodyHtml;
 
-        // Admin footer
+        // Footer with reply form
         const footer = document.getElementById('ticketViewFooter');
-        if (this.isAdmin) {
+        const isClosed = ticket.status === 'closed';
+
+        if (isClosed) {
+            footer.style.display = 'none';
+        } else if (this.isAdmin) {
             footer.style.display = 'flex';
             footer.innerHTML = `
                 <div class="admin-panel">
@@ -343,7 +363,13 @@ const homeApp = {
                 </div>
             `;
         } else {
-            footer.style.display = 'none';
+            footer.style.display = 'flex';
+            footer.innerHTML = `
+                <div class="user-reply-panel">
+                    <input type="text" id="userReplyInput" class="form-input" placeholder="Написать ответ...">
+                    <button class="btn-primary" onclick="homeApp.addUserReply()">Отправить</button>
+                </div>
+            `;
         }
 
         document.getElementById('ticketViewModal').classList.add('active');
@@ -383,10 +409,28 @@ const homeApp = {
             await CloudStorage.addTicketComment(this.currentTicket.id, text);
             input.value = '';
             await this.loadTickets();
-            // Re-render view modal
             this.viewTicket(this.currentTicket.id);
         } catch (e) {
             console.error('Error adding comment:', e);
+            alert('Ошибка: ' + e.message);
+        }
+    },
+
+    async addUserReply() {
+        if (!this.currentTicket) return;
+
+        const input = document.getElementById('userReplyInput');
+        const text = input.value.trim();
+
+        if (!text) return;
+
+        try {
+            await CloudStorage.addTicketComment(this.currentTicket.id, text);
+            input.value = '';
+            await this.loadTickets();
+            this.viewTicket(this.currentTicket.id);
+        } catch (e) {
+            console.error('Error adding reply:', e);
             alert('Ошибка: ' + e.message);
         }
     },
