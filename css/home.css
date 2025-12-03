@@ -1,4 +1,4 @@
-/* Home Page - Modern Minimalistic Design */
+/* Home Page - Dark Glassmorphism Design */
 
 /* Fonts */
 @font-face {
@@ -20,15 +20,22 @@
 /* Variables */
 :root {
     --white: #f2f2f2;
-    --black: #1a1a1a;
-    --gray: #8d8d8d;
-    --bg-white: #f2f2f2;
-    --bg-dark-white: #e8e8e8;
-    --gray-dark: #2e2e2e;
-    --gray-darker: #212121;
-    --bg-black: #1a1a1a;
+    --black: #0a0a0a;
+    --gray: #6b6b6b;
+    --gray-light: #a0a0a0;
+    --gray-medium: #3a3a3a;
+    --gray-dark: #252525;
+    --gray-darker: #1a1a1a;
+    --bg-black: #0d0d0d;
     --yellow: #fdbe2f;
-    --border-gray: #c3c3c3;
+
+    /* Glassmorphism - simplified */
+    --glass-bg: rgba(255, 255, 255, 0.02);
+    --glass-bg-light: rgba(255, 255, 255, 0.04);
+    --glass-bg-hover: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-border-hover: rgba(253, 190, 47, 0.3);
+    --glass-blur: 16px;
 }
 
 * {
@@ -40,7 +47,7 @@
 body {
     font-family: 'TT Firs Neue', 'Segoe UI', sans-serif;
     font-weight: 400;
-    background: #1a1a1a;
+    background: var(--bg-black);
     color: #f2f2f2;
     height: 100vh;
     overflow: hidden;
@@ -50,13 +57,20 @@ body {
 .app-container {
     display: flex;
     height: 100vh;
-    background: #2e2e2e;
+    background:
+        radial-gradient(circle at 15% 25%, rgba(253, 190, 47, 0.15) 0%, transparent 35%),
+        radial-gradient(circle at 85% 75%, rgba(80, 120, 200, 0.12) 0%, transparent 35%),
+        radial-gradient(circle at 50% 90%, rgba(253, 190, 47, 0.08) 0%, transparent 40%),
+        var(--bg-black);
 }
 
-/* Sidebar */
+/* Sidebar - Glassmorphism */
 .sidebar {
     width: 12%;
-    background: #e8e8e8;
+    background: rgba(20, 20, 20, 0.7);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
     padding: 0;
@@ -83,19 +97,19 @@ body {
     gap: 8px;
     padding: 0 20px;
     height: 60px;
-    background: #e8e8e8;
+    background: transparent;
     border: none;
     cursor: pointer;
     font-family: 'TT Firs Neue', sans-serif;
     font-size: 14px;
-    color: var(--black);
+    color: var(--white);
     font-weight: 400;
-    transition: opacity 0.2s;
+    transition: background 0.2s;
     box-sizing: border-box;
 }
 
 .back-button:hover {
-    background: #d0d0d0;
+    background: var(--glass-bg-hover);
 }
 
 .back-button img {
@@ -104,6 +118,7 @@ body {
     transition: transform 0.3s ease;
     object-fit: contain;
     display: block;
+    filter: brightness(0) invert(1);
 }
 
 .sidebar.collapsed .back-button img {
@@ -122,10 +137,10 @@ body {
 .menu-item {
     display: block;
     padding: 16px 20px;
-    color: var(--black);
+    color: var(--white);
     text-decoration: none;
     font-size: 14px;
-    transition: background 0.2s;
+    transition: all 0.2s ease;
     cursor: pointer;
     border: none;
     background: transparent;
@@ -159,6 +174,8 @@ body {
     transform: translateY(-50%);
     object-fit: contain;
     display: block;
+    filter: brightness(0) invert(1);
+    opacity: 0.7;
 }
 
 .sidebar.collapsed .menu-item span {
@@ -166,17 +183,28 @@ body {
 }
 
 .menu-item.active {
-    background: var(--yellow);
+    background: linear-gradient(90deg, rgba(253, 190, 47, 0.2) 0%, transparent 100%);
+    border-left: 3px solid var(--yellow);
     font-weight: 700;
+    color: var(--yellow);
+}
+
+.menu-item.active img {
+    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(101%) contrast(98%);
+    opacity: 1;
 }
 
 .menu-item:hover:not(.active) {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--glass-bg-hover);
+}
+
+.menu-item:hover:not(.active) img {
+    opacity: 1;
 }
 
 .menu-separator {
     height: 1px;
-    background: #c3c3c3;
+    background: var(--glass-border);
     margin: 10px 20px;
 }
 
@@ -196,10 +224,11 @@ body {
     width: 100%;
     position: relative;
     box-sizing: border-box;
+    transition: background 0.2s ease;
 }
 
 .version-info:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--glass-bg-hover);
 }
 
 .version-info .version-text-full {
@@ -223,6 +252,7 @@ body {
     width: 20px;
     height: 20px;
     opacity: 0.6;
+    filter: brightness(0) invert(1);
 }
 
 .version-info:hover .version-icon img {
@@ -250,10 +280,10 @@ body {
     flex-direction: column;
     position: relative;
     overflow: hidden;
-    background: #1a1a1a;
+    background: transparent;
 }
 
-/* Global header */
+/* Global header - Glassmorphism */
 .global-header {
     position: absolute;
     top: 0;
@@ -264,7 +294,10 @@ body {
     justify-content: center;
     gap: 20px;
     z-index: 100;
-    background: #212121;
+    background: rgba(20, 20, 20, 0.7);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding: 0 40px;
     height: 60px;
     box-sizing: border-box;
@@ -274,6 +307,7 @@ body {
     font-size: 16px;
     font-weight: 400;
     color: var(--white);
+    letter-spacing: 1px;
 }
 
 /* Content area */
@@ -295,10 +329,12 @@ body {
     width: 100%;
 }
 
-/* Module card */
+/* Module card - Glassmorphism */
 .module-card {
-    background: #2e2e2e;
-    border-radius: 12px;
+    background: rgba(40, 40, 40, 0.5);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 14px;
     padding: 32px 24px;
     display: flex;
     flex-direction: column;
@@ -307,12 +343,12 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     text-decoration: none;
-    border: 2px solid transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .module-card:hover {
-    background: #3a3a3a;
-    border-color: var(--yellow);
+    background: rgba(50, 50, 50, 0.6);
+    border-color: var(--glass-border-hover);
     transform: translateY(-4px);
 }
 
@@ -322,9 +358,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #212121;
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
     padding: 14px;
+    transition: all 0.2s ease;
+}
+
+.module-card:hover .module-icon {
+    background: rgba(253, 190, 47, 0.12);
 }
 
 .module-icon img {
@@ -332,6 +373,13 @@ body {
     height: 100%;
     object-fit: contain;
     filter: brightness(0) invert(1);
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.module-card:hover .module-icon img {
+    opacity: 1;
+    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(101%) contrast(98%);
 }
 
 .module-title {
@@ -339,6 +387,11 @@ body {
     font-weight: 400;
     color: var(--white);
     text-align: center;
+    transition: color 0.3s ease;
+}
+
+.module-card:hover .module-title {
+    color: var(--yellow);
 }
 
 .module-desc {
@@ -348,14 +401,16 @@ body {
     line-height: 1.4;
 }
 
-/* About Modal */
+/* Modal - Glassmorphism */
 .modal {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     display: none;
     align-items: center;
     justify-content: center;
@@ -367,8 +422,11 @@ body {
 }
 
 .modal-dialog {
-    background: var(--white);
-    border-radius: 8px;
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
     width: 90%;
     max-width: 400px;
     max-height: 90vh;
@@ -379,7 +437,7 @@ body {
 
 .modal-header {
     padding: 20px 24px;
-    border-bottom: 1px solid var(--border-gray);
+    border-bottom: 1px solid var(--glass-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -388,22 +446,29 @@ body {
 .modal-title {
     font-size: 18px;
     font-weight: 700;
-    color: var(--black);
+    color: var(--white);
 }
 
 .modal-close {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.1);
     border: none;
+    border-radius: 8px;
     cursor: pointer;
-    padding: 4px;
+    padding: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .modal-close img {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1);
 }
 
 .modal-body {
@@ -414,17 +479,22 @@ body {
 
 .modal-body p {
     font-size: 13px;
-    color: var(--black);
+    color: var(--white);
     line-height: 1.6;
     margin-bottom: 12px;
 }
 
 .modal-body a {
-    color: var(--black);
+    color: var(--yellow);
     word-break: break-all;
+    transition: opacity 0.2s ease;
 }
 
-/* Scrollbar */
+.modal-body a:hover {
+    opacity: 0.8;
+}
+
+/* Scrollbar - Dark */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -435,11 +505,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--gray);
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--gray-dark);
+    background: rgba(255, 255, 255, 0.25);
 }
 
 /* Content layout with tickets */
@@ -451,32 +522,39 @@ body {
 
 /* Module card accent (for feedback) */
 .module-card-accent {
-    border: 2px solid var(--yellow);
-    background: linear-gradient(135deg, #2e2e2e 0%, #3a3a3a 100%);
+    border: 1px solid rgba(253, 190, 47, 0.25);
+    background: rgba(40, 40, 40, 0.5);
 }
 
 .module-card-accent .module-icon {
-    background: var(--yellow);
+    background: rgba(253, 190, 47, 0.12);
 }
 
 .module-card-accent .module-icon svg {
     width: 100%;
     height: 100%;
-    stroke: var(--black);
+    stroke: var(--yellow);
 }
 
 .module-card-accent:hover {
-    background: linear-gradient(135deg, #3a3a3a 0%, #454545 100%);
+    background: rgba(50, 50, 50, 0.6);
+    border-color: rgba(253, 190, 47, 0.4);
 }
 
-/* Tickets Drawer */
+.module-card-accent:hover .module-icon {
+    background: rgba(253, 190, 47, 0.2);
+}
+
+/* Tickets Drawer - Glassmorphism */
 .tickets-drawer-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s;
@@ -494,11 +572,14 @@ body {
     top: 30%;
     transform: translateY(-50%);
     z-index: 999;
-    width: 40px;
-    height: 40px;
-    background: #2e2e2e;
-    border: none;
-    border-radius: 8px 0 0 8px;
+    width: 44px;
+    height: 44px;
+    background: rgba(50, 50, 50, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-right: none;
+    border-radius: 10px 0 0 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -507,13 +588,21 @@ body {
 }
 
 .tickets-drawer-toggle:hover {
-    background: #3a3a3a;
+    background: rgba(60, 60, 60, 0.9);
+    border-color: var(--glass-border-hover);
 }
 
 .tickets-drawer-toggle svg {
     width: 20px;
     height: 20px;
     stroke: var(--white);
+    opacity: 0.8;
+    transition: all 0.2s;
+}
+
+.tickets-drawer-toggle:hover svg {
+    stroke: var(--yellow);
+    opacity: 1;
 }
 
 .tickets-badge {
@@ -539,7 +628,10 @@ body {
     right: 0;
     bottom: 0;
     width: 380px;
-    background: #222;
+    background: rgba(20, 20, 20, 0.85);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
     z-index: 1001;
     transform: translateX(100%);
     transition: transform 0.3s ease;
@@ -556,8 +648,8 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 20px;
-    border-bottom: 1px solid #333;
-    background: #1a1a1a;
+    border-bottom: 1px solid var(--glass-border);
+    background: var(--gray-darker);
 }
 
 .tickets-drawer-header h3 {
@@ -576,19 +668,19 @@ body {
 .btn-close-drawer {
     width: 32px;
     height: 32px;
-    background: rgba(255,255,255,0.1);
-    border: none;
-    border-radius: 6px;
+    background: var(--gray-medium);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .btn-refresh:hover,
 .btn-close-drawer:hover {
-    background: rgba(255,255,255,0.2);
+    background: #424242;
 }
 
 .btn-refresh svg,
@@ -596,6 +688,12 @@ body {
     width: 16px;
     height: 16px;
     stroke: var(--white);
+    opacity: 0.8;
+}
+
+.btn-refresh:hover svg,
+.btn-close-drawer:hover svg {
+    opacity: 1;
 }
 
 .tickets-list {
@@ -611,15 +709,16 @@ body {
     font-size: 13px;
 }
 
-/* Ticket Card */
+/* Ticket Card - Glassmorphism */
 .ticket-card {
-    background: #2e2e2e;
-    border-radius: 8px;
+    background: var(--gray-medium);
+    border: 1px solid var(--glass-border);
+    border-left: 3px solid var(--gray);
+    border-radius: 10px;
     padding: 14px 16px;
     margin-bottom: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
-    border-left: 4px solid var(--gray);
 }
 
 .ticket-card:last-child {
@@ -627,7 +726,7 @@ body {
 }
 
 .ticket-card:hover {
-    background: #3a3a3a;
+    background: #424242;
 }
 
 .ticket-card.status-new {
@@ -721,7 +820,7 @@ body {
     max-width: 560px;
 }
 
-/* Form Styles */
+/* Form Styles - Dark Glassmorphism */
 .form-group {
     margin-bottom: 20px;
 }
@@ -729,12 +828,13 @@ body {
 .form-group label {
     display: block;
     font-size: 13px;
-    color: var(--black);
+    color: var(--white);
     margin-bottom: 8px;
+    opacity: 0.9;
 }
 
 .form-group .required {
-    color: #e03131;
+    color: #ff6b6b;
 }
 
 .form-input,
@@ -744,12 +844,17 @@ body {
     padding: 12px 14px;
     font-size: 13px;
     font-family: 'TT Firs Neue', sans-serif;
-    background: var(--bg-dark-white);
-    border: 1px solid var(--border-gray);
-    border-radius: 6px;
-    color: var(--black);
-    transition: border-color 0.2s;
+    background: var(--gray-dark);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--white);
+    transition: all 0.2s ease;
     box-sizing: border-box;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: var(--gray);
 }
 
 .form-input:focus,
@@ -757,6 +862,7 @@ body {
 .form-select:focus {
     outline: none;
     border-color: var(--yellow);
+    background: #2e2e2e;
 }
 
 .form-textarea {
@@ -764,7 +870,16 @@ body {
     min-height: 100px;
 }
 
-/* Image Upload */
+.form-select {
+    cursor: pointer;
+}
+
+.form-select option {
+    background: #1a1a1a;
+    color: var(--white);
+}
+
+/* Image Upload - Dark */
 .image-upload-area {
     display: flex;
     flex-wrap: wrap;
@@ -782,9 +897,10 @@ body {
     position: relative;
     width: 80px;
     height: 80px;
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
-    background: var(--bg-dark-white);
+    background: var(--gray-dark);
+    border: 1px solid var(--glass-border);
 }
 
 .image-preview img {
@@ -799,7 +915,7 @@ body {
     right: 4px;
     width: 20px;
     height: 20px;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     border: none;
     border-radius: 50%;
     cursor: pointer;
@@ -809,13 +925,18 @@ body {
     color: white;
     font-size: 14px;
     line-height: 1;
+    transition: background 0.2s;
+}
+
+.image-preview-remove:hover {
+    background: rgba(255, 100, 100, 0.8);
 }
 
 .image-upload-btn {
     width: 80px;
     height: 80px;
-    border: 2px dashed var(--border-gray);
-    border-radius: 8px;
+    border: 2px dashed var(--glass-border);
+    border-radius: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -824,11 +945,13 @@ body {
     cursor: pointer;
     transition: all 0.2s;
     color: var(--gray);
+    background: transparent;
 }
 
 .image-upload-btn:hover {
     border-color: var(--yellow);
-    color: var(--black);
+    color: var(--yellow);
+    background: var(--gray-dark);
 }
 
 .image-upload-btn svg {
@@ -844,7 +967,7 @@ body {
 /* Modal Footer */
 .modal-footer {
     padding: 16px 24px;
-    border-top: 1px solid var(--border-gray);
+    border-top: 1px solid var(--glass-border);
     display: flex;
     justify-content: flex-end;
     gap: 12px;
@@ -855,7 +978,7 @@ body {
     padding: 10px 20px;
     font-size: 13px;
     font-family: 'TT Firs Neue', sans-serif;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
     border: none;
@@ -877,20 +1000,20 @@ body {
 }
 
 .btn-secondary {
-    background: var(--bg-dark-white);
-    color: var(--black);
-    border: 1px solid var(--border-gray);
+    background: var(--gray-dark);
+    color: var(--white);
+    border: 1px solid var(--glass-border);
 }
 
 .btn-secondary:hover {
-    background: #d0d0d0;
+    background: #2e2e2e;
 }
 
-/* Ticket View Styles */
+/* Ticket View Styles - Dark */
 .ticket-view-description {
     font-size: 13px;
     line-height: 1.6;
-    color: var(--black);
+    color: var(--white);
     margin-bottom: 20px;
     white-space: pre-wrap;
 }
@@ -905,9 +1028,15 @@ body {
 .ticket-view-image {
     width: 120px;
     height: 120px;
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
     cursor: pointer;
+    border: 1px solid var(--glass-border);
+    transition: all 0.2s ease;
+}
+
+.ticket-view-image:hover {
+    border-color: var(--glass-border-hover);
 }
 
 .ticket-view-image img {
@@ -920,25 +1049,26 @@ body {
     font-size: 12px;
     color: var(--gray);
     padding-top: 16px;
-    border-top: 1px solid var(--border-gray);
+    border-top: 1px solid var(--glass-border);
 }
 
 .ticket-view-comments {
     margin-top: 20px;
     padding-top: 20px;
-    border-top: 1px solid var(--border-gray);
+    border-top: 1px solid var(--glass-border);
 }
 
 .ticket-view-comments h4 {
     font-size: 13px;
     font-weight: 700;
     margin-bottom: 12px;
-    color: var(--black);
+    color: var(--white);
 }
 
 .ticket-comment {
-    background: var(--bg-dark-white);
-    border-radius: 8px;
+    background: var(--gray-dark);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
     padding: 12px;
     margin-bottom: 12px;
 }
@@ -953,16 +1083,16 @@ body {
 
 .ticket-comment-text {
     font-size: 13px;
-    color: var(--black);
+    color: var(--white);
     white-space: pre-wrap;
 }
 
 .ticket-comment.admin {
-    background: rgba(253, 190, 47, 0.1);
+    background: rgba(253, 190, 47, 0.08);
     border-left: 3px solid var(--yellow);
 }
 
-/* Admin Panel in Footer */
+/* Admin Panel in Footer - Dark */
 .admin-panel {
     display: flex;
     align-items: center;
@@ -986,13 +1116,24 @@ body {
     padding: 10px 14px;
     font-size: 13px;
     font-family: 'TT Firs Neue', sans-serif;
-    background: var(--bg-dark-white);
-    border: 1px solid var(--border-gray);
-    border-radius: 6px;
-    color: var(--black);
+    background: var(--gray-dark);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--white);
+    transition: all 0.2s ease;
 }
 
-/* User reply panel */
+.admin-comment-input input:focus {
+    outline: none;
+    border-color: var(--yellow);
+    background: #2e2e2e;
+}
+
+.admin-comment-input input::placeholder {
+    color: var(--gray);
+}
+
+/* User reply panel - Dark */
 .user-reply-panel {
     display: flex;
     gap: 8px;
@@ -1004,10 +1145,21 @@ body {
     padding: 10px 14px;
     font-size: 13px;
     font-family: 'TT Firs Neue', sans-serif;
-    background: var(--bg-dark-white);
-    border: 1px solid var(--border-gray);
-    border-radius: 6px;
-    color: var(--black);
+    background: var(--gray-dark);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--white);
+    transition: all 0.2s ease;
+}
+
+.user-reply-panel input:focus {
+    outline: none;
+    border-color: var(--yellow);
+    background: #2e2e2e;
+}
+
+.user-reply-panel input::placeholder {
+    color: var(--gray);
 }
 
 /* Responsive */
@@ -1026,6 +1178,16 @@ body {
         display: none;
     }
 
+    .version-info .version-text-full,
+    .version-info .version-number {
+        display: none;
+    }
+
+    .version-info .version-icon {
+        position: static;
+        transform: none;
+    }
+
     .modules-grid {
         grid-template-columns: 1fr;
         gap: 16px;
@@ -1033,5 +1195,15 @@ body {
 
     .module-card {
         padding: 24px 20px;
+    }
+
+    .tickets-drawer-panel {
+        width: 100%;
+    }
+
+    .modal-dialog {
+        width: 95%;
+        max-width: none;
+        margin: 10px;
     }
 }

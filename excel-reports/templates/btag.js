@@ -4,7 +4,7 @@
 window.TEMPLATE_BTAG = {
     id: 'btag',
     name: 'B-TAG',
-    description: 'Анализ транзакций по статусам (первый/второй депозит, отказы)',
+    description: 'Листы: T3.4',
     filesConfig: {
         step1: { name: 'Файл транзакций', multiple: false }
     },

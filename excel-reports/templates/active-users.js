@@ -4,7 +4,7 @@
 window.TEMPLATE_ACTIVE_USERS = {
     id: 'active-users',
     name: 'Активные пользователи',
-    description: 'Анализ активных пользователей (T4, T4.1)',
+    description: 'Листы: T4, T4.1',
     filesConfig: {
         step1: { name: 'Файл прошлого месяца (ID игрока)', multiple: false },
         step2: { name: 'Файл текущего месяца (ID игрока)', multiple: false }

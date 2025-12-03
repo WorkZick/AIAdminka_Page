@@ -1930,16 +1930,27 @@ const partnersApp = {
 
         const previewInfo = document.getElementById('exportPreviewInfo');
 
-        let columns = ['Субагент', 'ID Субагента', 'Метод', 'DEP', 'WITH', 'COMP', 'Статус', 'Фото'];
+        let baseColumns = ['Субагент', 'ID Субагента', 'Метод', 'DEP', 'WITH', 'COMP', 'Статус', 'Фото'];
+        let customColumns = [];
 
         if (templateId) {
             const template = this.cachedTemplates[templateId];
             if (template && template.fields) {
-                columns = columns.concat(template.fields.map(f => f.label));
+                customColumns = template.fields.map(f => f.label);
             }
         }
 
-        previewInfo.innerHTML = `<strong>Колонки:</strong> ${columns.join(', ')}`;
+        const requiredCols = ['Субагент', 'ID Субагента', 'Метод'];
+        const baseTags = baseColumns.map(col => {
+            const isRequired = requiredCols.includes(col);
+            return `<span class="excel-hint-column ${isRequired ? 'required' : 'optional'}">${col}</span>`;
+        }).join('');
+        const customTags = customColumns.map(col => `<span class="excel-hint-column optional">${col}</span>`).join('');
+
+        previewInfo.innerHTML = `
+            <div class="export-preview-title">Колонки для экспорта:</div>
+            <div class="excel-hint-columns">${baseTags}${customTags}</div>
+        `;
     },
 
     doExport() {
@@ -2042,6 +2053,9 @@ const partnersApp = {
         this.pendingImportData = null;
         this.importType = 'json';
         this.selectedImportTemplateId = null;
+        // Reset file labels
+        this.resetFileLabel(document.getElementById('jsonFileLabel'), 'Выберите JSON файл', 'или перетащите сюда');
+        this.resetFileLabel(document.getElementById('excelFileLabel'), 'Выберите Excel файл', '.xlsx или .xls');
     },
 
     setImportType(type) {
@@ -2060,6 +2074,10 @@ const partnersApp = {
         document.getElementById('importFileInput').value = '';
         document.getElementById('importExcelInput').value = '';
 
+        // Reset file labels
+        this.resetFileLabel(document.getElementById('jsonFileLabel'), 'Выберите JSON файл', 'или перетащите сюда');
+        this.resetFileLabel(document.getElementById('excelFileLabel'), 'Выберите Excel файл', '.xlsx или .xls');
+
         if (type === 'excel') {
             this.goToImportStep1();
         }
@@ -2073,6 +2091,8 @@ const partnersApp = {
         document.getElementById('importExcelInput').value = '';
         this.pendingImportData = null;
         this.pendingExtraColumns = null;
+        // Reset Excel file label
+        this.resetFileLabel(document.getElementById('excelFileLabel'), 'Выберите Excel файл', '.xlsx или .xls');
     },
 
     goToImportStep2() {
@@ -2255,9 +2275,17 @@ const partnersApp = {
 
     setupImportHandler() {
         const fileInput = document.getElementById('importFileInput');
+        const jsonLabel = document.getElementById('jsonFileLabel');
+
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (!file) return;
+            if (!file) {
+                this.resetFileLabel(jsonLabel, 'Выберите JSON файл', 'или перетащите сюда');
+                return;
+            }
+
+            // Update label to show selected file
+            this.updateFileLabel(jsonLabel, file.name);
 
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -2279,15 +2307,24 @@ const partnersApp = {
                     alert('Ошибка чтения файла: ' + err.message);
                     document.getElementById('importPreview').style.display = 'none';
                     document.getElementById('importBtn').disabled = true;
+                    this.resetFileLabel(jsonLabel, 'Выберите JSON файл', 'или перетащите сюда');
                 }
             };
             reader.readAsText(file);
         });
 
         const excelInput = document.getElementById('importExcelInput');
+        const excelLabel = document.getElementById('excelFileLabel');
+
         excelInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (!file) return;
+            if (!file) {
+                this.resetFileLabel(excelLabel, 'Выберите Excel файл', '.xlsx или .xls');
+                return;
+            }
+
+            // Update label to show selected file
+            this.updateFileLabel(excelLabel, file.name);
 
             const reader = new FileReader();
             reader.onload = (event) => {
@@ -2422,10 +2459,51 @@ const partnersApp = {
                     alert('Ошибка чтения файла: ' + err.message);
                     document.getElementById('importPreview').style.display = 'none';
                     document.getElementById('importBtn').disabled = true;
+                    this.resetFileLabel(excelLabel, 'Выберите Excel файл', '.xlsx или .xls');
                 }
             };
             reader.readAsArrayBuffer(file);
         });
+    },
+
+    // Helper methods for file input labels
+    updateFileLabel(label, fileName) {
+        if (!label) return;
+        label.classList.add('has-file');
+        const mainText = label.querySelector('.main-text');
+        const subText = label.querySelector('.sub-text');
+        if (mainText) mainText.textContent = fileName;
+        if (subText) subText.textContent = 'Файл выбран';
+    },
+
+    resetFileLabel(label, mainText, subText) {
+        if (!label) return;
+        label.classList.remove('has-file');
+        const mainEl = label.querySelector('.main-text');
+        const subEl = label.querySelector('.sub-text');
+        if (mainEl) mainEl.textContent = mainText;
+        if (subEl) subEl.textContent = subText;
+    },
+
+    // Counter button helpers
+    incrementCounter(inputId) {
+        const input = document.getElementById(inputId);
+        if (input) {
+            const currentValue = parseInt(input.value) || 0;
+            input.value = currentValue + 1;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    },
+
+    decrementCounter(inputId) {
+        const input = document.getElementById(inputId);
+        if (input) {
+            const currentValue = parseInt(input.value) || 0;
+            const min = parseInt(input.min);
+            const newValue = currentValue - 1;
+            input.value = (!isNaN(min) && newValue < min) ? min : newValue;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
     },
 
     // Import state

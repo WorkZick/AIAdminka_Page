@@ -273,15 +273,33 @@
                             <div class="form-counters" id="formCounters">
                                 <div class="counter-input-group">
                                     <label>DEP:</label>
-                                    <input type="number" id="formDep" placeholder="0" min="0">
+                                    <div class="counter-input">
+                                        <input type="number" id="formDep" placeholder="0" min="0">
+                                        <div class="counter-buttons">
+                                            <button type="button" class="counter-btn" onclick="partnersApp.incrementCounter('formDep')">▲</button>
+                                            <button type="button" class="counter-btn" onclick="partnersApp.decrementCounter('formDep')">▼</button>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="counter-input-group">
                                     <label>WITH:</label>
-                                    <input type="number" id="formWith" placeholder="0" min="0">
+                                    <div class="counter-input">
+                                        <input type="number" id="formWith" placeholder="0" min="0">
+                                        <div class="counter-buttons">
+                                            <button type="button" class="counter-btn" onclick="partnersApp.incrementCounter('formWith')">▲</button>
+                                            <button type="button" class="counter-btn" onclick="partnersApp.decrementCounter('formWith')">▼</button>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="counter-input-group">
                                     <label>COMP:</label>
-                                    <input type="number" id="formComp" placeholder="0">
+                                    <div class="counter-input">
+                                        <input type="number" id="formComp" placeholder="0">
+                                        <div class="counter-buttons">
+                                            <button type="button" class="counter-btn" onclick="partnersApp.incrementCounter('formComp')">▲</button>
+                                            <button type="button" class="counter-btn" onclick="partnersApp.decrementCounter('formComp')">▼</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -351,7 +369,7 @@
 
     <!-- Export Modal -->
     <div class="modal" id="exportModal">
-        <div class="modal-dialog" style="max-width: 400px;">
+        <div class="modal-dialog" style="max-width: 480px;">
             <div class="modal-header">
                 <h2 class="modal-title">Экспорт данных</h2>
                 <button class="modal-close" onclick="partnersApp.closeExportDialog()">
@@ -374,20 +392,31 @@
 
                 <!-- JSON экспорт -->
                 <div id="jsonExportSection">
-                    <div class="export-info">
-                        Будут экспортированы все партнеры со всеми полями в формате JSON.
+                    <div class="export-info-box">
+                        <img src="icons/export.svg" width="24" height="24" alt="Export">
+                        <div class="export-info-text">
+                            <span class="export-info-title">Экспорт в JSON</span>
+                            <span class="export-info-desc">Все партнеры со всеми полями</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Excel экспорт -->
                 <div id="excelExportSection" style="display: none;">
-                    <div class="form-group">
-                        <label class="form-label">Выберите шаблон колонок</label>
+                    <div class="export-info-box export-excel-box">
+                        <img src="icons/excel_reports.svg" width="24" height="24" alt="Excel">
+                        <div class="export-info-text">
+                            <span class="export-info-title">Экспорт в Excel</span>
+                            <span class="export-info-desc">Настройте колонки для выгрузки</span>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label class="form-label">Шаблон колонок</label>
                         <select class="form-select" id="exportTemplateSelect" onchange="partnersApp.updateExportPreview()">
                             <option value="">Без шаблона (базовые поля)</option>
                         </select>
                     </div>
-                    <div class="export-info" id="exportPreviewInfo">
+                    <div class="export-columns-preview" id="exportPreviewInfo">
                         <!-- Генерируется JS -->
                     </div>
                 </div>
@@ -428,8 +457,16 @@
                 <!-- JSON импорт -->
                 <div id="jsonImportSection">
                     <div class="form-group">
-                        <label class="form-label">Выберите JSON файл</label>
-                        <input type="file" class="form-input" id="importFileInput" accept=".json">
+                        <div class="file-input-wrapper">
+                            <input type="file" id="importFileInput" accept=".json">
+                            <label for="importFileInput" class="file-input-label" id="jsonFileLabel">
+                                <img src="icons/import.svg" alt="Импорт">
+                                <span class="file-input-text">
+                                    <span class="main-text">Выберите JSON файл</span>
+                                    <span class="sub-text">или перетащите сюда</span>
+                                </span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -484,13 +521,21 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Выберите Excel файл (.xlsx)</label>
-                            <input type="file" class="form-input" id="importExcelInput" accept=".xlsx,.xls">
+                            <div class="file-input-wrapper">
+                                <input type="file" id="importExcelInput" accept=".xlsx,.xls">
+                                <label for="importExcelInput" class="file-input-label" id="excelFileLabel">
+                                    <img src="icons/excel_reports.svg" alt="Excel">
+                                    <span class="file-input-text">
+                                        <span class="main-text">Выберите Excel файл</span>
+                                        <span class="sub-text">.xlsx или .xls</span>
+                                    </span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div id="importPreview" style="display: none; padding: 12px; background: #f0e8d8; border-radius: 4px; margin-top: 12px; font-size: 13px; color: #5c4a3d;"></div>
+                <div id="importPreview" style="display: none;"></div>
             </div>
 
             <div class="modal-footer">

@@ -1,6 +1,44 @@
 {
-  "version": "2.12.2",
+  "version": "2.13.0",
   "updates": [
+    {
+      "version": "2.13.0",
+      "date": "2025-12-04",
+      "title": "Dark Glassmorphism: глобальный редизайн",
+      "changes": [
+        {
+          "category": "Новое",
+          "items": [
+            "Glassmorphism дизайн всех модулей (backdrop-filter blur)",
+            "Градиентные фоны с цветовыми акцентами",
+            "Прозрачный sidebar с эффектом стекла",
+            "Кнопки ▲/▼ для счётчиков DEP/WITH/COMP в форме партнёра",
+            "Drag & drop стиль выбора файлов в импорте",
+            "Информативные карточки экспорта с иконками"
+          ]
+        },
+        {
+          "category": "Улучшено",
+          "items": [
+            "Обновлённая цветовая палитра статусов",
+            "CSS переменные для glassmorphism эффектов",
+            "Теги колонок в preview Excel экспорта",
+            "Компактные описания шаблонов Excel Reports",
+            "Увеличена ширина модального окна экспорта"
+          ]
+        },
+        {
+          "category": "Файлы",
+          "items": [
+            "css/home.css, team-info.css, partners.css",
+            "traffic-calculation.css, excel-reports.css",
+            "sync.css, documentation.css",
+            "partners/index.html, partners/js/partners.js",
+            "excel-reports/templates/*.js"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.12.2",
       "date": "2025-12-04",

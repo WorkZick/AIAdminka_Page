@@ -4,7 +4,7 @@
 window.TEMPLATE_ANALYTICS_T9 = {
     id: 'analytics-t9',
     name: 'Аналитика Т9',
-    description: 'Анализ по типам продуктов (Slot, 1xGames, Live Casino)',
+    description: 'Листы: T9',
     filesConfig: {
         step1: { name: 'Файл с данными', multiple: false }
     },

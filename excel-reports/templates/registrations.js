@@ -4,7 +4,7 @@
 window.TEMPLATE_REGISTRATIONS = {
     id: 'registrations',
     name: 'Регистрации',
-    description: 'Создает отчеты по регистрациям (ТОЛЬКО по заголовкам, БЕЗ привязки к колонкам)',
+    description: 'Листы: T3.1, T3.2, T6, T7',
     filesConfig: {
         step1: { name: 'Файл регистраций', multiple: false }
     },

@@ -4,7 +4,7 @@
 window.TEMPLATE_DEPOSITS_WITHDRAWALS = {
     id: 'deposits_withdrawals',
     name: 'Пополнения и выводы',
-    description: 'Создает отчет по депозитам и выплатам с учетом статусов и агента',
+    description: 'Листы: T1, T1.1, T1.2, T1.3, T2, T2.1, T5, К',
     filesConfig: {
         step1: { name: 'Пополнения', multiple: true },
         step2: { name: 'Выводы', multiple: true }

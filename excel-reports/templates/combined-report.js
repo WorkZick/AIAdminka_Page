@@ -4,7 +4,7 @@
 window.TEMPLATE_COMBINED_REPORT = {
     id: 'combined-report',
     name: 'Общий отчет',
-    description: 'Объединяет все отчеты в один документ (T1-T9, К)',
+    description: 'Листы: T1, T1.1, T1.2, T1.3, T2, T2.1, T3.1, T3.2, T3.4, T4, T4.1, T5, T6, T7, T9, К',
     filesConfig: {
         step1: { name: 'Пополнения', multiple: true },
         step2: { name: 'Выводы', multiple: true },
