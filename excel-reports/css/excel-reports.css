@@ -380,21 +380,27 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    opacity: 0.4;
+    opacity: 0.3;
     transition: all 0.3s ease;
+    cursor: not-allowed;
 }
 
 .step.active {
     opacity: 1;
+    cursor: default;
 }
 
 .step.completed {
-    opacity: 0.7;
+    opacity: 0.8;
 }
 
 .step.clickable {
     cursor: pointer;
-    opacity: 0.8;
+    opacity: 0.7;
+}
+
+.step.clickable.completed {
+    opacity: 0.85;
 }
 
 .step.clickable:hover {

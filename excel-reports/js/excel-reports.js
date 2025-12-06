@@ -276,30 +276,18 @@ const excelApp = {
         });
     },
 
-    // Проверка доступности шага
+    // Проверка доступности шага (ВСЕ ШАГИ ДОСТУПНЫ ДЛЯ КЛИКА)
     isStepAccessible(stepId) {
+        // Шаблон всегда доступен
         if (stepId === 'template') return true;
+
+        // Обработка доступна ТОЛЬКО если все файловые шаги завершены
         if (stepId === 'process') {
-            // Процесс доступен если все файлы загружены
             return this.areAllFilesLoaded();
         }
 
-        const allSteps = this.getAllSteps();
-        const stepIndex = allSteps.findIndex(s => s.id === stepId);
-        const currentIndex = allSteps.findIndex(s => s.id === this.currentStep);
-
-        // Можно кликнуть на любой ЗАВЕРШЁННЫЙ шаг (для возврата к нему)
-        if (this.isStepCompleted(stepId)) {
-            return true;
-        }
-
-        // Можно кликнуть на следующий шаг (для продолжения)
-        if (stepIndex === currentIndex + 1) {
-            return true;
-        }
-
-        // Можно кликнуть на предыдущий шаг (для возврата назад)
-        if (stepIndex < currentIndex) {
+        // После выбора шаблона ВСЕ файловые шаги доступны для клика
+        if (this.selectedTemplate) {
             return true;
         }
 
