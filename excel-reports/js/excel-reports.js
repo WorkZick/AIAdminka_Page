@@ -13,7 +13,7 @@ const excelApp = {
     init() {
         this.renderTemplates();
         this.setupEventListeners();
-        this.updateStepIndicator();
+        this.buildStepsIndicator();
         this.createLoadingOverlays();
         logger.log('Excel Reports готов к работе', 'success');
     },
@@ -155,6 +155,7 @@ const excelApp = {
             item.classList.add('selected');
             this.selectedTemplate = TEMPLATES[Object.keys(TEMPLATES).find(k => TEMPLATES[k].id === templateId)];
             document.getElementById('confirmTemplateBtn').disabled = false;
+            this.buildStepsIndicator(); // Обновляем индикатор шагов
             logger.log(`Выбран шаблон: ${this.selectedTemplate.name}`, 'info');
         }
     },
@@ -205,37 +206,205 @@ const excelApp = {
         });
     },
 
+    // Построение индикатора шагов
+    buildStepsIndicator() {
+        const container = document.getElementById('stepsIndicator');
+        if (!container) return;
+
+        const stepsHTML = [];
+        const allSteps = this.getAllSteps();
+
+        allSteps.forEach((step, index) => {
+            if (index > 0) {
+                stepsHTML.push('<div class="step-line"></div>');
+            }
+
+            const isActive = step.id === this.currentStep;
+            const isCompleted = this.isStepCompleted(step.id);
+            const isClickable = step.id !== 'template' && (isCompleted || this.isStepAccessible(step.id));
+
+            stepsHTML.push(`
+                <div class="step ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isClickable ? 'clickable' : ''}"
+                     data-step="${step.id}"
+                     ${isClickable ? `onclick="excelApp.handleStepClick('${step.id}')"` : ''}>
+                    <div class="step-number">${index + 1}</div>
+                    <div class="step-text">${step.name}</div>
+                </div>
+            `);
+        });
+
+        container.innerHTML = stepsHTML.join('');
+    },
+
+    // Получение всех шагов для текущего шаблона
+    getAllSteps() {
+        const steps = [{ id: 'template', name: 'Выбор шаблона' }];
+
+        if (this.selectedTemplate) {
+            const fileSteps = Object.keys(this.selectedTemplate.filesConfig);
+            fileSteps.forEach((stepId, index) => {
+                const config = this.selectedTemplate.filesConfig[stepId];
+                steps.push({
+                    id: stepId,
+                    name: config.name || `Шаг ${index + 1}`
+                });
+            });
+        }
+
+        steps.push({ id: 'process', name: 'Обработка' });
+        return steps;
+    },
+
+    // Обновление индикатора шагов
     updateStepIndicator() {
         const steps = document.querySelectorAll('.step');
         steps.forEach(step => {
-            step.classList.remove('active', 'completed');
-            const stepName = step.dataset.step;
+            const stepId = step.dataset.step;
+            const isActive = stepId === this.currentStep;
+            const isCompleted = this.isStepCompleted(stepId);
+            const isClickable = stepId !== 'template' && (isCompleted || this.isStepAccessible(stepId));
 
-            // Для step1 показываем активность если находимся на любом шаге загрузки файлов
-            if (stepName === 'step1' && this.isOnFileUploadStep()) {
-                step.classList.add('active');
-            } else if (stepName === this.currentStep) {
-                step.classList.add('active');
-            } else if (this.isStepCompleted(stepName)) {
-                step.classList.add('completed');
+            step.classList.toggle('active', isActive);
+            step.classList.toggle('completed', isCompleted);
+            step.classList.toggle('clickable', isClickable);
+
+            if (isClickable) {
+                step.onclick = () => this.handleStepClick(stepId);
+            } else {
+                step.onclick = null;
             }
         });
     },
 
-    isOnFileUploadStep() {
-        return this.currentStep.startsWith('step') && this.currentStep !== 'template';
+    // Проверка доступности шага
+    isStepAccessible(stepId) {
+        if (stepId === 'template') return true;
+        if (stepId === 'process') {
+            // Процесс доступен если все файлы загружены
+            return this.areAllFilesLoaded();
+        }
+
+        const allSteps = this.getAllSteps();
+        const stepIndex = allSteps.findIndex(s => s.id === stepId);
+        const currentIndex = allSteps.findIndex(s => s.id === this.currentStep);
+
+        // Можно кликнуть на следующий шаг или на предыдущие
+        return stepIndex <= currentIndex + 1;
     },
 
-    isStepCompleted(stepName) {
-        // Если текущий шаг - обработка, значит все шаги загрузки завершены
-        if (this.currentStep === 'process') {
-            return stepName === 'template' || stepName === 'step1';
+    // Проверка завершённости шага
+    isStepCompleted(stepId) {
+        if (stepId === 'template') {
+            return this.selectedTemplate !== null;
         }
-        // Если текущий шаг - один из шагов загрузки
-        if (this.isOnFileUploadStep()) {
-            return stepName === 'template';
+        if (stepId === 'process') {
+            return false; // Процесс никогда не завершён (конечный шаг)
         }
-        return false;
+
+        // Проверяем наличие данных для этого шага
+        if (stepId === 'step1') {
+            return this.step1Data.length > 0;
+        }
+        if (stepId === 'step2') {
+            return this.step2Data.length > 0;
+        }
+        // Для динамических шагов
+        return this.stepsData[stepId] && this.stepsData[stepId].length > 0;
+    },
+
+    // Проверка загрузки всех файлов
+    areAllFilesLoaded() {
+        if (!this.selectedTemplate) return false;
+
+        const fileSteps = Object.keys(this.selectedTemplate.filesConfig);
+        for (const stepId of fileSteps) {
+            if (!this.isStepCompleted(stepId)) {
+                return false;
+            }
+        }
+        return true;
+    },
+
+    // Обработка клика по шагу
+    handleStepClick(stepId) {
+        if (stepId === this.currentStep) return;
+        if (!this.isStepAccessible(stepId)) return;
+
+        // Навигация к нужному шагу
+        if (stepId === 'template') {
+            this.goBackToTemplateSelection();
+        } else if (stepId === 'process') {
+            this.showProcessSection();
+        } else {
+            this.navigateToFileStep(stepId);
+        }
+    },
+
+    // Навигация к шагу загрузки файлов
+    navigateToFileStep(stepId) {
+        // Скрываем все секции
+        document.getElementById('templateSection').classList.add('hidden');
+        document.getElementById('step1Section').classList.add('hidden');
+        document.getElementById('step2Section').classList.add('hidden');
+        document.getElementById('processSection').classList.add('hidden');
+
+        const dynamicSection = document.getElementById('dynamicStepSection');
+        if (dynamicSection) {
+            dynamicSection.classList.add('hidden');
+        }
+
+        // Показываем нужную секцию
+        if (stepId === 'step1') {
+            document.getElementById('step1Section').classList.remove('hidden');
+        } else if (stepId === 'step2') {
+            document.getElementById('step2Section').classList.remove('hidden');
+        } else {
+            // Динамический шаг
+            this.showDynamicStep(stepId);
+            return;
+        }
+
+        this.currentStep = stepId;
+        this.updateStepIndicator();
+    },
+
+    // Возврат к выбору шаблона
+    goBackToTemplateSelection() {
+        // Очищаем все данные
+        this.step1Files = [];
+        this.step1Data = [];
+        this.step2Files = [];
+        this.step2Data = [];
+        this.stepsData = {};
+
+        // Сбрасываем UI
+        document.getElementById('step1Input').value = '';
+        document.getElementById('step2Input').value = '';
+        document.getElementById('step1Status').classList.add('hidden');
+        document.getElementById('step2Status').classList.add('hidden');
+        document.getElementById('step1Count').textContent = '0';
+        document.getElementById('step2Count').textContent = '0';
+        document.getElementById('step1NextBtn').disabled = true;
+        document.getElementById('step2NextBtn').disabled = true;
+
+        // Скрываем все кроме выбора шаблона
+        document.getElementById('templateSection').classList.remove('hidden');
+        document.getElementById('step1Section').classList.add('hidden');
+        document.getElementById('step2Section').classList.add('hidden');
+        document.getElementById('processSection').classList.add('hidden');
+
+        const dynamicSection = document.getElementById('dynamicStepSection');
+        if (dynamicSection) {
+            dynamicSection.remove();
+        }
+
+        this.currentStep = 'template';
+        this.selectedTemplate = null;
+        this.buildStepsIndicator();
+
+        document.querySelectorAll('.template-item').forEach(c => c.classList.remove('selected'));
+
+        logger.log('Возврат к выбору шаблона', 'info');
     },
 
     showStep1() {

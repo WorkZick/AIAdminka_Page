@@ -379,7 +379,7 @@ body {
     align-items: center;
     gap: 8px;
     opacity: 0.4;
-    transition: opacity 0.3s;
+    transition: all 0.3s ease;
 }
 
 .step.active {
@@ -388,6 +388,30 @@ body {
 
 .step.completed {
     opacity: 0.7;
+}
+
+.step.clickable {
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.step.clickable:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+.step.clickable:hover .step-number {
+    background: linear-gradient(135deg, var(--yellow) 0%, rgba(253, 190, 47, 0.7) 100%);
+    border-color: var(--yellow);
+    box-shadow: 0 0 12px rgba(253, 190, 47, 0.4);
+}
+
+.step.clickable:hover .step-text {
+    color: var(--yellow);
+}
+
+.step.clickable:active {
+    transform: translateY(0);
 }
 
 .step-number {
