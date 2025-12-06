@@ -73,10 +73,12 @@ const TokenManager = {
     silentRefresh() {
         return new Promise((resolve) => {
             if (this.refreshInProgress) {
+                console.log('[TokenManager] Silent refresh уже выполняется');
                 resolve(false);
                 return;
             }
 
+            console.log('[TokenManager] Запуск silent refresh...');
             this.refreshInProgress = true;
 
             // Генерируем state для silent refresh
@@ -98,6 +100,7 @@ const TokenManager = {
 
             // Таймаут на случай ошибки
             const timeout = setTimeout(() => {
+                console.warn('[TokenManager] ⚠️ Silent refresh timeout (10s)');
                 this.cleanupRefresh(iframe);
                 sessionStorage.removeItem('oauth_silent');
                 resolve(false);
@@ -108,6 +111,7 @@ const TokenManager = {
             const checkInterval = setInterval(() => {
                 const newTimestamp = this.getAuthTimestamp();
                 if (newTimestamp && newTimestamp > originalTimestamp) {
+                    console.log('[TokenManager] ✅ Silent refresh успешен! Новый timestamp:', new Date(newTimestamp).toLocaleTimeString());
                     clearInterval(checkInterval);
                     clearTimeout(timeout);
                     this.cleanupRefresh(iframe);
@@ -180,6 +184,9 @@ const TokenManager = {
         // Сбрасываем счётчик неудач
         this.failedRefreshCount = 0;
 
+        const timeRemaining = Math.floor(this.getTimeRemaining() / 60000); // в минутах
+        console.log(`[TokenManager] 🔄 Автообновление токена запущено. Осталось: ${timeRemaining} мин`);
+
         // Периодическая проверка
         this.refreshTimer = setInterval(async () => {
             await this.tryRefreshIfNeeded();
@@ -189,6 +196,7 @@ const TokenManager = {
         if (!this.visibilityHandler) {
             this.visibilityHandler = async () => {
                 if (document.visibilityState === 'visible') {
+                    console.log('[TokenManager] 👁️ Вкладка активна, проверяем токен...');
                     // При возврате на вкладку - сразу проверяем токен
                     await this.tryRefreshIfNeeded();
                 }
@@ -205,25 +213,120 @@ const TokenManager = {
             return;
         }
 
+        const timeRemaining = Math.floor(this.getTimeRemaining() / 60000);
+
         // Если токен уже истёк - редирект на логин
         if (this.isExpired()) {
+            console.error('[TokenManager] ❌ Токен истёк! Редирект на логин...');
             this.handleExpiredToken();
             return;
         }
 
         // Если нужно обновить
         if (this.needsRefresh()) {
+            console.log(`[TokenManager] ⏰ Токен нужно обновить (осталось ${timeRemaining} мин)`);
             const refreshed = await this.silentRefresh();
             if (refreshed) {
                 this.failedRefreshCount = 0;
+                console.log('[TokenManager] ✅ Токен успешно обновлён');
             } else {
                 this.failedRefreshCount++;
-                // После 3 неудачных попыток - редирект на логин
-                if (this.failedRefreshCount >= 3) {
-                    this.handleExpiredToken();
+                console.warn(`[TokenManager] ⚠️ Попытка ${this.failedRefreshCount}/5 не удалась`);
+
+                // После 3 неудачных попыток - пробуем интерактивный refresh
+                if (this.failedRefreshCount === 3) {
+                    console.log('[TokenManager] 🔄 Попытка интерактивного обновления...');
+                    const interactiveRefreshed = await this.interactiveRefresh();
+                    if (interactiveRefreshed) {
+                        this.failedRefreshCount = 0;
+                        console.log('[TokenManager] ✅ Интерактивное обновление успешно');
+                        return;
+                    }
+                }
+
+                // После 5 неудачных попыток - показываем предупреждение
+                if (this.failedRefreshCount >= 5) {
+                    console.error('[TokenManager] ❌ 5 неудачных попыток обновления токена');
+                    // Показываем предупреждение пользователю
+                    if (confirm('Не удалось автоматически обновить сессию. Требуется повторный вход. Перейти на страницу входа?')) {
+                        this.handleExpiredToken();
+                    }
                 }
             }
         }
+    },
+
+    /**
+     * Интерактивное обновление токена (fallback для silent refresh)
+     */
+    interactiveRefresh() {
+        return new Promise((resolve) => {
+            // Генерируем state
+            const state = this.generateState();
+            sessionStorage.setItem('oauth_state', state);
+            sessionStorage.setItem('oauth_silent', 'true');
+
+            const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
+                '?client_id=' + encodeURIComponent(this.CLIENT_ID) +
+                '&redirect_uri=' + encodeURIComponent(this.getRedirectUri()) +
+                '&response_type=token' +
+                '&scope=' + encodeURIComponent(this.SCOPES) +
+                '&state=' + encodeURIComponent(state) +
+                '&prompt=none&include_granted_scopes=true';
+
+            // Открываем в popup окне
+            const width = 500;
+            const height = 600;
+            const left = (screen.width - width) / 2;
+            const top = (screen.height - height) / 2;
+
+            const popup = window.open(
+                authUrl,
+                'oauth_popup',
+                `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no`
+            );
+
+            if (!popup) {
+                console.warn('[TokenManager] ⚠️ Popup заблокирован браузером');
+                resolve(false);
+                return;
+            }
+
+            // Слушаем обновление токена
+            const originalTimestamp = this.getAuthTimestamp();
+            let checkCount = 0;
+            const maxChecks = 100; // 20 секунд
+
+            const checkInterval = setInterval(() => {
+                checkCount++;
+
+                // Проверяем закрыто ли окно
+                if (popup.closed) {
+                    clearInterval(checkInterval);
+                    sessionStorage.removeItem('oauth_silent');
+                    resolve(false);
+                    return;
+                }
+
+                // Проверяем обновление токена
+                const newTimestamp = this.getAuthTimestamp();
+                if (newTimestamp && newTimestamp > originalTimestamp) {
+                    clearInterval(checkInterval);
+                    popup.close();
+                    sessionStorage.removeItem('oauth_silent');
+                    resolve(true);
+                    return;
+                }
+
+                // Timeout
+                if (checkCount >= maxChecks) {
+                    clearInterval(checkInterval);
+                    popup.close();
+                    sessionStorage.removeItem('oauth_silent');
+                    resolve(false);
+                }
+            }, 200);
+        });
     },
 
     /**

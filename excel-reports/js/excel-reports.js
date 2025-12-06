@@ -770,11 +770,19 @@ const excelApp = {
         document.getElementById('step2Section').classList.add('hidden');
         document.getElementById('processSection').classList.add('hidden');
         const dynamicSection = document.getElementById('dynamicStepSection');
-        if (dynamicSection) dynamicSection.classList.add('hidden');
+        if (dynamicSection) {
+            dynamicSection.remove();
+        }
+
+        // Сброс file inputs
+        document.getElementById('step1Input').value = '';
+        document.getElementById('step2Input').value = '';
 
         // Сброс статусов загрузки
         document.getElementById('step1Status').classList.add('hidden');
         document.getElementById('step2Status').classList.add('hidden');
+        document.getElementById('step1Count').textContent = '0';
+        document.getElementById('step2Count').textContent = '0';
         document.getElementById('step1NextBtn').disabled = true;
         document.getElementById('step2NextBtn').disabled = true;
 
