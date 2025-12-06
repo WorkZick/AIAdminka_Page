@@ -167,77 +167,72 @@ class UIRenderer {
         if (config.subFiles && config.subFiles.length > 0) {
             html += `<p class="step-description">Загрузите файлы для каждого периода</p>`;
 
-            config.subFiles.forEach((subFile, index) => {
+            // Требуемые колонки один раз для всего шага (если они одинаковые)
+            const firstSubFile = config.subFiles[0];
+            if (firstSubFile.requiredColumns && firstSubFile.requiredColumns.length > 0) {
+                const uniqueId = this.utils.generateId('required-cols');
+                const columnsList = firstSubFile.requiredColumns
+                    .map(col => `<li>${col}</li>`)
+                    .join('');
+
+                html += `
+                    <div class="required-columns-block">
+                        <button type="button" class="required-columns-toggle" onclick="excelApp.toggleRequiredColumns('${uniqueId}', event)">
+                            <span class="toggle-icon">▶</span>
+                            <span class="toggle-text">Требуемые колонки</span>
+                            <span class="columns-count">(${firstSubFile.requiredColumns.length})</span>
+                        </button>
+                        <div id="${uniqueId}" class="required-columns-list" style="display: none;">
+                            <ul>${columnsList}</ul>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Два столбца для subFiles
+            html += `<div class="sub-files-grid">`;
+
+            config.subFiles.forEach((subFile) => {
                 const subId = `${stepId}_${subFile.id}`;
                 const subData = this.state.getStepData(subId);
                 const subFiles = this.state.getStepFiles(subId);
                 const subCompleted = subData && subData.length > 0;
 
+                // Извлекаем короткое название (последняя часть после " - ")
+                const shortName = subFile.name.split(' - ').pop();
+
                 html += `
-                    <div class="sub-file-section">
-                        <h3 class="sub-file-title">${index + 1}. ${subFile.name}</h3>
-                `;
-
-                // Требуемые колонки для subFile
-                if (subFile.requiredColumns && subFile.requiredColumns.length > 0) {
-                    const uniqueId = this.utils.generateId('required-cols');
-                    const columnsList = subFile.requiredColumns
-                        .map(col => `<li>${col}</li>`)
-                        .join('');
-
-                    html += `
-                        <div class="required-columns-block">
-                            <button type="button" class="required-columns-toggle" onclick="excelApp.toggleRequiredColumns('${uniqueId}', event)">
-                                <span class="toggle-icon">▶</span>
-                                <span class="toggle-text">Требуемые колонки</span>
-                                <span class="columns-count">(${subFile.requiredColumns.length})</span>
-                            </button>
-                            <div id="${uniqueId}" class="required-columns-list" style="display: none;">
-                                <ul>${columnsList}</ul>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // Загрузка файла
-                html += `
-                    <div class="file-upload-section">
+                    <div class="sub-file-card">
+                        <h3 class="sub-file-card-title">${shortName}</h3>
                         <label class="file-upload-label">
                             <input type="file"
                                    id="fileInput_${subId}"
                                    accept=".xlsx,.xls"
                                    onchange="excelApp.handleSubFileUpload('${stepId}', '${subFile.id}', this.files, ${JSON.stringify(subFile).replace(/"/g, '&quot;')})"
                                    class="file-input">
-                            <div class="file-upload-area ${subCompleted ? 'uploaded' : ''}">
-                                <div class="upload-icon">📁</div>
-                                <div class="upload-text">
-                                    <strong>Выберите файл</strong> или перетащите сюда
+                            <div class="file-upload-area-compact ${subCompleted ? 'uploaded' : ''}">
+                                <div class="upload-icon-small">📁</div>
+                                <div class="upload-text-compact">
+                                    ${subCompleted ? '<strong>✓ Загружен</strong>' : '<strong>Выберите файл</strong>'}
                                 </div>
-                                <div class="upload-hint">Поддерживаются .xlsx и .xls</div>
                             </div>
                         </label>
-                    </div>
                 `;
 
                 // Статус загрузки для subFile
                 if (subCompleted && subFiles && subFiles.length > 0) {
                     const totalRows = Array.isArray(subData[0]) ? subData.length - 1 : 0;
-
                     html += `
-                        <div class="file-status success">
-                            <div class="status-icon">✓</div>
-                            <div class="status-content">
-                                <div class="status-title">Файл загружен</div>
-                                <div class="status-details">
-                                    ${subFiles[0]}, ${this.utils.formatNumber(totalRows)} строк
-                                </div>
-                            </div>
+                        <div class="file-info-compact">
+                            ${this.utils.formatNumber(totalRows)} строк
                         </div>
                     `;
                 }
 
-                html += `</div>`; // sub-file-section
+                html += `</div>`; // sub-file-card
             });
+
+            html += `</div>`; // sub-files-grid
 
         } else {
             // Обычная загрузка файлов (без subFiles)
