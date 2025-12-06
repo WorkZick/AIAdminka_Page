@@ -530,9 +530,28 @@ const excelApp = {
             dynamicSection.classList.add('hidden');
         }
 
-        // Определяем предыдущий шаг
+        // Очищаем данные текущего и последующих динамических шагов
         const steps = Object.keys(this.selectedTemplate.filesConfig);
         const currentIndex = steps.indexOf(this.currentDynamicStep);
+
+        // Удаляем данные текущего и всех последующих шагов
+        for (let i = currentIndex; i < steps.length; i++) {
+            const stepName = steps[i];
+            if (this.stepsData[stepName]) {
+                delete this.stepsData[stepName];
+            }
+        }
+
+        // Очищаем UI динамического шага
+        const dynamicInput = document.getElementById('dynamicStepInput');
+        const dynamicStatus = document.getElementById('dynamicStepStatus');
+        const dynamicCount = document.getElementById('dynamicStepCount');
+        const dynamicNextBtn = document.getElementById('dynamicStepNextBtn');
+
+        if (dynamicInput) dynamicInput.value = '';
+        if (dynamicStatus) dynamicStatus.classList.add('hidden');
+        if (dynamicCount) dynamicCount.textContent = '0';
+        if (dynamicNextBtn) dynamicNextBtn.disabled = true;
 
         if (currentIndex > 0) {
             const prevStep = steps[currentIndex - 1];
@@ -799,6 +818,23 @@ const excelApp = {
     },
 
     goBackFromStep1() {
+        // Очищаем данные загруженных файлов
+        this.step1Files = [];
+        this.step1Data = [];
+        this.step2Files = [];
+        this.step2Data = [];
+        this.stepsData = {};
+
+        // Очищаем UI
+        document.getElementById('step1Input').value = '';
+        document.getElementById('step2Input').value = '';
+        document.getElementById('step1Status').classList.add('hidden');
+        document.getElementById('step2Status').classList.add('hidden');
+        document.getElementById('step1Count').textContent = '0';
+        document.getElementById('step2Count').textContent = '0';
+        document.getElementById('step1NextBtn').disabled = true;
+        document.getElementById('step2NextBtn').disabled = true;
+
         document.getElementById('step1Section').classList.add('hidden');
         document.getElementById('templateSection').classList.remove('hidden');
         this.currentStep = 'template';
@@ -807,6 +843,17 @@ const excelApp = {
     },
 
     goBackFromStep2() {
+        // Очищаем данные step2 и последующих шагов
+        this.step2Files = [];
+        this.step2Data = [];
+        this.stepsData = {};
+
+        // Очищаем UI
+        document.getElementById('step2Input').value = '';
+        document.getElementById('step2Status').classList.add('hidden');
+        document.getElementById('step2Count').textContent = '0';
+        document.getElementById('step2NextBtn').disabled = true;
+
         document.getElementById('step2Section').classList.add('hidden');
         document.getElementById('step1Section').classList.remove('hidden');
         this.currentStep = 'step1';
