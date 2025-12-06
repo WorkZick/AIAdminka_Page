@@ -366,6 +366,7 @@ class UIRenderer {
         return `
             <div class="${classes.join(' ')}"
                  data-step="${step.id}"
+                 data-title="${step.name}"
                  ${onclickAttr}>
                 <div class="step-number">${index}</div>
                 <div class="step-text">${step.name}</div>
