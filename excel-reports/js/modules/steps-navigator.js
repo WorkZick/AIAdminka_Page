@@ -44,10 +44,9 @@ class StepsNavigator {
         const template = this.state.get('selectedTemplate');
 
         if (!template) {
-            // Если шаблон не выбран, показываем только первый и последний шаг
+            // Если шаблон не выбран, показываем только первый шаг
             return [
-                { id: 'template', name: 'Выберите шаблон', type: 'template' },
-                { id: 'process', name: 'Обработка', type: 'process' }
+                { id: 'template', name: 'Выберите шаблон', type: 'template' }
             ];
         }
 
