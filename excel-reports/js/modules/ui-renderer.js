@@ -213,8 +213,9 @@ class UIRenderer {
                             <div class="file-upload-area-compact ${subCompleted ? 'uploaded' : ''}">
                                 <div class="upload-icon-small">📁</div>
                                 <div class="upload-text-compact">
-                                    ${subCompleted ? '<strong>✓ Загружен</strong>' : '<strong>Выберите файл</strong>'}
+                                    ${subCompleted ? '<strong>✓ Загружен</strong>' : '<strong>Выберите файл</strong> или перетащите сюда'}
                                 </div>
+                                ${!subCompleted ? '<div class="upload-hint">Поддерживаются .xlsx и .xls</div>' : ''}
                             </div>
                         </label>
                 `;
