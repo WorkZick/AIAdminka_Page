@@ -348,7 +348,7 @@ class UIRenderer {
 
             const isActive = step.id === currentStep;
             const isCompleted = this.navigator.isStepCompleted(step.id);
-            const isClickable = step.id !== 'template' && (isCompleted || this.navigator.canNavigateTo(step.id));
+            const isClickable = this.navigator.canNavigateTo(step.id);
 
             const stepHtml = this.renderStepIndicator(step, {
                 index: index + 1,
