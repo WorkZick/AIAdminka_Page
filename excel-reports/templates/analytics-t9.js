@@ -6,7 +6,11 @@ window.TEMPLATE_ANALYTICS_T9 = {
     name: 'Аналитика Т9',
     description: 'Листы: T9',
     filesConfig: {
-        step1: { name: 'Файл с данными', multiple: true }
+        step1: {
+            name: 'Файл с данными',
+            multiple: true,
+            requiredColumns: ['Продукт', 'Тип продукта', 'Кол-во пользователей', 'Кол-во операций']
+        }
     },
     handler: (inputData) => {
         // Объединяем данные из всех файлов

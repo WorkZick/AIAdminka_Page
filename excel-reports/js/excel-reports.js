@@ -253,7 +253,7 @@ const excelApp = {
         // Обновляем информацию о шаге
         document.getElementById('step1Current').textContent = '1';
         document.getElementById('step1Total').textContent = totalSteps;
-        document.getElementById('step1Description').textContent = this.getStepDescription('step1', config);
+        document.getElementById('step1Description').innerHTML = this.getStepDescription('step1', config);
 
         this.currentStep = 'step1';
         this.updateStepIndicator();
@@ -263,7 +263,42 @@ const excelApp = {
 
     getStepDescription(stepName, config) {
         const multiple = config.multiple ? ' (можно выбрать несколько файлов)' : '';
-        return `Загрузите файл "${config.name}"${multiple}`;
+        let description = `Загрузите файл "${config.name}"${multiple}`;
+
+        if (config.requiredColumns && config.requiredColumns.length > 0) {
+            const columnsList = config.requiredColumns.map(col => `<strong>${col}</strong>`).join(', ');
+            description += `<br><br><span style="color: #666;">Требуемые колонки:</span> ${columnsList}`;
+        }
+
+        return description;
+    },
+
+    // Проверка наличия требуемых колонок в заголовках файла
+    validateFileHeaders(headers, requiredColumns) {
+        if (!requiredColumns || requiredColumns.length === 0) {
+            return { valid: true };
+        }
+
+        const missingColumns = [];
+        const normalizedHeaders = headers.map(h => (h || '').toString().trim().toLowerCase());
+
+        for (const required of requiredColumns) {
+            const normalizedRequired = required.toLowerCase();
+            const found = normalizedHeaders.some(h => h === normalizedRequired);
+
+            if (!found) {
+                missingColumns.push(required);
+            }
+        }
+
+        if (missingColumns.length > 0) {
+            return {
+                valid: false,
+                missingColumns: missingColumns
+            };
+        }
+
+        return { valid: true };
     },
 
     async handleStep1Files(e) {
@@ -277,6 +312,9 @@ const excelApp = {
         // Показываем спиннер
         this.showLoading('step1Section', 'Обработка файлов...', `0 из ${files.length}`);
 
+        const config = this.selectedTemplate.filesConfig.step1;
+        const requiredColumns = config.requiredColumns || [];
+
         let successCount = 0;
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -284,6 +322,15 @@ const excelApp = {
 
             try {
                 const data = await this.readExcelFile(file);
+
+                // Проверка заголовков
+                if (data.length > 0 && requiredColumns.length > 0) {
+                    const validation = this.validateFileHeaders(data[0], requiredColumns);
+                    if (!validation.valid) {
+                        throw new Error(`В файле "${file.name}" отсутствуют колонки: ${validation.missingColumns.join(', ')}`);
+                    }
+                }
+
                 this.step1Data.push(data);
                 successCount++;
                 logger.log(`Обработан файл: ${file.name}`, 'success');
@@ -320,7 +367,7 @@ const excelApp = {
             // Обновляем информацию о шаге
             document.getElementById('step2Current').textContent = '2';
             document.getElementById('step2Total').textContent = totalSteps;
-            document.getElementById('step2Description').textContent = this.getStepDescription('step2', config);
+            document.getElementById('step2Description').innerHTML = this.getStepDescription('step2', config);
 
             this.currentStep = 'step2';
             this.updateStepIndicator();
@@ -342,6 +389,9 @@ const excelApp = {
         // Показываем спиннер
         this.showLoading('step2Section', 'Обработка файлов...', `0 из ${files.length}`);
 
+        const config = this.selectedTemplate.filesConfig.step2;
+        const requiredColumns = config.requiredColumns || [];
+
         let successCount = 0;
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -349,6 +399,15 @@ const excelApp = {
 
             try {
                 const data = await this.readExcelFile(file);
+
+                // Проверка заголовков
+                if (data.length > 0 && requiredColumns.length > 0) {
+                    const validation = this.validateFileHeaders(data[0], requiredColumns);
+                    if (!validation.valid) {
+                        throw new Error(`В файле "${file.name}" отсутствуют колонки: ${validation.missingColumns.join(', ')}`);
+                    }
+                }
+
                 this.step2Data.push(data);
                 successCount++;
                 logger.log(`Обработан файл: ${file.name}`, 'success');
@@ -417,7 +476,7 @@ const excelApp = {
         // Обновляем информацию о шаге
         document.getElementById('dynamicStepCurrent').textContent = currentStepIndex;
         document.getElementById('dynamicStepTotal').textContent = totalSteps;
-        document.getElementById('dynamicStepDescription').textContent = this.getStepDescription(stepName, config);
+        document.getElementById('dynamicStepDescription').innerHTML = this.getStepDescription(stepName, config);
 
         this.currentDynamicStep = stepName;
         this.currentStep = stepName;
@@ -486,6 +545,9 @@ const excelApp = {
         // Показываем спиннер
         this.showLoading('dynamicStepSection', 'Обработка файлов...', `0 из ${files.length}`);
 
+        const config = this.selectedTemplate.filesConfig[stepName];
+        const requiredColumns = config.requiredColumns || [];
+
         let successCount = 0;
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -493,6 +555,15 @@ const excelApp = {
 
             try {
                 const data = await this.readExcelFile(file);
+
+                // Проверка заголовков
+                if (data.length > 0 && requiredColumns.length > 0) {
+                    const validation = this.validateFileHeaders(data[0], requiredColumns);
+                    if (!validation.valid) {
+                        throw new Error(`В файле "${file.name}" отсутствуют колонки: ${validation.missingColumns.join(', ')}`);
+                    }
+                }
+
                 this.stepsData[stepName].push(data);
                 successCount++;
                 logger.log(`Обработан файл: ${file.name}`, 'success');

@@ -6,7 +6,11 @@ window.TEMPLATE_BTAG = {
     name: 'B-TAG',
     description: 'Листы: T3.4',
     filesConfig: {
-        step1: { name: 'Файл транзакций', multiple: true }
+        step1: {
+            name: 'Файл транзакций',
+            multiple: true,
+            requiredColumns: ['Номер игрока', 'Статус 1 транзакции', 'Статус 2 транзакции']
+        }
     },
     handler: (transactionsData) => {
         // Объединяем данные из всех файлов
