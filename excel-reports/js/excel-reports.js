@@ -288,8 +288,25 @@ const excelApp = {
         const stepIndex = allSteps.findIndex(s => s.id === stepId);
         const currentIndex = allSteps.findIndex(s => s.id === this.currentStep);
 
-        // Можно кликнуть на следующий шаг или на предыдущие
-        return stepIndex <= currentIndex + 1;
+        // Можно кликнуть на любой предыдущий шаг
+        if (stepIndex < currentIndex) {
+            return true;
+        }
+
+        // Можно кликнуть на следующий шаг если все предыдущие шаги завершены
+        if (stepIndex === currentIndex + 1) {
+            // Проверяем что все предыдущие файловые шаги завершены
+            for (let i = 1; i < allSteps.length - 1; i++) {
+                if (i >= stepIndex) break;
+                const step = allSteps[i];
+                if (step.id !== 'template' && step.id !== 'process' && !this.isStepCompleted(step.id)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        return false;
     },
 
     // Проверка завершённости шага
@@ -299,6 +316,11 @@ const excelApp = {
         }
         if (stepId === 'process') {
             return false; // Процесс никогда не завершён (конечный шаг)
+        }
+
+        // Проверяем что шаг существует в текущем шаблоне
+        if (!this.selectedTemplate || !this.selectedTemplate.filesConfig[stepId]) {
+            return false;
         }
 
         // Проверяем наличие данных для этого шага
