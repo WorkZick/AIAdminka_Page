@@ -6,8 +6,16 @@ window.TEMPLATE_DEPOSITS_WITHDRAWALS = {
     name: 'Пополнения и выводы',
     description: 'Листы: T1, T1.1, T1.2, T1.3, T2, T2.1, T5, К',
     filesConfig: {
-        step1: { name: 'Пополнения', multiple: true },
-        step2: { name: 'Выводы', multiple: true }
+        step1: {
+            name: 'Пополнения',
+            multiple: true,
+            requiredColumns: ['сумма в валюте отчета', 'статус транзакции', 'сумма комиссии в валюте отчёта', 'id агента', 'тип платежной системы', 'группа субагентов', 'субагент', 'id субагента', 'агент', 'бренд']
+        },
+        step2: {
+            name: 'Выводы',
+            multiple: true,
+            requiredColumns: ['сумма в валюте отчета', 'статус транзакции', 'сумма комиссии в валюте отчёта', 'id агента', 'тип платежной системы', 'группа субагентов', 'субагент', 'id субагента']
+        }
     },
     handler: (depositsFiles, withdrawalsFiles) => {
         // Объединяем все файлы пополнений в один массив

@@ -6,8 +6,16 @@ window.TEMPLATE_ACTIVE_USERS = {
     name: 'Активные пользователи',
     description: 'Листы: T4, T4.1',
     filesConfig: {
-        step1: { name: 'Файл прошлого месяца (ID игрока)', multiple: false },
-        step2: { name: 'Файл текущего месяца (ID игрока)', multiple: false }
+        step1: {
+            name: 'Файл прошлого месяца (ID игрока)',
+            multiple: false,
+            requiredColumns: ['ID игрока']
+        },
+        step2: {
+            name: 'Файл текущего месяца (ID игрока)',
+            multiple: false,
+            requiredColumns: ['ID игрока']
+        }
     },
     handler: (prevMonthData, currentMonthData) => {
         const dataPrev = Array.isArray(prevMonthData) ? prevMonthData[0] : prevMonthData;
