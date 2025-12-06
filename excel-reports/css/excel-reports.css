@@ -1641,19 +1641,56 @@ body {
     opacity: 1;
 }
 
-.components-list .component-name {
+.components-list .component-icon img {
+    filter: invert(0.7);
+    transition: filter 0.2s ease;
+}
+
+.components-list .component-item:hover .component-icon img {
+    filter: invert(0.9);
+}
+
+.components-list .component-info {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.components-list .component-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-light);
+    transition: color 0.2s ease;
+}
+
+.components-list .component-item:hover .component-name {
+    color: var(--white);
+}
+
+.components-list .component-desc {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+    line-height: 1.3;
 }
 
 .components-list .component-arrow {
     opacity: 0;
     transition: opacity 0.2s ease;
-    color: var(--yellow);
-    font-weight: bold;
+    display: flex;
+    align-items: center;
+}
+
+.components-list .component-arrow img {
+    filter: invert(0.9) sepia(1) saturate(5) hue-rotate(10deg);
 }
 
 .components-list .component-item:hover .component-arrow {
     opacity: 1;
+}
+
+.selected-badge img {
+    filter: brightness(0);
 }
 
 /* File Upload Section */
