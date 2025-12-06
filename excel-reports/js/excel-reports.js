@@ -345,6 +345,11 @@ const excelApp = {
 
     // Переключение списка компонентов отчёта
     toggleComponents(uniqueId, event) {
+        // Останавливаем всплытие события, чтобы не сработал клик по карточке
+        if (event) {
+            event.stopPropagation();
+        }
+
         const list = document.getElementById(uniqueId);
         const icon = event?.target.closest('.components-toggle')?.querySelector('.toggle-icon');
 
