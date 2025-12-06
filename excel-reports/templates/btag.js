@@ -6,13 +6,42 @@ window.TEMPLATE_BTAG = {
     name: 'B-TAG',
     description: 'Листы: T3.4',
     filesConfig: {
-        step1: { name: 'Файл транзакций', multiple: false }
+        step1: { name: 'Файл транзакций', multiple: true }
     },
     handler: (transactionsData) => {
-        const data = Array.isArray(transactionsData) ? transactionsData : transactionsData[0];
+        // Объединяем данные из всех файлов
+        let combinedData = [];
+        const filesArray = Array.isArray(transactionsData) ? transactionsData : [transactionsData];
+
+        if (filesArray.length === 0) {
+            throw new Error('Нет загруженных файлов');
+        }
+
+        // Обрабатываем первый файл (берем заголовки)
+        const firstFile = filesArray[0];
+        if (!firstFile || firstFile.length === 0) {
+            throw new Error('Первый файл не содержит данных');
+        }
+
+        combinedData = [...firstFile]; // Копируем весь первый файл (с заголовками)
+
+        // Добавляем данные из остальных файлов (без заголовков)
+        for (let i = 1; i < filesArray.length; i++) {
+            const file = filesArray[i];
+            if (!file || file.length <= 1) continue; // Пропускаем пустые файлы или файлы только с заголовками
+
+            // Добавляем строки начиная со второй (пропускаем заголовок)
+            for (let j = 1; j < file.length; j++) {
+                if (file[j] && file[j].length > 0) {
+                    combinedData.push(file[j]);
+                }
+            }
+        }
+
+        const data = combinedData;
 
         if (!data || data.length === 0) {
-            throw new Error('Файл транзакций не содержит данных');
+            throw new Error('Файлы не содержат данных');
         }
 
         // Заголовки для поиска колонок
