@@ -1,8 +1,8 @@
 // Шаблон: B-TAG
 // Анализ транзакций по статусам (по заголовкам, БЕЗ привязки к колонкам)
 
-window.TEMPLATE_BTAG = {
-    id: 'btag',
+window.TEMPLATE_B_TAG = {
+    id: 'b-tag',
     name: 'B-TAG',
     description: 'Листы: T3.4',
     filesConfig: {

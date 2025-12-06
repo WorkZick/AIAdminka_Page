@@ -145,24 +145,6 @@ const excelApp = {
         }
     },
 
-    // Навигация назад
-    navigateBack() {
-        if (this.navigator.navigateBack()) {
-            // Навигация успешна, UI обновится через подписку
-        } else {
-            logger.log('Невозможно вернуться назад', 'warning');
-        }
-    },
-
-    // Навигация вперёд
-    navigateNext() {
-        if (this.navigator.navigateNext()) {
-            // Навигация успешна, UI обновится через подписку
-        } else {
-            logger.log('Невозможно перейти к следующему шагу', 'warning');
-        }
-    },
-
     // Обработка и экспорт данных
     async processFiles() {
         try {
@@ -328,25 +310,9 @@ const excelApp = {
     },
 
     // Переключение списка требуемых колонок
-    toggleRequiredColumns(uniqueId, event) {
+    toggleRequiredColumns(uniqueId) {
         const list = document.getElementById(uniqueId);
-        const icon = event?.target.closest('.required-columns-toggle')?.querySelector('.toggle-icon');
-
-        if (list && icon) {
-            if (list.style.display === 'none') {
-                list.style.display = 'block';
-                icon.textContent = '▼';
-            } else {
-                list.style.display = 'none';
-                icon.textContent = '▶';
-            }
-        }
-    },
-
-    // Переключение списка компонентов отчёта
-    toggleComponents(uniqueId, event) {
-        const list = document.getElementById(uniqueId);
-        const icon = event?.target.closest('.components-toggle')?.querySelector('.toggle-icon');
+        const icon = event.target.closest('.required-columns-toggle')?.querySelector('.toggle-icon');
 
         if (list && icon) {
             if (list.style.display === 'none') {

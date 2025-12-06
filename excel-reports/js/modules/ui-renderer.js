@@ -65,8 +65,8 @@ class UIRenderer {
         // Главный шаблон
         const mainTemplate = { id: 'combined-report', obj: window.TEMPLATE_COMBINED_REPORT };
 
-        // Отдельные шаблоны
-        const individualTemplates = [
+        // Компоненты отчёта
+        const reportComponents = [
             { id: 'registrations', obj: window.TEMPLATE_REGISTRATIONS },
             { id: 'active-users', obj: window.TEMPLATE_ACTIVE_USERS },
             { id: 'deposits-withdrawals', obj: window.TEMPLATE_DEPOSITS_WITHDRAWALS },
@@ -74,14 +74,14 @@ class UIRenderer {
             { id: 'analytics-t9', obj: window.TEMPLATE_ANALYTICS_T9 }
         ];
 
+        const uniqueId = this.utils.generateId('components');
+
         let html = `
             <div class="step-content">
                 <div class="step-header-nav">
                     <div class="nav-left"></div>
-                    <h2>Выбор шаблона отчёта</h2>
                     <div class="nav-right"></div>
                 </div>
-                <p class="step-description">Выберите тип отчёта для обработки</p>
         `;
 
         // Главный шаблон (Общий отчёт)
@@ -91,10 +91,6 @@ class UIRenderer {
 
             html += `
                 <div class="template-featured-section">
-                    <div class="template-section-header">
-                        <span class="section-icon">⭐</span>
-                        <h3>Рекомендуемый шаблон</h3>
-                    </div>
                     <div class="template-card-featured ${selectedClass}" onclick="excelApp.selectTemplate('${mainTemplate.id}')">
                         <div class="featured-badge">Общий отчёт</div>
                         <div class="template-header">
@@ -102,46 +98,31 @@ class UIRenderer {
                             ${isSelected ? '<span class="selected-badge">✓ Выбран</span>' : ''}
                         </div>
                         <p class="template-description">${mainTemplate.obj.description}</p>
-                        <div class="template-meta">
-                            <span class="meta-tag">Объединяет все отдельные отчёты</span>
+
+                        <div class="template-components">
+                            <button type="button" class="components-toggle" onclick="excelApp.toggleComponents('${uniqueId}', event)">
+                                <span class="toggle-icon">▶</span>
+                                <span class="toggle-text">Из чего состоит</span>
+                                <span class="components-count">(${reportComponents.length} отчётов)</span>
+                            </button>
+                            <div id="${uniqueId}" class="components-list" style="display: none;">
+                                <ul>
+        `;
+
+            reportComponents.forEach(({ obj }) => {
+                if (!obj) return;
+                html += `<li><span class="component-icon">📊</span> ${obj.name}</li>`;
+            });
+
+            html += `
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
-            `;
-        }
-
-        // Отдельные шаблоны
-        html += `
-            <div class="template-individual-section">
-                <div class="template-section-header">
-                    <span class="section-icon">📊</span>
-                    <h3>Отдельные отчёты</h3>
-                </div>
-                <div class="template-grid">
-        `;
-
-        individualTemplates.forEach(({ id, obj }) => {
-            if (!obj) return;
-
-            const isSelected = selectedTemplate && selectedTemplate.id === id;
-            const selectedClass = isSelected ? 'selected' : '';
-
-            html += `
-                <div class="template-card ${selectedClass}" onclick="excelApp.selectTemplate('${id}')">
-                    <div class="template-header">
-                        <h3>${obj.name}</h3>
-                        ${isSelected ? '<span class="selected-badge">✓ Выбран</span>' : ''}
-                    </div>
-                    <p class="template-description">${obj.description}</p>
-                </div>
-            `;
-        });
-
-        html += `
-                </div>
             </div>
-        </div>
         `;
+        }
 
         return html;
     }

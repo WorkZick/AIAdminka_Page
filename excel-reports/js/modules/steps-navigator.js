@@ -12,7 +12,7 @@ class StepsNavigator {
         // 1. Первый шаг - выбор шаблона
         steps.push({
             id: 'template',
-            name: 'Выбор шаблона',
+            name: 'Выберите шаблон',
             type: 'template'
         });
 
@@ -46,7 +46,7 @@ class StepsNavigator {
         if (!template) {
             // Если шаблон не выбран, показываем только первый и последний шаг
             return [
-                { id: 'template', name: 'Выбор шаблона', type: 'template' },
+                { id: 'template', name: 'Выберите шаблон', type: 'template' },
                 { id: 'process', name: 'Обработка', type: 'process' }
             ];
         }
