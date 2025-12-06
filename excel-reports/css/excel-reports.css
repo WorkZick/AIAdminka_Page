@@ -1628,26 +1628,6 @@ body {
 .components-list .component-item:hover {
     background: rgba(253, 190, 47, 0.1);
     color: var(--white);
-    transform: translateX(4px);
-}
-
-.components-list .component-icon {
-    font-size: 14px;
-    opacity: 0.6;
-    transition: opacity 0.2s ease;
-}
-
-.components-list .component-item:hover .component-icon {
-    opacity: 1;
-}
-
-.components-list .component-icon img {
-    filter: invert(0.7);
-    transition: filter 0.2s ease;
-}
-
-.components-list .component-item:hover .component-icon img {
-    filter: invert(0.9);
 }
 
 .components-list .component-info {
@@ -1675,18 +1655,16 @@ body {
 }
 
 .components-list .component-arrow {
+    font-size: 14px;
+    color: var(--yellow);
     opacity: 0;
-    transition: opacity 0.2s ease;
-    display: flex;
-    align-items: center;
-}
-
-.components-list .component-arrow img {
-    filter: invert(0.9) sepia(1) saturate(5) hue-rotate(10deg);
+    transform: translateX(-4px);
+    transition: all 0.3s ease;
 }
 
 .components-list .component-item:hover .component-arrow {
     opacity: 1;
+    transform: translateX(0);
 }
 
 .selected-badge img {

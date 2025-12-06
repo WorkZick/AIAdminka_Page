@@ -113,12 +113,11 @@ class UIRenderer {
                 if (!obj) return;
                 html += `
                     <li class="component-item" onclick="event.stopPropagation(); excelApp.selectTemplate('${id}');">
-                        <span class="component-icon"><img src="icons/documents.svg" width="14" height="14" alt=""></span>
                         <div class="component-info">
                             <span class="component-name">${obj.name}</span>
                             <span class="component-desc">${obj.description}</span>
                         </div>
-                        <span class="component-arrow"><img src="icons/arrow.svg" width="12" height="12" alt="→"></span>
+                        <span class="component-arrow">→</span>
                     </li>
                 `;
             });
