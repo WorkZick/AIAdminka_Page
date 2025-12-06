@@ -288,21 +288,18 @@ const excelApp = {
         const stepIndex = allSteps.findIndex(s => s.id === stepId);
         const currentIndex = allSteps.findIndex(s => s.id === this.currentStep);
 
-        // Можно кликнуть на любой предыдущий шаг
-        if (stepIndex < currentIndex) {
+        // Можно кликнуть на любой ЗАВЕРШЁННЫЙ шаг (для возврата к нему)
+        if (this.isStepCompleted(stepId)) {
             return true;
         }
 
-        // Можно кликнуть на следующий шаг если все предыдущие шаги завершены
+        // Можно кликнуть на следующий шаг (для продолжения)
         if (stepIndex === currentIndex + 1) {
-            // Проверяем что все предыдущие файловые шаги завершены
-            for (let i = 1; i < allSteps.length - 1; i++) {
-                if (i >= stepIndex) break;
-                const step = allSteps[i];
-                if (step.id !== 'template' && step.id !== 'process' && !this.isStepCompleted(step.id)) {
-                    return false;
-                }
-            }
+            return true;
+        }
+
+        // Можно кликнуть на предыдущий шаг (для возврата назад)
+        if (stepIndex < currentIndex) {
             return true;
         }
 
@@ -571,6 +568,9 @@ const excelApp = {
         }
 
         document.getElementById('step1NextBtn').disabled = this.step1Data.length === 0;
+
+        // Обновляем индикатор шагов (чтобы шаг стал зелёным)
+        this.updateStepIndicator();
     },
 
     completeStep1() {
@@ -648,6 +648,9 @@ const excelApp = {
         }
 
         document.getElementById('step2NextBtn').disabled = this.step2Data.length === 0;
+
+        // Обновляем индикатор шагов (чтобы шаг стал зелёным)
+        this.updateStepIndicator();
     },
 
     completeStep2() {
@@ -804,6 +807,9 @@ const excelApp = {
         }
 
         document.getElementById('dynamicStepNextBtn').disabled = this.stepsData[stepName].length === 0;
+
+        // Обновляем индикатор шагов (чтобы шаг стал зелёным)
+        this.updateStepIndicator();
     },
 
     completeDynamicStep() {
