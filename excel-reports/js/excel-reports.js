@@ -266,11 +266,40 @@ const excelApp = {
         let description = `Загрузите файл "${config.name}"${multiple}`;
 
         if (config.requiredColumns && config.requiredColumns.length > 0) {
-            const columnsList = config.requiredColumns.map(col => `<strong>${col}</strong>`).join(', ');
-            description += `<br><br><span style="color: #666;">Требуемые колонки:</span> ${columnsList}`;
+            const uniqueId = `required-cols-${stepName}-${Date.now()}`;
+            const columnsList = config.requiredColumns
+                .map(col => `<li>${col}</li>`)
+                .join('');
+
+            description += `
+                <div class="required-columns-block">
+                    <button type="button" class="required-columns-toggle" onclick="excelApp.toggleRequiredColumns('${uniqueId}')">
+                        <span class="toggle-icon">▶</span>
+                        <span class="toggle-text">Требуемые колонки</span>
+                        <span class="columns-count">(${config.requiredColumns.length})</span>
+                    </button>
+                    <div id="${uniqueId}" class="required-columns-list" style="display: none;">
+                        <ul>${columnsList}</ul>
+                    </div>
+                </div>
+            `;
         }
 
         return description;
+    },
+
+    toggleRequiredColumns(id) {
+        const list = document.getElementById(id);
+        const button = list.previousElementSibling;
+        const icon = button.querySelector('.toggle-icon');
+
+        if (list.style.display === 'none') {
+            list.style.display = 'block';
+            icon.textContent = '▼';
+        } else {
+            list.style.display = 'none';
+            icon.textContent = '▶';
+        }
     },
 
     // Проверка наличия требуемых колонок в заголовках файла
