@@ -136,6 +136,80 @@ const excelApp = {
         }
     },
 
+    // Загрузка файлов для sub-шага
+    async handleSubFileUpload(stepId, subFileId, files, subFileConfig) {
+        if (!files || files.length === 0) return;
+
+        try {
+            const subId = `${stepId}_${subFileId}`;
+
+            // Показываем спиннер
+            this.uiRenderer.showLoadingSpinner(`Загрузка "${subFileConfig.name}"...`);
+
+            logger.log(`Начало загрузки файла для ${subFileConfig.name}`, 'info');
+
+            // Загружаем файл
+            const results = await this.fileProcessor.loadFiles(Array.from(files), subFileConfig);
+
+            // Скрываем спиннер
+            this.uiRenderer.hideLoadingSpinner();
+
+            // Проверяем результаты
+            if (!this.fileProcessor.areAllValid(results)) {
+                const errorMessage = this.fileProcessor.formatResults(results);
+                logger.log(errorMessage, 'error');
+                this.utils.showError('Ошибка загрузки файла. См. детали в журнале.');
+                return;
+            }
+
+            // Сохраняем данные для subFile
+            const mergedData = this.fileProcessor.mergeFileData(results);
+            this.state.setStepData(subId, mergedData);
+            this.state.setStepFiles(subId, Array.from(files).map(f => f.name));
+
+            // Сохраняем данные в основной шаг для обработки
+            const template = this.state.get('selectedTemplate');
+            const config = template.filesConfig[stepId];
+
+            // Собираем данные всех subFiles
+            const allSubFilesData = {};
+            config.subFiles.forEach(sf => {
+                const sid = `${stepId}_${sf.id}`;
+                const data = this.state.getStepData(sid);
+                if (data) {
+                    allSubFilesData[sf.id] = data;
+                }
+            });
+
+            // Сохраняем объединённые данные для основного шага
+            this.state.setStepData(stepId, allSubFilesData);
+
+            // Проверяем все ли subFiles загружены
+            const allLoaded = config.subFiles.every(sf => {
+                const sid = `${stepId}_${sf.id}`;
+                return this.state.getStepData(sid) !== null;
+            });
+
+            if (allLoaded) {
+                this.state.markStepCompleted(stepId, allSubFilesData);
+            }
+
+            // Логируем успех
+            const stats = this.fileProcessor.getLoadStats(results);
+            logger.log(`✓ Загружено: ${subFileConfig.name}, ${stats.totalRows} строк`, 'success');
+
+            // Обновляем UI
+            this.uiRenderer.renderStep(stepId);
+            this.uiRenderer.updateStepsIndicator();
+
+        } catch (error) {
+            this.uiRenderer.hideLoadingSpinner();
+            console.error('Ошибка загрузки файла:', error);
+            this.utils.showError(error.message);
+            logger.log(`Ошибка: ${error.message}`, 'error');
+        }
+    },
+
     // Навигация к шагу (клик по индикатору)
     navigateToStep(stepId) {
         if (this.navigator.navigateTo(stepId)) {
@@ -180,10 +254,13 @@ const excelApp = {
 
             // Собираем данные из всех шагов
             const fileSteps = Object.keys(template.filesConfig);
-            const stepDataArray = fileSteps.map(stepId => this.state.getStepData(stepId));
+            const stepsData = {};
+            fileSteps.forEach(stepId => {
+                stepsData[stepId] = this.state.getStepData(stepId);
+            });
 
             // Вызываем обработчик шаблона
-            this.result = template.handler(...stepDataArray);
+            this.result = template.handler(stepsData);
 
             this.uiRenderer.hideLoadingSpinner();
 

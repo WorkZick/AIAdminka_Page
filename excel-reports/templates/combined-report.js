@@ -22,21 +22,26 @@ window.TEMPLATE_COMBINED_REPORT = {
             requiredColumns: ['Месяц', 'Тип регистрации', 'Источник трафика', 'Устройство', 'Всего регистраций', 'Количество регистраций за период, из них с первым депозитом', 'Количество новых регистраций с быстрым депозитом', 'Игроки с регистрацией и первым депозитом за указанный период', 'Количество всех депозитов игроков, зарегистрированных за указанный период', 'Количество всех ставок игроков, зарегистрированных за указанный период']
         },
         step4: {
-            name: 'Транзакции B-TAG',
+            name: 'B-TAG',
             multiple: false,
             requiredColumns: ['Номер игрока', 'Статус 1 транзакции', 'Статус 2 транзакции']
         },
         step5: {
-            name: 'Активные пользователи - прошлый месяц',
-            multiple: false,
-            requiredColumns: ['ID игрока']
+            name: 'Активные пользователи',
+            subFiles: [
+                {
+                    id: 'prev',
+                    name: 'Активные пользователи - Прошлый месяц',
+                    requiredColumns: ['ID игрока']
+                },
+                {
+                    id: 'curr',
+                    name: 'Активные пользователи - Текущий месяц',
+                    requiredColumns: ['ID игрока']
+                }
+            ]
         },
         step6: {
-            name: 'Активные пользователи - текущий месяц',
-            multiple: false,
-            requiredColumns: ['ID игрока']
-        },
-        step7: {
             name: 'Аналитика T9',
             multiple: false,
             requiredColumns: ['Продукт', 'Тип продукта', 'Кол-во пользователей', 'Кол-во операций']
@@ -1074,9 +1079,9 @@ window.TEMPLATE_COMBINED_REPORT = {
         }
 
         // =============== ОБРАБОТКА АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ (T4, T4.1) ===============
-        if (stepsData.step5 && stepsData.step5.length > 0 && stepsData.step6 && stepsData.step6.length > 0) {
-            const dataPrev = stepsData.step5[0];
-            const dataCurrent = stepsData.step6[0];
+        if (stepsData.step5 && stepsData.step5.prev && stepsData.step5.prev.length > 0 && stepsData.step5.curr && stepsData.step5.curr.length > 0) {
+            const dataPrev = stepsData.step5.prev[0];
+            const dataCurrent = stepsData.step5.curr[0];
 
             if (dataPrev && dataPrev.length > 0 && dataCurrent && dataCurrent.length > 0) {
                 const HEADERS_MAP_USERS = { playerId: ['ID игрока', 'Player ID', 'Номер игрока', 'ID'] };
@@ -1192,8 +1197,8 @@ window.TEMPLATE_COMBINED_REPORT = {
         }
 
         // =============== ОБРАБОТКА АНАЛИТИКИ T9 ===============
-        if (stepsData.step7 && stepsData.step7.length > 0) {
-            const t9Data = stepsData.step7[0];
+        if (stepsData.step6 && stepsData.step6.length > 0) {
+            const t9Data = stepsData.step6[0];
             if (t9Data && t9Data.length > 0) {
                 const HEADERS_MAP_T9 = {
                     product: ['Продукт'],

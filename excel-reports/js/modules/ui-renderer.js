@@ -137,16 +137,10 @@ class UIRenderer {
 
     // Рендеринг загрузки файлов
     renderFileUpload(stepId, config) {
-        const stepData = this.state.getStepData(stepId);
-        const stepFiles = this.state.getStepFiles(stepId);
-        const isCompleted = this.navigator.isStepCompleted(stepId);
-
-        const multipleAttr = config.multiple ? 'multiple' : '';
-        const multipleText = config.multiple ? ' (можно выбрать несколько файлов)' : '';
-
         // Навигационные кнопки
         const prevStep = this.navigator.getPreviousStep();
         const nextStep = this.navigator.getNextStep();
+        const isCompleted = this.navigator.isStepCompleted(stepId);
 
         let html = `
             <div class="step-content">
@@ -167,66 +161,151 @@ class UIRenderer {
                         ` : ''}
                     </div>
                 </div>
-                <p class="step-description">Загрузите файл${multipleText}</p>
         `;
 
-        // Требуемые колонки (если есть)
-        if (config.requiredColumns && config.requiredColumns.length > 0) {
-            const uniqueId = this.utils.generateId('required-cols');
-            const columnsList = config.requiredColumns
-                .map(col => `<li>${col}</li>`)
-                .join('');
+        // Если есть subFiles - показываем несколько секций загрузки
+        if (config.subFiles && config.subFiles.length > 0) {
+            html += `<p class="step-description">Загрузите файлы для каждого периода</p>`;
 
-            html += `
-                <div class="required-columns-block">
-                    <button type="button" class="required-columns-toggle" onclick="excelApp.toggleRequiredColumns('${uniqueId}', event)">
-                        <span class="toggle-icon">▶</span>
-                        <span class="toggle-text">Требуемые колонки</span>
-                        <span class="columns-count">(${config.requiredColumns.length})</span>
-                    </button>
-                    <div id="${uniqueId}" class="required-columns-list" style="display: none;">
-                        <ul>${columnsList}</ul>
+            config.subFiles.forEach((subFile, index) => {
+                const subId = `${stepId}_${subFile.id}`;
+                const subData = this.state.getStepData(subId);
+                const subFiles = this.state.getStepFiles(subId);
+                const subCompleted = subData && subData.length > 0;
+
+                html += `
+                    <div class="sub-file-section">
+                        <h3 class="sub-file-title">${index + 1}. ${subFile.name}</h3>
+                `;
+
+                // Требуемые колонки для subFile
+                if (subFile.requiredColumns && subFile.requiredColumns.length > 0) {
+                    const uniqueId = this.utils.generateId('required-cols');
+                    const columnsList = subFile.requiredColumns
+                        .map(col => `<li>${col}</li>`)
+                        .join('');
+
+                    html += `
+                        <div class="required-columns-block">
+                            <button type="button" class="required-columns-toggle" onclick="excelApp.toggleRequiredColumns('${uniqueId}', event)">
+                                <span class="toggle-icon">▶</span>
+                                <span class="toggle-text">Требуемые колонки</span>
+                                <span class="columns-count">(${subFile.requiredColumns.length})</span>
+                            </button>
+                            <div id="${uniqueId}" class="required-columns-list" style="display: none;">
+                                <ul>${columnsList}</ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Загрузка файла
+                html += `
+                    <div class="file-upload-section">
+                        <label class="file-upload-label">
+                            <input type="file"
+                                   id="fileInput_${subId}"
+                                   accept=".xlsx,.xls"
+                                   onchange="excelApp.handleSubFileUpload('${stepId}', '${subFile.id}', this.files, ${JSON.stringify(subFile).replace(/"/g, '&quot;')})"
+                                   class="file-input">
+                            <div class="file-upload-area ${subCompleted ? 'uploaded' : ''}">
+                                <div class="upload-icon">📁</div>
+                                <div class="upload-text">
+                                    <strong>Выберите файл</strong> или перетащите сюда
+                                </div>
+                                <div class="upload-hint">Поддерживаются .xlsx и .xls</div>
+                            </div>
+                        </label>
                     </div>
+                `;
+
+                // Статус загрузки для subFile
+                if (subCompleted && subFiles && subFiles.length > 0) {
+                    const totalRows = Array.isArray(subData[0]) ? subData.length - 1 : 0;
+
+                    html += `
+                        <div class="file-status success">
+                            <div class="status-icon">✓</div>
+                            <div class="status-content">
+                                <div class="status-title">Файл загружен</div>
+                                <div class="status-details">
+                                    ${subFiles[0]}, ${this.utils.formatNumber(totalRows)} строк
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `</div>`; // sub-file-section
+            });
+
+        } else {
+            // Обычная загрузка файлов (без subFiles)
+            const stepData = this.state.getStepData(stepId);
+            const stepFiles = this.state.getStepFiles(stepId);
+            const multipleAttr = config.multiple ? 'multiple' : '';
+            const multipleText = config.multiple ? ' (можно выбрать несколько файлов)' : '';
+
+            html += `<p class="step-description">Загрузите файл${multipleText}</p>`;
+
+            // Требуемые колонки (если есть)
+            if (config.requiredColumns && config.requiredColumns.length > 0) {
+                const uniqueId = this.utils.generateId('required-cols');
+                const columnsList = config.requiredColumns
+                    .map(col => `<li>${col}</li>`)
+                    .join('');
+
+                html += `
+                    <div class="required-columns-block">
+                        <button type="button" class="required-columns-toggle" onclick="excelApp.toggleRequiredColumns('${uniqueId}', event)">
+                            <span class="toggle-icon">▶</span>
+                            <span class="toggle-text">Требуемые колонки</span>
+                            <span class="columns-count">(${config.requiredColumns.length})</span>
+                        </button>
+                        <div id="${uniqueId}" class="required-columns-list" style="display: none;">
+                            <ul>${columnsList}</ul>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Загрузка файлов
+            html += `
+                <div class="file-upload-section">
+                    <label class="file-upload-label">
+                        <input type="file"
+                               id="fileInput_${stepId}"
+                               accept=".xlsx,.xls"
+                               ${multipleAttr}
+                               onchange="excelApp.handleFileUpload('${stepId}', this.files)"
+                               class="file-input">
+                        <div class="file-upload-area">
+                            <div class="upload-icon">📁</div>
+                            <div class="upload-text">
+                                <strong>Выберите файл(ы)</strong> или перетащите сюда
+                            </div>
+                            <div class="upload-hint">Поддерживаются .xlsx и .xls</div>
+                        </div>
+                    </label>
                 </div>
             `;
-        }
 
-        // Загрузка файлов
-        html += `
-            <div class="file-upload-section">
-                <label class="file-upload-label">
-                    <input type="file"
-                           id="fileInput_${stepId}"
-                           accept=".xlsx,.xls"
-                           ${multipleAttr}
-                           onchange="excelApp.handleFileUpload('${stepId}', this.files)"
-                           class="file-input">
-                    <div class="file-upload-area">
-                        <div class="upload-icon">📁</div>
-                        <div class="upload-text">
-                            <strong>Выберите файл(ы)</strong> или перетащите сюда
-                        </div>
-                        <div class="upload-hint">Поддерживаются .xlsx и .xls</div>
-                    </div>
-                </label>
-            </div>
-        `;
+            // Статус загрузки
+            if (isCompleted && stepFiles && stepFiles.length > 0) {
+                const totalRows = stepData ? (Array.isArray(stepData[0]) ? stepData.length - 1 : 0) : 0;
 
-        // Статус загрузки
-        if (isCompleted && stepFiles.length > 0) {
-            const totalRows = stepData ? (Array.isArray(stepData[0]) ? stepData.length - 1 : 0) : 0;
-
-            html += `
-                <div class="file-status success">
-                    <div class="status-icon">✓</div>
-                    <div class="status-content">
-                        <div class="status-title">Файлы успешно загружены</div>
-                        <div class="status-details">
-                            Загружено: ${stepFiles.length} файл(ов), ${this.utils.formatNumber(totalRows)} строк данных
+                html += `
+                    <div class="file-status success">
+                        <div class="status-icon">✓</div>
+                        <div class="status-content">
+                            <div class="status-title">Файлы успешно загружены</div>
+                            <div class="status-details">
+                                Загружено: ${stepFiles.length} файл(ов), ${this.utils.formatNumber(totalRows)} строк данных
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
         }
 
         html += `</div>`;
