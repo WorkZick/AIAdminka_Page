@@ -79,9 +79,10 @@ class StepsNavigator {
             return true;
         }
 
-        // Обработка доступна ТОЛЬКО если все файловые шаги завершены
+        // Обработка доступна если выбран шаблон (свободная навигация)
+        // UI покажет предупреждение если файлы не загружены
         if (stepId === 'process') {
-            return this.areAllFilesLoaded();
+            return this.state.get('selectedTemplate') !== null;
         }
 
         // После выбора шаблона ВСЕ файловые шаги доступны для клика
