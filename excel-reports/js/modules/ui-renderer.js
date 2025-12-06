@@ -109,9 +109,15 @@ class UIRenderer {
                                 <ul>
         `;
 
-            reportComponents.forEach(({ obj }) => {
+            reportComponents.forEach(({ id, obj }) => {
                 if (!obj) return;
-                html += `<li><span class="component-icon">📊</span> ${obj.name}</li>`;
+                html += `
+                    <li class="component-item" onclick="event.stopPropagation(); excelApp.selectTemplate('${id}');">
+                        <span class="component-icon">📊</span>
+                        <span class="component-name">${obj.name}</span>
+                        <span class="component-arrow">→</span>
+                    </li>
+                `;
             });
 
             html += `
