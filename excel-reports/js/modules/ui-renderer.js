@@ -332,8 +332,9 @@ class UIRenderer {
                     </div>
                     <h2>Обработка данных</h2>
                     <div class="nav-right">
-                        <button class="btn-nav btn-reset" onclick="excelApp.reset()">
-                            🔄 Начать заново
+                        <button class="btn-nav btn-reset" onclick="excelApp.showResetModal()">
+                            <img src="icons/sync.svg" width="14" height="14" alt="Сброс">
+                            Начать заново
                         </button>
                     </div>
                 </div>

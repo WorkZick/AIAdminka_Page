@@ -384,15 +384,24 @@ const excelApp = {
         }
     },
 
-    // Сброс состояния
-    reset() {
-        if (confirm('Вы уверены, что хотите начать заново? Все загруженные данные будут удалены.')) {
-            this.state.reset();
-            this.result = null;
-            this.navigator.navigateTo('template');
-            logger.log('Приложение сброшено', 'info');
-            this.utils.showSuccess('Данные очищены. Начните заново.');
-        }
+    // Показать модальное окно подтверждения сброса
+    showResetModal() {
+        document.getElementById('resetModal').classList.add('active');
+    },
+
+    // Закрыть модальное окно подтверждения сброса
+    closeResetModal() {
+        document.getElementById('resetModal').classList.remove('active');
+    },
+
+    // Подтверждение и выполнение сброса
+    confirmReset() {
+        this.closeResetModal();
+        this.state.reset();
+        this.result = null;
+        this.navigator.navigateTo('template');
+        logger.log('Приложение сброшено', 'info');
+        this.utils.showSuccess('Данные очищены. Начните заново.');
     },
 
     // Переключение сайдбара

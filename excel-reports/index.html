@@ -277,6 +277,26 @@
         </div>
     </div>
 
+    <!-- Reset Confirmation Modal -->
+    <div class="modal" id="resetModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Подтверждение сброса</h2>
+                <button class="modal-close" onclick="excelApp.closeResetModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите начать заново?</p>
+                <p><strong>Все загруженные данные будут удалены.</strong></p>
+                <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
+                    <button class="btn-secondary" onclick="excelApp.closeResetModal()">Отмена</button>
+                    <button class="btn-primary" onclick="excelApp.confirmReset()">Сбросить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Load templates -->
     <script src="templates/combined-report.js"></script>
     <script src="templates/deposits-withdrawals.js"></script>
@@ -305,6 +325,9 @@
         }
         document.getElementById('aboutModal').addEventListener('click', function(e) {
             if (e.target === this) closeAboutModal();
+        });
+        document.getElementById('resetModal').addEventListener('click', function(e) {
+            if (e.target === this) excelApp.closeResetModal();
         });
     </script>
 </body>
