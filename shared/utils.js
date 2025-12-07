@@ -116,10 +116,12 @@ const Utils = {
     },
 
     /**
-     * Инициализация иконок Lucide
+     * Инициализация иконок (совместимость с Lucide API)
      */
     initLucideIcons() {
-        if (typeof lucide !== 'undefined') {
+        if (typeof LocalIcons !== 'undefined') {
+            LocalIcons.createIcons();
+        } else if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
     }
