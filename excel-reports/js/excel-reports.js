@@ -94,17 +94,24 @@ const excelApp = {
             }
 
             const config = template.filesConfig[stepId];
+            const totalFiles = files.length;
 
-            // Показываем спиннер
-            this.uiRenderer.showLoadingSpinner(`Загрузка файлов для шага "${config.name}"...`);
+            // Показываем inline индикатор с прогрессом
+            this.showInlineLoader(stepId, `Загрузка 1 из ${totalFiles}...`, 0, totalFiles);
 
-            logger.log(`Начало загрузки ${files.length} файл(ов) для шага ${stepId}`, 'info');
+            logger.log(`Начало загрузки ${totalFiles} файл(ов) для шага ${stepId}`, 'info');
 
-            // Загружаем файлы
-            const results = await this.fileProcessor.loadFiles(Array.from(files), config);
+            // Загружаем файлы с callback прогресса
+            const results = await this.fileProcessor.loadFiles(
+                Array.from(files),
+                config,
+                (current, total, fileName) => {
+                    this.updateInlineLoader(stepId, current, total, fileName);
+                }
+            );
 
-            // Скрываем спиннер
-            this.uiRenderer.hideLoadingSpinner();
+            // Скрываем inline индикатор
+            this.hideInlineLoader(stepId);
 
             // Проверяем результаты
             if (!this.fileProcessor.areAllValid(results)) {
@@ -129,7 +136,7 @@ const excelApp = {
             this.uiRenderer.updateStepsIndicator();
 
         } catch (error) {
-            this.uiRenderer.hideLoadingSpinner();
+            this.hideInlineLoader(stepId);
             console.error('Ошибка загрузки файлов:', error);
             this.utils.showError(error.message);
             logger.log(`Ошибка: ${error.message}`, 'error');
@@ -143,16 +150,16 @@ const excelApp = {
         try {
             const subId = `${stepId}_${subFileId}`;
 
-            // Показываем спиннер
-            this.uiRenderer.showLoadingSpinner(`Загрузка "${subFileConfig.name}"...`);
+            // Показываем inline индикатор для subFile
+            this.showSubFileLoader(subId, subFileConfig.name);
 
             logger.log(`Начало загрузки файла для ${subFileConfig.name}`, 'info');
 
             // Загружаем файл
             const results = await this.fileProcessor.loadFiles(Array.from(files), subFileConfig);
 
-            // Скрываем спиннер
-            this.uiRenderer.hideLoadingSpinner();
+            // Скрываем индикатор
+            this.hideSubFileLoader(subId);
 
             // Проверяем результаты
             if (!this.fileProcessor.areAllValid(results)) {
@@ -203,10 +210,91 @@ const excelApp = {
             this.uiRenderer.updateStepsIndicator();
 
         } catch (error) {
-            this.uiRenderer.hideLoadingSpinner();
+            this.hideSubFileLoader(`${stepId}_${subFileId}`);
             console.error('Ошибка загрузки файла:', error);
             this.utils.showError(error.message);
             logger.log(`Ошибка: ${error.message}`, 'error');
+        }
+    },
+
+    // Показать inline loader для основного шага
+    showInlineLoader(stepId, message, current = 0, total = 1) {
+        const uploadArea = document.querySelector(`#fileInput_${stepId}`)?.closest('.file-upload-label');
+        if (uploadArea) {
+            const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+            const loader = document.createElement('div');
+            loader.id = `loader_${stepId}`;
+            loader.className = 'inline-loader';
+            loader.innerHTML = `
+                <div class="inline-loader-content">
+                    <div class="inline-loader-header">
+                        <div class="inline-loader-spinner"></div>
+                        <span class="inline-loader-text">${message}</span>
+                    </div>
+                    <div class="inline-loader-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${percent}%"></div>
+                        </div>
+                        <span class="progress-percent">${percent}%</span>
+                    </div>
+                    <div class="inline-loader-filename"></div>
+                </div>
+            `;
+            uploadArea.parentNode.insertBefore(loader, uploadArea.nextSibling);
+            uploadArea.style.opacity = '0.5';
+            uploadArea.style.pointerEvents = 'none';
+        }
+    },
+
+    // Обновить прогресс inline loader
+    updateInlineLoader(stepId, current, total, fileName) {
+        const loader = document.getElementById(`loader_${stepId}`);
+        if (!loader) return;
+
+        const percent = Math.round((current / total) * 100);
+        const text = loader.querySelector('.inline-loader-text');
+        const fill = loader.querySelector('.progress-fill');
+        const percentText = loader.querySelector('.progress-percent');
+        const fileNameEl = loader.querySelector('.inline-loader-filename');
+
+        if (text) text.textContent = `Загрузка ${current} из ${total}`;
+        if (fill) fill.style.width = `${percent}%`;
+        if (percentText) percentText.textContent = `${percent}%`;
+        if (fileNameEl) fileNameEl.textContent = fileName;
+    },
+
+    // Скрыть inline loader
+    hideInlineLoader(stepId) {
+        const loader = document.getElementById(`loader_${stepId}`);
+        if (loader) loader.remove();
+
+        const uploadArea = document.querySelector(`#fileInput_${stepId}`)?.closest('.file-upload-label');
+        if (uploadArea) {
+            uploadArea.style.opacity = '';
+            uploadArea.style.pointerEvents = '';
+        }
+    },
+
+    // Показать loader для subFile
+    showSubFileLoader(subId, name) {
+        const card = document.querySelector(`#fileInput_${subId}`)?.closest('.sub-file-card');
+        if (card) {
+            card.classList.add('loading');
+            const uploadArea = card.querySelector('.file-upload-area-compact');
+            if (uploadArea) {
+                uploadArea.innerHTML = `
+                    <div class="inline-loader-spinner"></div>
+                    <div class="upload-text-compact">Загрузка...</div>
+                `;
+            }
+        }
+    },
+
+    // Скрыть loader для subFile
+    hideSubFileLoader(subId) {
+        const card = document.querySelector(`#fileInput_${subId}`)?.closest('.sub-file-card');
+        if (card) {
+            card.classList.remove('loading');
         }
     },
 

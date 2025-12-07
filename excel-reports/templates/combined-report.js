@@ -128,31 +128,9 @@ window.TEMPLATE_COMBINED_REPORT = {
 
         // =============== ОБРАБОТКА ПОПОЛНЕНИЙ И ВЫВОДОВ (T1, T1.1, T1.2, T1.3, T2, T2.1, T5, К) ===============
         if (stepsData.step1 && stepsData.step1.length > 0 && stepsData.step2 && stepsData.step2.length > 0) {
-            // Объединяем файлы пополнений
-            const allDepositsData = [];
-            stepsData.step1.forEach(fileData => {
-                if (fileData && fileData.length > 0) {
-                    if (allDepositsData.length === 0) {
-                        allDepositsData.push(fileData[0]);
-                    }
-                    for (let i = 1; i < fileData.length; i++) {
-                        allDepositsData.push(fileData[i]);
-                    }
-                }
-            });
-
-            // Объединяем файлы выводов
-            const allWithdrawalsData = [];
-            stepsData.step2.forEach(fileData => {
-                if (fileData && fileData.length > 0) {
-                    if (allWithdrawalsData.length === 0) {
-                        allWithdrawalsData.push(fileData[0]);
-                    }
-                    for (let i = 1; i < fileData.length; i++) {
-                        allWithdrawalsData.push(fileData[i]);
-                    }
-                }
-            });
+            // Данные уже объединены
+            const allDepositsData = stepsData.step1;
+            const allWithdrawalsData = stepsData.step2;
 
             if (allDepositsData.length > 0 && allWithdrawalsData.length > 0) {
                 // Индексы колонок для депозитов
@@ -650,7 +628,8 @@ window.TEMPLATE_COMBINED_REPORT = {
 
         // =============== ОБРАБОТКА РЕГИСТРАЦИЙ (T3.1, T3.2, T6, T7) ===============
         if (stepsData.step3 && stepsData.step3.length > 0) {
-            const regData = stepsData.step3[0];
+            // Данные уже объединены
+            const regData = stepsData.step3;
             if (regData && regData.length > 0) {
                 const HEADERS_MAP_REG = {
                     month: ['Месяц', 'Month'],
@@ -1003,7 +982,8 @@ window.TEMPLATE_COMBINED_REPORT = {
 
         // =============== ОБРАБОТКА B-TAG (T3.4) ===============
         if (stepsData.step4 && stepsData.step4.length > 0) {
-            const btagData = stepsData.step4[0];
+            // Данные уже объединены
+            const btagData = stepsData.step4;
             if (btagData && btagData.length > 0) {
                 const HEADERS_MAP_BTAG = {
                     playerId: ['Номер игрока'],
@@ -1080,8 +1060,8 @@ window.TEMPLATE_COMBINED_REPORT = {
 
         // =============== ОБРАБОТКА АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ (T4, T4.1) ===============
         if (stepsData.step5 && stepsData.step5.prev && stepsData.step5.prev.length > 0 && stepsData.step5.curr && stepsData.step5.curr.length > 0) {
-            const dataPrev = stepsData.step5.prev[0];
-            const dataCurrent = stepsData.step5.curr[0];
+            const dataPrev = stepsData.step5.prev;
+            const dataCurrent = stepsData.step5.curr;
 
             if (dataPrev && dataPrev.length > 0 && dataCurrent && dataCurrent.length > 0) {
                 const HEADERS_MAP_USERS = { playerId: ['ID игрока', 'Player ID', 'Номер игрока', 'ID'] };
@@ -1198,7 +1178,8 @@ window.TEMPLATE_COMBINED_REPORT = {
 
         // =============== ОБРАБОТКА АНАЛИТИКИ T9 ===============
         if (stepsData.step6 && stepsData.step6.length > 0) {
-            const t9Data = stepsData.step6[0];
+            // Данные уже объединены
+            const t9Data = stepsData.step6;
             if (t9Data && t9Data.length > 0) {
                 const HEADERS_MAP_T9 = {
                     product: ['Продукт'],

@@ -1207,3 +1207,166 @@ body {
         margin: 10px;
     }
 }
+
+/* Game Card */
+.module-card-game {
+    border: 1px solid rgba(255, 100, 100, 0.25);
+    background: rgba(40, 40, 40, 0.5);
+}
+
+.module-card-game .module-icon {
+    background: rgba(255, 200, 50, 0.15);
+}
+
+.module-card-game .module-icon svg {
+    width: 100%;
+    height: 100%;
+    stroke: #ffcc00;
+    fill: none;
+}
+
+.module-card-game:hover {
+    background: rgba(50, 50, 50, 0.6);
+    border-color: rgba(255, 200, 50, 0.4);
+}
+
+.module-card-game:hover .module-icon {
+    background: rgba(255, 200, 50, 0.25);
+}
+
+/* Game Modal */
+.modal-dialog.modal-game {
+    max-width: 750px;
+    width: 95%;
+}
+
+.modal-game .modal-header {
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.game-body {
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #0a0a0a;
+}
+
+.game-container {
+    position: relative;
+    width: 640px;
+    height: 640px;
+    background: #0d0d0d;
+    border-radius: 0 0 14px 14px;
+    overflow: hidden;
+}
+
+#gameCanvas {
+    display: block;
+    width: 640px;
+    height: 640px;
+    background: #0d0d0d;
+}
+
+.game-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.3s ease;
+}
+
+.game-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.game-message {
+    text-align: center;
+    color: var(--white);
+}
+
+.game-message h3 {
+    font-size: 24px;
+    margin-bottom: 12px;
+    color: var(--yellow);
+}
+
+.game-message p {
+    font-size: 14px;
+    margin-bottom: 8px;
+    opacity: 0.8;
+}
+
+.game-message .game-controls {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-bottom: 20px;
+}
+
+.game-message .btn-primary {
+    padding: 12px 32px;
+    font-size: 14px;
+}
+
+/* Eat animation */
+@keyframes eatPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(0); opacity: 0; }
+}
+
+.eat-animation {
+    animation: eatPulse 0.3s ease-out forwards;
+}
+
+/* Eat phrase popup */
+.score-popup {
+    position: absolute;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--yellow);
+    pointer-events: none;
+    animation: scoreFloat 1.5s ease-out forwards;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.9), 0 0 20px currentColor;
+    white-space: nowrap;
+    transform: translateX(-50%);
+}
+
+@keyframes scoreFloat {
+    0% {
+        transform: translateX(-50%) translateY(0) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(-50%) translateY(-50px) scale(1.2);
+        opacity: 0;
+    }
+}
+
+/* Game responsive */
+@media (max-width: 700px) {
+    .modal-dialog.modal-game {
+        max-width: 100%;
+    }
+
+    .game-container,
+    #gameCanvas {
+        width: 480px;
+        height: 480px;
+    }
+}
+
+@media (max-width: 520px) {
+    .game-container,
+    #gameCanvas {
+        width: 320px;
+        height: 320px;
+    }
+}

@@ -12,9 +12,10 @@ window.TEMPLATE_REGISTRATIONS = {
             requiredColumns: ['Месяц', 'Тип регистрации', 'Источник трафика', 'Устройство', 'Всего регистраций', 'Количество регистраций за период, из них с первым депозитом', 'Количество новых регистраций с быстрым депозитом', 'Игроки с регистрацией и первым депозитом за указанный период', 'Количество всех депозитов игроков, зарегистрированных за указанный период', 'Количество всех ставок игроков, зарегистрированных за указанный период']
         }
     },
-    handler: (registrationsData) => {
-        const data = Array.isArray(registrationsData) ? registrationsData : registrationsData[0];
-        
+    handler: (stepsData) => {
+        // stepsData = { step1: [...] } - уже объединённые данные
+        const data = stepsData.step1;
+
         if (!data || data.length === 0) {
             throw new Error('Файл регистраций не содержит данных');
         }

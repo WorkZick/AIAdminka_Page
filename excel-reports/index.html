@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://cdn.jsdelivr.net; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://accounts.google.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://cdn.jsdelivr.net; frame-ancestors 'self'">
     <title>Отчеты - AIAdminka</title>
     <link rel="stylesheet" href="css/excel-reports.css">
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"
@@ -236,23 +236,30 @@
                     </div><!-- END OLD STATIC SECTIONS -->
                 </main>
 
-                <!-- Right panel - Log -->
-                <aside class="right-panel">
-                    <div class="log-panel">
-                        <div class="panel-header">
-                            <span>Журнал операций</span>
-                            <button class="btn-clear" onclick="logger.clear()">Очистить</button>
-                        </div>
-                        <div class="panel-content">
-                            <div class="log-list" id="logs">
-                                <div class="log-empty">Нет записей</div>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
             </div>
         </div>
     </div>
+
+    <!-- Floating Log Toggle Button -->
+    <button class="log-toggle-btn" id="logToggleBtn" onclick="toggleLogPanel()" title="Журнал операций">
+        <img src="icons/documents.svg" width="20" height="20" alt="Журнал">
+    </button>
+
+    <!-- Slide-out Log Panel -->
+    <aside class="log-drawer" id="logDrawer">
+        <div class="log-drawer-header">
+            <span>Журнал операций</span>
+            <div class="log-drawer-actions">
+                <button class="btn-clear" onclick="logger.clear()">Очистить</button>
+                <button class="log-drawer-close" onclick="toggleLogPanel()">✕</button>
+            </div>
+        </div>
+        <div class="log-drawer-content">
+            <div class="log-list" id="logs">
+                <div class="log-empty">Нет записей</div>
+            </div>
+        </div>
+    </aside>
 
     <script src="../shared/version.js"></script>
     <script src="../shared/cloud-storage.js"></script>
@@ -329,6 +336,13 @@
         document.getElementById('resetModal').addEventListener('click', function(e) {
             if (e.target === this) excelApp.closeResetModal();
         });
+
+        function toggleLogPanel() {
+            const drawer = document.getElementById('logDrawer');
+            const btn = document.getElementById('logToggleBtn');
+            drawer.classList.toggle('open');
+            btn.classList.toggle('hidden');
+        }
     </script>
 </body>
 </html>

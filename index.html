@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com; frame-ancestors 'self'">
     <title>AIAdminka</title>
     <link rel="stylesheet" href="css/home.css">
 </head>
@@ -152,6 +152,19 @@
                         <div class="module-title">Предложить улучшение</div>
                         <div class="module-desc">Идеи, баги, пожелания</div>
                     </div>
+
+                    <!-- Игра -->
+                    <div class="module-card module-card-game" onclick="homeApp.showGameModal()">
+                        <div class="module-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="9"/>
+                                <circle cx="12" cy="12" r="5"/>
+                                <circle cx="12" cy="12" r="1"/>
+                            </svg>
+                        </div>
+                        <div class="module-title">Pac-Man: Конкуренты</div>
+                        <div class="module-desc">Сожрать всех!</div>
+                    </div>
                 </div>
 
             </div>
@@ -261,6 +274,31 @@
             </div>
             <div class="modal-footer" id="ticketViewFooter" style="display: none;">
                 <!-- Админ-панель -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Modal -->
+    <div class="modal" id="gameModal">
+        <div class="modal-dialog modal-game">
+            <div class="modal-header">
+                <h2 class="modal-title">Охота за конкурентами!</h2>
+                <button class="modal-close" onclick="homeApp.closeGameModal()">
+                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body game-body">
+                <div class="game-container" id="gameContainer">
+                    <canvas id="gameCanvas" width="640" height="640"></canvas>
+                    <div class="game-overlay" id="gameOverlay">
+                        <div class="game-message" id="gameMessage">
+                            <h3>Охота за конкурентами!</h3>
+                            <p>Сожри всех конкурентов!</p>
+                            <p class="game-controls">Стрелки для управления</p>
+                            <button class="btn-primary" onclick="pacmanGame.start()">Начать охоту!</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

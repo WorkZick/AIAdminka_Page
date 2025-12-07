@@ -12,37 +12,9 @@ window.TEMPLATE_ANALYTICS_T9 = {
             requiredColumns: ['Продукт', 'Тип продукта', 'Кол-во пользователей', 'Кол-во операций']
         }
     },
-    handler: (inputData) => {
-        // Объединяем данные из всех файлов
-        let combinedData = [];
-        const filesArray = Array.isArray(inputData) ? inputData : [inputData];
-
-        if (filesArray.length === 0) {
-            throw new Error('Нет загруженных файлов');
-        }
-
-        // Обрабатываем первый файл (берем заголовки)
-        const firstFile = filesArray[0];
-        if (!firstFile || firstFile.length === 0) {
-            throw new Error('Первый файл не содержит данных');
-        }
-
-        combinedData = [...firstFile]; // Копируем весь первый файл (с заголовками)
-
-        // Добавляем данные из остальных файлов (без заголовков)
-        for (let i = 1; i < filesArray.length; i++) {
-            const file = filesArray[i];
-            if (!file || file.length <= 1) continue; // Пропускаем пустые файлы или файлы только с заголовками
-
-            // Добавляем строки начиная со второй (пропускаем заголовок)
-            for (let j = 1; j < file.length; j++) {
-                if (file[j] && file[j].length > 0) {
-                    combinedData.push(file[j]);
-                }
-            }
-        }
-
-        const data = combinedData;
+    handler: (stepsData) => {
+        // stepsData = { step1: [...] } - уже объединённые данные
+        const data = stepsData.step1;
 
         if (!data || data.length === 0) {
             throw new Error('Файлы не содержат данных');

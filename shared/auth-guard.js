@@ -1,5 +1,6 @@
 /**
- * TokenManager - Управление OAuth токенами с автоматическим обновлением
+ * TokenManager - Управление OAuth токенами
+ * Показывает уведомление за 10 минут до истечения токена
  */
 const TokenManager = {
     // OAuth Config
@@ -7,18 +8,17 @@ const TokenManager = {
     SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
 
     // Временные параметры
-    TOKEN_LIFETIME: 3500000,       // ~58 минут (Google токен живёт 60 мин, обновляем раньше)
-    REFRESH_BEFORE: 600000,        // Обновлять за 10 минут до истечения (более безопасно)
-    CHECK_INTERVAL: 30000,         // Проверять каждые 30 секунд (чаще)
+    TOKEN_LIFETIME: 3500000,       // ~58 минут (Google токен живёт 60 мин)
+    WARN_BEFORE: 600000,           // Предупреждать за 10 минут
+    CHECK_INTERVAL: 60000,         // Проверять каждую минуту
 
     // Состояние
-    refreshInProgress: false,
     refreshTimer: null,
     visibilityHandler: null,
-    failedRefreshCount: 0,
+    warningShown: false,
 
     /**
-     * Получить REDIRECT_URI в зависимости от окружения
+     * Получить REDIRECT_URI
      */
     getRedirectUri() {
         const host = window.location.hostname;
@@ -29,20 +29,20 @@ const TokenManager = {
     },
 
     /**
-     * Проверить, нужно ли обновить токен
+     * Проверить, нужно ли показать предупреждение
      */
-    needsRefresh() {
+    needsWarning() {
         const authData = localStorage.getItem('cloud-auth');
         if (!authData) return false;
 
         const auth = JSON.parse(authData);
         const elapsed = Date.now() - auth.timestamp;
 
-        return elapsed > (this.TOKEN_LIFETIME - this.REFRESH_BEFORE);
+        return elapsed > (this.TOKEN_LIFETIME - this.WARN_BEFORE);
     },
 
     /**
-     * Проверить, истёк ли токен полностью
+     * Проверить, истёк ли токен
      */
     isExpired() {
         const authData = localStorage.getItem('cloud-auth');
@@ -55,7 +55,7 @@ const TokenManager = {
     },
 
     /**
-     * Получить оставшееся время жизни токена (мс)
+     * Получить оставшееся время (мс)
      */
     getTimeRemaining() {
         const authData = localStorage.getItem('cloud-auth');
@@ -68,83 +68,6 @@ const TokenManager = {
     },
 
     /**
-     * Silent Refresh - обновление токена через скрытый iframe
-     */
-    silentRefresh() {
-        return new Promise((resolve) => {
-            if (this.refreshInProgress) {
-                console.log('[TokenManager] Silent refresh уже выполняется');
-                resolve(false);
-                return;
-            }
-
-            console.log('[TokenManager] Запуск silent refresh...');
-            this.refreshInProgress = true;
-
-            // Генерируем state для silent refresh
-            const state = this.generateState();
-            sessionStorage.setItem('oauth_state', state);
-            sessionStorage.setItem('oauth_silent', 'true'); // Маркер silent режима
-
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.id = 'silent-refresh-iframe';
-
-            const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
-                '?client_id=' + encodeURIComponent(this.CLIENT_ID) +
-                '&redirect_uri=' + encodeURIComponent(this.getRedirectUri()) +
-                '&response_type=token' +
-                '&scope=' + encodeURIComponent(this.SCOPES) +
-                '&state=' + encodeURIComponent(state) +
-                '&prompt=none';  // Ключевой параметр - без UI
-
-            // Таймаут на случай ошибки
-            const timeout = setTimeout(() => {
-                console.warn('[TokenManager] ⚠️ Silent refresh timeout (10s)');
-                this.cleanupRefresh(iframe);
-                sessionStorage.removeItem('oauth_silent');
-                resolve(false);
-            }, 10000);
-
-            // Слушаем обновление токена
-            const originalTimestamp = this.getAuthTimestamp();
-            const checkInterval = setInterval(() => {
-                const newTimestamp = this.getAuthTimestamp();
-                if (newTimestamp && newTimestamp > originalTimestamp) {
-                    console.log('[TokenManager] ✅ Silent refresh успешен! Новый timestamp:', new Date(newTimestamp).toLocaleTimeString());
-                    clearInterval(checkInterval);
-                    clearTimeout(timeout);
-                    this.cleanupRefresh(iframe);
-                    sessionStorage.removeItem('oauth_silent');
-                    resolve(true);
-                }
-            }, 200);
-
-            iframe.src = authUrl;
-            document.body.appendChild(iframe);
-        });
-    },
-
-    /**
-     * Очистка после refresh
-     */
-    cleanupRefresh(iframe) {
-        this.refreshInProgress = false;
-        if (iframe && iframe.parentNode) {
-            iframe.parentNode.removeChild(iframe);
-        }
-    },
-
-    /**
-     * Получить timestamp текущего токена
-     */
-    getAuthTimestamp() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return 0;
-        return JSON.parse(authData).timestamp || 0;
-    },
-
-    /**
      * Генерация state параметра
      */
     generateState() {
@@ -154,51 +77,28 @@ const TokenManager = {
     },
 
     /**
-     * Проверка и автоматическое обновление токена
-     */
-    async ensureValidToken() {
-        if (!localStorage.getItem('cloud-auth')) {
-            return false;
-        }
-
-        // Если токен скоро истечёт - пробуем обновить
-        if (this.needsRefresh()) {
-            const refreshed = await this.silentRefresh();
-            if (!refreshed && this.isExpired()) {
-                // Токен истёк и не удалось обновить
-                return false;
-            }
-        }
-
-        return true;
-    },
-
-    /**
-     * Запуск автоматического обновления токена
+     * Запуск автоматической проверки
      */
     startAutoRefresh() {
         if (this.refreshTimer) {
             clearInterval(this.refreshTimer);
         }
 
-        // Сбрасываем счётчик неудач
-        this.failedRefreshCount = 0;
+        this.warningShown = false;
 
-        const timeRemaining = Math.floor(this.getTimeRemaining() / 60000); // в минутах
-        console.log(`[TokenManager] 🔄 Автообновление токена запущено. Осталось: ${timeRemaining} мин`);
+        const timeRemaining = Math.floor(this.getTimeRemaining() / 60000);
+        console.log(`[TokenManager] 🔄 Мониторинг токена запущен. Истекает через ${timeRemaining} мин`);
 
         // Периодическая проверка
-        this.refreshTimer = setInterval(async () => {
-            await this.tryRefreshIfNeeded();
+        this.refreshTimer = setInterval(() => {
+            this.checkToken();
         }, this.CHECK_INTERVAL);
 
-        // Обработчик возврата на вкладку
+        // Проверка при возврате на вкладку
         if (!this.visibilityHandler) {
-            this.visibilityHandler = async () => {
+            this.visibilityHandler = () => {
                 if (document.visibilityState === 'visible') {
-                    console.log('[TokenManager] 👁️ Вкладка активна, проверяем токен...');
-                    // При возврате на вкладку - сразу проверяем токен
-                    await this.tryRefreshIfNeeded();
+                    this.checkToken();
                 }
             };
             document.addEventListener('visibilitychange', this.visibilityHandler);
@@ -206,127 +106,180 @@ const TokenManager = {
     },
 
     /**
-     * Попытка обновить токен если нужно
+     * Проверка токена
      */
-    async tryRefreshIfNeeded() {
+    checkToken() {
         if (!localStorage.getItem('cloud-auth')) {
             return;
         }
 
-        const timeRemaining = Math.floor(this.getTimeRemaining() / 60000);
-
-        // Если токен уже истёк - редирект на логин
+        // Токен истёк
         if (this.isExpired()) {
             console.error('[TokenManager] ❌ Токен истёк! Редирект на логин...');
             this.handleExpiredToken();
             return;
         }
 
-        // Если нужно обновить
-        if (this.needsRefresh()) {
-            console.log(`[TokenManager] ⏰ Токен нужно обновить (осталось ${timeRemaining} мин)`);
-            const refreshed = await this.silentRefresh();
-            if (refreshed) {
-                this.failedRefreshCount = 0;
-                console.log('[TokenManager] ✅ Токен успешно обновлён');
-            } else {
-                this.failedRefreshCount++;
-                console.warn(`[TokenManager] ⚠️ Попытка ${this.failedRefreshCount}/5 не удалась`);
-
-                // После 3 неудачных попыток - пробуем интерактивный refresh
-                if (this.failedRefreshCount === 3) {
-                    console.log('[TokenManager] 🔄 Попытка интерактивного обновления...');
-                    const interactiveRefreshed = await this.interactiveRefresh();
-                    if (interactiveRefreshed) {
-                        this.failedRefreshCount = 0;
-                        console.log('[TokenManager] ✅ Интерактивное обновление успешно');
-                        return;
-                    }
-                }
-
-                // После 5 неудачных попыток - показываем предупреждение
-                if (this.failedRefreshCount >= 5) {
-                    console.error('[TokenManager] ❌ 5 неудачных попыток обновления токена');
-                    // Показываем предупреждение пользователю
-                    if (confirm('Не удалось автоматически обновить сессию. Требуется повторный вход. Перейти на страницу входа?')) {
-                        this.handleExpiredToken();
-                    }
-                }
-            }
+        // Скоро истечёт - показываем предупреждение
+        if (this.needsWarning() && !this.warningShown) {
+            const timeRemaining = Math.floor(this.getTimeRemaining() / 60000);
+            console.log(`[TokenManager] ⏰ Сессия истекает через ${timeRemaining} мин`);
+            this.showRefreshPrompt(timeRemaining);
+            this.warningShown = true;
         }
     },
 
     /**
-     * Интерактивное обновление токена (fallback для silent refresh)
+     * Показать уведомление о продлении сессии с живым таймером
      */
-    interactiveRefresh() {
-        return new Promise((resolve) => {
-            // Генерируем state
-            const state = this.generateState();
-            sessionStorage.setItem('oauth_state', state);
-            sessionStorage.setItem('oauth_silent', 'true');
+    showRefreshPrompt(minutesLeft) {
+        if (document.getElementById('token-refresh-prompt')) return;
 
-            const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
-                '?client_id=' + encodeURIComponent(this.CLIENT_ID) +
-                '&redirect_uri=' + encodeURIComponent(this.getRedirectUri()) +
-                '&response_type=token' +
-                '&scope=' + encodeURIComponent(this.SCOPES) +
-                '&state=' + encodeURIComponent(state) +
-                '&prompt=none&include_granted_scopes=true';
+        const prompt = document.createElement('div');
+        prompt.id = 'token-refresh-prompt';
+        prompt.innerHTML = `
+            <style>
+                @keyframes pulse-border {
+                    0%, 100% { border-color: #fdbe2f; box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 0 rgba(253,190,47,0.4); }
+                    50% { border-color: #ff9500; box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 8px rgba(253,190,47,0); }
+                }
+                #token-prompt-box { animation: pulse-border 2s ease-in-out infinite; }
+                #token-prompt-box:hover { animation: none; border-color: #fdbe2f; }
+            </style>
+            <div id="token-prompt-box" style="position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#1a1a2e,#16213e);
+                border:2px solid #fdbe2f;border-radius:12px;padding:16px 20px;z-index:99999;
+                box-shadow:0 8px 32px rgba(0,0,0,0.4);max-width:320px;font-family:system-ui,sans-serif;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                    <div style="font-size:24px;">⏰</div>
+                    <div>
+                        <div style="color:#fdbe2f;font-weight:600;font-size:15px;">Сессия истекает</div>
+                        <div id="token-countdown" style="color:#fff;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;"></div>
+                    </div>
+                </div>
+                <div style="color:#e0e0e0;font-size:13px;margin-bottom:12px;">
+                    Нажмите чтобы продлить ещё на 1 час
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="TokenManager.extendSession()" style="flex:1;padding:10px 16px;
+                        background:linear-gradient(135deg,#fdbe2f,#f5a623);border:none;border-radius:6px;
+                        color:#1a1a1a;font-weight:600;cursor:pointer;font-size:14px;transition:transform 0.1s;">
+                        Продлить сессию</button>
+                    <button onclick="TokenManager.dismissPrompt()" style="padding:10px 12px;
+                        background:transparent;border:1px solid #555;border-radius:6px;
+                        color:#888;cursor:pointer;font-size:13px;">Позже</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(prompt);
 
-            // Открываем в popup окне
-            const width = 500;
-            const height = 600;
-            const left = (screen.width - width) / 2;
-            const top = (screen.height - height) / 2;
+        // Живой таймер
+        this.updateCountdown();
+        this.countdownInterval = setInterval(() => this.updateCountdown(), 1000);
+    },
 
-            const popup = window.open(
-                authUrl,
-                'oauth_popup',
-                `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no`
-            );
+    /**
+     * Обновить обратный отсчёт
+     */
+    updateCountdown() {
+        const el = document.getElementById('token-countdown');
+        if (!el) {
+            if (this.countdownInterval) clearInterval(this.countdownInterval);
+            return;
+        }
 
-            if (!popup) {
-                console.warn('[TokenManager] ⚠️ Popup заблокирован браузером');
-                resolve(false);
-                return;
+        const remaining = this.getTimeRemaining();
+        if (remaining <= 0) {
+            el.textContent = 'Истекла!';
+            el.style.color = '#ff4444';
+            return;
+        }
+
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        el.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        // Красный цвет когда меньше 2 минут
+        if (minutes < 2) {
+            el.style.color = '#ff6b6b';
+        }
+    },
+
+    /**
+     * Закрыть уведомление (покажем снова через 2 мин)
+     */
+    dismissPrompt() {
+        const prompt = document.getElementById('token-refresh-prompt');
+        if (prompt) prompt.remove();
+        if (this.countdownInterval) clearInterval(this.countdownInterval);
+
+        // Показать снова через 2 минуты если токен ещё не истёк
+        setTimeout(() => {
+            if (!this.isExpired() && this.needsWarning()) {
+                this.warningShown = false;
+                this.checkToken();
             }
+        }, 120000);
+    },
 
-            // Слушаем обновление токена
-            const originalTimestamp = this.getAuthTimestamp();
-            let checkCount = 0;
-            const maxChecks = 100; // 20 секунд
+    /**
+     * Продлить сессию через popup
+     */
+    extendSession() {
+        // Убираем уведомление
+        const prompt = document.getElementById('token-refresh-prompt');
+        if (prompt) prompt.remove();
 
-            const checkInterval = setInterval(() => {
-                checkCount++;
+        const state = this.generateState();
+        sessionStorage.setItem('oauth_state', state);
+        sessionStorage.setItem('oauth_silent', 'true');
 
-                // Проверяем закрыто ли окно
+        const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
+            '?client_id=' + encodeURIComponent(this.CLIENT_ID) +
+            '&redirect_uri=' + encodeURIComponent(this.getRedirectUri()) +
+            '&response_type=token' +
+            '&scope=' + encodeURIComponent(this.SCOPES) +
+            '&state=' + encodeURIComponent(state) +
+            '&prompt=none'; // Попробуем без UI
+
+        const width = 500, height = 600;
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
+
+        const popup = window.open(
+            authUrl,
+            'oauth_extend',
+            `width=${width},height=${height},left=${left},top=${top}`
+        );
+
+        if (!popup) {
+            alert('Popup заблокирован. Разрешите popup для этого сайта.');
+            return;
+        }
+
+        // Следим за обновлением токена
+        const originalTimestamp = this.getAuthTimestamp();
+        const checkInterval = setInterval(() => {
+            try {
                 if (popup.closed) {
                     clearInterval(checkInterval);
+                    const newTimestamp = this.getAuthTimestamp();
+                    if (newTimestamp > originalTimestamp) {
+                        this.warningShown = false;
+                        console.log('[TokenManager] ✅ Сессия продлена на 1 час');
+                    }
                     sessionStorage.removeItem('oauth_silent');
-                    resolve(false);
-                    return;
                 }
+            } catch(e) {}
+        }, 200);
+    },
 
-                // Проверяем обновление токена
-                const newTimestamp = this.getAuthTimestamp();
-                if (newTimestamp && newTimestamp > originalTimestamp) {
-                    clearInterval(checkInterval);
-                    popup.close();
-                    sessionStorage.removeItem('oauth_silent');
-                    resolve(true);
-                    return;
-                }
-
-                // Timeout
-                if (checkCount >= maxChecks) {
-                    clearInterval(checkInterval);
-                    popup.close();
-                    sessionStorage.removeItem('oauth_silent');
-                    resolve(false);
-                }
-            }, 200);
-        });
+    /**
+     * Получить timestamp токена
+     */
+    getAuthTimestamp() {
+        const authData = localStorage.getItem('cloud-auth');
+        if (!authData) return 0;
+        return JSON.parse(authData).timestamp || 0;
     },
 
     /**
@@ -334,15 +287,13 @@ const TokenManager = {
      */
     handleExpiredToken() {
         localStorage.removeItem('cloud-auth');
-        // Сохраняем текущий URL для возврата
         const currentPath = window.location.pathname + window.location.search;
         sessionStorage.setItem('auth-redirect', currentPath);
-        // Редирект на логин
         window.location.href = AuthGuard.LOGIN_URL;
     },
 
     /**
-     * Остановка автоматического обновления
+     * Остановка мониторинга
      */
     stopAutoRefresh() {
         if (this.refreshTimer) {
@@ -353,82 +304,46 @@ const TokenManager = {
             document.removeEventListener('visibilitychange', this.visibilityHandler);
             this.visibilityHandler = null;
         }
-        this.failedRefreshCount = 0;
+        this.warningShown = false;
     }
 };
 
 /**
- * AuthGuard - Проверка авторизации на страницах
- * Подключается на всех страницах, требующих авторизации
+ * AuthGuard - Проверка авторизации
  */
-
 const AuthGuard = {
-    // Определяем базовый путь динамически (для локальной разработки и GitHub Pages)
     getBasePath() {
         const path = window.location.pathname;
-        // Ищем первый сегмент пути (SimpleAIAdminka или AIAdminka_Page)
         const match = path.match(/^\/([^\/]+)\//);
         return match ? '/' + match[1] : '';
     },
 
-    // URL страницы входа (динамический)
     get LOGIN_URL() {
         return this.getBasePath() + '/login/index.html';
     },
 
-    /**
-     * Проверка авторизации
-     * Если не авторизован - редирект на login
-     * @param {boolean} redirect - делать ли редирект (по умолчанию true)
-     * @returns {boolean} true если авторизован
-     */
     check(redirect = true) {
         const authData = localStorage.getItem('cloud-auth');
 
         if (!authData) {
-            if (redirect) {
-                this.redirectToLogin();
-            }
+            if (redirect) this.redirectToLogin();
             return false;
         }
 
-        // Проверяем срок токена через TokenManager (1 час реальный срок Google)
         if (TokenManager.isExpired()) {
-            // Если идёт синхронизация - пробуем silent refresh
-            if (typeof SyncManager !== 'undefined' && SyncManager.hasPendingSync()) {
-                // Запускаем async refresh, но не блокируем
-                TokenManager.silentRefresh().then(refreshed => {
-                    if (!refreshed) {
-                        console.warn('⚠️ Не удалось обновить токен во время синхронизации');
-                    }
-                });
-                return true; // Позволяем продолжить синхронизацию
-            }
-
             localStorage.removeItem('cloud-auth');
-            if (redirect) {
-                this.redirectToLogin();
-            }
+            if (redirect) this.redirectToLogin();
             return false;
         }
 
-        // Запускаем автоматическое обновление токена
         TokenManager.startAutoRefresh();
-
         return true;
     },
 
-    /**
-     * Проверка авторизации (async версия)
-     * Можно использовать в init() модулей
-     */
     async checkAsync(redirect = true) {
         return this.check(redirect);
     },
 
-    /**
-     * Получить данные текущего пользователя
-     */
     getUser() {
         const authData = localStorage.getItem('cloud-auth');
         if (!authData) return null;
@@ -441,11 +356,7 @@ const AuthGuard = {
         };
     },
 
-    /**
-     * Выход из системы
-     */
     logout() {
-        // Проверяем, идёт ли синхронизация
         if (typeof SyncManager !== 'undefined' && SyncManager.hasPendingSync()) {
             const canLogout = SyncManager.canLogout();
             if (canLogout !== true) {
@@ -454,16 +365,12 @@ const AuthGuard = {
             }
         }
 
-        // Очищаем очередь синхронизации
         if (typeof SyncManager !== 'undefined') {
             localStorage.removeItem('sync-queue');
         }
 
-        // Очищаем данные авторизации
         localStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
-
-        // Очищаем все кэшированные данные пользователя
         localStorage.removeItem('partners-data');
         localStorage.removeItem('partnersColumnsConfig');
         localStorage.removeItem('traffic-analytics-temp');
@@ -476,7 +383,6 @@ const AuthGuard = {
         localStorage.removeItem('sync-auth');
         localStorage.removeItem('sync-access-status');
 
-        // Очищаем кэш CloudStorage
         if (typeof CloudStorage !== 'undefined' && CloudStorage.clearCache) {
             CloudStorage.clearCache();
         }
@@ -484,35 +390,20 @@ const AuthGuard = {
         this.redirectToLogin();
     },
 
-    /**
-     * Редирект на страницу входа
-     */
     redirectToLogin() {
-        // Сохраняем текущий URL для возврата после логина
         const currentPath = window.location.pathname + window.location.search;
         sessionStorage.setItem('auth-redirect', currentPath);
-
         window.location.href = this.LOGIN_URL;
     },
 
-    /**
-     * Получить URL для редиректа после логина
-     */
     getRedirectUrl() {
         return sessionStorage.getItem('auth-redirect') || (this.getBasePath() + '/index.html');
     },
 
-    /**
-     * Очистить сохранённый URL редиректа
-     */
     clearRedirectUrl() {
         sessionStorage.removeItem('auth-redirect');
     },
 
-    /**
-     * Добавить информацию о пользователе в header/sidebar
-     * @param {string} containerId - ID контейнера для вставки
-     */
     renderUserInfo(containerId) {
         const user = this.getUser();
         if (!user) return;
@@ -545,9 +436,6 @@ const AuthGuard = {
         `;
     },
 
-    /**
-     * Получить инициалы из имени
-     */
     getInitials(name) {
         if (!name) return '?';
         const parts = name.trim().split(' ');
@@ -558,7 +446,7 @@ const AuthGuard = {
     }
 };
 
-// CSS стили для user info (добавляются автоматически)
+// CSS стили
 (function() {
     const style = document.createElement('style');
     style.textContent = `
@@ -571,7 +459,6 @@ const AuthGuard = {
             border-radius: 8px;
             margin: 10px;
         }
-
         .auth-user-avatar {
             width: 36px;
             height: 36px;
@@ -585,18 +472,15 @@ const AuthGuard = {
             color: #1a1a1a;
             overflow: hidden;
         }
-
         .auth-user-avatar img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
-
         .auth-user-details {
             flex: 1;
             min-width: 0;
         }
-
         .auth-user-name {
             font-size: 13px;
             font-weight: 600;
@@ -604,7 +488,6 @@ const AuthGuard = {
             overflow: hidden;
             text-overflow: ellipsis;
         }
-
         .auth-user-email {
             font-size: 11px;
             opacity: 0.7;
@@ -612,7 +495,6 @@ const AuthGuard = {
             overflow: hidden;
             text-overflow: ellipsis;
         }
-
         .auth-logout-btn {
             background: none;
             border: none;
@@ -622,17 +504,13 @@ const AuthGuard = {
             transition: opacity 0.2s;
             color: inherit;
         }
-
         .auth-logout-btn:hover {
             opacity: 1;
         }
-
-        /* Скрываем детали в свёрнутом сайдбаре */
         .sidebar.collapsed .auth-user-details,
         .sidebar.collapsed .auth-logout-btn {
             display: none;
         }
-
         .sidebar.collapsed .auth-user-info {
             justify-content: center;
             padding: 10px;
@@ -641,13 +519,11 @@ const AuthGuard = {
     document.head.appendChild(style);
 })();
 
-// Автоматическая проверка при загрузке страницы
+// Автопроверка при загрузке
 (function() {
-    // Проверяем сразу при загрузке скрипта
     AuthGuard.check();
 })();
 
-// Экспорт
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = AuthGuard;
 }

@@ -17,34 +17,12 @@ window.TEMPLATE_DEPOSITS_WITHDRAWALS = {
             requiredColumns: ['сумма в валюте отчета', 'статус транзакции', 'сумма комиссии в валюте отчёта', 'id агента', 'тип платежной системы', 'группа субагентов', 'субагент', 'id субагента']
         }
     },
-    handler: (depositsFiles, withdrawalsFiles) => {
-        // Объединяем все файлы пополнений в один массив
-        const allDepositsData = [];
-        depositsFiles.forEach(fileData => {
-            if (fileData && fileData.length > 0) {
-                if (allDepositsData.length === 0) {
-                    allDepositsData.push(fileData[0]); // заголовки
-                }
-                for (let i = 1; i < fileData.length; i++) {
-                    allDepositsData.push(fileData[i]);
-                }
-            }
-        });
+    handler: (stepsData) => {
+        // stepsData = { step1: [...], step2: [...] } - уже объединённые данные
+        const allDepositsData = stepsData.step1;
+        const allWithdrawalsData = stepsData.step2;
 
-        // Объединяем все файлы выводов в один массив
-        const allWithdrawalsData = [];
-        withdrawalsFiles.forEach(fileData => {
-            if (fileData && fileData.length > 0) {
-                if (allWithdrawalsData.length === 0) {
-                    allWithdrawalsData.push(fileData[0]); // заголовки
-                }
-                for (let i = 1; i < fileData.length; i++) {
-                    allWithdrawalsData.push(fileData[i]);
-                }
-            }
-        });
-
-        if (!allDepositsData || !allWithdrawalsData) {
+        if (!allDepositsData || allDepositsData.length === 0 || !allWithdrawalsData || allWithdrawalsData.length === 0) {
             throw new Error('Один или оба типа файлов не содержат данных');
         }
 

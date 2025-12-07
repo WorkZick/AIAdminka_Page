@@ -58,7 +58,8 @@
                     // В silent режиме ошибка означает что нужен интерактивный логин
                     if (isSilentRefresh) {
                         sessionStorage.removeItem('oauth_silent');
-                        return; // Просто закрываем iframe
+                        window.close();
+                        return;
                     }
                     throw new Error('Авторизация отклонена: ' + error);
                 }
@@ -66,6 +67,7 @@
                 if (!accessToken) {
                     if (isSilentRefresh) {
                         sessionStorage.removeItem('oauth_silent');
+                        window.close();
                         return;
                     }
                     throw new Error('Токен не получен');
@@ -77,6 +79,7 @@
                     sessionStorage.removeItem('oauth_state');
                     sessionStorage.removeItem('oauth_silent');
                     if (isSilentRefresh) {
+                        window.close();
                         return;
                     }
                     throw new Error('Ошибка безопасности: неверный state параметр');
@@ -103,8 +106,9 @@
                     history.replaceState(null, '', window.location.pathname);
 
                     if (isSilentRefresh) {
-                        // Silent refresh завершён - не редиректим
+                        // Silent refresh завершён - закрываем окно
                         sessionStorage.removeItem('oauth_silent');
+                        window.close();
                         return;
                     }
 
@@ -128,6 +132,7 @@
                 .catch(function(e) {
                     if (isSilentRefresh) {
                         sessionStorage.removeItem('oauth_silent');
+                        window.close();
                         return;
                     }
                     throw e;
@@ -136,6 +141,7 @@
             } catch (e) {
                 if (isSilentRefresh) {
                     sessionStorage.removeItem('oauth_silent');
+                    window.close();
                     return;
                 }
                 spinner.style.display = 'none';

@@ -94,7 +94,6 @@ class UIRenderer {
                     <div class="template-card-featured ${selectedClass}" onclick="excelApp.selectTemplate('${mainTemplate.id}')">
                         <div class="featured-badge">Общий отчёт</div>
                         <div class="template-header">
-                            <h3>${mainTemplate.obj.name}</h3>
                             ${isSelected ? '<span class="selected-badge"><img src="icons/done.svg" width="12" height="12" alt="✓"> Выбран</span>' : ''}
                         </div>
                         <p class="template-description">${mainTemplate.obj.description}</p>

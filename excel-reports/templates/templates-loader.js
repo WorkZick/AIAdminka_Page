@@ -11,8 +11,8 @@ if (typeof window.TEMPLATE_DEPOSITS_WITHDRAWALS === 'undefined') {
 if (typeof window.TEMPLATE_REGISTRATIONS === 'undefined') {
     console.error('Шаблон REGISTRATIONS не загружен!');
 }
-if (typeof window.TEMPLATE_BTAG === 'undefined') {
-    console.error('Шаблон BTAG не загружен!');
+if (typeof window.TEMPLATE_B_TAG === 'undefined') {
+    console.error('Шаблон B_TAG не загружен!');
 }
 if (typeof window.TEMPLATE_ANALYTICS_T9 === 'undefined') {
     console.error('Шаблон ANALYTICS_T9 не загружен!');
@@ -26,7 +26,7 @@ const TEMPLATES = {
     COMBINED_REPORT: window.TEMPLATE_COMBINED_REPORT,
     DEPOSITS_WITHDRAWALS: window.TEMPLATE_DEPOSITS_WITHDRAWALS,
     REGISTRATIONS: window.TEMPLATE_REGISTRATIONS,
-    BTAG: window.TEMPLATE_BTAG,
+    B_TAG: window.TEMPLATE_B_TAG,
     ANALYTICS_T9: window.TEMPLATE_ANALYTICS_T9,
     ACTIVE_USERS: window.TEMPLATE_ACTIVE_USERS
 };

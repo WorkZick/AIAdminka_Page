@@ -12,37 +12,9 @@ window.TEMPLATE_B_TAG = {
             requiredColumns: ['Номер игрока', 'Статус 1 транзакции', 'Статус 2 транзакции']
         }
     },
-    handler: (transactionsData) => {
-        // Объединяем данные из всех файлов
-        let combinedData = [];
-        const filesArray = Array.isArray(transactionsData) ? transactionsData : [transactionsData];
-
-        if (filesArray.length === 0) {
-            throw new Error('Нет загруженных файлов');
-        }
-
-        // Обрабатываем первый файл (берем заголовки)
-        const firstFile = filesArray[0];
-        if (!firstFile || firstFile.length === 0) {
-            throw new Error('Первый файл не содержит данных');
-        }
-
-        combinedData = [...firstFile]; // Копируем весь первый файл (с заголовками)
-
-        // Добавляем данные из остальных файлов (без заголовков)
-        for (let i = 1; i < filesArray.length; i++) {
-            const file = filesArray[i];
-            if (!file || file.length <= 1) continue; // Пропускаем пустые файлы или файлы только с заголовками
-
-            // Добавляем строки начиная со второй (пропускаем заголовок)
-            for (let j = 1; j < file.length; j++) {
-                if (file[j] && file[j].length > 0) {
-                    combinedData.push(file[j]);
-                }
-            }
-        }
-
-        const data = combinedData;
+    handler: (stepsData) => {
+        // stepsData = { step1: [...] } - уже объединённые данные
+        const data = stepsData.step1;
 
         if (!data || data.length === 0) {
             throw new Error('Файлы не содержат данных');

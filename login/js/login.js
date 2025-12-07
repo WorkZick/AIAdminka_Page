@@ -1,24 +1,21 @@
 /**
  * Login Module - AIAdminka Authorization
+ * Использует стандартный OAuth для логина, GIS для silent refresh
  */
 
 const loginApp = {
-    // OAuth Config (используем те же данные что в sync)
+    // OAuth Config
     CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
+    SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
 
-    // Динамический REDIRECT_URI в зависимости от окружения
+    // Динамический REDIRECT_URI
     get REDIRECT_URI() {
         const host = window.location.hostname;
         if (host === '127.0.0.1' || host === 'localhost') {
             return 'http://127.0.0.1:5500/SimpleAIAdminka/login/callback.html';
         }
-        // GitHub Pages
         return 'https://workzick.github.io/AIAdminka_Page/login/callback.html';
     },
-    SCOPES: [
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile'
-    ].join(' '),
 
     // Apps Script URL
     SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyeWmZs028zVkzKTrqNTbzTasKK0Z63eCfV1I4RUV6BJWMH8r62kScLh7U5B45bHRRILA/exec',
@@ -27,25 +24,12 @@ const loginApp = {
     currentUser: null,
     storageReady: false,
 
-    // ============ SECURITY HELPERS ============
+    // ============ SECURITY ============
 
-    /**
-     * Генерация криптографически безопасного state параметра для CSRF защиты
-     */
     generateState() {
         const array = new Uint8Array(32);
         crypto.getRandomValues(array);
         return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-    },
-
-    /**
-     * Безопасное экранирование HTML для предотвращения XSS
-     */
-    escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     },
 
     // ============ INITIALIZATION ============
@@ -66,8 +50,7 @@ const loginApp = {
 
         const auth = JSON.parse(authData);
 
-        // Проверяем срок токена (~58 минут, Google токен живёт 60 мин)
-        // Silent refresh будет обновлять токен автоматически
+        // Проверяем срок токена (~58 минут)
         if (Date.now() - auth.timestamp > 3500000) {
             localStorage.removeItem('cloud-auth');
             this.showLoginForm();
@@ -86,15 +69,13 @@ const loginApp = {
     },
 
     checkAuthCallback() {
-        // Callback теперь сам сохраняет полные данные в cloud-auth
         // Проверяем, был ли свежий логин (токен получен менее 10 секунд назад)
         const authData = localStorage.getItem('cloud-auth');
         if (authData) {
             const auth = JSON.parse(authData);
-            const isRecent = Date.now() - auth.timestamp < 10000; // Менее 10 сек назад
+            const isRecent = Date.now() - auth.timestamp < 10000;
 
             if (isRecent && !this.currentUser) {
-                // Свежий логин - загружаем пользователя
                 this.currentUser = {
                     email: auth.email,
                     name: auth.name,
@@ -110,7 +91,7 @@ const loginApp = {
     // ============ OAUTH ============
 
     login() {
-        // Генерируем state параметр для CSRF защиты
+        // Стандартный OAuth redirect flow
         const state = this.generateState();
         sessionStorage.setItem('oauth_state', state);
 
@@ -122,14 +103,12 @@ const loginApp = {
             '&state=' + encodeURIComponent(state) +
             '&prompt=consent';
 
-        // Открываем в том же окне для лучшего UX
         window.location.href = authUrl;
     },
 
     logout() {
         localStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
-        // Очищаем кэш данных пользователя
         localStorage.removeItem('partners-data');
         localStorage.removeItem('traffic-analytics-temp');
         this.currentUser = null;
@@ -137,65 +116,20 @@ const loginApp = {
         this.showLoginForm();
     },
 
-    async fetchUserInfo(accessToken) {
-        try {
-            const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-                headers: { 'Authorization': 'Bearer ' + accessToken }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to get user info');
-            }
-
-            const userInfo = await response.json();
-
-            // Сохраняем auth данные
-            const authData = {
-                accessToken: accessToken,
-                email: userInfo.email,
-                name: userInfo.name,
-                picture: userInfo.picture,
-                timestamp: Date.now()
-            };
-            localStorage.setItem('cloud-auth', JSON.stringify(authData));
-
-            this.currentUser = {
-                email: userInfo.email,
-                name: userInfo.name,
-                picture: userInfo.picture,
-                accessToken: accessToken
-            };
-
-            this.showLoading('Проверка доступа...');
-            this.checkAccess();
-
-        } catch (error) {
-            console.error('fetchUserInfo error:', error);
-            this.showError('Ошибка получения данных пользователя');
-        }
-    },
-
     // ============ ACCESS CONTROL ============
 
-    /**
-     * Безопасный запрос к API с токеном
-     * Данные отправляются в URL параметрах (GAS теряет POST body при редиректе)
-     */
     async secureApiCall(action, params = {}) {
         const url = new URL(this.SCRIPT_URL);
         url.searchParams.set('action', action);
         url.searchParams.set('accessToken', this.currentUser.accessToken);
 
-        // Добавляем остальные параметры
         for (const [key, value] of Object.entries(params)) {
             if (value !== undefined && value !== null) {
                 url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
             }
         }
 
-        const response = await fetch(url.toString(), {
-            method: 'GET'
-        });
+        const response = await fetch(url.toString(), { method: 'GET' });
         return response.json();
     },
 
@@ -208,14 +142,11 @@ const loginApp = {
             }
 
             if (result.allowed) {
-                // Доступ разрешён - проверяем хранилище
                 this.showLoading('Проверка хранилища...');
                 this.checkStorage();
             } else if (result.pendingRequest) {
-                // Запрос уже отправлен
                 this.showAccessPending();
             } else {
-                // Доступ запрещён - показываем кнопку запроса
                 this.showAccessDenied();
             }
 
@@ -261,7 +192,6 @@ const loginApp = {
             }
 
             if (result.exists) {
-                // Хранилище существует
                 this.storageReady = true;
                 localStorage.setItem('cloud-storage-info', JSON.stringify({
                     sheetId: result.sheetId,
@@ -269,7 +199,6 @@ const loginApp = {
                 }));
                 this.showSuccess();
             } else {
-                // Нужно создать хранилище
                 this.showInitStorage();
             }
 
@@ -365,15 +294,10 @@ const loginApp = {
         const emailEl = document.getElementById('userEmail');
 
         if (this.currentUser.picture) {
-            // Безопасное создание img элемента (защита от XSS)
             avatarEl.innerHTML = '';
             const img = document.createElement('img');
-            // Валидируем URL - только HTTPS от Google
             const pictureUrl = this.currentUser.picture;
-            if (pictureUrl && (pictureUrl.startsWith('https://lh3.googleusercontent.com/') ||
-                              pictureUrl.startsWith('https://lh4.googleusercontent.com/') ||
-                              pictureUrl.startsWith('https://lh5.googleusercontent.com/') ||
-                              pictureUrl.startsWith('https://lh6.googleusercontent.com/'))) {
+            if (pictureUrl && pictureUrl.startsWith('https://lh')) {
                 img.src = pictureUrl;
                 img.alt = '';
                 img.onerror = () => { avatarEl.textContent = this.getInitials(this.currentUser.name); };

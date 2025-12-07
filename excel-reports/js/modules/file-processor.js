@@ -6,10 +6,18 @@ class FileProcessor {
     }
 
     // Универсальная загрузка файлов с валидацией
-    async loadFiles(files, config) {
+    async loadFiles(files, config, onProgress = null) {
         const results = [];
+        const total = files.length;
 
-        for (const file of files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+
+            // Вызываем callback прогресса
+            if (onProgress) {
+                onProgress(i + 1, total, file.name);
+            }
+
             try {
                 const result = await this.loadSingleFile(file, config);
                 results.push(result);
@@ -39,7 +47,7 @@ class FileProcessor {
             throw new Error('Файл пуст или не содержит данных');
         }
 
-        // Валидация обязательных колонок
+        // Валидация обязательных колонок (уже проверено в readExcelFile)
         if (config.requiredColumns && config.requiredColumns.length > 0) {
             const headers = data[0] || [];
             const validationResult = this.validateHeaders(headers, config.requiredColumns);
@@ -78,10 +86,11 @@ class FileProcessor {
 
                     // Конвертируем в массив массивов
                     const data = [];
+
                     worksheet.eachRow((row, rowNumber) => {
                         const rowData = [];
                         row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                            rowData.push(cell.value);
+                            rowData[colNumber - 1] = cell.value;
                         });
                         data.push(rowData);
                     });

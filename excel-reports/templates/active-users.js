@@ -7,19 +7,25 @@ window.TEMPLATE_ACTIVE_USERS = {
     description: 'Листы: T4, T4.1',
     filesConfig: {
         step1: {
-            name: 'Файл прошлого месяца (ID игрока)',
-            multiple: false,
-            requiredColumns: ['ID игрока']
-        },
-        step2: {
-            name: 'Файл текущего месяца (ID игрока)',
-            multiple: false,
-            requiredColumns: ['ID игрока']
+            name: 'Активные пользователи',
+            subFiles: [
+                {
+                    id: 'prev',
+                    name: 'Прошлый месяц',
+                    requiredColumns: ['ID игрока']
+                },
+                {
+                    id: 'curr',
+                    name: 'Текущий месяц',
+                    requiredColumns: ['ID игрока']
+                }
+            ]
         }
     },
-    handler: (prevMonthData, currentMonthData) => {
-        const dataPrev = Array.isArray(prevMonthData) ? prevMonthData[0] : prevMonthData;
-        const dataCurrent = Array.isArray(currentMonthData) ? currentMonthData[0] : currentMonthData;
+    handler: (stepsData) => {
+        // stepsData = { step1: { prev: [...], curr: [...] } }
+        const dataPrev = stepsData.step1.prev;
+        const dataCurrent = stepsData.step1.curr;
 
         if (!dataPrev || dataPrev.length === 0) {
             throw new Error('Файл прошлого месяца не содержит данных');
@@ -192,19 +198,17 @@ window.TEMPLATE_ACTIVE_USERS = {
 
         // Данные T4
         const t4Data = [
-            ['Активные пользователи', countPrev, null, countCurrent, null],
-            ['Процент прироста, с предыдущим месяцем', '-', null, growthPercent, null]
+            ['Активные пользователи', countPrev, null, countCurrent, null, false],
+            ['Процент прироста, с предыдущим месяцем', '-', null, growthPercent, null, true]
         ];
 
         let t4Row = 3;
-        t4Data.forEach((row, idx) => {
-            sheetT4.data.push(row);
+        t4Data.forEach(row => {
+            sheetT4.data.push([row[0], row[1], row[2], row[3], row[4]]);
             sheetT4.styles.push({ cell: `A${t4Row}`, ...dataStyle, alignment: { horizontal: 'left', vertical: 'middle' } });
             sheetT4.styles.push({ cell: `B${t4Row}`, ...dataStyle, alignment: { horizontal: 'center', vertical: 'middle' } });
             sheetT4.styles.push({ cell: `C${t4Row}`, ...separatorStyle });
-
-            if (idx === 1) {
-                // Процент
+            if (row[5]) {
                 sheetT4.styles.push({ cell: `D${t4Row}`, ...dataStyle, alignment: { horizontal: 'center', vertical: 'middle' }, numFmt: '0.00%' });
             } else {
                 sheetT4.styles.push({ cell: `D${t4Row}`, ...dataStyle, alignment: { horizontal: 'center', vertical: 'middle' } });
