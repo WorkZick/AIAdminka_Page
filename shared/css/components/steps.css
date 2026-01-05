@@ -1,0 +1,65 @@
+/* ============================================================
+   Step Indicator Component
+   ============================================================ */
+
+.steps {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+    align-items: center;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--gray);
+}
+
+.step-number {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--gray-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-sm);
+    color: var(--gray-light);
+    flex-shrink: 0;
+}
+
+.step-label {
+    font-size: var(--font-size-sm);
+    color: var(--gray-light);
+}
+
+.step.active .step-number {
+    background: var(--yellow);
+    color: var(--black);
+}
+
+.step.active .step-label {
+    color: var(--white);
+}
+
+.step.completed .step-number {
+    background: var(--status-green);
+    color: var(--white);
+}
+
+.step.completed .step-label {
+    color: var(--status-green);
+}
+
+.step-line {
+    flex: 1;
+    height: 2px;
+    background: var(--gray-dark);
+    min-width: 20px;
+}
+
+.step.completed + .step-line,
+.step.active + .step-line {
+    background: var(--yellow);
+}

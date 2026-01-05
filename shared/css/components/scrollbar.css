@@ -1,0 +1,70 @@
+/* ============================================================
+   AIAdminka Design System - Scrollbar
+   ============================================================ */
+
+/* ==================== WEBKIT SCROLLBAR ==================== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Corner */
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* ==================== THIN SCROLLBAR ==================== */
+.scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+}
+
+/* ==================== HIDDEN SCROLLBAR ==================== */
+.scrollbar-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+}
+
+/* ==================== FIREFOX ==================== */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+/* ==================== AUTO-HIDE SCROLLBAR ==================== */
+.scrollbar-auto {
+    overflow: auto;
+}
+
+.scrollbar-auto::-webkit-scrollbar-thumb {
+    background: transparent;
+}
+
+.scrollbar-auto:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.scrollbar-auto:hover::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}

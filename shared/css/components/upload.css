@@ -1,0 +1,66 @@
+/* ============================================================
+   Upload Zone Component
+   ============================================================ */
+
+.upload-zone {
+    border: 2px dashed var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-2xl);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    background: var(--glass-bg);
+}
+
+.upload-zone:hover,
+.upload-zone.dragover {
+    border-color: var(--yellow);
+    background: var(--glass-bg-light);
+}
+
+.upload-zone-icon {
+    font-size: 48px;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.5;
+}
+
+.upload-zone-icon img {
+    width: 48px;
+    height: 48px;
+    opacity: 0.5;
+}
+
+.upload-zone-text {
+    color: var(--gray-light);
+    font-size: var(--font-size-base);
+}
+
+.upload-zone-hint {
+    color: var(--gray);
+    font-size: var(--font-size-sm);
+    margin-top: var(--spacing-sm);
+}
+
+/* File selected state */
+.upload-zone.has-file {
+    border-color: var(--status-green);
+    border-style: solid;
+}
+
+.upload-zone.has-file .upload-zone-text {
+    color: var(--status-green);
+}
+
+/* Error state */
+.upload-zone.error {
+    border-color: var(--status-red);
+}
+
+.upload-zone.error .upload-zone-text {
+    color: var(--status-red);
+}
+
+/* Hidden input */
+.upload-zone input[type="file"] {
+    display: none;
+}

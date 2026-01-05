@@ -1,0 +1,16 @@
+/* ============================================================
+   Page Header Component
+   ============================================================ */
+
+.page-header {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-bottom: 1px solid var(--glass-border);
+    margin-bottom: var(--spacing-xl);
+}
+
+.page-title {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--white);
+    margin: 0;
+}

@@ -1,404 +1,50 @@
-/* Documentation - Dark Glassmorphism Design */
+/* Documentation Module - Specific Styles */
+/* Base styles provided by ../shared/css/design-system.css */
 
-/* Fonts */
-@font-face {
-    font-family: 'TT Firs Neue';
-    src: url('../fonts/TTFirsNeue-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'TT Firs Neue';
-    src: url('../fonts/TTFirsNeue-Bold.woff2') format('woff2');
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-}
-
-/* Variables */
-:root {
-    --white: #f2f2f2;
-    --black: #0a0a0a;
-    --gray: #6b6b6b;
-    --gray-light: #a0a0a0;
-    --gray-medium: #3a3a3a;
-    --gray-dark: #252525;
-    --gray-darker: #1a1a1a;
-    --bg-black: #0d0d0d;
-    --yellow: #fdbe2f;
-
-    /* Glassmorphism */
-    --glass-bg: rgba(255, 255, 255, 0.02);
-    --glass-bg-light: rgba(255, 255, 255, 0.04);
-    --glass-bg-hover: rgba(255, 255, 255, 0.06);
-    --glass-border: rgba(255, 255, 255, 0.06);
-    --glass-border-hover: rgba(253, 190, 47, 0.3);
-    --glass-blur: 16px;
-
-    /* Status colors */
-    --status-green: #51cf66;
-    --status-red: #ff6b6b;
-    --status-yellow: #fdbe2f;
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'TT Firs Neue', 'Segoe UI', sans-serif;
-    font-weight: 400;
-    background: var(--bg-black);
-    color: var(--white);
-    height: 100vh;
-    overflow: hidden;
-}
-
-/* Layout */
-.app-container {
-    display: flex;
-    height: 100vh;
-    background:
-        radial-gradient(circle at 15% 25%, rgba(253, 190, 47, 0.15) 0%, transparent 35%),
-        radial-gradient(circle at 85% 75%, rgba(80, 120, 200, 0.12) 0%, transparent 35%),
-        radial-gradient(circle at 50% 90%, rgba(253, 190, 47, 0.08) 0%, transparent 40%),
-        var(--bg-black);
-}
-
-/* Sidebar - Glassmorphism */
-.sidebar {
-    width: 12%;
-    background: rgba(20, 20, 20, 0.7);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    transition: width 0.3s ease;
-}
-
-.sidebar.no-transition,
-.sidebar.no-transition * {
-    transition: none !important;
-}
-
-.sidebar.collapsed {
-    width: 60px;
-}
-
-.sidebar.collapsed .menu-separator {
-    display: none;
-}
-
-.back-button {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 0 20px;
-    height: 60px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-family: 'TT Firs Neue', sans-serif;
-    font-size: 14px;
-    color: var(--white);
-    font-weight: 400;
-    transition: background 0.2s;
-    box-sizing: border-box;
-}
-
-.back-button:hover {
-    background: var(--glass-bg-hover);
-}
-
-.back-button img {
-    width: 30px;
-    height: 30px;
-    transition: transform 0.3s ease;
-    object-fit: contain;
-    display: block;
-    filter: brightness(0) invert(1);
-}
-
-.sidebar.collapsed .back-button img {
-    transform: rotate(180deg);
-}
-
-.sidebar-menu {
-    flex: 1;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    padding-top: 100px;
-}
-
-.menu-item {
-    display: block;
-    padding: 16px 20px;
-    color: var(--white);
-    text-decoration: none;
-    font-size: 14px;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    border: none;
-    background: transparent;
-    width: 100%;
-    text-align: center;
-    font-family: 'TT Firs Neue', sans-serif;
-    font-weight: 400;
-    white-space: nowrap;
-    overflow: hidden;
-    height: 48px;
-    position: relative;
-}
-
-.sidebar.collapsed .menu-item {
-    padding: 16px 20px;
-}
-
-.menu-item span {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-}
-
-.menu-item img {
-    width: 20px;
-    height: 20px;
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    object-fit: contain;
-    display: block;
-    filter: brightness(0) invert(1);
-    opacity: 0.7;
-}
-
-.sidebar.collapsed .menu-item span {
-    display: none;
-}
-
-.menu-item.active {
-    background: linear-gradient(90deg, rgba(253, 190, 47, 0.2) 0%, transparent 100%);
-    border-left: 3px solid var(--yellow);
-    font-weight: 700;
-    color: var(--yellow);
-}
-
-.menu-item.active img {
-    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(101%) contrast(98%);
-    opacity: 1;
-}
-
-.menu-item:hover:not(.active) {
-    background: var(--glass-bg-hover);
-}
-
-.menu-item:hover:not(.active) img {
-    opacity: 1;
-}
-
-.menu-separator {
-    height: 1px;
-    background: var(--glass-border);
-    margin: 10px 20px;
-}
-
-.sidebar.collapsed .menu-separator {
-    margin: 10px;
-}
-
-.version-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 20px;
-    color: var(--gray);
-    font-size: 14px;
-    font-family: 'TT Firs Neue', sans-serif;
-    font-weight: 400;
-    cursor: pointer;
-    background: transparent;
-    width: 100%;
-    position: relative;
-    box-sizing: border-box;
-    transition: background 0.2s ease;
-}
-
-.version-info:hover {
-    background: var(--glass-bg-hover);
-}
-
-.version-info .version-text-full {
-    white-space: nowrap;
-}
-
-.version-info .version-number {
-    font-size: 11px;
-    opacity: 0.6;
-    margin-top: 4px;
-}
-
-.version-info .version-icon {
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.version-info .version-icon img {
-    width: 20px;
-    height: 20px;
-    opacity: 0.6;
-    filter: brightness(0) invert(1);
-}
-
-.version-info:hover .version-icon img {
-    opacity: 1;
-}
-
-.sidebar.collapsed .version-info {
-    padding: 12px;
-}
-
-.sidebar.collapsed .version-info .version-text-full,
-.sidebar.collapsed .version-info .version-number {
-    display: none;
-}
-
-.sidebar.collapsed .version-info .version-icon {
-    position: static;
-    transform: none;
-}
-
-/* Main wrapper */
-.main-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    overflow: hidden;
-    background: transparent;
-}
-
-/* Global header - Glassmorphism */
-.global-header {
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    z-index: 100;
-    background: rgba(20, 20, 20, 0.7);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 0 40px;
-    height: 60px;
-    box-sizing: border-box;
-}
-
-.header-title {
-    font-size: 16px;
-    font-weight: 400;
-    color: var(--white);
-    letter-spacing: 1px;
-}
-
-.header-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.btn-changelog {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    background: var(--yellow);
-    border: none;
-    color: var(--black);
-    font-family: 'TT Firs Neue', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.btn-changelog:hover {
-    background: #e5a829;
-}
-
-.btn-changelog img {
-    width: 14px;
-    height: 14px;
-    filter: brightness(0);
-}
-
-/* Content area */
-.content-area {
-    display: flex;
-    gap: 20px;
-    padding: 80px 40px 20px 40px;
-    height: 100%;
-    overflow: hidden;
-}
-
-/* Left panel - TOC - Glassmorphism */
+/* ============================================================
+   Left Panel - Table of Contents
+   ============================================================ */
 .left-panel {
     flex: 0 0 220px;
     min-width: 220px;
     max-width: 220px;
+    display: flex;
+    flex-direction: column;
 }
 
 .toc-panel {
-    background: rgba(40, 40, 40, 0.5);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 14px;
-    height: 100%;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-2xl);
+    flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
 .toc-panel .panel-header {
-    background: rgba(30, 30, 30, 0.8);
-    padding: 16px 20px;
+    background: var(--gray-darker);
+    padding: var(--spacing-lg) var(--spacing-xl);
     display: flex;
     align-items: center;
     justify-content: center;
     height: 60px;
     box-sizing: border-box;
-    border-radius: 14px 14px 0 0;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
     border-bottom: 1px solid var(--glass-border);
     color: var(--white);
-    font-size: 14px;
+    font-size: var(--font-size-md);
     font-weight: 400;
 }
 
 .toc-panel .panel-content {
     flex: 1;
     overflow-y: auto;
-    background: rgba(50, 50, 50, 0.5);
-    padding: 16px;
-    border-radius: 0 0 14px 14px;
+    background: var(--glass-bg-light);
+    padding: var(--spacing-lg);
+    border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
 }
 
 .toc-nav {
@@ -428,28 +74,30 @@ body {
     color: var(--yellow);
 }
 
-/* Main section - Glassmorphism */
+/* ============================================================
+   Main Section - Documentation Content
+   ============================================================ */
 .main-section {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: rgba(40, 40, 40, 0.5);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 14px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-2xl);
 }
 
 .doc-container {
     flex: 1;
     overflow-y: auto;
-    background: rgba(50, 50, 50, 0.5);
+    background: var(--glass-bg-light);
     padding: 30px;
-    border-radius: 14px;
+    border-radius: var(--radius-2xl);
 }
 
-/* Doc header */
+/* Doc Header */
 .doc-header {
     border-bottom: 2px solid var(--yellow);
     padding-bottom: 20px;
@@ -481,7 +129,7 @@ body {
     color: var(--gray);
 }
 
-/* Sections */
+/* Doc Sections */
 .doc-section {
     margin-bottom: 40px;
     padding-bottom: 30px;
@@ -549,7 +197,9 @@ body {
     opacity: 0.8;
 }
 
-/* Advantages grid - Glassmorphism */
+/* ============================================================
+   Advantages Grid
+   ============================================================ */
 .advantages {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -583,7 +233,9 @@ body {
     color: var(--gray);
 }
 
-/* Troubleshooting - Glassmorphism */
+/* ============================================================
+   Troubleshooting & Warning Boxes
+   ============================================================ */
 .troubleshooting-item {
     background: rgba(253, 190, 47, 0.08);
     border-left: 4px solid var(--yellow);
@@ -610,7 +262,6 @@ body {
     font-size: 12px;
 }
 
-/* Warning box - Glassmorphism */
 .warning {
     background: rgba(255, 107, 107, 0.15);
     border: 1px solid var(--status-red);
@@ -632,7 +283,9 @@ body {
     color: var(--white);
 }
 
-/* Code blocks - Dark */
+/* ============================================================
+   Code Blocks
+   ============================================================ */
 code {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -659,7 +312,79 @@ pre code {
     color: var(--white);
 }
 
-/* Changelog Modal - Glassmorphism */
+/* ============================================================
+   Header Actions (positioned right like header-right)
+   ============================================================ */
+.header-actions {
+    position: absolute;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ============================================================
+   Design System Button (Header)
+   ============================================================ */
+.btn-design-system {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border);
+    color: var(--white);
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.btn-design-system:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(253, 190, 47, 0.3);
+    color: var(--yellow);
+}
+
+.btn-design-system svg {
+    stroke: currentColor;
+}
+
+/* ============================================================
+   Changelog Button (Header)
+   ============================================================ */
+.btn-changelog {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--yellow);
+    border: none;
+    color: var(--black);
+    font-family: 'TT Firs Neue', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.btn-changelog:hover {
+    background: var(--yellow-hover);
+}
+
+.btn-changelog img {
+    width: 14px;
+    height: 14px;
+    filter: brightness(0);
+}
+
+/* ============================================================
+   Changelog Modal
+   ============================================================ */
 .changelog-modal {
     position: fixed;
     top: 0;
@@ -876,7 +601,9 @@ pre code {
     background: var(--gray);
 }
 
-/* Changelog Split Layout - Glassmorphism */
+/* ============================================================
+   Changelog Split Layout
+   ============================================================ */
 .changelog-dialog-split {
     max-width: 1000px;
     width: 95%;
@@ -1027,120 +754,9 @@ pre code {
     font-size: 14px;
 }
 
-/* Scrollbar - Dark */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
-}
-
-/* Modal - Glassmorphism */
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-}
-
-.modal.active {
-    display: flex;
-}
-
-.modal-dialog {
-    background: rgba(30, 30, 30, 0.85);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
-    width: 90%;
-    max-width: 400px;
-    max-height: 90vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.modal-header {
-    padding: 20px 24px;
-    border-bottom: 1px solid var(--glass-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--white);
-}
-
-.modal-close {
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    padding: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s ease;
-}
-
-.modal-close:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.modal-close img {
-    width: 20px;
-    height: 20px;
-    filter: brightness(0) invert(1);
-}
-
-.modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px;
-    background: rgba(50, 50, 50, 0.5);
-}
-
-.modal-body p {
-    font-size: 13px;
-    color: var(--white);
-    line-height: 1.6;
-    margin-bottom: 12px;
-}
-
-.modal-body a {
-    color: var(--yellow);
-    word-break: break-all;
-    transition: opacity 0.2s ease;
-}
-
-.modal-body a:hover {
-    opacity: 0.8;
-}
-
-/* Responsive */
+/* ============================================================
+   Responsive
+   ============================================================ */
 @media (max-width: 1024px) {
     .left-panel {
         display: none;
@@ -1152,43 +768,17 @@ pre code {
 }
 
 @media (max-width: 768px) {
-    .sidebar {
-        width: 60px;
-    }
-
-    .menu-item span {
-        display: none;
-    }
-
-    .version-info .version-text-full,
-    .version-info .version-number {
-        display: none;
-    }
-
-    .version-info .version-icon {
-        position: static;
-        transform: none;
-    }
-
-    .global-header {
-        padding: 0 20px;
-    }
-
-    .header-title {
-        font-size: 14px;
-    }
-
-    .btn-changelog {
-        padding: 8px 14px;
-        font-size: 12px;
-    }
-
     .doc-container {
         padding: 20px;
     }
 
     .doc-header h1 {
         font-size: 20px;
+    }
+
+    .btn-changelog {
+        padding: 8px 14px;
+        font-size: 12px;
     }
 
     .changelog-dialog-split {
@@ -1212,5 +802,920 @@ pre code {
 
     .changelog-search {
         max-width: none;
+    }
+}
+
+/* ============================================================
+   Design System Section - Live Component Examples
+   ============================================================ */
+
+/* Design System Block (container for examples) */
+.ds-block {
+    background: rgba(30, 30, 30, 0.6);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+/* Colors Grid */
+.ds-colors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.ds-color-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ds-color-swatch {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.ds-color-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ds-color-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--white);
+}
+
+.ds-color-info code {
+    font-size: 11px;
+    color: var(--gray-light);
+    background: transparent;
+    padding: 0;
+}
+
+/* Component Row */
+.ds-component-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Code Hint */
+.ds-code-hint {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--glass-border);
+    font-size: 11px;
+    color: var(--gray);
+}
+
+.ds-code-hint code {
+    background: rgba(253, 190, 47, 0.1);
+    color: var(--yellow);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+/* Colors Grid - 5 columns variant */
+.ds-colors-5 {
+    grid-template-columns: repeat(5, 1fr);
+}
+
+/* Color variable name */
+.ds-color-var {
+    font-size: 10px;
+    color: var(--gray);
+    font-family: monospace;
+}
+
+.ds-color-role {
+    font-size: 10px;
+    color: var(--gray);
+}
+
+/* Status Examples */
+.ds-status-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 16px;
+}
+
+.ds-status-example {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--gray-light);
+}
+
+.ds-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Status Badges */
+.ds-status-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ds-badge-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Glassmorphism Examples */
+.ds-glass-examples {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.ds-glass-card {
+    padding: 16px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    backdrop-filter: blur(16px);
+}
+
+.ds-glass-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--white);
+}
+
+.ds-glass-card code {
+    font-size: 10px;
+    color: var(--gray);
+    background: transparent;
+    padding: 0;
+}
+
+/* Hint text */
+.ds-hint {
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 12px;
+}
+
+/* ============================================
+   DESIGN SYSTEM BUTTON DEMOS (Isolated)
+   Using .ds-btn to avoid conflicts with .btn
+   ============================================ */
+
+/* Base demo button */
+.ds-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+/* Primary button - default */
+.ds-btn-primary {
+    background: #fdbe2f;
+    color: #0a0a0a;
+}
+
+/* Primary button - hover */
+.ds-btn-primary:hover {
+    background: #e5a829;
+    box-shadow: 0 6px 20px rgba(253, 190, 47, 0.5);
+}
+
+/* Primary button - active */
+.ds-btn-primary:active {
+    background: #c99a24;
+    transform: scale(0.96);
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Secondary button - default */
+.ds-btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f2f2f2;
+}
+
+/* Secondary button - hover */
+.ds-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
+}
+
+/* Secondary button - active */
+.ds-btn-secondary:active {
+    background: rgba(255, 255, 255, 0.05);
+    transform: scale(0.96);
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Ghost button - default */
+.ds-btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #f2f2f2;
+}
+
+/* Ghost button - hover */
+.ds-btn-ghost:hover {
+    background: rgba(253, 190, 47, 0.12);
+    border-color: #fdbe2f;
+    color: #fdbe2f;
+}
+
+/* Ghost button - active */
+.ds-btn-ghost:active {
+    background: rgba(253, 190, 47, 0.2);
+    border-color: #fdbe2f;
+    color: #fdbe2f;
+    transform: scale(0.96);
+}
+
+/* Disabled state - no hover/active effects */
+.ds-btn-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Loading state - no hover/active effects */
+.ds-btn-loading {
+    min-width: 90px;
+    cursor: wait;
+    pointer-events: none;
+}
+
+/* Badges for demo */
+.ds-block .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.ds-block .badge-active {
+    background: rgba(81, 207, 102, 0.15);
+    color: var(--status-green);
+}
+
+.ds-block .badge-pending {
+    background: rgba(255, 146, 43, 0.15);
+    color: var(--status-orange);
+}
+
+.ds-block .badge-inactive {
+    background: rgba(255, 107, 107, 0.15);
+    color: var(--status-red);
+}
+
+.ds-block .badge-info {
+    background: rgba(116, 192, 252, 0.15);
+    color: var(--status-blue);
+}
+
+.ds-block .role-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--gray-light);
+}
+
+.ds-block .role-badge.role-admin {
+    background: rgba(255, 107, 107, 0.15);
+    color: var(--status-red);
+}
+
+.ds-block .role-badge.role-leader {
+    background: rgba(253, 190, 47, 0.15);
+    color: var(--yellow);
+}
+
+.ds-block .role-badge.role-assistant {
+    background: rgba(80, 120, 200, 0.15);
+    color: #6699cc;
+}
+
+/* Form Demo */
+.ds-form-demo {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.ds-block .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ds-block .form-group label {
+    font-size: 11px;
+    color: var(--gray-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ds-block .form-input,
+.ds-block .form-select {
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--white);
+    transition: all 0.2s;
+}
+
+.ds-block .form-input:focus,
+.ds-block .form-select:focus {
+    outline: none;
+    border-color: rgba(253, 190, 47, 0.4);
+}
+
+.ds-block .form-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    color: #6b6b6b;
+}
+
+/* Когда выбрана реальная опция - белый текст */
+.ds-block .form-select:valid {
+    color: #f2f2f2;
+}
+
+.ds-block .form-select option {
+    background: #1a1a1a;
+    color: #6b6b6b;
+}
+
+.ds-block .form-input::placeholder {
+    color: var(--gray);
+}
+
+.ds-block .search-input-wrapper {
+    position: relative;
+}
+
+.ds-block .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray);
+}
+
+.ds-block .search-input {
+    padding-left: 36px;
+}
+
+/* Card Demo */
+.ds-cards-demo {
+    display: flex;
+    gap: 16px;
+}
+
+.ds-card-example {
+    flex: 1;
+    max-width: 300px;
+    background: rgba(40, 40, 40, 0.5);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.ds-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: rgba(30, 30, 30, 0.8);
+    border-bottom: 1px solid var(--glass-border);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ds-card-body {
+    padding: 16px;
+}
+
+.ds-card-body p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--gray-light);
+    line-height: 1.5;
+}
+
+/* Typography Demo */
+.ds-typography {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ds-type-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.ds-type-label {
+    width: 140px;
+    font-size: 11px;
+    color: var(--gray);
+    flex-shrink: 0;
+}
+
+.ds-type-example {
+    color: var(--white);
+}
+
+/* Spacing Demo */
+.ds-spacing-demo {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ds-spacing-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.ds-spacing-label {
+    width: 100px;
+    font-size: 12px;
+    color: var(--gray-light);
+    flex-shrink: 0;
+}
+
+.ds-spacing-row code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--white);
+}
+
+.ds-radius-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 36px;
+    background: rgba(253, 190, 47, 0.15);
+    border: 1px solid var(--yellow);
+    font-size: 10px;
+    color: var(--yellow);
+}
+
+/* Variables Demo */
+.ds-variables {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ds-variables code {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--gray-light);
+}
+
+/* Colors 4-grid layout */
+.ds-colors-4 {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.ds-color-large .ds-color-swatch {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+}
+
+.ds-color-role {
+    font-size: 10px;
+    color: var(--gray);
+    margin-top: 2px;
+}
+
+/* Buttons Section with States */
+.ds-buttons-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ds-buttons-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ds-state-label {
+    width: 85px;
+    font-size: 11px;
+    color: var(--gray);
+    flex-shrink: 0;
+}
+
+
+/* Spinner */
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--yellow);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Spinner dark (for light backgrounds like yellow buttons) */
+.spinner-dark,
+.ds-btn-primary .spinner,
+.btn-primary .spinner {
+    border-color: rgba(0, 0, 0, 0.2) !important;
+    border-top-color: #0a0a0a !important;
+}
+
+.spinner-sm {
+    width: 12px;
+    height: 12px;
+    border-width: 1.5px;
+}
+
+.spinner-lg {
+    width: 24px;
+    height: 24px;
+    border-width: 3px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.ds-spinner-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 24px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.ds-spinner-label {
+    font-size: 11px;
+    color: var(--gray);
+}
+
+.ds-spinner-block {
+    flex-direction: row;
+    gap: 12px;
+    padding: 20px 30px;
+    background: rgba(30, 30, 30, 0.8);
+}
+
+.ds-spinner-block span:last-child {
+    font-size: 13px;
+    color: var(--gray-light);
+}
+
+/* Scrollbar Demo */
+.ds-scrollbar-demo {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.ds-scroll-container {
+    width: 200px;
+    height: 120px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.ds-scroll-content p {
+    margin: 0;
+    padding: 6px 0;
+    font-size: 12px;
+    color: var(--gray-light);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.ds-scroll-content p:last-child {
+    border-bottom: none;
+}
+
+.ds-scroll-specs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ds-scroll-spec {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ds-spec-label {
+    width: 60px;
+    font-size: 11px;
+    color: var(--gray);
+}
+
+.ds-spec-value {
+    font-size: 11px;
+    font-family: monospace;
+    color: var(--white);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* Icons Modal */
+.ds-icons-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border);
+    color: var(--white);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.ds-icons-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(253, 190, 47, 0.3);
+    color: var(--yellow);
+}
+
+.icons-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+}
+
+.icons-modal.active {
+    display: flex;
+}
+
+.icons-modal-content {
+    background: #1e1e1e;
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: translateZ(0);
+}
+
+.icons-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    background: rgba(20, 20, 20, 0.8);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.icons-modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.icons-modal-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--gray-light);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.icons-modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+}
+
+.icons-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.icons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+}
+
+.icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.icon-item:hover {
+    background: rgba(253, 190, 47, 0.1);
+    border-color: rgba(253, 190, 47, 0.3);
+}
+
+.icon-item img {
+    width: 24px;
+    height: 24px;
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+}
+
+.icon-item:hover img {
+    opacity: 1;
+    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg);
+}
+
+.icon-item span {
+    font-size: 10px;
+    color: var(--gray);
+    text-align: center;
+    word-break: break-word;
+}
+
+.icon-item:hover span {
+    color: var(--yellow);
+}
+
+/* Icons Categories in Design System */
+.ds-icons-categories {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ds-icons-category {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+}
+
+.ds-icons-cat-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--white);
+}
+
+.ds-icons-cat-count {
+    font-size: 11px;
+    color: var(--gray-light);
+}
+
+.ds-icons-cat-path code {
+    font-size: 10px;
+    color: var(--gray);
+    background: transparent;
+    padding: 0;
+}
+
+/* Icons Modal Sections */
+.icons-section {
+    margin-bottom: 24px;
+}
+
+.icons-section:last-child {
+    margin-bottom: 0;
+}
+
+.icons-section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--white);
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.icons-section-path {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--gray);
+    font-family: monospace;
+}
+
+/* Design System Responsive */
+@media (max-width: 768px) {
+    .ds-colors-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ds-colors-4 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ds-colors-5 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ds-glass-examples {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ds-form-demo {
+        grid-template-columns: 1fr;
+    }
+
+    .ds-component-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .ds-buttons-row {
+        flex-wrap: wrap;
+    }
+
+    .ds-scrollbar-demo {
+        flex-direction: column;
+    }
+
+    .ds-status-examples {
+        gap: 12px;
     }
 }

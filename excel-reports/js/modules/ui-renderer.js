@@ -146,16 +146,16 @@ class UIRenderer {
                 <div class="step-header-nav">
                     <div class="nav-left">
                         ${prevStep ? `
-                            <button class="btn-nav btn-back" onclick="excelApp.navigateBack()">
-                                ← Назад
+                            <button class="btn btn-ghost" onclick="excelApp.navigateBack()">
+                                Назад
                             </button>
                         ` : ''}
                     </div>
                     <h2>${config.name}</h2>
                     <div class="nav-right">
                         ${nextStep && isCompleted ? `
-                            <button class="btn-nav btn-next" onclick="excelApp.navigateNext()">
-                                Далее →
+                            <button class="btn btn-ghost" onclick="excelApp.navigateNext()">
+                                Далее
                             </button>
                         ` : ''}
                     </div>
@@ -324,15 +324,14 @@ class UIRenderer {
                 <div class="step-header-nav">
                     <div class="nav-left">
                         ${prevStep ? `
-                            <button class="btn-nav btn-back" onclick="excelApp.navigateBack()">
-                                ← Назад
+                            <button class="btn btn-ghost" onclick="excelApp.navigateBack()">
+                                Назад
                             </button>
                         ` : ''}
                     </div>
                     <h2>Обработка данных</h2>
                     <div class="nav-right">
-                        <button class="btn-nav btn-reset" onclick="excelApp.showResetModal()">
-                            <img src="icons/sync.svg" width="14" height="14" alt="Сброс">
+                        <button class="btn btn-ghost" onclick="excelApp.showResetModal()">
                             Начать заново
                         </button>
                     </div>
@@ -367,8 +366,8 @@ class UIRenderer {
                 </div>
 
                 <div class="process-actions">
-                    <button class="btn btn-primary" onclick="excelApp.processFiles()">
-                        <span>🚀 Обработать и экспортировать</span>
+                    <button class="btn btn-ghost" onclick="excelApp.processFiles()">
+                        Обработать и экспортировать
                     </button>
                 </div>
             `;

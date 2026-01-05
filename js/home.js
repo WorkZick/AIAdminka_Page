@@ -25,6 +25,11 @@ const homeApp = {
             this.loadTickets();
         }
 
+        // Initialize RoleGuard for role-based UI
+        if (typeof RoleGuard !== 'undefined') {
+            await RoleGuard.init();
+        }
+
         // Setup image upload handler
         const imageInput = document.getElementById('imageInput');
         if (imageInput) {
@@ -49,19 +54,36 @@ const homeApp = {
     // ============ SIDEBAR ============
 
     toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('collapsed');
-        localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+        // Delegate to SidebarController if available
+        if (typeof SidebarController !== 'undefined') {
+            SidebarController.toggle();
+        } else {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+        }
     },
 
     // ============ ABOUT MODAL ============
 
     showAbout() {
-        document.getElementById('aboutModal').classList.add('active');
+        // Delegate to global function from about-modal component
+        if (typeof showAboutModal === 'function') {
+            showAboutModal();
+        } else {
+            const modal = document.getElementById('aboutModal');
+            if (modal) modal.classList.add('active');
+        }
     },
 
     closeAbout() {
-        document.getElementById('aboutModal').classList.remove('active');
+        // Delegate to global function from about-modal component
+        if (typeof closeAboutModal === 'function') {
+            closeAboutModal();
+        } else {
+            const modal = document.getElementById('aboutModal');
+            if (modal) modal.classList.remove('active');
+        }
     },
 
     // ============ TICKETS ============

@@ -131,7 +131,7 @@ const partnersApp = {
     },
 
     showError(message) {
-        alert(message);
+        Toast.error(message);
     },
 
     // ==================== METHODS MANAGEMENT ====================
@@ -149,6 +149,7 @@ const partnersApp = {
         document.getElementById('methodsModal').classList.add('active');
         document.getElementById('newMethodInput').value = '';
         this.renderMethodsList();
+        this.updateMethodsCount();
     },
 
     closeMethodsDialog() {
@@ -156,18 +157,25 @@ const partnersApp = {
         this.populateMethodsSelect();
     },
 
+    updateMethodsCount() {
+        const badge = document.getElementById('methodsCountBadge');
+        if (badge) {
+            badge.textContent = this.getMethods().length;
+        }
+    },
+
     async addMethod() {
         const input = document.getElementById('newMethodInput');
         const name = input.value.trim();
 
         if (!name) {
-            alert('Введите название метода');
+            Toast.warning('Введите название метода');
             return;
         }
 
         const methods = this.getMethods();
         if (methods.some(m => m.name.toLowerCase() === name.toLowerCase())) {
-            alert('Метод с таким названием уже существует');
+            Toast.warning('Метод с таким названием уже существует');
             return;
         }
 
@@ -176,18 +184,19 @@ const partnersApp = {
             this.cachedMethods.push({ id: result.id, name: name });
             input.value = '';
             this.renderMethodsList();
+            this.updateMethodsCount();
+            input.focus();
         } catch (error) {
             this.showError('Ошибка добавления метода: ' + error.message);
         }
     },
 
     async deleteMethod(methodId) {
-        if (!confirm('Удалить этот метод?')) return;
-
         try {
             await CloudStorage.deleteMethod(methodId);
             this.cachedMethods = this.cachedMethods.filter(m => m.id !== methodId);
             this.renderMethodsList();
+            this.updateMethodsCount();
         } catch (error) {
             this.showError('Ошибка удаления метода: ' + error.message);
         }
@@ -201,17 +210,25 @@ const partnersApp = {
         const item = document.querySelector(`[data-method-id="${methodId}"]`);
         if (!item) return;
 
+        item.classList.add('editing');
         item.innerHTML = `
-            <input type="text" class="method-item-input" id="editMethodInput_${methodId}" value="${this.escapeHtml(method.name)}">
-            <button class="method-item-btn" onclick="partnersApp.saveEditMethod('${methodId}')" title="Сохранить">
-                <img src="icons/done.svg" width="16" height="16" alt="Сохранить">
-            </button>
-            <button class="method-item-btn" onclick="partnersApp.renderMethodsList()" title="Отмена">
-                <img src="icons/cross.svg" width="16" height="16" alt="Отмена">
-            </button>
+            <input type="text" class="method-item-input" id="editMethodInput_${methodId}"
+                   value="${this.escapeHtml(method.name)}"
+                   onkeypress="if(event.key==='Enter')partnersApp.saveEditMethod('${methodId}')"
+                   onkeydown="if(event.key==='Escape')partnersApp.renderMethodsList()">
+            <div class="method-edit-actions">
+                <button class="method-edit-btn save" onclick="partnersApp.saveEditMethod('${methodId}')" title="Сохранить">
+                    <img src="../shared/icons/done.svg" alt="Сохранить">
+                </button>
+                <button class="method-edit-btn cancel" onclick="partnersApp.renderMethodsList()" title="Отмена">
+                    <img src="../shared/icons/cross.svg" alt="Отмена">
+                </button>
+            </div>
         `;
 
-        document.getElementById(`editMethodInput_${methodId}`).focus();
+        const input = document.getElementById(`editMethodInput_${methodId}`);
+        input.focus();
+        input.select();
     },
 
     async saveEditMethod(methodId) {
@@ -219,7 +236,7 @@ const partnersApp = {
         const newName = input.value.trim();
 
         if (!newName) {
-            alert('Название не может быть пустым');
+            Toast.warning('Название не может быть пустым');
             return;
         }
 
@@ -228,7 +245,7 @@ const partnersApp = {
         if (methodIndex === -1) return;
 
         if (methods.some((m, i) => i !== methodIndex && m.name.toLowerCase() === newName.toLowerCase())) {
-            alert('Метод с таким названием уже существует');
+            Toast.warning('Метод с таким названием уже существует');
             return;
         }
 
@@ -261,19 +278,27 @@ const partnersApp = {
         const methods = this.getMethods();
 
         if (methods.length === 0) {
-            container.innerHTML = '<div class="methods-empty">Нет добавленных методов</div>';
+            container.innerHTML = `
+                <div class="methods-empty">
+                    <img class="methods-empty-icon" src="../shared/icons/partners.svg" alt="">
+                    <span class="methods-empty-text">Нет методов</span>
+                    <span class="methods-empty-hint">Добавьте первый метод выше</span>
+                </div>
+            `;
             return;
         }
 
         container.innerHTML = methods.map(method => `
             <div class="method-item" data-method-id="${method.id}">
                 <span class="method-item-name">${this.escapeHtml(method.name)}</span>
-                <button class="method-item-btn" onclick="partnersApp.startEditMethod('${method.id}')" title="Редактировать">
-                    <img src="icons/pen.svg" width="16" height="16" alt="Редактировать">
-                </button>
-                <button class="method-item-btn delete" onclick="partnersApp.deleteMethod('${method.id}')" title="Удалить">
-                    <img src="icons/cross.svg" width="16" height="16" alt="Удалить">
-                </button>
+                <div class="method-item-actions">
+                    <button class="method-action-btn" onclick="partnersApp.startEditMethod('${method.id}')" title="Редактировать">
+                        <img src="../shared/icons/pen.svg" alt="Редактировать">
+                    </button>
+                    <button class="method-action-btn delete" onclick="partnersApp.deleteMethod('${method.id}')" title="Удалить">
+                        <img src="../shared/icons/cross.svg" alt="Удалить">
+                    </button>
+                </div>
             </div>
         `).join('');
     },
@@ -411,7 +436,7 @@ const partnersApp = {
                 html += `<th data-column="${col.id}">
                     <div class="sort-header" onclick="partnersApp.sortBy('${col.id}')">
                         ${this.escapeHtml(col.label)}
-                        <img src="icons/filter.svg" width="16" height="16" alt="Сортировка">
+                        <img src="../shared/icons/filter.svg" width="16" height="16" alt="Сортировка">
                     </div>
                 </th>`;
             } else {
@@ -497,7 +522,7 @@ const partnersApp = {
 
         const visibleCount = columns.filter(c => c.visible).length;
         if (!column.visible && visibleCount >= this.maxVisibleColumns) {
-            alert(`Максимум ${this.maxVisibleColumns} колонок. Отключите одну из текущих колонок.`);
+            Toast.warning(`Максимум ${this.maxVisibleColumns} колонок. Отключите одну из текущих колонок.`);
             return;
         }
 
@@ -560,7 +585,7 @@ const partnersApp = {
 
         switch (columnId) {
             case 'avatar':
-                return `<td data-column="avatar"><div class="partner-avatar"></div></td>`;
+                return `<td data-column="avatar"><div class="partner-avatar"><img class="avatar-placeholder" src="../shared/icons/partners.svg" alt=""></div></td>`;
             case 'method':
                 return `<td data-column="method">${this.escapeHtml(partner.method || '')}</td>`;
             case 'subagent':
@@ -629,8 +654,8 @@ const partnersApp = {
                 });
 
                 rowHtml += `
-                    <td>
-                        <img class="row-arrow" src="icons/arrow.svg" width="20" height="20" alt="Открыть" style="transform: rotate(${this.selectedPartnerId === partner.id ? '180deg' : '0deg'}); transition: transform 0.2s ease;">
+                    <td class="col-arrow">
+                        <img class="row-arrow" src="../shared/icons/arrow.svg" alt="">
                     </td>
                 `;
 
@@ -639,6 +664,8 @@ const partnersApp = {
                 if (isValidAvatar) {
                     const avatarDiv = tr.querySelector('.partner-avatar');
                     if (avatarDiv) {
+                        const placeholder = avatarDiv.querySelector('.avatar-placeholder');
+                        if (placeholder) placeholder.style.display = 'none';
                         const img = document.createElement('img');
                         img.src = avatar;
                         img.alt = '';
@@ -663,6 +690,12 @@ const partnersApp = {
 
         const uniqueMethods = new Set(partners.map(p => p.method).filter(Boolean));
         document.getElementById('methodsCount').textContent = uniqueMethods.size;
+
+        // Update status counts for header badges
+        const openCount = partners.filter(p => (p.status || 'Открыт') === 'Открыт').length;
+        const closedCount = partners.filter(p => p.status === 'Закрыт').length;
+        document.getElementById('openCount').textContent = openCount;
+        document.getElementById('closedCount').textContent = closedCount;
     },
 
     sortBy(field) {
@@ -699,11 +732,15 @@ const partnersApp = {
     deselectPartner() {
         this.selectedPartnerId = null;
         this.render();
-        this.showStatsPanel();
+        this.showHintPanel();
     },
 
-    showStatsPanel() {
-        document.getElementById('statsPanel').style.display = 'flex';
+    closeCard() {
+        this.deselectPartner();
+    },
+
+    showHintPanel() {
+        document.getElementById('hintPanel').style.display = 'flex';
         document.getElementById('partnerCard').style.display = 'none';
         document.getElementById('partnerForm').style.display = 'none';
     },
@@ -713,19 +750,22 @@ const partnersApp = {
         const partner = partners.find(p => p.id === id);
         if (!partner) return;
 
-        document.getElementById('statsPanel').style.display = 'none';
+        document.getElementById('hintPanel').style.display = 'none';
         document.getElementById('partnerCard').style.display = 'flex';
         document.getElementById('partnerForm').style.display = 'none';
 
         const cardAvatar = document.getElementById('cardAvatar');
+        const cardAvatarPlaceholder = document.getElementById('cardAvatarPlaceholder');
         // Используем avatarFileId для получения URL из Google Drive
         const avatarUrl = partner.avatarFileId ? CloudStorage.getImageUrl(partner.avatarFileId) : '';
         if (avatarUrl) {
             cardAvatar.src = avatarUrl;
             cardAvatar.style.display = 'block';
+            if (cardAvatarPlaceholder) cardAvatarPlaceholder.style.display = 'none';
         } else {
             cardAvatar.src = '';
             cardAvatar.style.display = 'none';
+            if (cardAvatarPlaceholder) cardAvatarPlaceholder.style.display = 'flex';
         }
 
         document.getElementById('cardFullName').textContent = partner.subagent || '-';
@@ -797,7 +837,7 @@ const partnersApp = {
         const isOpen = dropdown.style.display === 'none';
         dropdown.style.display = isOpen ? 'flex' : 'none';
         if (arrow) {
-            arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+            arrow.style.transform = isOpen ? 'rotate(-90deg)' : 'rotate(0deg)';
         }
     },
 
@@ -824,7 +864,7 @@ const partnersApp = {
 
             document.getElementById('cardStatusDropdown').style.display = 'none';
             const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
-            if (arrow) arrow.style.transform = 'rotate(-90deg)';
+            if (arrow) arrow.style.transform = 'rotate(0deg)';
 
             this.render();
         } catch (error) {
@@ -838,7 +878,7 @@ const partnersApp = {
         const isOpen = dropdown.style.display === 'none';
         dropdown.style.display = isOpen ? 'flex' : 'none';
         if (arrow) {
-            arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+            arrow.style.transform = isOpen ? 'rotate(-90deg)' : 'rotate(0deg)';
         }
     },
 
@@ -850,7 +890,7 @@ const partnersApp = {
 
         document.getElementById('formStatusDropdown').style.display = 'none';
         const arrow = document.querySelector('#formStatusBadge .status-dropdown-icon');
-        if (arrow) arrow.style.transform = 'rotate(-90deg)';
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
     },
 
     showAddModal() {
@@ -860,7 +900,7 @@ const partnersApp = {
         this.formStatus = 'Открыт';
         this.render();
 
-        document.getElementById('statsPanel').style.display = 'none';
+        document.getElementById('hintPanel').style.display = 'none';
         document.getElementById('partnerCard').style.display = 'none';
         document.getElementById('partnerForm').style.display = 'flex';
 
@@ -871,7 +911,7 @@ const partnersApp = {
         document.getElementById('formTemplateSelector').style.display = 'flex';
         document.getElementById('templateFieldsContainer').style.display = 'none';
         document.getElementById('formBody').style.display = 'block';
-        document.getElementById('formCounters').style.display = 'flex';
+        document.getElementById('formCounters').style.display = 'block';
         document.getElementById('formCounters').classList.remove('disabled');
         document.querySelector('.form-partner-info').style.display = 'flex';
 
@@ -931,17 +971,18 @@ const partnersApp = {
         this.isTemplateMode = false;
         this.formStatus = partner.status || 'Открыт';
 
-        document.getElementById('statsPanel').style.display = 'none';
+        document.getElementById('hintPanel').style.display = 'none';
         document.getElementById('partnerCard').style.display = 'none';
         document.getElementById('partnerForm').style.display = 'flex';
 
         document.getElementById('formTitle').textContent = 'Редактировать партнера';
         document.getElementById('formSaveBtnText').textContent = 'Сохранить изменения';
+        document.getElementById('formDeleteBtn').style.display = 'inline-block';
 
         document.getElementById('formTemplateSelector').style.display = 'none';
         document.getElementById('templateFieldsContainer').style.display = 'none';
         document.getElementById('formBody').style.display = 'block';
-        document.getElementById('formCounters').style.display = 'flex';
+        document.getElementById('formCounters').style.display = 'block';
         document.getElementById('formCounters').classList.remove('disabled');
         document.querySelector('.form-partner-info').style.display = 'flex';
 
@@ -1015,11 +1056,12 @@ const partnersApp = {
         this.isTemplateMode = false;
         this.editingTemplateId = null;
 
+        document.getElementById('templateFieldsSection').style.display = 'none';
         document.getElementById('templateFieldsContainer').style.display = 'none';
 
         document.getElementById('formBody').style.display = 'block';
         const formCounters = document.getElementById('formCounters');
-        formCounters.style.display = 'flex';
+        formCounters.style.display = 'block';
         formCounters.classList.remove('disabled');
 
         document.querySelector('.form-partner-info').style.display = 'flex';
@@ -1057,13 +1099,14 @@ const partnersApp = {
         if (this.selectedPartnerId) {
             this.showPartnerCard(this.selectedPartnerId);
         } else {
-            this.showStatsPanel();
+            this.showHintPanel();
         }
     },
 
     removeDynamicFields() {
-        const formBody = document.getElementById('formBody');
-        formBody.innerHTML = '';
+        // Remove dynamic custom fields and template fields
+        const dynamicFields = document.querySelectorAll('[data-custom-field="true"], [data-template-field="true"]');
+        dynamicFields.forEach(field => field.remove());
     },
 
     handleAvatarUpload(event) {
@@ -1188,7 +1231,7 @@ const partnersApp = {
         const comp = parseInt(document.getElementById('formComp').value) || 0;
 
         if (!subagent || !subagentId || !method) {
-            alert('Пожалуйста, заполните все обязательные поля (Субагент, ID Субагента, Метод)');
+            Toast.warning('Пожалуйста, заполните все обязательные поля (Субагент, ID Субагента, Метод)');
             return;
         }
 
@@ -1314,7 +1357,7 @@ const partnersApp = {
             this.selectedPartnerId = null;
             this.cleanupUnusedColumns();
             this.render();
-            this.showStatsPanel();
+            this.showHintPanel();
         } catch (error) {
             this.showError('Ошибка удаления: ' + error.message);
         } finally {
@@ -1348,7 +1391,7 @@ const partnersApp = {
             this.selectedPartnerId = null;
             this.cleanupUnusedColumns();
             this.render();
-            this.showStatsPanel();
+            this.showHintPanel();
         } catch (error) {
             this.showError('Ошибка удаления: ' + error.message);
         } finally {
@@ -1429,7 +1472,7 @@ const partnersApp = {
         const templateList = Object.values(this.cachedTemplates);
 
         if (templateList.length === 0) {
-            alert('Нет шаблонов для удаления');
+            Toast.warning('Нет шаблонов для удаления');
             this.restoreTemplateSelection();
             return;
         }
@@ -1450,7 +1493,7 @@ const partnersApp = {
         const index = parseInt(input) - 1;
 
         if (isNaN(index) || index < 0 || index >= templateList.length) {
-            alert('Неверный номер шаблона');
+            Toast.warning('Неверный номер шаблона');
             this.restoreTemplateSelection();
             return;
         }
@@ -1466,7 +1509,7 @@ const partnersApp = {
                 }
                 delete this.cachedTemplates[templateToDelete.id];
                 this.updateTemplateList();
-                alert('Шаблон удален!');
+                Toast.success('Шаблон удален!');
             } catch (error) {
                 this.showError('Ошибка удаления шаблона: ' + error.message);
             } finally {
@@ -1481,7 +1524,7 @@ const partnersApp = {
         const templateList = Object.values(this.cachedTemplates);
 
         if (templateList.length === 0) {
-            alert('Нет шаблонов для переименования');
+            Toast.warning('Нет шаблонов для переименования');
             this.restoreTemplateSelection();
             return;
         }
@@ -1503,7 +1546,7 @@ const partnersApp = {
         const index = parseInt(input) - 1;
 
         if (isNaN(index) || index < 0 || index >= templateList.length) {
-            alert('Неверный номер шаблона');
+            Toast.warning('Неверный номер шаблона');
             this.restoreTemplateSelection();
             return;
         }
@@ -1532,7 +1575,7 @@ const partnersApp = {
 
             await CloudStorage.saveTemplate(this.cachedTemplates[templateToRename.id]);
             this.updateTemplateList();
-            alert('Шаблон обновлен!');
+            Toast.success('Шаблон обновлен!');
         } catch (error) {
             this.showError('Ошибка обновления шаблона: ' + error.message);
         } finally {
@@ -1544,7 +1587,7 @@ const partnersApp = {
         const templateList = Object.values(this.cachedTemplates);
 
         if (templateList.length === 0) {
-            alert('Нет шаблонов для редактирования');
+            Toast.warning('Нет шаблонов для редактирования');
             this.restoreTemplateSelection();
             return;
         }
@@ -1566,7 +1609,7 @@ const partnersApp = {
         const index = parseInt(input) - 1;
 
         if (isNaN(index) || index < 0 || index >= templateList.length) {
-            alert('Неверный номер шаблона');
+            Toast.warning('Неверный номер шаблона');
             this.restoreTemplateSelection();
             return;
         }
@@ -1585,7 +1628,7 @@ const partnersApp = {
         document.getElementById('formBody').style.display = 'none';
 
         const formCounters = document.getElementById('formCounters');
-        formCounters.style.display = 'flex';
+        formCounters.style.display = 'block';
         formCounters.classList.add('disabled');
         document.getElementById('formDep').value = '0';
         document.getElementById('formWith').value = '0';
@@ -1623,33 +1666,44 @@ const partnersApp = {
             formAvatar.style.pointerEvents = 'none';
         }
 
+        document.getElementById('templateFieldsSection').style.display = 'block';
         document.getElementById('templateFieldsContainer').style.display = 'block';
         document.getElementById('templateFieldsList').innerHTML = '';
 
         if (existingTemplate && existingTemplate.fields) {
             this.templateFields = existingTemplate.fields.map(f => ({...f}));
             existingTemplate.fields.forEach(field => {
-                const fieldHtml = `
-                    <div class="template-field-item" data-field-id="${field.id}">
-                        <input type="text" class="template-field-input" placeholder="Название поля" value="${this.escapeHtml(field.label)}"
-                            onchange="partnersApp.updateTemplateFieldLabel('${field.id}', this.value)">
-                        <select class="template-field-type" onchange="partnersApp.updateTemplateFieldType('${field.id}', this.value)">
-                            <option value="text" ${field.type === 'text' ? 'selected' : ''}>Текст</option>
-                            <option value="email" ${field.type === 'email' ? 'selected' : ''}>Email</option>
-                            <option value="tel" ${field.type === 'tel' ? 'selected' : ''}>Телефон</option>
-                            <option value="date" ${field.type === 'date' ? 'selected' : ''}>Дата</option>
-                            <option value="textarea" ${field.type === 'textarea' ? 'selected' : ''}>Текстовая область</option>
-                        </select>
-                        <button class="template-field-remove" onclick="partnersApp.removeTemplateField('${field.id}')">
-                            <img src="icons/cross.svg" width="16" height="16" alt="Удалить">
-                        </button>
-                    </div>
-                `;
+                const fieldHtml = this.createTemplateFieldHtml(field.id, field.label, field.type);
                 document.getElementById('templateFieldsList').insertAdjacentHTML('beforeend', fieldHtml);
             });
         } else {
             this.templateFields = [];
         }
+    },
+
+    createTemplateFieldHtml(fieldId, label = '', type = 'text') {
+        return `
+            <div class="template-field-row" data-field-id="${fieldId}">
+                <div class="form-field" style="flex: 2;">
+                    <label>Название поля</label>
+                    <input type="text" class="template-field-input" placeholder="Например: Telegram" value="${this.escapeHtml(label)}"
+                        onchange="partnersApp.updateTemplateFieldLabel('${fieldId}', this.value)">
+                </div>
+                <div class="form-field" style="flex: 1;">
+                    <label>Тип</label>
+                    <select class="template-field-type" onchange="partnersApp.updateTemplateFieldType('${fieldId}', this.value)">
+                        <option value="text" ${type === 'text' ? 'selected' : ''}>Текст</option>
+                        <option value="email" ${type === 'email' ? 'selected' : ''}>Email</option>
+                        <option value="tel" ${type === 'tel' ? 'selected' : ''}>Телефон</option>
+                        <option value="date" ${type === 'date' ? 'selected' : ''}>Дата</option>
+                        <option value="textarea" ${type === 'textarea' ? 'selected' : ''}>Многострочный</option>
+                    </select>
+                </div>
+                <button class="template-field-delete" onclick="partnersApp.removeTemplateField('${fieldId}')" title="Удалить">
+                    <img src="../shared/icons/cross.svg" width="14" height="14" alt="Удалить">
+                </button>
+            </div>
+        `;
     },
 
     addTemplateField() {
@@ -1663,24 +1717,12 @@ const partnersApp = {
 
         this.templateFields.push(field);
 
-        const fieldHtml = `
-            <div class="template-field-item" data-field-id="${fieldId}">
-                <input type="text" class="template-field-input" placeholder="Название поля"
-                    onchange="partnersApp.updateTemplateFieldLabel('${fieldId}', this.value)">
-                <select class="template-field-type" onchange="partnersApp.updateTemplateFieldType('${fieldId}', this.value)">
-                    <option value="text">Текст</option>
-                    <option value="email">Email</option>
-                    <option value="tel">Телефон</option>
-                    <option value="date">Дата</option>
-                    <option value="textarea">Текстовая область</option>
-                </select>
-                <button class="template-field-remove" onclick="partnersApp.removeTemplateField('${fieldId}')">
-                    <img src="icons/cross.svg" width="16" height="16" alt="Удалить">
-                </button>
-            </div>
-        `;
-
+        const fieldHtml = this.createTemplateFieldHtml(fieldId, '', 'text');
         document.getElementById('templateFieldsList').insertAdjacentHTML('beforeend', fieldHtml);
+
+        // Focus on the new field's input
+        const newField = document.querySelector(`[data-field-id="${fieldId}"] .template-field-input`);
+        if (newField) newField.focus();
     },
 
     updateTemplateFieldLabel(fieldId, label) {
@@ -1732,12 +1774,12 @@ const partnersApp = {
     async saveTemplate() {
         const invalidFields = this.templateFields.filter(f => !f.label.trim());
         if (invalidFields.length > 0) {
-            alert('Все поля должны иметь название');
+            Toast.warning('Все поля должны иметь название');
             return;
         }
 
         if (this.templateFields.length === 0) {
-            alert('Добавьте хотя бы одно поле для шаблона');
+            Toast.warning('Добавьте хотя бы одно поле для шаблона');
             return;
         }
 
@@ -1793,7 +1835,7 @@ const partnersApp = {
             }
 
             const formCounters = document.getElementById('formCounters');
-            formCounters.style.display = 'flex';
+            formCounters.style.display = 'block';
             formCounters.classList.remove('disabled');
 
             document.querySelector('.form-partner-info').style.display = 'flex';
@@ -1801,7 +1843,7 @@ const partnersApp = {
             this.closeForm();
             this.updateTemplateList();
 
-            alert('Шаблон сохранен!');
+            Toast.success('Шаблон сохранен!');
         } catch (error) {
             this.showError('Ошибка сохранения шаблона: ' + error.message);
         } finally {
@@ -1870,7 +1912,7 @@ const partnersApp = {
     showExportDialog() {
         const partners = this.getPartners();
         if (partners.length === 0) {
-            alert('Нет данных для экспорта');
+            Toast.warning('Нет данных для экспорта');
             return;
         }
 
@@ -2010,7 +2052,7 @@ const partnersApp = {
                 partner.with || 0,
                 partner.comp || 0,
                 partner.status || 'Открыт',
-                partner.avatar || ''
+                partner.avatarFileId ? CloudStorage.getImageUrl(partner.avatarFileId) : ''
             ];
 
             templateHeaders.forEach(header => {
@@ -2118,7 +2160,7 @@ const partnersApp = {
         this.isTemplateMode = true;
         this.showTemplateEditor();
 
-        extraColumns.forEach(colName => {
+        extraColumns.forEach((colName, index) => {
             const fieldId = 'templateField_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
             const field = {
                 id: fieldId,
@@ -2127,22 +2169,7 @@ const partnersApp = {
             };
             this.templateFields.push(field);
 
-            const fieldHtml = `
-                <div class="template-field-item" data-field-id="${fieldId}">
-                    <input type="text" class="template-field-input" placeholder="Название поля" value="${this.escapeHtml(colName)}"
-                        onchange="partnersApp.updateTemplateFieldLabel('${fieldId}', this.value)">
-                    <select class="template-field-type" onchange="partnersApp.updateTemplateFieldType('${fieldId}', this.value)">
-                        <option value="text" selected>Текст</option>
-                        <option value="email">Email</option>
-                        <option value="tel">Телефон</option>
-                        <option value="date">Дата</option>
-                        <option value="textarea">Текстовая область</option>
-                    </select>
-                    <button class="template-field-remove" onclick="partnersApp.removeTemplateField('${fieldId}')">
-                        <img src="icons/cross.svg" width="16" height="16" alt="Удалить">
-                    </button>
-                </div>
-            `;
+            const fieldHtml = this.createTemplateFieldHtml(fieldId, colName, 'text');
             document.getElementById('templateFieldsList').insertAdjacentHTML('beforeend', fieldHtml);
         });
     },
@@ -2304,7 +2331,7 @@ const partnersApp = {
 
                     document.getElementById('importBtn').disabled = false;
                 } catch (err) {
-                    alert('Ошибка чтения файла: ' + err.message);
+                    Toast.error('Ошибка чтения файла: ' + err.message);
                     document.getElementById('importPreview').style.display = 'none';
                     document.getElementById('importBtn').disabled = true;
                     this.resetFileLabel(jsonLabel, 'Выберите JSON файл', 'или перетащите сюда');
@@ -2456,7 +2483,7 @@ const partnersApp = {
 
                     document.getElementById('importBtn').disabled = false;
                 } catch (err) {
-                    alert('Ошибка чтения файла: ' + err.message);
+                    Toast.error('Ошибка чтения файла: ' + err.message);
                     document.getElementById('importPreview').style.display = 'none';
                     document.getElementById('importBtn').disabled = true;
                     this.resetFileLabel(excelLabel, 'Выберите Excel файл', '.xlsx или .xls');
@@ -2615,12 +2642,10 @@ const partnersApp = {
             this.render();
 
             // Показываем результат
-            let message = `Импорт завершен!\n\n`;
-            message += `Добавлено: ${added}\n`;
-            if (updated > 0) message += `Обновлено: ${updated}\n`;
-            if (methodsAdded > 0) message += `Новых методов: ${methodsAdded}\n`;
-            message += `\nСинхронизация с облаком идёт в фоне...`;
-            alert(message);
+            let message = `Импорт завершен! Добавлено: ${added}`;
+            if (updated > 0) message += `, обновлено: ${updated}`;
+            if (methodsAdded > 0) message += `, новых методов: ${methodsAdded}`;
+            Toast.success(message);
 
             // Добавляем операции в очередь фоновой синхронизации
             if (typeof SyncManager !== 'undefined') {
@@ -2680,7 +2705,7 @@ const partnersApp = {
                         <div class="import-progress-count" id="importProgressCount">0 / 0</div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn-secondary" onclick="partnersApp.cancelImport()">Отмена</button>
+                        <button class="btn btn-secondary" onclick="partnersApp.cancelImport()">Отмена</button>
                     </div>
                 </div>
             `;
@@ -2746,7 +2771,7 @@ const partnersApp = {
         const partners = this.getPartners();
 
         if (partners.length === 0) {
-            alert('Нет партнёров');
+            Toast.warning('Нет партнёров');
             return;
         }
 
@@ -2767,7 +2792,7 @@ const partnersApp = {
         }
 
         if (duplicateIds.length === 0) {
-            alert('Дубликатов не найдено');
+            Toast.info('Дубликатов не найдено');
             return;
         }
 
@@ -2791,7 +2816,7 @@ const partnersApp = {
 
             this.syncPartnersToLocalStorage();
             this.render();
-            alert(`Удалено дубликатов: ${deleted}`);
+            Toast.success(`Удалено дубликатов: ${deleted}`);
         } catch (error) {
             this.showError('Ошибка удаления: ' + error.message);
         } finally {
@@ -2847,15 +2872,15 @@ document.addEventListener('click', (e) => {
     const columnsSettings = document.querySelector('.columns-settings');
     const columnsMenu = document.getElementById('columnsMenu');
 
-    if (cardStatusBadge && !cardStatusBadge.contains(e.target)) {
+    if (cardStatusBadge && cardStatusDropdown && !cardStatusBadge.contains(e.target)) {
         cardStatusDropdown.style.display = 'none';
         const arrow = cardStatusBadge.querySelector('.status-dropdown-icon');
-        if (arrow) arrow.style.transform = 'rotate(-90deg)';
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
     }
-    if (formStatusBadge && !formStatusBadge.contains(e.target)) {
+    if (formStatusBadge && formStatusDropdown && !formStatusBadge.contains(e.target)) {
         formStatusDropdown.style.display = 'none';
         const arrow = formStatusBadge.querySelector('.status-dropdown-icon');
-        if (arrow) arrow.style.transform = 'rotate(-90deg)';
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
     }
     if (columnsSettings && columnsMenu && !columnsSettings.contains(e.target)) {
         columnsMenu.classList.remove('active');

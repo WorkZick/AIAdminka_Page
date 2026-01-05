@@ -51,7 +51,7 @@ const trafficCalc = {
     // Открыть калькулятор трафика
     openTrafficCalculator() {
         if (!this.currentReportData || this.currentReportData.length === 0) {
-            alert('Сначала сформируйте отчет');
+            Toast.warning('Нет данных для расчета');
             return;
         }
 
@@ -78,11 +78,9 @@ const trafficCalc = {
     // Переключить отображение подсказки
     toggleHelp() {
         const helpContent = document.getElementById('trafficHelpContent');
-        const helpBtn = document.querySelector('.help-toggle-btn');
-        if (helpContent && helpBtn) {
+        if (helpContent) {
             const isVisible = helpContent.style.display !== 'none';
             helpContent.style.display = isVisible ? 'none' : 'block';
-            helpBtn.classList.toggle('active', !isVisible);
         }
     },
 
@@ -157,7 +155,7 @@ const trafficCalc = {
     // Экспорт настроек калькулятора в JSON
     exportTrafficSettings() {
         if (!this.trafficSettings) {
-            alert('Настройки не загружены');
+            Toast.error('Настройки не загружены');
             return;
         }
 
@@ -218,15 +216,15 @@ const trafficCalc = {
                     // Перерисовываем форму с новыми настройками
                     this.renderTrafficSettings();
 
-                    alert('Настройки успешно импортированы!');
+                    Toast.success('Настройки успешно импортированы!');
                 } catch (error) {
-                    alert(`Ошибка при импорте настроек: ${error.message}`);
+                    Toast.error(`Ошибка при импорте настроек: ${error.message}`);
                     console.error('Import error:', error);
                 }
             };
 
             reader.onerror = () => {
-                alert('Ошибка при чтении файла');
+                Toast.error('Ошибка при чтении файла');
             };
 
             reader.readAsText(file);
@@ -456,7 +454,7 @@ const trafficCalc = {
     // Рассчитать трафик
     calculateTraffic() {
         if (!this.currentReportData || this.currentReportData.length === 0) {
-            alert('Нет данных для расчета');
+            Toast.warning('Нет данных для расчета');
             return;
         }
 
@@ -712,7 +710,7 @@ const trafficCalc = {
     // Экспорт результатов в Excel
     exportTrafficResults() {
         if (!this.trafficResults || this.trafficResults.length === 0) {
-            alert('Нет данных для экспорта');
+            Toast.warning('Нет данных для экспорта');
             return;
         }
 
@@ -813,7 +811,7 @@ const trafficCalc = {
         const subagentId = document.getElementById('subagentIdInput').value.trim();
 
         if (!method || !subagent || !subagentId) {
-            alert('Пожалуйста, заполните все поля');
+            Toast.warning('Пожалуйста, заполните все поля');
             return;
         }
 
@@ -832,7 +830,7 @@ const trafficCalc = {
         this.renderPartners();
         this.updateCounts();
 
-        alert('Партнер успешно добавлен!');
+        Toast.success('Партнер успешно добавлен!');
     },
 
     // Отображение партнеров
@@ -867,12 +865,8 @@ const trafficCalc = {
                     <td>${date}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="action-btn" onclick="trafficCalc.editPartner('${partner.id}')" title="Редактировать">
-                                <img src="icons/pen.svg" alt="" style="width: 12px; height: 12px;"> Изменить
-                            </button>
-                            <button class="action-btn delete" onclick="trafficCalc.deletePartner('${partner.id}')" title="Удалить">
-                                <img src="icons/cross.svg" alt="" style="width: 12px; height: 12px;"> Удалить
-                            </button>
+                            <button class="action-btn" onclick="trafficCalc.editPartner('${partner.id}')" title="Редактировать">Изменить</button>
+                            <button class="action-btn delete" onclick="trafficCalc.deletePartner('${partner.id}')" title="Удалить">Удалить</button>
                         </div>
                     </td>
                 </tr>
@@ -912,7 +906,7 @@ const trafficCalc = {
         const status = document.getElementById('editStatusSelect').value;
 
         if (!method || !subagent || !subagentId) {
-            alert('Пожалуйста, заполните все поля');
+            Toast.warning('Пожалуйста, заполните все поля');
             return;
         }
 
@@ -927,7 +921,7 @@ const trafficCalc = {
         this.renderPartners();
         this.updateCounts();
 
-        alert('Изменения сохранены!');
+        Toast.success('Изменения сохранены!');
     },
 
     // Закрытие модального окна редактирования
@@ -971,9 +965,7 @@ const trafficCalc = {
         container.innerHTML = methods.map(method => `
             <div class="method-item">
                 <span>${this.escapeHtml(method)}</span>
-                <button onclick="trafficCalc.deleteMethod('${this.escapeHtml(method)}')">
-                    <img src="icons/cross.svg" alt="" style="width: 12px; height: 12px;"> Удалить
-                </button>
+                <button onclick="trafficCalc.deleteMethod('${this.escapeHtml(method)}')">Удалить</button>
             </div>
         `).join('');
     },
@@ -983,7 +975,7 @@ const trafficCalc = {
         const methodName = input.value.trim();
 
         if (!methodName) {
-            alert('Введите название метода');
+            Toast.warning('Введите название метода');
             return;
         }
 
@@ -991,9 +983,9 @@ const trafficCalc = {
             input.value = '';
             this.loadMethods();
             this.renderMethodsList();
-            alert('Метод добавлен!');
+            Toast.success('Метод добавлен!');
         } else {
-            alert('Такой метод уже существует');
+            Toast.warning('Такой метод уже существует');
         }
     },
 
@@ -1050,7 +1042,7 @@ const trafficCalc = {
         const selectedMethods = selectedIndices.map(i => this.availableMethods[i]);
 
         if (selectedMethods.length === 0) {
-            alert('Выберите хотя бы один метод');
+            Toast.warning('Выберите хотя бы один метод');
             return;
         }
 
@@ -1087,7 +1079,7 @@ const trafficCalc = {
         this.selectedPartners = Array.from(checkboxes).map(cb => cb.value);
 
         if (this.selectedPartners.length === 0) {
-            alert('Выберите хотя бы одного партнера');
+            Toast.warning('Выберите хотя бы одного партнера');
             return;
         }
 
@@ -1209,12 +1201,121 @@ const trafficCalc = {
             this.checkManualDataCompletionStep6();
         }
 
+        // При переходе на шаг 7 (отчёт) - сгенерировать отчёт
+        if (stepNumber === 7) {
+            this.prepareStep7Report();
+        }
+
+        // При переходе на шаг 8 (настройки расчёта) - подготовить данные
+        if (stepNumber === 8) {
+            this.prepareStep8Settings();
+        }
+
+    },
+
+    // Подготовка шага 7 (отчёт)
+    prepareStep7Report() {
+        // Генерируем отчёт на основе данных предыдущих шагов
+        if (this.selectedPartners.length === 0) {
+            Toast.warning('Сначала выберите партнеров');
+            this.goToStep(1);
+            return;
+        }
+
+        // Вызываем генерацию отчёта
+        this.generateReport();
+    },
+
+    // Подготовка шага 8 (настройки расчёта)
+    prepareStep8Settings() {
+        // Формируем данные для расчёта
+        if (this.selectedPartners.length === 0) {
+            Toast.warning('Сначала выберите партнеров');
+            this.goToStep(1);
+            return;
+        }
+
+        const allPartners = storage.getPartners();
+        this.currentReportData = allPartners.filter(p => this.selectedPartners.includes(p.id));
+
+        // Загружаем или создаем настройки
+        this.trafficSettings = this.loadTrafficSettings();
+
+        // Отображаем форму настроек
+        this.renderTrafficSettings();
+    },
+
+    // Рассчитать трафик и показать результаты (для кнопки "Рассчитать" на шаге 8)
+    calculateAndShowResults() {
+        if (!this.currentReportData || this.currentReportData.length === 0) {
+            Toast.warning('Нет данных для расчета');
+            return;
+        }
+
+        // Выполняем расчет для каждого партнера
+        this.trafficResults = this.currentReportData.map(partner => {
+            const scores = this.evaluatePartner(partner, this.trafficSettings);
+            return {
+                method: partner.method,
+                subagent: partner.subagent,
+                subagentId: partner.subagentId,
+                scores: scores
+            };
+        });
+
+        // Рассчитываем процент трафика для каждого партнера
+        this.calculateTrafficPercentages();
+
+        // Переходим на шаг 9 и показываем результаты
+        this.goToStep(9);
+        this.showTrafficResultsInStep();
+    },
+
+    // Показать результаты расчёта на шаге 9
+    showTrafficResultsInStep() {
+        if (!this.trafficResults || this.trafficResults.length === 0) {
+            document.getElementById('resultsNotCalculated').style.display = 'flex';
+            document.getElementById('resultsCalculated').style.display = 'none';
+            return;
+        }
+
+        document.getElementById('resultsNotCalculated').style.display = 'none';
+        document.getElementById('resultsCalculated').style.display = 'flex';
+
+        // Сортируем результаты по методу и проценту
+        const sortedResults = [...this.trafficResults].sort((a, b) => {
+            if (a.method !== b.method) {
+                return a.method.localeCompare(b.method);
+            }
+            return b.trafficPercent - a.trafficPercent;
+        });
+
+        const tbody = document.getElementById('trafficResultsTableBody');
+        tbody.innerHTML = sortedResults.map(result => `
+            <tr>
+                <td>${this.escapeHtml(result.method)}</td>
+                <td>${this.escapeHtml(result.subagent)}</td>
+                <td>${this.escapeHtml(result.subagentId)}</td>
+                <td class="score-cell score-good">${result.scores.good}</td>
+                <td class="score-cell score-normal">${result.scores.normal}</td>
+                <td class="score-cell score-bad">${result.scores.bad}</td>
+                <td class="score-cell score-terrible">${result.scores.terrible}</td>
+                <td class="score-cell score-total">${result.scores.total}</td>
+                <td class="traffic-percent">${result.trafficPercent}%</td>
+            </tr>
+        `).join('');
+
+        // Отмечаем шаг 9 как завершённый
+        if (!this.completedSteps.includes(9)) {
+            this.completedSteps.push(9);
+        }
+        this.updateStepsIndicator(9);
     },
 
     updateStepsIndicator(currentStep) {
         document.querySelectorAll('.steps-indicator .step').forEach(step => {
             const stepNum = parseInt(step.getAttribute('data-step'));
-            step.classList.remove('active');
+            step.classList.remove('active', 'clickable');
 
             if (stepNum === currentStep) {
                 step.classList.add('active');
@@ -1226,10 +1327,15 @@ const trafficCalc = {
             } else {
                 step.classList.remove('completed');
             }
+
+            // Все шаги кроме текущего - кликабельные (свободная навигация)
+            if (stepNum !== currentStep) {
+                step.classList.add('clickable');
+            }
         });
     },
 
-    // Навигация по кликам на индикаторе шагов
+    // Навигация по кликам на индикаторе шагов (свободная навигация)
     navigateToStep(stepNumber) {
         // Сохраняем данные текущего партнера, если мы на шаге 4 или 6
         if (this.currentStep === 4 && this.currentSelectedPartnerId) {
@@ -1237,6 +1343,11 @@ const trafficCalc = {
         }
         if (this.currentStep === 6 && this.currentSelectedPartnerId6) {
             this.saveCurrentManualDataStep6();
+        }
+
+        // Сохраняем настройки трафика при уходе с шага 8
+        if (this.currentStep === 8 && this.trafficSettings) {
+            this.saveTrafficSettings();
         }
 
         // Переходим на выбранный шаг
@@ -1432,17 +1543,17 @@ const trafficCalc = {
     completeAnalytics() {
         // Проверяем обязательные шаги в правильном порядке
         if (!this.filesUploaded.deposits) {
-            alert('Необходимо загрузить данные на шаге 2 "Пополнения и выводы"');
+            Toast.warning('Необходимо загрузить данные на шаге 2 "Пополнения и выводы"');
             return;
         }
 
         if (!this.filesUploaded.quality) {
-            alert('Необходимо загрузить данные на шаге 3 "Контроль качества"');
+            Toast.warning('Необходимо загрузить данные на шаге 3 "Контроль качества"');
             return;
         }
 
         if (!this.filesUploaded.percent) {
-            alert('Необходимо загрузить данные на шаге 5 "Автоотключения"');
+            Toast.warning('Необходимо загрузить данные на шаге 5 "Автоотключения"');
             return;
         }
 
@@ -1481,7 +1592,7 @@ const trafficCalc = {
                 this.resetAnalytics();
             }
         } else {
-            alert('Нет данных для сброса');
+            Toast.warning('Нет данных для сброса');
         }
     },
 
@@ -1501,6 +1612,10 @@ const trafficCalc = {
         this.allPartnersListForStep5 = [];
         this.selectedPartners = [];
 
+        // Очищаем данные расчёта трафика
+        this.currentReportData = [];
+        this.trafficResults = [];
+
         // Очищаем статусы
         document.getElementById('depositsStatus').textContent = '';
         document.getElementById('qualityStatus').textContent = '';
@@ -1516,6 +1631,18 @@ const trafficCalc = {
         // Очищаем шаг 4 (ручные данные)
         document.getElementById('partnerSearchInput').value = '';
         document.getElementById('manualDataForm').style.display = 'none';
+
+        // Очищаем шаг 7 (отчёт)
+        const reportNotGenerated = document.getElementById('reportNotGenerated');
+        const reportGenerated = document.getElementById('reportGenerated');
+        if (reportNotGenerated) reportNotGenerated.style.display = 'flex';
+        if (reportGenerated) reportGenerated.style.display = 'none';
+
+        // Очищаем шаг 9 (результаты расчёта)
+        const resultsNotCalculated = document.getElementById('resultsNotCalculated');
+        const resultsCalculated = document.getElementById('resultsCalculated');
+        if (resultsNotCalculated) resultsNotCalculated.style.display = 'flex';
+        if (resultsCalculated) resultsCalculated.style.display = 'none';
 
         // Очищаем input файлов
         const depositsInput = document.getElementById('depositsFileInput');
@@ -1535,7 +1662,7 @@ const trafficCalc = {
     // Сброс данных шага 2 (пополнения и выводы)
     resetDepositsData() {
         if (!this.filesUploaded.deposits) {
-            alert('Нет данных для сброса');
+            Toast.warning('Нет данных для сброса');
             return;
         }
 
@@ -1559,13 +1686,13 @@ const trafficCalc = {
         document.getElementById('step2NextBtn').disabled = true;
 
         this.updateStepsIndicator(this.currentStep);
-        alert('Данные пополнений и выводов сброшены');
+        Toast.success('Данные пополнений и выводов сброшены');
     },
 
     // Сброс данных шага 3 (контроль качества)
     resetQualityData() {
         if (!this.filesUploaded.quality) {
-            alert('Нет данных для сброса');
+            Toast.warning('Нет данных для сброса');
             return;
         }
 
@@ -1593,13 +1720,13 @@ const trafficCalc = {
         document.getElementById('step3NextBtn').disabled = true;
 
         this.updateStepsIndicator(this.currentStep);
-        alert('Данные контроля качества сброшены');
+        Toast.success('Данные контроля качества сброшены');
     },
 
     // Сброс данных шага 5 (автоотключения)
     resetPercentData() {
         if (!this.filesUploaded.percent) {
-            alert('Нет данных для сброса');
+            Toast.warning('Нет данных для сброса');
             return;
         }
 
@@ -1622,7 +1749,7 @@ const trafficCalc = {
         document.getElementById('step5NextBtn').disabled = true;
 
         this.updateStepsIndicator(this.currentStep);
-        alert('Данные автоотключений сброшены');
+        Toast.success('Данные автоотключений сброшены');
     },
 
     // ШАГ 4: РУЧНЫЕ ДАННЫЕ
@@ -1803,7 +1930,7 @@ const trafficCalc = {
         const selectedPartnersData = allPartners.filter(p => this.selectedPartners.includes(p.id));
 
         if (selectedPartnersData.length === 0) {
-            alert('Нет выбранных субагентов для сброса');
+            Toast.warning('Нет выбранных субагентов для сброса');
             return;
         }
 
@@ -1824,7 +1951,7 @@ const trafficCalc = {
         // Проверяем заполнение данных
         this.checkManualDataCompletion();
 
-        alert(`Данные по времени работы сброшены для ${selectedPartnersData.length} субагентов`);
+        Toast.success(`Данные по времени работы сброшены для ${selectedPartnersData.length} субагентов`);
     },
 
     // ========== Шаг 6: Нарушения ==========
@@ -1997,7 +2124,7 @@ const trafficCalc = {
         const selectedPartnersData = allPartners.filter(p => this.selectedPartners.includes(p.id));
 
         if (selectedPartnersData.length === 0) {
-            alert('Нет выбранных субагентов для сброса');
+            Toast.warning('Нет выбранных субагентов для сброса');
             return;
         }
 
@@ -2030,7 +2157,7 @@ const trafficCalc = {
         // Проверяем заполнение данных
         this.checkManualDataCompletionStep6();
 
-        alert(`Данные по нарушениям сброшены для ${selectedPartnersData.length} субагентов`);
+        Toast.success(`Данные по нарушениям сброшены для ${selectedPartnersData.length} субагентов`);
     },
 
 
@@ -2314,7 +2441,7 @@ const trafficCalc = {
     // Генерация отчета
     generateReport() {
         if (this.selectedPartners.length === 0) {
-            alert('Сначала выберите партнеров на вкладке "Аналитика"');
+            Toast.warning('Сначала выберите партнеров');
             return;
         }
 
@@ -2369,7 +2496,7 @@ const trafficCalc = {
     // Экспорт детального отчета в Excel
     exportReportToExcel() {
         if (!this.currentReportData || this.currentReportData.length === 0) {
-            alert('Нет данных для экспорта. Сначала сформируйте отчет.');
+            Toast.warning('Нет данных для экспорта');
             return;
         }
 
@@ -2452,7 +2579,7 @@ const trafficCalc = {
         const partners = storage.getPartners();
 
         if (partners.length === 0) {
-            alert('Список партнеров пуст. Нечего экспортировать.');
+            Toast.warning('Список партнеров пуст. Нечего экспортировать.');
             return;
         }
 
@@ -2581,7 +2708,7 @@ const trafficCalc = {
         const file = fileInput.files[0];
 
         if (!file) {
-            alert('Выберите файл для импорта');
+            Toast.warning('Выберите файл для импорта');
             return;
         }
 
@@ -2663,15 +2790,15 @@ const trafficCalc = {
                 this.loadMethods();
                 this.closeImportModal();
 
-                alert(`Успешно импортировано ${processedPartners.length} партнер(ов)!`);
+                Toast.success(`Успешно импортировано ${processedPartners.length} партнер(ов)!`);
             } catch (error) {
-                alert(`Ошибка при импорте: ${error.message}`);
+                Toast.error(`Ошибка при импорте: ${error.message}`);
                 console.error('Import error:', error);
             }
         };
 
         reader.onerror = () => {
-            alert('Ошибка при чтении файла');
+            Toast.error('Ошибка при чтении файла');
         };
 
         reader.readAsText(file);

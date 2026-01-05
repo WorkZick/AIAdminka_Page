@@ -1,0 +1,239 @@
+/* ============================================================
+   AIAdminka Design System - Forms
+   ============================================================ */
+
+/* ==================== FORM GROUP ==================== */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    font-size: var(--font-size-base);
+    color: var(--white);
+    margin-bottom: 8px;
+    opacity: 0.9;
+}
+
+.form-group .required {
+    color: var(--status-red);
+}
+
+/* ==================== TEXT INPUT ==================== */
+.form-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
+    background: var(--gray-dark);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    color: var(--white);
+    transition: all var(--transition-fast);
+    box-sizing: border-box;
+}
+
+.form-input::placeholder {
+    color: var(--gray);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--yellow);
+    background: #2e2e2e;
+}
+
+.form-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ==================== TEXTAREA ==================== */
+.form-textarea {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
+    background: var(--gray-dark);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    color: var(--white);
+    transition: all var(--transition-fast);
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-textarea::placeholder {
+    color: var(--gray);
+}
+
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--yellow);
+    background: #2e2e2e;
+}
+
+/* ==================== SELECT ==================== */
+.form-select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
+    background: var(--gray-dark);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    color: var(--white);
+    transition: all var(--transition-fast);
+    box-sizing: border-box;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0a0a0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--yellow);
+    background-color: #2e2e2e;
+}
+
+.form-select option {
+    background: var(--gray-darker);
+    color: var(--white);
+    padding: 8px;
+}
+
+/* ==================== CHECKBOX & RADIO ==================== */
+.form-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.form-check input[type="checkbox"],
+.form-check input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--yellow);
+    cursor: pointer;
+}
+
+.form-check-label {
+    font-size: var(--font-size-base);
+    color: var(--white);
+    cursor: pointer;
+}
+
+/* ==================== FORM HINT ==================== */
+.form-hint {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+    margin-top: 6px;
+}
+
+/* ==================== FORM ERROR ==================== */
+.form-error {
+    font-size: var(--font-size-sm);
+    color: var(--status-red);
+    margin-top: 6px;
+}
+
+.form-input.error,
+.form-textarea.error,
+.form-select.error {
+    border-color: var(--status-red);
+}
+
+/* ==================== INLINE FORM ==================== */
+.form-inline {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.form-inline .form-group {
+    margin-bottom: 0;
+    flex: 1;
+}
+
+/* ==================== FORM ROW ==================== */
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+/* ==================== INPUT WITH ICON ==================== */
+.input-with-icon {
+    position: relative;
+}
+
+.input-with-icon .form-input {
+    padding-left: 40px;
+}
+
+.input-with-icon .input-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(1);
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.input-with-icon .form-input:focus + .input-icon,
+.input-with-icon .form-input:focus ~ .input-icon {
+    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg);
+    opacity: 1;
+}
+
+/* ==================== SEARCH INPUT ==================== */
+.search-input-wrapper {
+    position: relative;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 14px 10px 36px;
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    color: var(--white);
+    transition: all var(--transition-fast);
+}
+
+.search-input::placeholder {
+    color: var(--gray);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--yellow);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.search-input-wrapper .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(1);
+    opacity: 0.5;
+    pointer-events: none;
+}

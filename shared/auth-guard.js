@@ -139,34 +139,109 @@ const TokenManager = {
         prompt.id = 'token-refresh-prompt';
         prompt.innerHTML = `
             <style>
-                @keyframes pulse-border {
-                    0%, 100% { border-color: #fdbe2f; box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 0 rgba(253,190,47,0.4); }
-                    50% { border-color: #ff9500; box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 8px rgba(253,190,47,0); }
+                .token-prompt-box {
+                    position: fixed;
+                    top: 16px;
+                    right: 16px;
+                    z-index: 99999;
+                    background: rgba(30, 30, 30, 0.85);
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 12px;
+                    padding: 14px 16px;
+                    min-width: 240px;
+                    font-family: 'TT Firs Neue', 'Segoe UI', system-ui, sans-serif;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
                 }
-                #token-prompt-box { animation: pulse-border 2s ease-in-out infinite; }
-                #token-prompt-box:hover { animation: none; border-color: #fdbe2f; }
+                .token-prompt-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 12px;
+                }
+                .token-prompt-icon {
+                    width: 32px;
+                    height: 32px;
+                    background: rgba(253, 190, 47, 0.15);
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+                .token-prompt-icon svg {
+                    width: 16px;
+                    height: 16px;
+                    fill: #fdbe2f;
+                }
+                .token-prompt-text {
+                    flex: 1;
+                }
+                .token-prompt-title {
+                    color: #f2f2f2;
+                    font-weight: 600;
+                    font-size: 13px;
+                    margin-bottom: 2px;
+                }
+                .token-prompt-subtitle {
+                    color: #6b6b6b;
+                    font-size: 11px;
+                }
+                .token-prompt-time {
+                    color: #fdbe2f;
+                    font-weight: 600;
+                }
+                .token-prompt-time.warning {
+                    color: #ff6b6b;
+                }
+                .token-prompt-actions {
+                    display: flex;
+                    gap: 8px;
+                }
+                .token-prompt-btn {
+                    flex: 1;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    font-family: inherit;
+                    font-size: 12px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                    border: none;
+                }
+                .token-prompt-btn-primary {
+                    background: rgba(253, 190, 47, 0.15);
+                    color: #fdbe2f;
+                    border: 1px solid rgba(253, 190, 47, 0.3);
+                }
+                .token-prompt-btn-primary:hover {
+                    background: rgba(253, 190, 47, 0.25);
+                    border-color: rgba(253, 190, 47, 0.5);
+                }
+                .token-prompt-btn-secondary {
+                    background: rgba(255, 255, 255, 0.05);
+                    color: #6b6b6b;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                }
+                .token-prompt-btn-secondary:hover {
+                    background: rgba(255, 255, 255, 0.08);
+                    color: #a0a0a0;
+                }
             </style>
-            <div id="token-prompt-box" style="position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#1a1a2e,#16213e);
-                border:2px solid #fdbe2f;border-radius:12px;padding:16px 20px;z-index:99999;
-                box-shadow:0 8px 32px rgba(0,0,0,0.4);max-width:320px;font-family:system-ui,sans-serif;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                    <div style="font-size:24px;">⏰</div>
-                    <div>
-                        <div style="color:#fdbe2f;font-weight:600;font-size:15px;">Сессия истекает</div>
-                        <div id="token-countdown" style="color:#fff;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;"></div>
+            <div class="token-prompt-box">
+                <div class="token-prompt-content">
+                    <div class="token-prompt-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H9l4-6v4h2l-4 6z"/></svg>
+                    </div>
+                    <div class="token-prompt-text">
+                        <div class="token-prompt-title">Сессия истекает</div>
+                        <div class="token-prompt-subtitle">Осталось <span id="token-countdown" class="token-prompt-time"></span></div>
                     </div>
                 </div>
-                <div style="color:#e0e0e0;font-size:13px;margin-bottom:12px;">
-                    Нажмите чтобы продлить ещё на 1 час
-                </div>
-                <div style="display:flex;gap:8px;">
-                    <button onclick="TokenManager.extendSession()" style="flex:1;padding:10px 16px;
-                        background:linear-gradient(135deg,#fdbe2f,#f5a623);border:none;border-radius:6px;
-                        color:#1a1a1a;font-weight:600;cursor:pointer;font-size:14px;transition:transform 0.1s;">
-                        Продлить сессию</button>
-                    <button onclick="TokenManager.dismissPrompt()" style="padding:10px 12px;
-                        background:transparent;border:1px solid #555;border-radius:6px;
-                        color:#888;cursor:pointer;font-size:13px;">Позже</button>
+                <div class="token-prompt-actions">
+                    <button class="token-prompt-btn token-prompt-btn-primary" onclick="TokenManager.extendSession()">Продлить</button>
+                    <button class="token-prompt-btn token-prompt-btn-secondary" onclick="TokenManager.dismissPrompt()">Позже</button>
                 </div>
             </div>
         `;
@@ -189,8 +264,8 @@ const TokenManager = {
 
         const remaining = this.getTimeRemaining();
         if (remaining <= 0) {
-            el.textContent = 'Истекла!';
-            el.style.color = '#ff4444';
+            el.textContent = '0:00';
+            el.className = 'token-prompt-time warning';
             return;
         }
 
@@ -200,7 +275,9 @@ const TokenManager = {
 
         // Красный цвет когда меньше 2 минут
         if (minutes < 2) {
-            el.style.color = '#ff6b6b';
+            el.className = 'token-prompt-time warning';
+        } else {
+            el.className = 'token-prompt-time';
         }
     },
 
@@ -344,6 +421,22 @@ const AuthGuard = {
         return this.check(redirect);
     },
 
+    /**
+     * Проверка авторизации + инициализация RoleGuard
+     * Используется для страниц, требующих проверки прав доступа
+     */
+    async checkWithRole(redirect = true) {
+        // Сначала обычная проверка токена
+        if (!this.check(redirect)) return false;
+
+        // Затем инициализация RoleGuard
+        if (typeof RoleGuard !== 'undefined') {
+            await RoleGuard.init();
+        }
+
+        return true;
+    },
+
     getUser() {
         const authData = localStorage.getItem('cloud-auth');
         if (!authData) return null;
@@ -382,9 +475,14 @@ const AuthGuard = {
         localStorage.removeItem('sync-logs');
         localStorage.removeItem('sync-auth');
         localStorage.removeItem('sync-access-status');
+        localStorage.removeItem('roleGuard');
 
         if (typeof CloudStorage !== 'undefined' && CloudStorage.clearCache) {
             CloudStorage.clearCache();
+        }
+
+        if (typeof RoleGuard !== 'undefined' && RoleGuard.clearCache) {
+            RoleGuard.clearCache();
         }
 
         this.redirectToLogin();
@@ -425,13 +523,7 @@ const AuthGuard = {
                     <div class="auth-user-name">${user.name || 'Пользователь'}</div>
                     <div class="auth-user-email">${user.email}</div>
                 </div>
-                <button class="auth-logout-btn" onclick="AuthGuard.logout()" title="Выйти">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16,17 21,12 16,7"/>
-                        <line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
-                </button>
+                <button class="auth-logout-btn" onclick="AuthGuard.logout()" title="Выйти">Выйти</button>
             </div>
         `;
     },

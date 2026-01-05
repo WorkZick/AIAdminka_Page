@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://accounts.google.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://cdn.jsdelivr.net; frame-ancestors 'self'">
     <title>Отчеты - AIAdminka</title>
+    <link rel="stylesheet" href="../shared/css/design-system.css">
     <link rel="stylesheet" href="css/excel-reports.css">
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"
             crossorigin="anonymous"
@@ -12,74 +13,8 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <button class="back-button" onclick="excelApp.toggleSidebar()">
-                <img src="icons/arrow.svg" width="30" height="30" alt="Toggle">
-            </button>
-
-            <div class="sidebar-menu">
-                <div class="menu-item" onclick="window.location.href='../index.html'">
-                    <span>Главная</span>
-                    <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
-                </div>
-
-                <div class="menu-item active">
-                    <span>Отчеты</span>
-                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Отчеты">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../team-info/index.html'">
-                    <span>Сотрудники</span>
-                    <img src="icons/team_info.svg" width="20" height="20" alt="Сотрудники">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../traffic-calculation/index.html'">
-                    <span>Расчет трафика</span>
-                    <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../partners/index.html'">
-                    <span>Партнеры</span>
-                    <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
-                    <span>Документация</span>
-                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../sync/index.html'">
-                    <span>Настройки</span>
-                    <img src="icons/sync.svg" width="20" height="20" alt="Настройки">
-                </div>
-            </div>
-
-            <div class="menu-separator"></div>
-
-            <div class="version-info" onclick="showAboutModal()">
-                <span class="version-text-full">О разработке</span>
-                <span id="versionText" class="version-number"></span>
-                <span class="version-icon" title="О разработке">
-                    <img src="../shared/icons/info.svg" alt="О разработке">
-                </span>
-            </div>
-        </aside>
-
-        <script>
-            (function() {
-                const sidebar = document.getElementById('sidebar');
-                sidebar.classList.add('no-transition');
-                if (localStorage.getItem('sidebar-collapsed') === 'true') {
-                    sidebar.classList.add('collapsed');
-                }
-                requestAnimationFrame(function() {
-                    requestAnimationFrame(function() {
-                        sidebar.classList.remove('no-transition');
-                    });
-                });
-            })();
-        </script>
+        <!-- Sidebar Container -->
+        <div id="sidebar-container"></div>
 
         <!-- Main wrapper -->
         <div class="main-wrapper">
@@ -110,10 +45,7 @@
                             <div class="header-nav-left"></div>
                             <span>Выберите шаблон обработки</span>
                             <div class="header-nav-right">
-                                <button class="btn-header-nav btn-next" id="confirmTemplateBtn" disabled onclick="excelApp.showStep1()">
-                                    Далее
-                                    <img src="icons/arrow.svg" width="16" height="16" alt="Далее">
-                                </button>
+                                <button class="btn-header-nav btn-next" id="confirmTemplateBtn" disabled onclick="excelApp.showStep1()">Далее</button>
                             </div>
                         </div>
                         <div class="panel-content">
@@ -127,17 +59,11 @@
                     <div class="panel files-panel hidden" id="step1Section">
                         <div class="panel-header panel-header-nav">
                             <div class="header-nav-left">
-                                <button class="btn-header-nav btn-back" onclick="excelApp.goBackFromStep1()">
-                                    <img src="icons/arrow.svg" width="16" height="16" alt="Назад">
-                                    Назад
-                                </button>
+                                <button class="btn-header-nav btn-back" onclick="excelApp.goBackFromStep1()">Назад</button>
                             </div>
                             <span id="step1Title">Загрузка файлов</span>
                             <div class="header-nav-right">
-                                <button class="btn-header-nav btn-next" id="step1NextBtn" disabled onclick="excelApp.completeStep1()">
-                                    Далее
-                                    <img src="icons/arrow.svg" width="16" height="16" alt="Далее">
-                                </button>
+                                <button class="btn-header-nav btn-next" id="step1NextBtn" disabled onclick="excelApp.completeStep1()">Далее</button>
                             </div>
                         </div>
                         <div class="panel-content">
@@ -146,13 +72,13 @@
                                 <div class="step-description" id="step1Description"></div>
                             </div>
                             <div class="upload-area" id="step1UploadArea" onclick="document.getElementById('step1Input').click()">
-                                <img src="icons/download_photo.svg" width="48" height="48" alt="Upload">
+                                <img src="../shared/icons/download_photo.svg" width="48" height="48" alt="Upload">
                                 <div class="upload-text">Нажмите для выбора файлов</div>
                                 <div class="upload-hint">или перетащите файлы сюда</div>
                             </div>
                             <input type="file" id="step1Input" multiple accept=".xlsx" style="display:none;">
                             <div class="upload-status hidden" id="step1Status">
-                                <img src="icons/done.svg" width="20" height="20" alt="OK">
+                                <img src="../shared/icons/done.svg" width="20" height="20" alt="OK">
                                 <span>Загружено файлов: <strong id="step1Count">0</strong></span>
                             </div>
                         </div>
@@ -162,17 +88,11 @@
                     <div class="panel files-panel hidden" id="step2Section">
                         <div class="panel-header panel-header-nav">
                             <div class="header-nav-left">
-                                <button class="btn-header-nav btn-back" onclick="excelApp.goBackFromStep2()">
-                                    <img src="icons/arrow.svg" width="16" height="16" alt="Назад">
-                                    Назад
-                                </button>
+                                <button class="btn-header-nav btn-back" onclick="excelApp.goBackFromStep2()">Назад</button>
                             </div>
                             <span id="step2Title">Дополнительные файлы</span>
                             <div class="header-nav-right">
-                                <button class="btn-header-nav btn-next" id="step2NextBtn" disabled onclick="excelApp.completeStep2()">
-                                    Далее
-                                    <img src="icons/arrow.svg" width="16" height="16" alt="Далее">
-                                </button>
+                                <button class="btn-header-nav btn-next" id="step2NextBtn" disabled onclick="excelApp.completeStep2()">Далее</button>
                             </div>
                         </div>
                         <div class="panel-content">
@@ -181,13 +101,13 @@
                                 <div class="step-description" id="step2Description"></div>
                             </div>
                             <div class="upload-area" id="step2UploadArea" onclick="document.getElementById('step2Input').click()">
-                                <img src="icons/download_photo.svg" width="48" height="48" alt="Upload">
+                                <img src="../shared/icons/download_photo.svg" width="48" height="48" alt="Upload">
                                 <div class="upload-text">Нажмите для выбора файлов</div>
                                 <div class="upload-hint">или перетащите файлы сюда</div>
                             </div>
                             <input type="file" id="step2Input" multiple accept=".xlsx" style="display:none;">
                             <div class="upload-status hidden" id="step2Status">
-                                <img src="icons/done.svg" width="20" height="20" alt="OK">
+                                <img src="../shared/icons/done.svg" width="20" height="20" alt="OK">
                                 <span>Загружено файлов: <strong id="step2Count">0</strong></span>
                             </div>
                         </div>
@@ -197,17 +117,11 @@
                     <div class="panel process-panel hidden" id="processSection">
                         <div class="panel-header panel-header-nav">
                             <div class="header-nav-left">
-                                <button class="btn-header-nav btn-back" onclick="excelApp.goBackFromProcess()">
-                                    <img src="icons/arrow.svg" width="16" height="16" alt="Назад">
-                                    Назад
-                                </button>
+                                <button class="btn-header-nav btn-back" onclick="excelApp.goBackFromProcess()">Назад</button>
                             </div>
                             <span>Обработка данных</span>
                             <div class="header-nav-right">
-                                <button class="btn-header-nav" onclick="excelApp.reset()">
-                                    <img src="icons/sync.svg" width="14" height="14" alt="Сброс">
-                                    Начать заново
-                                </button>
+                                <button class="btn-header-nav" onclick="excelApp.reset()">Начать заново</button>
                             </div>
                         </div>
                         <div class="panel-content">
@@ -222,14 +136,8 @@
                                 </div>
                             </div>
                             <div class="process-buttons">
-                                <button class="btn-primary btn-process" id="processBtn" onclick="excelApp.processFiles()">
-                                    <img src="icons/done.svg" width="16" height="16" alt="Process">
-                                    Обработать
-                                </button>
-                                <button class="btn-success" id="exportBtn" disabled onclick="excelApp.exportResult()">
-                                    <img src="icons/export.svg" width="16" height="16" alt="Export">
-                                    Скачать результат
-                                </button>
+                                <button class="btn-primary btn-process" id="processBtn" onclick="excelApp.processFiles()">Обработать</button>
+                                <button class="btn-success" id="exportBtn" disabled onclick="excelApp.exportResult()">Скачать результат</button>
                             </div>
                         </div>
                     </div>
@@ -242,7 +150,7 @@
 
     <!-- Floating Log Toggle Button -->
     <button class="log-toggle-btn" id="logToggleBtn" onclick="toggleLogPanel()" title="Журнал операций">
-        <img src="icons/documents.svg" width="20" height="20" alt="Журнал">
+        <img src="../icons/documents.svg" width="20" height="20" alt="Журнал">
     </button>
 
     <!-- Slide-out Log Panel -->
@@ -265,24 +173,10 @@
     <script src="../shared/cloud-storage.js"></script>
     <script src="../shared/sync-manager.js"></script>
     <script src="../shared/auth-guard.js"></script>
+    <script src="../shared/role-guard.js"></script>
 
-    <!-- About Modal -->
-    <div class="modal" id="aboutModal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h2 class="modal-title">О разработке</h2>
-                <button class="modal-close" onclick="closeAboutModal()">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Это проект <strong>Vadim P</strong></p>
-                <p>Reddy ID для связи: <strong>62219492522</strong></p>
-                <p>Ссылка на чат с актуальной версией:<br>
-                <a href="https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_" target="_blank">https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_</a></p>
-            </div>
-        </div>
-    </div>
+    <!-- About Modal Container -->
+    <div id="about-modal-container"></div>
 
     <!-- Reset Confirmation Modal -->
     <div class="modal" id="resetModal">
@@ -290,19 +184,23 @@
             <div class="modal-header">
                 <h2 class="modal-title">Подтверждение сброса</h2>
                 <button class="modal-close" onclick="excelApp.closeResetModal()">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
                 </button>
             </div>
             <div class="modal-body">
                 <p>Вы уверены, что хотите начать заново?</p>
                 <p><strong>Все загруженные данные будут удалены.</strong></p>
                 <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
-                    <button class="btn-secondary" onclick="excelApp.closeResetModal()">Отмена</button>
-                    <button class="btn-primary" onclick="excelApp.confirmReset()">Сбросить</button>
+                    <button class="btn btn-ghost" onclick="excelApp.closeResetModal()">Отмена</button>
+                    <button class="btn btn-ghost" onclick="excelApp.confirmReset()">Сбросить</button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Component Loader -->
+    <script src="../shared/js/component-loader.js"></script>
+    <script src="../shared/js/sidebar-controller.js"></script>
 
     <!-- Load templates -->
     <script src="templates/combined-report.js"></script>
@@ -324,15 +222,18 @@
     <script src="js/logger.js"></script>
     <script src="js/excel-reports.js"></script>
     <script>
-        function showAboutModal() {
-            document.getElementById('aboutModal').classList.add('active');
-        }
-        function closeAboutModal() {
-            document.getElementById('aboutModal').classList.remove('active');
-        }
-        document.getElementById('aboutModal').addEventListener('click', function(e) {
-            if (e.target === this) closeAboutModal();
+        document.addEventListener('DOMContentLoaded', async function() {
+            ComponentLoader.init('../shared');
+            await ComponentLoader.load('sidebar', '#sidebar-container', {
+                basePath: '..',
+                activeModule: 'reports'
+            });
+            await ComponentLoader.load('about-modal', '#about-modal-container', {
+                basePath: '..'
+            });
+            SidebarController.init({ basePath: '..' });
         });
+
         document.getElementById('resetModal').addEventListener('click', function(e) {
             if (e.target === this) excelApp.closeResetModal();
         });

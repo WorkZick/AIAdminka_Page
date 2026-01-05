@@ -5,7 +5,6 @@ const teamInfo = {
     sortField: null,
     sortDirection: 'asc',
     teamName: 'Vadim team',
-    sidebarCollapsed: false,
     formChanged: false,
     originalFormData: null,
     tempImageData: null,
@@ -22,7 +21,6 @@ const teamInfo = {
         try {
             this.data = await storage.loadData();
             this.loadTeamName();
-            this.loadSidebarState();
             this.setupTextareaAutoResize();
             this.render();
             this.updateStats();
@@ -45,62 +43,25 @@ const teamInfo = {
         textarea.addEventListener('change', autoResize);
     },
 
-    loadSidebarState() {
-        const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
-        this.sidebarCollapsed = collapsed;
-        if (collapsed) {
-            document.getElementById('sidebar').classList.add('collapsed');
-        }
-    },
-
-    toggleSidebar() {
-        this.sidebarCollapsed = !this.sidebarCollapsed;
-        const sidebar = document.getElementById('sidebar');
-
-        if (this.sidebarCollapsed) {
-            sidebar.classList.add('collapsed');
-        } else {
-            sidebar.classList.remove('collapsed');
-        }
-
-        localStorage.setItem('sidebar-collapsed', this.sidebarCollapsed);
-    },
-
     loadTeamName() {
         const savedName = localStorage.getItem('team-name');
         if (savedName) {
             this.teamName = savedName;
         }
-        // Update all team name displays
-        const teamNameElement = document.querySelector('.team-name');
+        // Update team name display in hint panel
+        const teamNameElement = document.getElementById('teamName');
         if (teamNameElement) {
-            teamNameElement.childNodes[0].textContent = this.teamName + ' ';
-        }
-        const cardTeamName = document.getElementById('cardTeamName');
-        if (cardTeamName) {
-            cardTeamName.textContent = this.teamName;
-        }
-        const formTeamName = document.getElementById('formTeamName');
-        if (formTeamName) {
-            formTeamName.textContent = this.teamName;
+            teamNameElement.firstChild.textContent = this.teamName + ' ';
         }
     },
 
     saveTeamName(name) {
         this.teamName = name;
         localStorage.setItem('team-name', name);
-        // Update all team name displays
-        const teamNameElement = document.querySelector('.team-name');
+        // Update team name display
+        const teamNameElement = document.getElementById('teamName');
         if (teamNameElement) {
-            teamNameElement.childNodes[0].textContent = name + ' ';
-        }
-        const cardTeamName = document.getElementById('cardTeamName');
-        if (cardTeamName) {
-            cardTeamName.textContent = name;
-        }
-        const formTeamName = document.getElementById('formTeamName');
-        if (formTeamName) {
-            formTeamName.textContent = name;
+            teamNameElement.firstChild.textContent = name + ' ';
         }
     },
 
@@ -114,11 +75,17 @@ const teamInfo = {
     render() {
         const tbody = document.getElementById('employeesTableBody');
         const emptyState = document.getElementById('emptyState');
+        const loadingState = document.getElementById('loadingState');
         const table = document.querySelector('.employees-table');
+
+        // Always hide loading state after initial render
+        if (loadingState) {
+            loadingState.style.display = 'none';
+        }
 
         if (this.data.length === 0) {
             table.style.display = 'none';
-            emptyState.style.display = 'block';
+            emptyState.style.display = 'flex';
             return;
         }
 
@@ -144,21 +111,19 @@ const teamInfo = {
             tr.addEventListener('click', () => this.openCard(employee.id));
 
             tr.innerHTML = `
-                <td>
+                <td class="col-status">
                     <span class="status-badge ${this.escapeHtml(statusClass)}">${this.escapeHtml(statusText)}</span>
                 </td>
-                <td>
-                    <div class="employee-info">
-                        <div class="employee-avatar"></div>
-                    </div>
+                <td class="col-photo">
+                    <div class="employee-avatar"></div>
                 </td>
-                <td><div class="employee-name">${formattedName}</div></td>
-                <td>${this.escapeHtml(employee.position || '')}</td>
-                <td>${this.escapeHtml(crmLogin)}</td>
-                <td>${this.escapeHtml(reddyId)}</td>
-                <td>${birthday}</td>
-                <td>
-                    <svg class="row-arrow" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                <td class="col-name">${formattedName}</td>
+                <td class="col-position">${this.escapeHtml(employee.position || '')}</td>
+                <td class="col-crm">${this.escapeHtml(crmLogin)}</td>
+                <td class="col-id">${this.escapeHtml(reddyId)}</td>
+                <td class="col-birthday">${birthday}</td>
+                <td class="col-arrow">
+                    <img class="row-arrow" src="../shared/icons/arrow.svg" alt="">
                 </td>
             `;
 
@@ -291,16 +256,15 @@ const teamInfo = {
 
         this.render();
 
-        const statsPanel = document.getElementById('statsPanel');
+        const hintPanel = document.getElementById('hintPanel');
 
-        statsPanel.style.display = 'none';
+        hintPanel.style.display = 'none';
         employeeCard.style.display = 'flex';
 
         // Add to navigation stack
         this.pushNavigation('card', id);
 
-        document.getElementById('cardTeamName').textContent = this.teamName;
-        document.getElementById('cardName').textContent = employee.fullName || '';
+        document.getElementById('cardFullName').textContent = employee.fullName || '';
         document.getElementById('cardPosition').textContent = employee.position || '';
 
         const currentStatus = employee.status || 'Работает';
@@ -399,12 +363,12 @@ const teamInfo = {
                 const isComment = field.label === 'Примечание';
 
                 if (isComment) {
-                    const placeholder = field.value ? '' : field.label;
-                    const valueText = field.value ? this.escapeHtml(field.value) : placeholder;
+                    const valueText = field.value ? this.escapeHtml(field.value) : '—';
                     const valueClass = field.value ? 'info-value textarea-style' : 'info-value textarea-style placeholder';
 
                     html += `
                         <div class="info-group vertical">
+                            <div class="info-label">${field.label}:</div>
                             <div class="${valueClass}">${valueText}</div>
                         </div>
                     `;
@@ -424,15 +388,15 @@ const teamInfo = {
 
     closeCard() {
         const employeeCard = document.getElementById('employeeCard');
-        const statsPanel = document.getElementById('statsPanel');
+        const hintPanel = document.getElementById('hintPanel');
 
         employeeCard.style.display = 'none';
 
         // Pop current card from navigation
         this.popNavigation();
 
-        // Show stats panel (always return to stats when closing card)
-        statsPanel.style.display = 'flex';
+        // Show hint panel (always return to hint when closing card)
+        hintPanel.style.display = 'flex';
 
         this.currentEmployeeId = null;
         this.render();
@@ -455,8 +419,8 @@ const teamInfo = {
     },
 
     showAddModal() {
-        // Hide stats and card
-        document.getElementById('statsPanel').style.display = 'none';
+        // Hide hint and card
+        document.getElementById('hintPanel').style.display = 'none';
         document.getElementById('employeeCard').style.display = 'none';
 
         // Show form
@@ -466,46 +430,10 @@ const teamInfo = {
         // Add to navigation stack
         this.pushNavigation('form', null);
 
-        // Reset template mode
-        this.isTemplateMode = false;
-
-        // Show template selector (only when adding)
-        document.getElementById('formTemplateSelector').style.display = 'flex';
-
-        // Hide template fields container
-        document.getElementById('templateFieldsContainer').style.display = 'none';
-
-        // Show form body
-        document.querySelector('.form-body').style.display = 'block';
-
-        // Remove any field toggle buttons from previous template mode
-        const toggleBtns = document.querySelectorAll('.field-toggle-btn');
-        toggleBtns.forEach(btn => btn.remove());
-
-        // Remove dynamically added template fields first
-        const dynamicFields = document.querySelectorAll('.form-body .form-group-inline');
-        dynamicFields.forEach(group => {
-            const input = group.querySelector('input, textarea');
-            if (input && input.id.startsWith('templateField_')) {
-                group.remove();
-            }
-        });
-
-        // Show all default fields initially
-        const formGroups = document.querySelectorAll('.form-body .form-group-inline');
-        formGroups.forEach(group => {
-            group.classList.remove('field-disabled');
-            group.style.display = 'flex';
-        });
-
-        // Load template list (will auto-select and apply default template if exists)
-        // This will hide default fields and add template fields if needed
-        this.updateTemplateList();
-
         // Reset form
         this.currentEmployeeId = null;
         this.currentAvatar = null;
-        document.getElementById('formTeamName').textContent = this.teamName;
+        document.getElementById('formTitle').textContent = 'Новый сотрудник';
         document.getElementById('formSaveBtnText').textContent = 'Добавить сотрудника';
         document.getElementById('formDeleteBtn').style.display = 'none';
 
@@ -759,13 +687,10 @@ const teamInfo = {
         // Add to navigation stack
         this.pushNavigation('form', id);
 
-        // Hide template selector (only for adding)
-        document.getElementById('formTemplateSelector').style.display = 'none';
-
         // Fill form with employee data
         this.currentEmployeeId = id;
         this.currentAvatar = employee.avatar || null;
-        document.getElementById('formTeamName').textContent = this.teamName;
+        document.getElementById('formTitle').textContent = 'Редактирование';
         document.getElementById('formSaveBtnText').textContent = 'Сохранить';
         document.getElementById('formDeleteBtn').style.display = 'none';
 
@@ -812,59 +737,9 @@ const teamInfo = {
     },
 
     closeForm() {
-        const employeeId = this.currentEmployeeId;
         document.getElementById('employeeForm').style.display = 'none';
         this.formChanged = false;
         this.originalFormData = null;
-
-        // Reset template mode
-        this.isTemplateMode = false;
-        this.editingTemplateId = null;
-
-        // Enable avatar upload back
-        const formAvatar = document.querySelector('.form-avatar');
-        if (formAvatar) {
-            formAvatar.classList.remove('disabled');
-            formAvatar.style.pointerEvents = 'auto';
-        }
-
-        // Enable form fields
-        const fullNameInput = document.getElementById('formFullName');
-        const positionInput = document.getElementById('formPosition');
-        const statusBadge = document.getElementById('formStatusBadge');
-
-        fullNameInput.classList.remove('disabled');
-        positionInput.classList.remove('disabled');
-        statusBadge.classList.remove('disabled');
-
-        fullNameInput.readOnly = false;
-        positionInput.readOnly = false;
-
-        // Hide template fields container
-        document.getElementById('templateFieldsContainer').style.display = 'none';
-
-        // Show form body
-        document.querySelector('.form-body').style.display = 'block';
-
-        // Remove any field toggle buttons
-        const toggleBtns = document.querySelectorAll('.field-toggle-btn');
-        toggleBtns.forEach(btn => btn.remove());
-
-        // Remove disabled state from fields and show all default fields
-        const formGroups = document.querySelectorAll('.form-body .form-group-inline');
-        formGroups.forEach(group => {
-            group.classList.remove('field-disabled');
-            group.style.display = 'flex';
-        });
-
-        // Remove dynamically added template fields
-        const dynamicFields = document.querySelectorAll('.form-body .form-group-inline');
-        dynamicFields.forEach(group => {
-            const input = group.querySelector('input, textarea');
-            if (input && input.id.startsWith('templateField_')) {
-                group.remove();
-            }
-        });
 
         // Pop current form from navigation
         this.popNavigation();
@@ -883,13 +758,12 @@ const teamInfo = {
                 this.render();
 
                 const employeeCard = document.getElementById('employeeCard');
-                const statsPanel = document.getElementById('statsPanel');
+                const hintPanel = document.getElementById('hintPanel');
 
-                statsPanel.style.display = 'none';
+                hintPanel.style.display = 'none';
                 employeeCard.style.display = 'flex';
 
-                document.getElementById('cardTeamName').textContent = this.teamName;
-                document.getElementById('cardName').textContent = employee.fullName || '';
+                document.getElementById('cardFullName').textContent = employee.fullName || '';
                 document.getElementById('cardPosition').textContent = employee.position || '';
 
                 const currentStatus = employee.status || 'Работает';
@@ -911,13 +785,13 @@ const teamInfo = {
                 const cardBody = document.getElementById('cardBody');
                 cardBody.innerHTML = this.generateCardInfo(employee);
             } else {
-                // Employee not found, go to stats
-                document.getElementById('statsPanel').style.display = 'flex';
+                // Employee not found, go to hint panel
+                document.getElementById('hintPanel').style.display = 'flex';
                 this.currentEmployeeId = null;
             }
         } else {
-            // Return to stats panel
-            document.getElementById('statsPanel').style.display = 'flex';
+            // Return to hint panel
+            document.getElementById('hintPanel').style.display = 'flex';
             this.currentEmployeeId = null;
         }
         this.render();
@@ -1158,7 +1032,7 @@ const teamInfo = {
                             <option value="textarea" ${field.type === 'textarea' ? 'selected' : ''}>Текстовая область</option>
                         </select>
                         <button class="template-field-remove" onclick="teamInfo.removeTemplateField('${field.id}')">
-                            <img src="icons/cross.svg" width="16" height="16" alt="Удалить">
+                            <img src="../shared/icons/cross.svg" width="16" height="16" alt="Удалить">
                         </button>
                     </div>
                 `;
@@ -1192,7 +1066,7 @@ const teamInfo = {
                     <option value="textarea">Текстовая область</option>
                 </select>
                 <button class="template-field-remove" onclick="teamInfo.removeTemplateField('${fieldId}')">
-                    <img src="icons/cross.svg" width="16" height="16" alt="Удалить">
+                    <img src="../shared/icons/cross.svg" width="16" height="16" alt="Удалить">
                 </button>
             </div>
         `;
@@ -1401,12 +1275,6 @@ const teamInfo = {
     },
 
     async saveFromForm() {
-        // Check if we're in template mode
-        if (this.isTemplateMode) {
-            this.saveTemplate();
-            return;
-        }
-
         const fullName = document.getElementById('formFullName').value.trim();
         const position = document.getElementById('formPosition').value.trim();
         const status = this.currentFormStatus || 'Работает';
@@ -1566,13 +1434,22 @@ const teamInfo = {
         }
     },
 
-    async exportJSON() {
+    showExportDialog() {
         if (this.data.length === 0) {
             alert('Нет данных для экспорта');
             return;
         }
+        document.getElementById('exportCount').textContent = `Будет экспортировано: ${this.data.length} сотрудников`;
+        document.getElementById('exportModal').classList.add('active');
+    },
 
+    closeExportDialog() {
+        document.getElementById('exportModal').classList.remove('active');
+    },
+
+    async doExport() {
         if (await storage.exportToFile(this.data)) {
+            this.closeExportDialog();
             alert(`Экспортировано ${this.data.length} сотрудников!`);
         } else {
             alert('Ошибка экспорта');
@@ -1742,6 +1619,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Close modals on escape key
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+        if (document.getElementById('exportModal').classList.contains('active')) {
+            teamInfo.closeExportDialog();
+        }
         if (document.getElementById('cropModal').classList.contains('active')) {
             teamInfo.closeCropModal();
         }
@@ -1785,6 +1665,12 @@ document.addEventListener('click', (e) => {
 });
 
 // Close modals on backdrop click
+document.getElementById('exportModal').addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+        teamInfo.closeExportDialog();
+    }
+});
+
 document.getElementById('importModal').addEventListener('click', (e) => {
     if (e.target.classList.contains('modal')) {
         teamInfo.closeImportDialog();

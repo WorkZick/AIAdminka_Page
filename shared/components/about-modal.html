@@ -1,0 +1,37 @@
+<div class="modal" id="aboutModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2 class="modal-title">О разработке</h2>
+            <button class="modal-close" onclick="closeAboutModal()">
+                <img src="{{basePath}}/shared/icons/cross.svg" alt="Закрыть">
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>Это проект <strong>Vadim P</strong></p>
+            <p>Reddy ID: <strong>62219492522</strong></p>
+            <p>Ссылка на чат: <a href="https://lnk.reddy.team/Vt6lJ0a" target="_blank">https://lnk.reddy.team/Vt6lJ0a</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showAboutModal() {
+        const modal = document.getElementById('aboutModal');
+        if (modal) modal.classList.add('active');
+    }
+
+    function closeAboutModal() {
+        const modal = document.getElementById('aboutModal');
+        if (modal) modal.classList.remove('active');
+    }
+
+    // Закрытие по клику на overlay
+    document.getElementById('aboutModal')?.addEventListener('click', function(e) {
+        if (e.target === this) closeAboutModal();
+    });
+
+    // Закрытие по Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeAboutModal();
+    });
+</script>

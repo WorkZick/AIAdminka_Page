@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com; frame-ancestors 'self'">
+    <title>Администрирование - AIAdminka</title>
+    <link rel="stylesheet" href="../shared/css/design-system.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Container -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header -->
+            <header class="global-header">
+                <div class="header-title">Администрирование</div>
+                <div class="header-actions">
+                    <span class="admin-badge">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        Администратор
+                    </span>
+                </div>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Tabs -->
+                <div class="tabs-container">
+                    <div class="tabs">
+                        <button class="tab active" data-tab="teams" onclick="adminApp.switchTab('teams')">
+                            Команды
+                            <span class="tab-count" id="teamsCount">0</span>
+                        </button>
+                        <button class="tab" data-tab="users" onclick="adminApp.switchTab('users')">
+                            Пользователи
+                            <span class="tab-count" id="usersCount">0</span>
+                        </button>
+                        <button class="tab" data-tab="requests" onclick="adminApp.switchTab('requests')">
+                            Запросы
+                            <span class="tab-count tab-count-pending" id="requestsCount">0</span>
+                        </button>
+                        <button class="tab" data-tab="permissions" onclick="adminApp.switchTab('permissions')">
+                            Роли и права
+                        </button>
+                        <button class="tab" data-tab="audit" onclick="adminApp.switchTab('audit')">
+                            История
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab: Teams -->
+                <div class="tab-content active" id="tab-teams">
+                    <div class="section-header">
+                        <div class="section-title">Все команды</div>
+                        <div class="section-actions">
+                            <div class="search-box">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="M21 21l-4.35-4.35"/>
+                                </svg>
+                                <input type="text" id="searchTeams" placeholder="Поиск..." oninput="adminApp.filterTeams()">
+                            </div>
+                            <button class="btn-primary" onclick="adminApp.openCreateTeamModal()">
+                                Создать команду
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="teams-grid" id="teamsGrid">
+                        <div class="empty-state" id="emptyTeams">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            <p>Команды не найдены</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Users -->
+                <div class="tab-content" id="tab-users">
+                    <div class="section-header">
+                        <div class="section-title">Все пользователи</div>
+                        <div class="section-actions">
+                            <div class="search-box">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="M21 21l-4.35-4.35"/>
+                                </svg>
+                                <input type="text" id="searchUsers" placeholder="Поиск..." oninput="adminApp.filterUsers()">
+                            </div>
+                            <select id="filterTeam" onchange="adminApp.filterUsers()">
+                                <option value="">Все команды</option>
+                            </select>
+                            <select id="filterRole" onchange="adminApp.filterUsers()">
+                                <option value="">Все роли</option>
+                                <option value="admin">Администратор</option>
+                                <option value="leader">Руководитель</option>
+                                <option value="assistant">Помощник</option>
+                                <option value="sales">Менеджер по продажам</option>
+                                <option value="partners_mgr">Менеджер по партнёрам</option>
+                                <option value="payments">Менеджер платежей</option>
+                                <option value="antifraud">Антифрод</option>
+                                <option value="tech">Техспециалист</option>
+                            </select>
+                            <select id="filterStatus" onchange="adminApp.filterUsers()">
+                                <option value="">Все статусы</option>
+                                <option value="active">Активные</option>
+                                <option value="blocked">Заблокированные</option>
+                                <option value="approved_no_team">Без команды</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="users-table-wrapper">
+                        <table class="users-table" id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>Пользователь</th>
+                                    <th>Команда</th>
+                                    <th>Роль</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                            </tbody>
+                        </table>
+                        <div class="empty-state" id="emptyUsers" style="display: none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            <p>Пользователи не найдены</p>
+                        </div>
+                    </div>
+
+                    <div class="pagination" id="usersPagination"></div>
+                </div>
+
+                <!-- Tab: Requests -->
+                <div class="tab-content" id="tab-requests">
+                    <div class="section-header">
+                        <div class="section-title">Запросы на регистрацию</div>
+                    </div>
+
+                    <div class="requests-grid" id="requestsGrid">
+                        <div class="empty-state" id="emptyRequests">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="8.5" cy="7" r="4"/>
+                                <line x1="20" y1="8" x2="20" y2="14"/>
+                                <line x1="23" y1="11" x2="17" y2="11"/>
+                            </svg>
+                            <p>Нет ожидающих запросов</p>
+                            <span>Все запросы на регистрацию обработаны</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Permissions -->
+                <div class="tab-content" id="tab-permissions">
+                    <div class="section-header">
+                        <div class="section-title">Настройка прав ролей</div>
+                        <div class="section-actions">
+                            <button class="btn-primary" onclick="adminApp.savePermissions()" id="btnSavePermissions">
+                                Сохранить
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="permissions-card">
+                        <div class="permissions-hint">
+                            <p>Настройте права доступа для каждой роли. Руководители смогут назначать только те роли, которые разрешены здесь.</p>
+                        </div>
+                        <div class="permissions-table-wrapper">
+                            <table class="permissions-table" id="permissionsTable">
+                                <thead>
+                                    <tr>
+                                        <th class="role-header">Роль</th>
+                                        <th>Партнёры</th>
+                                        <th>Сотрудники</th>
+                                        <th>Трафик</th>
+                                        <th>Отчёты</th>
+                                        <th>Настройки</th>
+                                        <th>Документация</th>
+                                        <th>Моя команда</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="permissionsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="permissions-legend">
+                            <span class="legend-item"><span class="legend-icon view"></span> Просмотр</span>
+                            <span class="legend-item"><span class="legend-icon edit"></span> Редактирование</span>
+                            <span class="legend-item"><span class="legend-icon delete"></span> Удаление</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Audit -->
+                <div class="tab-content" id="tab-audit">
+                    <div class="section-header">
+                        <div class="section-title">История изменений</div>
+                        <div class="section-actions">
+                            <div class="search-box">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="M21 21l-4.35-4.35"/>
+                                </svg>
+                                <input type="text" id="searchAudit" placeholder="Поиск..." oninput="adminApp.filterAudit()">
+                            </div>
+                            <select id="filterAction" onchange="adminApp.filterAudit()">
+                                <option value="">Все действия</option>
+                                <option value="user_approved">Одобрение</option>
+                                <option value="user_rejected">Отклонение</option>
+                                <option value="user_blocked">Блокировка</option>
+                                <option value="user_unblocked">Разблокировка</option>
+                                <option value="role_changed">Смена роли</option>
+                                <option value="team_created">Создание команды</option>
+                                <option value="permissions_changed">Изменение прав</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="audit-list" id="auditList">
+                        <div class="empty-state" id="emptyAudit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <p>История пуста</p>
+                        </div>
+                    </div>
+
+                    <div class="pagination" id="auditPagination"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Team Modal -->
+    <div class="modal" id="createTeamModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Создать команду</h2>
+                <button class="modal-close" onclick="adminApp.closeModal('createTeamModal')">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="createTeamForm" onsubmit="return adminApp.createTeam(event)">
+                    <div class="form-group">
+                        <label>Название команды</label>
+                        <input type="text" id="newTeamName" placeholder="Например: Команда продаж" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Руководитель (email)</label>
+                        <input type="email" id="newTeamLeader" placeholder="leader@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Описание</label>
+                        <textarea id="newTeamDescription" placeholder="Краткое описание команды..." rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="adminApp.closeModal('createTeamModal')">Отмена</button>
+                <button class="btn-primary" onclick="document.getElementById('createTeamForm').dispatchEvent(new Event('submit'))">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal" id="editUserModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Редактирование пользователя</h2>
+                <button class="modal-close" onclick="adminApp.closeModal('editUserModal')">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="user-modal-header">
+                    <div class="user-avatar" id="modalUserAvatar"></div>
+                    <div class="user-info">
+                        <div class="user-name" id="modalUserName">-</div>
+                        <div class="user-email" id="modalUserEmail">-</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Команда</label>
+                    <select id="modalUserTeam" class="form-select">
+                        <option value="">Без команды</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Роль</label>
+                    <select id="modalUserRole" class="form-select">
+                        <option value="admin">Администратор</option>
+                        <option value="leader">Руководитель</option>
+                        <option value="assistant">Помощник руководителя</option>
+                        <option value="sales">Менеджер по продажам</option>
+                        <option value="partners_mgr">Менеджер по партнёрам</option>
+                        <option value="payments">Менеджер платежей</option>
+                        <option value="antifraud">Антифрод</option>
+                        <option value="tech">Технический специалист</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Статус</label>
+                    <div class="status-toggle">
+                        <button type="button" class="status-btn active" data-status="active" onclick="adminApp.setModalStatus('active')">
+                            <span class="status-dot active"></span>
+                            Активен
+                        </button>
+                        <button type="button" class="status-btn" data-status="blocked" onclick="adminApp.setModalStatus('blocked')">
+                            <span class="status-dot blocked"></span>
+                            Заблокирован
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="adminApp.closeModal('editUserModal')">Отмена</button>
+                <button class="btn-primary" onclick="adminApp.saveUser()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Team Modal -->
+    <div class="modal" id="editTeamModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Редактирование команды</h2>
+                <button class="modal-close" onclick="adminApp.closeModal('editTeamModal')">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editTeamForm" onsubmit="return adminApp.saveTeam(event)">
+                    <div class="form-group">
+                        <label>Название команды</label>
+                        <input type="text" id="editTeamName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Описание</label>
+                        <textarea id="editTeamDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Статус</label>
+                        <div class="status-toggle">
+                            <button type="button" class="status-btn active" data-status="active" onclick="adminApp.setTeamStatus(true)">
+                                <span class="status-dot active"></span>
+                                Активна
+                            </button>
+                            <button type="button" class="status-btn" data-status="inactive" onclick="adminApp.setTeamStatus(false)">
+                                <span class="status-dot blocked"></span>
+                                Неактивна
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="adminApp.closeModal('editTeamModal')">Отмена</button>
+                <button class="btn-primary" onclick="document.getElementById('editTeamForm').dispatchEvent(new Event('submit'))">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal Container -->
+    <div id="about-modal-container"></div>
+
+    <script src="../shared/version.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/auth-guard.js"></script>
+    <script src="../shared/role-guard.js"></script>
+    <script src="../shared/js/component-loader.js"></script>
+    <script src="../shared/js/sidebar-controller.js"></script>
+    <script src="js/admin.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            ComponentLoader.init('../shared');
+            await ComponentLoader.load('sidebar', '#sidebar-container', {
+                basePath: '..',
+                activeModule: 'admin-panel'
+            });
+            await ComponentLoader.load('about-modal', '#about-modal-container', {
+                basePath: '..'
+            });
+            SidebarController.init({ basePath: '..' });
+        });
+    </script>
+</body>
+</html>

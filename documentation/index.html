@@ -5,78 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com; frame-ancestors 'self'">
     <title>Документация - AIAdminka</title>
+    <!-- Design System (base styles) -->
+    <link rel="stylesheet" href="../shared/css/design-system.css">
+    <!-- Module-specific styles -->
     <link rel="stylesheet" href="css/documentation.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <button class="back-button" onclick="docApp.toggleSidebar()">
-                <img src="icons/arrow.svg" width="30" height="30" alt="Toggle">
-            </button>
-
-            <div class="sidebar-menu">
-                <div class="menu-item" onclick="window.location.href='../index.html'">
-                    <span>Главная</span>
-                    <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../excel-reports/index.html'">
-                    <span>Отчеты</span>
-                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Отчеты">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../team-info/index.html'">
-                    <span>Сотрудники</span>
-                    <img src="icons/team_info.svg" width="20" height="20" alt="Сотрудники">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../traffic-calculation/index.html'">
-                    <span>Расчет трафика</span>
-                    <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../partners/index.html'">
-                    <span>Партнеры</span>
-                    <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
-                </div>
-
-                <div class="menu-item active">
-                    <span>Документация</span>
-                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../sync/index.html'">
-                    <span>Настройки</span>
-                    <img src="icons/sync.svg" width="20" height="20" alt="Настройки">
-                </div>
-            </div>
-
-            <div class="menu-separator"></div>
-
-            <div class="version-info" onclick="showAboutModal()">
-                <span class="version-text-full">О разработке</span>
-                <span id="versionText" class="version-number"></span>
-                <span class="version-icon" title="О разработке">
-                    <img src="../shared/icons/info.svg" alt="О разработке">
-                </span>
-            </div>
-        </aside>
-
-        <script>
-            (function() {
-                const sidebar = document.getElementById('sidebar');
-                sidebar.classList.add('no-transition');
-                if (localStorage.getItem('sidebar-collapsed') === 'true') {
-                    sidebar.classList.add('collapsed');
-                }
-                requestAnimationFrame(function() {
-                    requestAnimationFrame(function() {
-                        sidebar.classList.remove('no-transition');
-                    });
-                });
-            })();
-        </script>
+        <!-- Sidebar Container (loaded via ComponentLoader) -->
+        <div id="sidebar-container"></div>
 
         <!-- Main wrapper -->
         <div class="main-wrapper">
@@ -84,10 +21,16 @@
             <header class="global-header">
                 <div class="header-title">Документация</div>
                 <div class="header-actions">
-                    <button class="btn-changelog" onclick="changelog.show()">
-                        <img src="icons/filter.svg" width="14" height="14" alt="История">
-                        История обновлений
-                    </button>
+                    <a href="#design-system" class="btn-design-system">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        Дизайн-система
+                    </a>
+                    <button class="btn-changelog" onclick="changelog.show()">История обновлений</button>
                 </div>
             </header>
 
@@ -111,6 +54,7 @@
                                 <a href="#home" class="toc-link">8. Главная</a>
                                 <a href="#troubleshooting" class="toc-link">9. Проблемы</a>
                                 <a href="#architecture" class="toc-link">10. Архитектура</a>
+                                <a href="#design-system" class="toc-link">11. Дизайн-система</a>
                             </nav>
                         </div>
                     </div>
@@ -686,93 +630,651 @@
                                 <li>AuthGuard проверяет токен на каждой странице</li>
                             </ol>
                         </section>
+
+                        <!-- 11. Дизайн-система -->
+                        <section class="doc-section" id="design-system">
+                            <h2>11. Дизайн-система</h2>
+
+                            <p>Минималистичная тёмная тема с 4 основными цветами. Дизайн в стиле тёмного стекломорфизма.</p>
+
+                            <!-- Цветовая палитра (4 цвета) -->
+                            <h3>Цветовая палитра</h3>
+                            <div class="ds-block">
+                                <div class="ds-colors-grid ds-colors-4">
+                                    <div class="ds-color-item ds-color-large">
+                                        <div class="ds-color-swatch" style="background: #fdbe2f;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Жёлтый</span>
+                                            <span class="ds-color-role">Акцент, CTA, активные элементы</span>
+                                            <code>#fdbe2f</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item ds-color-large">
+                                        <div class="ds-color-swatch" style="background: #f2f2f2;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Белый</span>
+                                            <span class="ds-color-role">Текст, иконки</span>
+                                            <code>#f2f2f2</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item ds-color-large">
+                                        <div class="ds-color-swatch" style="background: #6b6b6b;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Серый</span>
+                                            <span class="ds-color-role">Вторичный текст, границы</span>
+                                            <code>#6b6b6b</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item ds-color-large">
+                                        <div class="ds-color-swatch" style="background: #0d0d0d; border: 1px solid rgba(255,255,255,0.1);"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Чёрный</span>
+                                            <span class="ds-color-role">Фон, подложки</span>
+                                            <code>#0d0d0d</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Оттенки серого -->
+                            <h3>Оттенки серого</h3>
+                            <div class="ds-block">
+                                <div class="ds-colors-grid ds-colors-5">
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch" style="background: #a0a0a0;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Светло-серый</span>
+                                            <span class="ds-color-var">--gray-light</span>
+                                            <code>#a0a0a0</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch" style="background: #6b6b6b;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Серый</span>
+                                            <span class="ds-color-var">--gray</span>
+                                            <code>#6b6b6b</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch" style="background: #3a3a3a;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Средне-серый</span>
+                                            <span class="ds-color-var">--gray-medium</span>
+                                            <code>#3a3a3a</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch" style="background: #252525;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Тёмно-серый</span>
+                                            <span class="ds-color-var">--gray-dark</span>
+                                            <code>#252525</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch" style="background: #1a1a1a;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Очень тёмный</span>
+                                            <span class="ds-color-var">--gray-darker</span>
+                                            <code>#1a1a1a</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Статусные цвета -->
+                            <h3>Статусные цвета</h3>
+                            <div class="ds-block">
+                                <div class="ds-colors-grid ds-colors-5">
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch" style="background: #51cf66;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Зелёный</span>
+                                            <span class="ds-color-role">Успех, активный, онлайн</span>
+                                            <span class="ds-color-var">--status-green</span>
+                                            <code>#51cf66</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch" style="background: #ff6b6b;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Красный</span>
+                                            <span class="ds-color-role">Ошибка, удаление, опасность</span>
+                                            <span class="ds-color-var">--status-red</span>
+                                            <code>#ff6b6b</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch" style="background: #ff922b;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Оранжевый</span>
+                                            <span class="ds-color-role">Предупреждение, ожидание</span>
+                                            <span class="ds-color-var">--status-orange</span>
+                                            <code>#ff922b</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch" style="background: #74c0fc;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Синий</span>
+                                            <span class="ds-color-role">Информация, ссылки</span>
+                                            <span class="ds-color-var">--status-blue</span>
+                                            <code>#74c0fc</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch" style="background: #da77f2;"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Фиолетовый</span>
+                                            <span class="ds-color-role">Особый статус, VIP</span>
+                                            <span class="ds-color-var">--status-purple</span>
+                                            <code>#da77f2</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Примеры использования статусов -->
+                            <h3>Примеры использования</h3>
+                            <div class="ds-block">
+                                <div class="ds-status-examples">
+                                    <div class="ds-status-example">
+                                        <span class="ds-status-dot" style="background: #51cf66;"></span>
+                                        <span>Онлайн / Активен</span>
+                                    </div>
+                                    <div class="ds-status-example">
+                                        <span class="ds-status-dot" style="background: #ff922b;"></span>
+                                        <span>Ожидает / В процессе</span>
+                                    </div>
+                                    <div class="ds-status-example">
+                                        <span class="ds-status-dot" style="background: #ff6b6b;"></span>
+                                        <span>Ошибка / Отклонено</span>
+                                    </div>
+                                    <div class="ds-status-example">
+                                        <span class="ds-status-dot" style="background: #6b6b6b;"></span>
+                                        <span>Офлайн / Неактивен</span>
+                                    </div>
+                                </div>
+                                <div class="ds-status-badges">
+                                    <span class="ds-badge-status" style="background: rgba(81, 207, 102, 0.15); color: #51cf66;">Выполнено</span>
+                                    <span class="ds-badge-status" style="background: rgba(255, 146, 43, 0.15); color: #ff922b;">В обработке</span>
+                                    <span class="ds-badge-status" style="background: rgba(255, 107, 107, 0.15); color: #ff6b6b;">Отклонено</span>
+                                    <span class="ds-badge-status" style="background: rgba(116, 192, 252, 0.15); color: #74c0fc;">Информация</span>
+                                </div>
+                            </div>
+
+                            <!-- Glassmorphism -->
+                            <h3>Glassmorphism</h3>
+                            <div class="ds-block">
+                                <p class="ds-hint">Полупрозрачные цвета для эффекта "матового стекла"</p>
+                                <div class="ds-glass-examples">
+                                    <div class="ds-glass-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08);">
+                                        <span class="ds-glass-label">--glass-bg</span>
+                                        <code>rgba(255, 255, 255, 0.02)</code>
+                                    </div>
+                                    <div class="ds-glass-card" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08);">
+                                        <span class="ds-glass-label">--glass-bg-light</span>
+                                        <code>rgba(255, 255, 255, 0.04)</code>
+                                    </div>
+                                    <div class="ds-glass-card" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08);">
+                                        <span class="ds-glass-label">--glass-bg-hover</span>
+                                        <code>rgba(255, 255, 255, 0.06)</code>
+                                    </div>
+                                    <div class="ds-glass-card" style="background: rgba(40, 40, 40, 0.4); border: 1px solid rgba(253, 190, 47, 0.3);">
+                                        <span class="ds-glass-label">Карточка с акцентом</span>
+                                        <code>border: --glass-border-hover</code>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Кнопки с эффектами -->
+                            <h3>Кнопки</h3>
+                            <div class="ds-block ds-buttons-demo">
+                                <div class="ds-buttons-section">
+                                    <!-- Базовое состояние -->
+                                    <div class="ds-buttons-row">
+                                        <span class="ds-state-label">Базовое</span>
+                                        <span class="ds-btn ds-btn-primary">Основная</span>
+                                        <span class="ds-btn ds-btn-secondary">Вторичная</span>
+                                        <span class="ds-btn ds-btn-ghost">Контурная</span>
+                                    </div>
+                                    <!-- Наведение (статичный пример) -->
+                                    <div class="ds-buttons-row">
+                                        <span class="ds-state-label">Наведение</span>
+                                        <span class="ds-btn ds-btn-primary" style="background: #e5a829; box-shadow: 0 6px 20px rgba(253, 190, 47, 0.5);">Основная</span>
+                                        <span class="ds-btn ds-btn-secondary" style="background: rgba(255, 255, 255, 0.15); box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);">Вторичная</span>
+                                        <span class="ds-btn ds-btn-ghost" style="background: rgba(253, 190, 47, 0.12); border-color: #fdbe2f; color: #fdbe2f;">Контурная</span>
+                                    </div>
+                                    <!-- Нажатие (статичный пример) -->
+                                    <div class="ds-buttons-row">
+                                        <span class="ds-state-label">Нажатие</span>
+                                        <span class="ds-btn ds-btn-primary" style="background: #c99a24; transform: scale(0.96); box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);">Основная</span>
+                                        <span class="ds-btn ds-btn-secondary" style="background: rgba(255, 255, 255, 0.05); transform: scale(0.96); box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);">Вторичная</span>
+                                        <span class="ds-btn ds-btn-ghost" style="background: rgba(253, 190, 47, 0.2); border-color: #fdbe2f; color: #fdbe2f; transform: scale(0.96);">Контурная</span>
+                                    </div>
+                                    <!-- Неактивно -->
+                                    <div class="ds-buttons-row">
+                                        <span class="ds-state-label">Неактивно</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-disabled">Основная</span>
+                                        <span class="ds-btn ds-btn-secondary ds-btn-disabled">Вторичная</span>
+                                        <span class="ds-btn ds-btn-ghost ds-btn-disabled">Контурная</span>
+                                    </div>
+                                    <!-- Загрузка -->
+                                    <div class="ds-buttons-row">
+                                        <span class="ds-state-label">Загрузка</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-loading">
+                                            <span class="spinner spinner-dark"></span>
+                                        </span>
+                                        <span class="ds-btn ds-btn-secondary ds-btn-loading">
+                                            <span class="spinner"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>.btn-primary</code> | <code>.btn-secondary</code> | <code>.btn-ghost</code> | <code>.btn-loading</code> | <code>disabled</code>
+                                </div>
+                            </div>
+
+                            <!-- Спиннер -->
+                            <h3>Спиннер</h3>
+                            <div class="ds-block">
+                                <div class="ds-component-row">
+                                    <div class="ds-spinner-item">
+                                        <span class="spinner spinner-sm"></span>
+                                        <span class="ds-spinner-label">Маленький</span>
+                                    </div>
+                                    <div class="ds-spinner-item">
+                                        <span class="spinner"></span>
+                                        <span class="ds-spinner-label">Стандартный</span>
+                                    </div>
+                                    <div class="ds-spinner-item">
+                                        <span class="spinner spinner-lg"></span>
+                                        <span class="ds-spinner-label">Большой</span>
+                                    </div>
+                                    <div class="ds-spinner-item ds-spinner-block">
+                                        <span class="spinner spinner-lg"></span>
+                                        <span>Загрузка данных...</span>
+                                    </div>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>.spinner</code> | <code>.spinner-sm</code> | <code>.spinner-lg</code>
+                                </div>
+                            </div>
+
+                            <!-- Прокрутка -->
+                            <h3>Прокрутка</h3>
+                            <div class="ds-block">
+                                <div class="ds-scrollbar-demo">
+                                    <div class="ds-scroll-container">
+                                        <div class="ds-scroll-content">
+                                            <p>Прокрутка контента</p>
+                                            <p>Строка 2</p>
+                                            <p>Строка 3</p>
+                                            <p>Строка 4</p>
+                                            <p>Строка 5</p>
+                                            <p>Строка 6</p>
+                                            <p>Строка 7</p>
+                                            <p>Строка 8</p>
+                                        </div>
+                                    </div>
+                                    <div class="ds-scroll-specs">
+                                        <div class="ds-scroll-spec">
+                                            <span class="ds-spec-label">Ширина</span>
+                                            <span class="ds-spec-value">6px</span>
+                                        </div>
+                                        <div class="ds-scroll-spec">
+                                            <span class="ds-spec-label">Трек</span>
+                                            <span class="ds-spec-value">прозрачный</span>
+                                        </div>
+                                        <div class="ds-scroll-spec">
+                                            <span class="ds-spec-label">Ползунок</span>
+                                            <span class="ds-spec-value">rgba(255,255,255,0.15)</span>
+                                        </div>
+                                        <div class="ds-scroll-spec">
+                                            <span class="ds-spec-label">Наведение</span>
+                                            <span class="ds-spec-value">rgba(253,190,47,0.4)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>::-webkit-scrollbar { width: 6px }</code> | <code>::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15) }</code>
+                                </div>
+                            </div>
+
+                            <!-- Бейджи -->
+                            <h3>Бейджи</h3>
+                            <div class="ds-block">
+                                <div class="ds-component-row">
+                                    <span class="role-badge role-admin">АДМИН</span>
+                                    <span class="role-badge role-leader">РУКОВОДИТЕЛЬ</span>
+                                    <span class="role-badge">СОТРУДНИК</span>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>.role-badge</code> | <code>.role-admin</code> | <code>.role-leader</code>
+                                </div>
+                            </div>
+
+                            <!-- Формы -->
+                            <h3>Формы</h3>
+                            <div class="ds-block">
+                                <div class="ds-form-demo">
+                                    <div class="form-group">
+                                        <label>Текстовое поле</label>
+                                        <input type="text" class="form-input" placeholder="Введите значение...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Выпадающий список</label>
+                                        <select class="form-select" required>
+                                            <option value="" disabled selected hidden>Выберите опцию</option>
+                                            <option value="1">Опция 1</option>
+                                            <option value="2">Опция 2</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Поиск</label>
+                                        <div class="search-input-wrapper">
+                                            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <circle cx="11" cy="11" r="8"/>
+                                                <path d="m21 21-4.35-4.35"/>
+                                            </svg>
+                                            <input type="text" class="form-input search-input" placeholder="Поиск...">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>.form-group</code> | <code>.form-input</code> | <code>.form-select</code>
+                                </div>
+                            </div>
+
+                            <!-- Карточки -->
+                            <h3>Карточки (Стекломорфизм)</h3>
+                            <div class="ds-block">
+                                <div class="ds-cards-demo">
+                                    <div class="ds-card-example">
+                                        <div class="ds-card-header">
+                                            <span>Заголовок карточки</span>
+                                            <span class="badge badge-active">Активно</span>
+                                        </div>
+                                        <div class="ds-card-body">
+                                            <p>Содержимое карточки с backdrop-filter: blur(16px) эффектом.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>background: rgba(40, 40, 40, 0.5)</code> | <code>backdrop-filter: blur(16px)</code> | <code>border: 1px solid rgba(255,255,255,0.08)</code>
+                                </div>
+                            </div>
+
+                            <!-- Типографика -->
+                            <h3>Типографика</h3>
+                            <div class="ds-block">
+                                <div class="ds-typography">
+                                    <div class="ds-type-row">
+                                        <span class="ds-type-label">Заголовок 1 (24px)</span>
+                                        <span class="ds-type-example" style="font-size: 24px; font-weight: 700;">TT Firs Neue Жирный</span>
+                                    </div>
+                                    <div class="ds-type-row">
+                                        <span class="ds-type-label">Заголовок 2 (18px)</span>
+                                        <span class="ds-type-example" style="font-size: 18px; font-weight: 700;">TT Firs Neue Жирный</span>
+                                    </div>
+                                    <div class="ds-type-row">
+                                        <span class="ds-type-label">Заголовок 3 (14px)</span>
+                                        <span class="ds-type-example" style="font-size: 14px; font-weight: 700;">TT Firs Neue Жирный</span>
+                                    </div>
+                                    <div class="ds-type-row">
+                                        <span class="ds-type-label">Основной (13px)</span>
+                                        <span class="ds-type-example" style="font-size: 13px;">TT Firs Neue Обычный</span>
+                                    </div>
+                                    <div class="ds-type-row">
+                                        <span class="ds-type-label">Мелкий (11px)</span>
+                                        <span class="ds-type-example" style="font-size: 11px; color: var(--gray-light);">TT Firs Neue Тонкий</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Отступы и скругления -->
+                            <h3>Отступы и скругления</h3>
+                            <div class="ds-block">
+                                <div class="ds-spacing-demo">
+                                    <div class="ds-spacing-row">
+                                        <span class="ds-spacing-label">Отступы:</span>
+                                        <code>4px</code> <code>8px</code> <code>12px</code> <code>16px</code> <code>20px</code> <code>24px</code>
+                                    </div>
+                                    <div class="ds-spacing-row">
+                                        <span class="ds-spacing-label">Скругления:</span>
+                                        <span class="ds-radius-box" style="border-radius: 4px;">4px</span>
+                                        <span class="ds-radius-box" style="border-radius: 8px;">8px</span>
+                                        <span class="ds-radius-box" style="border-radius: 12px;">12px</span>
+                                        <span class="ds-radius-box" style="border-radius: 14px;">14px</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CSS переменные -->
+                            <h3>CSS Переменные</h3>
+                            <div class="ds-block">
+                                <div class="ds-variables">
+                                    <code>--yellow: #fdbe2f</code>
+                                    <code>--glass-bg: rgba(255,255,255,0.02)</code>
+                                    <code>--glass-border: rgba(255,255,255,0.08)</code>
+                                    <code>--glass-blur: 16px</code>
+                                    <code>--radius-md: 8px</code>
+                                    <code>--transition-fast: 0.2s ease</code>
+                                </div>
+                                <div class="ds-code-hint" style="margin-top: 12px;">
+                                    Все переменные в <code>shared/css/variables.css</code>
+                                </div>
+                            </div>
+
+                            <!-- Иконки -->
+                            <h3>Иконки</h3>
+                            <div class="ds-block">
+                                <p style="font-size: 12px; color: var(--gray-light); margin: 0 0 16px;">SVG иконки проекта разделены на 2 категории</p>
+
+                                <div class="ds-icons-categories">
+                                    <div class="ds-icons-category">
+                                        <span class="ds-icons-cat-title">Навигация</span>
+                                        <span class="ds-icons-cat-count">11 иконок</span>
+                                        <span class="ds-icons-cat-path"><code>icons/</code></span>
+                                    </div>
+                                    <div class="ds-icons-category">
+                                        <span class="ds-icons-cat-title">UI элементы</span>
+                                        <span class="ds-icons-cat-count">42 иконки</span>
+                                        <span class="ds-icons-cat-path"><code>shared/icons/</code></span>
+                                    </div>
+                                </div>
+
+                                <button class="ds-icons-btn" onclick="showIconsModal()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="7" height="7"/>
+                                        <rect x="14" y="3" width="7" height="7"/>
+                                        <rect x="14" y="14" width="7" height="7"/>
+                                        <rect x="3" y="14" width="7" height="7"/>
+                                    </svg>
+                                    Открыть каталог иконок
+                                </button>
+                            </div>
+                        </section>
                     </div>
                 </main>
             </div>
         </div>
     </div>
 
+    <!-- Icons Modal -->
+    <div class="icons-modal" id="iconsModal" onclick="if(event.target === this) hideIconsModal()">
+        <div class="icons-modal-content">
+            <div class="icons-modal-header">
+                <h3>Каталог иконок (53 шт.)</h3>
+                <button class="icons-modal-close" onclick="hideIconsModal()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="icons-modal-body">
+                <div class="icons-section">
+                    <h4 class="icons-section-title">Навигация <span class="icons-section-path">icons/</span></h4>
+                    <div class="icons-grid" id="iconsGridNav"></div>
+                </div>
+                <div class="icons-section">
+                    <h4 class="icons-section-title">UI элементы <span class="icons-section-path">shared/icons/</span></h4>
+                    <div class="icons-grid" id="iconsGridUI"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal Container (loaded via ComponentLoader) -->
+    <div id="about-modal-container"></div>
+
+    <!-- Shared JS -->
+    <script src="../shared/js/component-loader.js"></script>
+    <script src="../shared/js/sidebar-controller.js"></script>
     <script src="../shared/utils.js"></script>
     <script src="../shared/version.js"></script>
     <script src="../shared/cloud-storage.js"></script>
     <script src="../shared/sync-manager.js"></script>
     <script src="../shared/auth-guard.js"></script>
+    <script src="../shared/role-guard.js"></script>
+
+    <!-- Module JS -->
     <script src="js/changelog.js"></script>
+
     <script>
-        // Documentation app
-        const docApp = {
-            toggleSidebar() {
-                const sidebar = document.getElementById('sidebar');
-                sidebar.classList.toggle('collapsed');
-                localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+        // Initialize ComponentLoader and load shared components
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize ComponentLoader with path to shared folder
+            ComponentLoader.init('../shared');
+
+            // Load sidebar and about modal in parallel
+            await ComponentLoader.loadAll([
+                {
+                    name: 'sidebar',
+                    target: '#sidebar-container',
+                    options: {
+                        basePath: '..',
+                        activeModule: 'documentation'
+                    }
+                },
+                {
+                    name: 'about-modal',
+                    target: '#about-modal-container',
+                    options: {
+                        basePath: '..'
+                    }
+                }
+            ]);
+
+            // Current date
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            // Smooth scrolling
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            });
+
+            // Highlight active TOC link on scroll
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const id = entry.target.getAttribute('id');
+                    const tocLink = document.querySelector(`.toc-link[href="#${id}"]`);
+
+                    if (entry.isIntersecting) {
+                        document.querySelectorAll('.toc-link').forEach(link => {
+                            link.classList.remove('active');
+                        });
+                        if (tocLink) tocLink.classList.add('active');
+                    }
+                });
+            }, { root: null, rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+
+            document.querySelectorAll('.doc-section[id]').forEach(section => {
+                observer.observe(section);
+            });
+
+            // Load icons for design system
+            loadIcons();
+        });
+
+        // Icons lists
+        const iconsNav = [
+            'admin', 'arrow', 'cross', 'documents', 'excel_reports',
+            'main_page', 'partners', 'sync', 'team_info', 'team_management',
+            'Traffic calculation'
+        ];
+
+        const iconsUI = [
+            'alert-triangle', 'arrow-left', 'arrow-right', 'bar-chart', 'book-open',
+            'calculator', 'check', 'check-square', 'chevron-down', 'cloud',
+            'cloud-sync', 'download', 'edit', 'file-plus', 'file-spreadsheet',
+            'file-text', 'filter', 'folder-open', 'git-branch', 'grid-3x3',
+            'handshake', 'hash', 'help-circle', 'info', 'layout-grid',
+            'list', 'lock', 'menu', 'minus', 'mouse-pointer',
+            'play', 'plus', 'rotate-ccw', 'settings', 'trash-2',
+            'trending-up', 'type', 'unlock', 'upload', 'users',
+            'volume-2', 'x'
+        ];
+
+        function loadIcons() {
+            const gridNav = document.getElementById('iconsGridNav');
+            const gridUI = document.getElementById('iconsGridUI');
+
+            if (gridNav) {
+                gridNav.innerHTML = iconsNav.map(name => `
+                    <div class="icon-item" onclick="copyIconName('${name}', 'icons/')" title="Нажми чтобы скопировать">
+                        <img src="../icons/${name}.svg" alt="${name}" loading="lazy">
+                        <span>${name}</span>
+                    </div>
+                `).join('');
             }
-        };
 
-        // Current date
-        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('ru-RU', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-
-        // Smooth scrolling
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-        });
-
-        // Highlight active TOC link on scroll
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                const id = entry.target.getAttribute('id');
-                const tocLink = document.querySelector(`.toc-link[href="#${id}"]`);
-
-                if (entry.isIntersecting) {
-                    document.querySelectorAll('.toc-link').forEach(link => {
-                        link.classList.remove('active');
-                    });
-                    if (tocLink) tocLink.classList.add('active');
-                }
-            });
-        }, { root: null, rootMargin: '-20% 0px -70% 0px', threshold: 0 });
-
-        document.querySelectorAll('.doc-section[id]').forEach(section => {
-            observer.observe(section);
-        });
-    </script>
-
-    <!-- About Modal -->
-    <div class="modal" id="aboutModal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h2 class="modal-title">О разработке</h2>
-                <button class="modal-close" onclick="closeAboutModal()">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Это проект <strong>Vadim P</strong></p>
-                <p>Reddy ID для связи: <strong>62219492522</strong></p>
-                <p>Ссылка на чат с актуальной версией:<br>
-                <a href="https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_" target="_blank">https://lnk.reddy.team/invite/sp9ugcdOP7mIzmLSWZNocYCffj5enUB_</a></p>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function showAboutModal() {
-            document.getElementById('aboutModal').classList.add('active');
+            if (gridUI) {
+                gridUI.innerHTML = iconsUI.map(name => `
+                    <div class="icon-item" onclick="copyIconName('${name}', 'shared/icons/')" title="Нажми чтобы скопировать">
+                        <img src="../shared/icons/${name}.svg" alt="${name}" loading="lazy">
+                        <span>${name}</span>
+                    </div>
+                `).join('');
+            }
         }
-        function closeAboutModal() {
-            document.getElementById('aboutModal').classList.remove('active');
+
+        function showIconsModal() {
+            document.getElementById('iconsModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
-        document.getElementById('aboutModal').addEventListener('click', function(e) {
-            if (e.target === this) closeAboutModal();
+
+        function hideIconsModal() {
+            document.getElementById('iconsModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function copyIconName(name, path = '') {
+            navigator.clipboard.writeText(path + name + '.svg').then(() => {
+                // Show feedback
+                const item = event.currentTarget;
+                const originalText = item.querySelector('span').textContent;
+                item.querySelector('span').textContent = 'Скопировано!';
+                setTimeout(() => {
+                    item.querySelector('span').textContent = originalText;
+                }, 1000);
+            });
+        }
+
+        // Close modal on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') hideIconsModal();
         });
     </script>
 </body>
