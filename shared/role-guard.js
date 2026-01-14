@@ -20,20 +20,14 @@ const RoleGuard = {
     CACHE_TTL: 300000, // 5 минут
 
     // Mock режим для тестирования без backend
-    USE_MOCK_API: true,
-
-    // Тестовые админы (email → роль)
-    TEST_ADMINS: {
-        'shrd.acc3@gmail.com': 'admin'
-    },
+    USE_MOCK_API: false,
 
     /**
      * Mock данные для тестирования
      */
     MOCK_DATA: {
         // Текущий пользователь (можно менять для тестирования)
-        // Варианты: 'admin', 'leader', 'employee', 'pending'
-        // Если email есть в TEST_ADMINS - используется роль оттуда
+        // Варианты: 'admin', 'leader', 'employee'
         mockUserType: 'admin',
 
         users: {
@@ -141,6 +135,7 @@ const RoleGuard = {
             this.permissions = cached.permissions;
             this.initialized = true;
             this.applyUI();
+            this.initDOMObserver();
 
             // Badge для руководителя/админа
             if (cached.pendingRequestsCount > 0) {
@@ -156,7 +151,26 @@ const RoleGuard = {
             if (this.USE_MOCK_API) {
                 result = await this.mockGetCurrentUser();
             } else {
-                result = await CloudStorage.callApi('getCurrentUser');
+                // Получаем email пользователя из AuthGuard
+                const authUser = AuthGuard.getUser();
+                if (!authUser) {
+                    console.warn('[RoleGuard] No authenticated user');
+                    return this;
+                }
+
+                // Проверяем права админа через существующий API
+                const isAdmin = await CloudStorage.callApi('checkIsAdmin');
+
+                // Строим результат в ожидаемом формате
+                result = {
+                    user: {
+                        email: authUser.email,
+                        name: authUser.name,
+                        role: isAdmin.isAdmin ? 'admin' : 'user'
+                    },
+                    permissions: this.buildPermissions(isAdmin.isAdmin),
+                    pendingRequestsCount: 0 // TODO: получать из API когда будет доступен
+                };
             }
 
             this.user = result.user;
@@ -164,6 +178,7 @@ const RoleGuard = {
             this.setCache(result);
             this.initialized = true;
             this.applyUI();
+            this.initDOMObserver();
 
             // Badge для руководителя/админа
             if (result.pendingRequestsCount > 0) {
@@ -191,12 +206,8 @@ const RoleGuard = {
             }
         }
 
-        // Проверяем TEST_ADMINS
-        let mockType = this.MOCK_DATA.mockUserType;
-        if (userEmail && this.TEST_ADMINS[userEmail]) {
-            mockType = this.TEST_ADMINS[userEmail];
-        }
-
+        // Используем mockUserType из MOCK_DATA
+        const mockType = this.MOCK_DATA.mockUserType;
         const result = this.MOCK_DATA.users[mockType] || this.MOCK_DATA.users.employee;
 
         // Подставляем реальный email если есть
@@ -205,6 +216,30 @@ const RoleGuard = {
         }
 
         return result;
+    },
+
+    /**
+     * Построение permissions на основе роли
+     * @param {boolean} isAdmin - является ли пользователь админом
+     * @returns {object} - объект permissions
+     */
+    buildPermissions(isAdmin) {
+        const allModules = ['partners', 'team-info', 'traffic', 'reports', 'settings', 'documentation', 'team-management', 'admin-panel'];
+        const permissions = {};
+
+        if (isAdmin) {
+            // Админ имеет полные права на всё
+            allModules.forEach(module => {
+                permissions[module] = { canView: true, canEdit: true, canDelete: true };
+            });
+        } else {
+            // Обычный пользователь имеет только права просмотра некоторых модулей
+            ['partners', 'team-info', 'documentation', 'reports'].forEach(module => {
+                permissions[module] = { canView: true, canEdit: false, canDelete: false };
+            });
+        }
+
+        return permissions;
     },
 
     /**
@@ -343,6 +378,8 @@ const RoleGuard = {
      * Применить UI ограничения
      */
     applyUI() {
+        if (!this.initialized) return;
+
         // Скрыть недоступные пункты меню в sidebar
         document.querySelectorAll('[data-module]').forEach(el => {
             const module = el.dataset.module;
@@ -392,6 +429,75 @@ const RoleGuard = {
                 el.style.display = 'none';
             }
         });
+    },
+
+    /**
+     * Инициализация наблюдателя за изменениями DOM
+     * Автоматически применяет права при добавлении новых элементов
+     */
+    initDOMObserver() {
+        if (!this.initialized || this.domObserver) return;
+
+        const targetAttributes = [
+            'data-module',
+            'data-module-card',
+            'data-requires-edit',
+            'data-requires-delete',
+            'data-admin-only',
+            'data-leader-only'
+        ];
+
+        this.domObserver = new MutationObserver((mutations) => {
+            let needsReapply = false;
+
+            for (const mutation of mutations) {
+                // Проверяем добавленные узлы
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            // Проверяем сам элемент и его потомков
+                            if (targetAttributes.some(attr => node.hasAttribute?.(attr)) ||
+                                targetAttributes.some(attr => node.querySelector?.(`[${attr}]`))) {
+                                needsReapply = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Проверяем изменения атрибутов
+                if (mutation.type === 'attributes' && targetAttributes.includes(mutation.attributeName)) {
+                    needsReapply = true;
+                }
+
+                if (needsReapply) break;
+            }
+
+            if (needsReapply) {
+                this.applyUI();
+            }
+        });
+
+        // Наблюдаем за всем документом
+        this.domObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: targetAttributes
+        });
+
+        console.log('✅ RoleGuard DOM Observer активирован');
+    },
+
+    /**
+     * Остановка наблюдателя
+     */
+    disconnectDOMObserver() {
+        if (this.domObserver) {
+            this.domObserver.disconnect();
+            this.domObserver = null;
+            console.log('🛑 RoleGuard DOM Observer остановлен');
+        }
     },
 
     /**
@@ -567,42 +673,19 @@ const RoleGuard = {
     }
 };
 
-// CSS стили для badge
+// Очистка устаревшего кеша при загрузке (только если прошло больше CACHE_TTL)
 (function() {
-    const style = document.createElement('style');
-    style.textContent = `
-        .requests-badge {
-            position: absolute;
-            top: -4px;
-            right: -4px;
-            min-width: 18px;
-            height: 18px;
-            padding: 0 5px;
-            background: #ff4757;
-            color: white;
-            font-size: 11px;
-            font-weight: 600;
-            border-radius: 9px;
-            display: none;
-            align-items: center;
-            justify-content: center;
+    try {
+        const data = localStorage.getItem('roleGuard');
+        if (data) {
+            const parsed = JSON.parse(data);
+            if (Date.now() - parsed.timestamp > 300000) {
+                localStorage.removeItem('roleGuard');
+            }
         }
-
-        .menu-item {
-            position: relative;
-        }
-
-        /* Скрытые элементы */
-        [data-hidden-by-role] {
-            display: none !important;
-        }
-    `;
-    document.head.appendChild(style);
-})();
-
-// Очистка устаревшего кеша при загрузке
-(function() {
-    localStorage.removeItem('roleGuard');
+    } catch (e) {
+        localStorage.removeItem('roleGuard');
+    }
 })();
 
 // Экспорт для модульных систем

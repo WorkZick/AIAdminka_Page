@@ -329,7 +329,7 @@ const TokenManager = {
         );
 
         if (!popup) {
-            alert('Popup заблокирован. Разрешите popup для этого сайта.');
+            Toast.warning('Popup заблокирован. Разрешите popup для этого сайта.');
             return;
         }
 
@@ -453,7 +453,7 @@ const AuthGuard = {
         if (typeof SyncManager !== 'undefined' && SyncManager.hasPendingSync()) {
             const canLogout = SyncManager.canLogout();
             if (canLogout !== true) {
-                alert(canLogout);
+                Toast.warning(canLogout);
                 return false;
             }
         }
@@ -537,79 +537,6 @@ const AuthGuard = {
         return name.substring(0, 2).toUpperCase();
     }
 };
-
-// CSS стили
-(function() {
-    const style = document.createElement('style');
-    style.textContent = `
-        .auth-user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 15px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            margin: 10px;
-        }
-        .auth-user-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: #fdbe2f;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1a1a1a;
-            overflow: hidden;
-        }
-        .auth-user-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .auth-user-details {
-            flex: 1;
-            min-width: 0;
-        }
-        .auth-user-name {
-            font-size: 13px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .auth-user-email {
-            font-size: 11px;
-            opacity: 0.7;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .auth-logout-btn {
-            background: none;
-            border: none;
-            padding: 6px;
-            cursor: pointer;
-            opacity: 0.6;
-            transition: opacity 0.2s;
-            color: inherit;
-        }
-        .auth-logout-btn:hover {
-            opacity: 1;
-        }
-        .sidebar.collapsed .auth-user-details,
-        .sidebar.collapsed .auth-logout-btn {
-            display: none;
-        }
-        .sidebar.collapsed .auth-user-info {
-            justify-content: center;
-            padding: 10px;
-        }
-    `;
-    document.head.appendChild(style);
-})();
 
 // Автопроверка при загрузке
 (function() {
