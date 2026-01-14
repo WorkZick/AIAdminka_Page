@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com; frame-ancestors 'self'">
+    <!-- CSP: Разрешён Live Server script для разработки (hash добавлен) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:* ws://localhost:*; frame-ancestors 'self'">
     <title>AIAdminka</title>
     <link rel="stylesheet" href="shared/css/design-system.css">
     <link rel="stylesheet" href="css/home.css">
