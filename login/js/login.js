@@ -22,7 +22,7 @@ const loginApp = {
     SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyeWmZs028zVkzKTrqNTbzTasKK0Z63eCfV1I4RUV6BJWMH8r62kScLh7U5B45bHRRILA/exec',
 
     // Mock API режим (для тестирования без backend)
-    USE_MOCK_API: true,
+    USE_MOCK_API: false,
 
     // State
     currentUser: null,
@@ -280,11 +280,27 @@ const loginApp = {
         try {
             const result = await this.secureApiCall('checkAccess');
 
+            // DEBUG: Логируем ответ от API для отладки
+            console.log('checkAccess API response:', result);
+
             if (result.error) {
                 throw new Error(result.error);
             }
 
-            switch (result.status) {
+            // Адаптер: преобразуем старый формат бэкенда в новый
+            let status;
+            if (result.allowed === true) {
+                status = 'approved';
+            } else if (result.pendingRequest === true) {
+                status = result.status || 'pending';
+            } else if (result.allowed === false && result.pendingRequest === false) {
+                status = 'new';
+            } else {
+                // Если уже новый формат с полем status
+                status = result.status;
+            }
+
+            switch (status) {
                 case 'new':
                     this.showRegistration();
                     break;
@@ -311,7 +327,8 @@ const loginApp = {
                     break;
 
                 default:
-                    this.showError('Неизвестное состояние доступа');
+                    console.error('Unknown access status:', status, 'Full response:', result);
+                    this.showError(`Неизвестное состояние доступа: ${status || 'undefined'}`);
             }
 
         } catch (error) {
@@ -341,7 +358,7 @@ const loginApp = {
         const reddyId = formData.get('reddyId').trim();
 
         if (!reddyId) {
-            alert('Введите Reddy ID');
+            Toast.warning('Введите Reddy ID');
             return false;
         }
 
