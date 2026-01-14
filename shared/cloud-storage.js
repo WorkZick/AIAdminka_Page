@@ -11,6 +11,9 @@ const CloudStorage = {
     CACHE_TTL: 60000, // 1 минута
     cache: {},
 
+    // Pending requests для предотвращения race condition
+    pendingRequests: new Map(),
+
     // State
     isOnline: navigator.onLine,
     userEmail: null,
@@ -88,6 +91,10 @@ const CloudStorage = {
 
     // ============ API CALLS ============
 
+    // Retry settings
+    MAX_RETRIES: 3,
+    INITIAL_DELAY: 1000, // 1 second
+
     /**
      * Получение access token для авторизации запросов
      */
@@ -97,10 +104,18 @@ const CloudStorage = {
     },
 
     /**
+     * Sleep helper for retry delays
+     */
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    },
+
+    /**
      * Вызов Apps Script API (GET с URL параметрами)
      * GAS теряет POST body при редиректе, поэтому используем GET
+     * Включает retry с exponential backoff
      */
-    async callApi(action, params = {}) {
+    async callApi(action, params = {}, retryCount = 0) {
         if (!this.isOnline) {
             throw new Error('Нет подключения к интернету');
         }
@@ -109,12 +124,16 @@ const CloudStorage = {
         if (!accessToken) {
             // Токен истёк или отсутствует - редирект на логин
             this.redirectToLogin();
-            throw new Error('Требуется авторизация');
+            // Возвращаем Promise, который не разрешится - предотвращает выполнение кода после редиректа
+            return new Promise(() => {});
         }
 
         try {
             const url = new URL(this.SCRIPT_URL);
             url.searchParams.set('action', action);
+            // TODO: SECURITY - Токен в URL небезопасен (логи сервера/браузера)
+            // Решение: использовать Authorization header (требует изменения Apps Script)
+            // Google Apps Script теряет POST body при редиректе, поэтому используем GET
             url.searchParams.set('accessToken', accessToken);
 
             // Добавляем остальные параметры
@@ -136,6 +155,19 @@ const CloudStorage = {
 
             return result;
         } catch (error) {
+            // Retry logic with exponential backoff
+            const isRetryable = error.message.includes('Failed to fetch') ||
+                               error.message.includes('NetworkError') ||
+                               error.message.includes('timeout') ||
+                               error.name === 'TypeError';
+
+            if (isRetryable && retryCount < this.MAX_RETRIES) {
+                const delay = this.INITIAL_DELAY * Math.pow(2, retryCount);
+                console.warn(`CloudStorage: Retry ${retryCount + 1}/${this.MAX_RETRIES} after ${delay}ms...`);
+                await this.sleep(delay);
+                return this.callApi(action, params, retryCount + 1);
+            }
+
             console.error('CloudStorage API error:', error);
             throw error;
         }
@@ -222,53 +254,68 @@ const CloudStorage = {
             if (cached) return cached;
         }
 
-        const result = await this.callApi('getPartners');
-        let partners = result.partners || [];
-
-        // Парсим customFields и маппим поля из Google Sheets формата
-        partners.forEach(p => {
-            if (p.customFields && typeof p.customFields === 'string') {
-                try {
-                    p.customFields = JSON.parse(p.customFields);
-                } catch (e) {
-                    p.customFields = {};
-                }
-            }
-            // Маппинг полей: Google Sheets → локальный формат
-            p.dep = p.deposits || p.dep || 0;
-            p.with = p.withdrawals || p.with || 0;
-            p.comp = p.compensation || p.comp || 0;
-            // Помечаем облачные данные как синхронизированные
-            p._synced = true;
-        });
-
-        // Объединяем с локальными несинхронизированными
-        const localUnsynced = this.getLocalUnsynced('partners-data');
-        if (localUnsynced.length > 0) {
-            const getKey = (p) => `${String(p.subagent || '').toLowerCase().trim()}|${String(p.subagentId || '').toLowerCase().trim()}|${String(p.method || '').toLowerCase().trim()}`;
-
-            // Создаём Set ключей из облачных данных
-            const cloudKeys = new Set(partners.map(getKey));
-
-            // Фильтруем локальные - оставляем только те, которых НЕТ в облаке
-            const reallyUnsynced = localUnsynced.filter(local => !cloudKeys.has(getKey(local)));
-
-            if (reallyUnsynced.length !== localUnsynced.length) {
-                // Есть стейл-данные, которые уже в облаке - очищаем localStorage
-                if (reallyUnsynced.length === 0) {
-                    localStorage.removeItem('partners-data');
-                } else {
-                    localStorage.setItem('partners-data', JSON.stringify(reallyUnsynced));
-                }
-            }
-
-            if (reallyUnsynced.length > 0) {
-                partners = [...partners, ...reallyUnsynced];
-            }
+        // Предотвращение race condition: возвращаем существующий Promise если запрос уже в процессе
+        if (this.pendingRequests.has('partners')) {
+            return this.pendingRequests.get('partners');
         }
 
-        this.setCache('partners', partners);
-        return partners;
+        const fetchPromise = (async () => {
+            try {
+                const result = await this.callApi('getPartners');
+                let partners = result.partners || [];
+
+                // Парсим customFields и маппим поля из Google Sheets формата
+                partners.forEach(p => {
+                    if (p.customFields && typeof p.customFields === 'string') {
+                        try {
+                            p.customFields = JSON.parse(p.customFields);
+                        } catch (e) {
+                            console.warn(`Invalid customFields for partner ${p.id}:`, p.customFields);
+                            p.customFields = {};
+                        }
+                    }
+                    // Маппинг полей: Google Sheets → локальный формат
+                    p.dep = p.deposits || p.dep || 0;
+                    p.with = p.withdrawals || p.with || 0;
+                    p.comp = p.compensation || p.comp || 0;
+                    // Помечаем облачные данные как синхронизированные
+                    p._synced = true;
+                });
+
+                // Объединяем с локальными несинхронизированными
+                const localUnsynced = this.getLocalUnsynced('partners-data');
+                if (localUnsynced.length > 0) {
+                    const getKey = (p) => `${String(p.subagent || '').toLowerCase().trim()}|${String(p.subagentId || '').toLowerCase().trim()}|${String(p.method || '').toLowerCase().trim()}`;
+
+                    // Создаём Set ключей из облачных данных
+                    const cloudKeys = new Set(partners.map(getKey));
+
+                    // Фильтруем локальные - оставляем только те, которых НЕТ в облаке
+                    const reallyUnsynced = localUnsynced.filter(local => !cloudKeys.has(getKey(local)));
+
+                    if (reallyUnsynced.length !== localUnsynced.length) {
+                        // Есть стейл-данные, которые уже в облаке - очищаем localStorage
+                        if (reallyUnsynced.length === 0) {
+                            localStorage.removeItem('partners-data');
+                        } else {
+                            localStorage.setItem('partners-data', JSON.stringify(reallyUnsynced));
+                        }
+                    }
+
+                    if (reallyUnsynced.length > 0) {
+                        partners = [...partners, ...reallyUnsynced];
+                    }
+                }
+
+                this.setCache('partners', partners);
+                return partners;
+            } finally {
+                this.pendingRequests.delete('partners');
+            }
+        })();
+
+        this.pendingRequests.set('partners', fetchPromise);
+        return fetchPromise;
     },
 
     /**
@@ -277,6 +324,7 @@ const CloudStorage = {
     async addPartner(data) {
         const result = await this.callApi('addPartner', { data: data });
         this.clearCache('partners');
+        this.pendingRequests.delete('partners'); // Очищаем pending при изменении данных
         return result;
     },
 
@@ -286,6 +334,7 @@ const CloudStorage = {
     async updatePartner(id, data) {
         const result = await this.callApi('updatePartner', { id: id, data: data });
         this.clearCache('partners');
+        this.pendingRequests.delete('partners');
         return result;
     },
 
@@ -295,6 +344,7 @@ const CloudStorage = {
     async deletePartner(id) {
         const result = await this.callApi('deletePartner', { id: id });
         this.clearCache('partners');
+        this.pendingRequests.delete('partners');
         return result;
     },
 
@@ -526,7 +576,7 @@ const CloudStorage = {
      */
     showOfflineMessage() {
         // Можно переопределить в конкретном модуле
-        alert('Нет подключения к интернету. Проверьте соединение и попробуйте снова.');
+        Toast.error('Нет подключения к интернету. Проверьте соединение и попробуйте снова.');
     },
 
     /**
