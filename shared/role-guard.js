@@ -233,8 +233,9 @@ const RoleGuard = {
                 permissions[module] = { canView: true, canEdit: true, canDelete: true };
             });
         } else {
-            // Обычный пользователь имеет только права просмотра некоторых модулей
-            ['partners', 'team-info', 'documentation', 'reports'].forEach(module => {
+            // Обычный пользователь имеет доступ ко всем модулям кроме admin-panel и team-management
+            // Но права редактирования/удаления только у админа
+            ['partners', 'team-info', 'traffic', 'reports', 'settings', 'documentation'].forEach(module => {
                 permissions[module] = { canView: true, canEdit: false, canDelete: false };
             });
         }
