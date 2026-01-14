@@ -21,13 +21,18 @@ const homeApp = {
         // Check if CloudStorage is available
         if (typeof CloudStorage !== 'undefined') {
             await CloudStorage.init();
-            this.isAdmin = await this.checkIsAdmin();
-            this.loadTickets();
         }
 
-        // Initialize RoleGuard for role-based UI
+        // Initialize RoleGuard for role-based UI (includes checkIsAdmin)
         if (typeof RoleGuard !== 'undefined') {
             await RoleGuard.init();
+            // Get admin status from RoleGuard (avoids duplicate API call)
+            this.isAdmin = RoleGuard.hasRole('admin');
+        }
+
+        // Load tickets after role initialization
+        if (typeof CloudStorage !== 'undefined') {
+            this.loadTickets();
         }
 
         // Setup image upload handler
