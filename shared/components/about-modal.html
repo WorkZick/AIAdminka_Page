@@ -2,7 +2,7 @@
     <div class="modal-dialog">
         <div class="modal-header">
             <h2 class="modal-title">О разработке</h2>
-            <button class="modal-close" onclick="closeAboutModal()">
+            <button class="modal-close">
                 <img src="{{basePath}}/shared/icons/cross.svg" alt="Закрыть">
             </button>
         </div>
@@ -13,25 +13,3 @@
         </div>
     </div>
 </div>
-
-<script>
-    function showAboutModal() {
-        const modal = document.getElementById('aboutModal');
-        if (modal) modal.classList.add('active');
-    }
-
-    function closeAboutModal() {
-        const modal = document.getElementById('aboutModal');
-        if (modal) modal.classList.remove('active');
-    }
-
-    // Закрытие по клику на overlay
-    document.getElementById('aboutModal')?.addEventListener('click', function(e) {
-        if (e.target === this) closeAboutModal();
-    });
-
-    // Закрытие по Escape
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeAboutModal();
-    });
-</script>

@@ -731,4 +731,50 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Initialize app
     homeApp.init();
+
+    // Initialize about modal after component is loaded
+    initAboutModal();
 });
+
+// ============ ABOUT MODAL (Global functions) ============
+function showAboutModal() {
+    const modal = document.getElementById('aboutModal');
+    if (modal) modal.classList.add('active');
+}
+
+function closeAboutModal() {
+    const modal = document.getElementById('aboutModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function initAboutModal() {
+    // Close button handler
+    const closeBtn = document.querySelector('#aboutModal .modal-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeAboutModal);
+    }
+
+    // Close by clicking overlay
+    const modal = document.getElementById('aboutModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) closeAboutModal();
+        });
+    }
+
+    // Close by Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('aboutModal');
+            if (modal && modal.classList.contains('active')) {
+                closeAboutModal();
+            }
+        }
+    });
+
+    // Version info click handler
+    const versionInfo = document.querySelector('.version-info');
+    if (versionInfo) {
+        versionInfo.addEventListener('click', showAboutModal);
+    }
+}
