@@ -29,6 +29,9 @@ const excelApp = {
             // Подписки на изменения состояния
             this.setupSubscriptions();
 
+            // Подключаем event listeners
+            this.setupEventListeners();
+
             // Рендерим начальный шаг (выбор шаблона)
             this.uiRenderer.renderStep('template');
 
@@ -51,6 +54,125 @@ const excelApp = {
         this.state.subscribe('stepsInitialized', (template) => {
             this.uiRenderer.updateStepsIndicator();
             logger.log(`Шаблон выбран: ${template.name}`, 'success');
+        });
+    },
+
+    // Настройка event listeners для кнопок
+    setupEventListeners() {
+        // Log panel toggle buttons
+        const logToggleBtn = document.getElementById('logToggleBtn');
+        const logCloseBtn = document.getElementById('logCloseBtn');
+        if (logToggleBtn) {
+            logToggleBtn.addEventListener('click', toggleLogPanel);
+        }
+        if (logCloseBtn) {
+            logCloseBtn.addEventListener('click', toggleLogPanel);
+        }
+
+        // Log clear button
+        const logClearBtn = document.getElementById('logClearBtn');
+        if (logClearBtn) {
+            logClearBtn.addEventListener('click', () => logger.clear());
+        }
+
+        // Reset modal buttons
+        const resetModalClose = document.getElementById('resetModalClose');
+        const resetModalCancel = document.getElementById('resetModalCancel');
+        const resetModalConfirm = document.getElementById('resetModalConfirm');
+
+        if (resetModalClose) {
+            resetModalClose.addEventListener('click', () => this.closeResetModal());
+        }
+        if (resetModalCancel) {
+            resetModalCancel.addEventListener('click', () => this.closeResetModal());
+        }
+        if (resetModalConfirm) {
+            resetModalConfirm.addEventListener('click', () => this.confirmReset());
+        }
+
+        // Event delegation для динамического контента
+        this.setupEventDelegation();
+    },
+
+    // Настройка event delegation для динамически генерируемого HTML
+    setupEventDelegation() {
+        // Делегирование для кликов
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            const action = target.dataset.action;
+
+            switch (action) {
+                case 'select-template':
+                    e.preventDefault();
+                    this.selectTemplate(target.dataset.templateId);
+                    break;
+
+                case 'toggle-components':
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.toggleComponents(target.dataset.targetId, e);
+                    break;
+
+                case 'toggle-required-columns':
+                    e.preventDefault();
+                    this.toggleRequiredColumns(target.dataset.targetId, e);
+                    break;
+
+                case 'navigate-back':
+                    e.preventDefault();
+                    this.navigateBack();
+                    break;
+
+                case 'navigate-next':
+                    e.preventDefault();
+                    this.navigateNext();
+                    break;
+
+                case 'navigate-to-step':
+                    e.preventDefault();
+                    this.navigateToStep(target.dataset.stepId);
+                    break;
+
+                case 'show-reset-modal':
+                    e.preventDefault();
+                    this.showResetModal();
+                    break;
+
+                case 'process-files':
+                    e.preventDefault();
+                    this.processFiles();
+                    break;
+            }
+        });
+
+        // Делегирование для изменения файловых input'ов
+        document.addEventListener('change', (e) => {
+            const target = e.target;
+            if (!target.matches('[data-action]')) return;
+
+            const action = target.dataset.action;
+
+            switch (action) {
+                case 'upload-file':
+                    this.handleFileUpload(target.dataset.stepId, target.files);
+                    break;
+
+                case 'upload-sub-file':
+                    try {
+                        const subFileConfig = JSON.parse(target.dataset.subFileConfig);
+                        this.handleSubFileUpload(
+                            target.dataset.stepId,
+                            target.dataset.subFileId,
+                            target.files,
+                            subFileConfig
+                        );
+                    } catch (error) {
+                        console.error('Ошибка парсинга конфигурации sub-file:', error);
+                    }
+                    break;
+            }
         });
     },
 
@@ -233,7 +355,7 @@ const excelApp = {
                     </div>
                     <div class="inline-loader-progress">
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${percent}%"></div>
+                            <div class="progress-fill" data-percent="${percent}"></div>
                         </div>
                         <span class="progress-percent">${percent}%</span>
                     </div>
@@ -241,8 +363,14 @@ const excelApp = {
                 </div>
             `;
             uploadArea.parentNode.insertBefore(loader, uploadArea.nextSibling);
-            uploadArea.style.opacity = '0.5';
-            uploadArea.style.pointerEvents = 'none';
+
+            // Применяем процент через data-атрибут и CSS
+            const fill = loader.querySelector('.progress-fill');
+            if (fill) {
+                fill.style.setProperty('--progress-width', `${percent}%`);
+            }
+
+            uploadArea.classList.add('loading');
         }
     },
 
@@ -258,7 +386,7 @@ const excelApp = {
         const fileNameEl = loader.querySelector('.inline-loader-filename');
 
         if (text) text.textContent = `Загрузка ${current} из ${total}`;
-        if (fill) fill.style.width = `${percent}%`;
+        if (fill) fill.style.setProperty('--progress-width', `${percent}%`);
         if (percentText) percentText.textContent = `${percent}%`;
         if (fileNameEl) fileNameEl.textContent = fileName;
     },
@@ -270,8 +398,7 @@ const excelApp = {
 
         const uploadArea = document.querySelector(`#fileInput_${stepId}`)?.closest('.file-upload-label');
         if (uploadArea) {
-            uploadArea.style.opacity = '';
-            uploadArea.style.pointerEvents = '';
+            uploadArea.classList.remove('loading');
         }
     },
 
@@ -507,11 +634,12 @@ const excelApp = {
         const icon = event?.target.closest('.required-columns-toggle')?.querySelector('.toggle-icon');
 
         if (list && icon) {
-            if (list.style.display === 'none') {
-                list.style.display = 'block';
+            const isHidden = list.classList.contains('hidden');
+            if (isHidden) {
+                list.classList.remove('hidden');
                 icon.textContent = '▼';
             } else {
-                list.style.display = 'none';
+                list.classList.add('hidden');
                 icon.textContent = '▶';
             }
         }
@@ -528,11 +656,12 @@ const excelApp = {
         const icon = event?.target.closest('.components-toggle')?.querySelector('.toggle-icon');
 
         if (list && icon) {
-            if (list.style.display === 'none') {
-                list.style.display = 'block';
+            const isHidden = list.classList.contains('hidden');
+            if (isHidden) {
+                list.classList.remove('hidden');
                 icon.textContent = '▼';
             } else {
-                list.style.display = 'none';
+                list.classList.add('hidden');
                 icon.textContent = '▶';
             }
         }
@@ -555,7 +684,44 @@ const excelApp = {
     }
 };
 
+// Глобальная функция для toggle log panel
+function toggleLogPanel() {
+    const drawer = document.getElementById('logDrawer');
+    const btn = document.getElementById('logToggleBtn');
+    if (drawer) {
+        drawer.classList.toggle('open');
+    }
+    if (btn) {
+        btn.classList.toggle('hidden');
+    }
+}
+
 // Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check authentication and role status (waiting_invite/blocked check)
+    if (!await AuthGuard.checkWithRole()) {
+        return; // Will redirect to login or waiting-invite
+    }
+
+    // Инициализация компонентов
+    ComponentLoader.init('../shared');
+    await ComponentLoader.load('sidebar', '#sidebar-container', {
+        basePath: '..',
+        activeModule: 'reports'
+    });
+    await ComponentLoader.load('about-modal', '#about-modal-container', {
+        basePath: '..'
+    });
+    SidebarController.init({ basePath: '..' });
+
+    // Инициализация приложения
     excelApp.init();
+
+    // Обработчик клика по overlay модального окна сброса
+    const resetModal = document.getElementById('resetModal');
+    if (resetModal) {
+        resetModal.addEventListener('click', function(e) {
+            if (e.target === this) excelApp.closeResetModal();
+        });
+    }
 });

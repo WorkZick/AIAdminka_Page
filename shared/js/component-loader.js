@@ -7,6 +7,8 @@
 const ComponentLoader = {
     basePath: '../shared',
     loadedComponents: new Map(),
+    // Whitelist of allowed components for script execution
+    allowedComponents: new Set(['sidebar', 'about-modal']),
 
     /**
      * Инициализация загрузчика
@@ -31,12 +33,27 @@ const ComponentLoader = {
         }
 
         try {
-            const response = await fetch(`${this.basePath}/components/${name}.html`);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
+            let html;
+            const cacheKey = `component-cache-${name}`;
 
-            let html = await response.text();
+            // Пробуем sessionStorage кеш (очищается при закрытии вкладки)
+            const cachedHtml = sessionStorage.getItem(cacheKey);
+            if (cachedHtml) {
+                html = cachedHtml;
+            } else {
+                const response = await fetch(`${this.basePath}/components/${name}.html`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                html = await response.text();
+
+                // Кешируем в sessionStorage
+                try {
+                    sessionStorage.setItem(cacheKey, html);
+                } catch (e) {
+                    // sessionStorage переполнен — продолжаем без кеша
+                }
+            }
 
             // Применяем опции (замена плейсхолдеров)
             html = this.processTemplate(html, options);
@@ -47,6 +64,9 @@ const ComponentLoader = {
             } else {
                 target.innerHTML = html;
             }
+
+            // Выполняем скрипты только для разрешённых компонентов
+            this.executeScripts(target, name);
 
             // Инициализируем компонент
             await this.initComponent(name, options);
@@ -73,6 +93,36 @@ const ComponentLoader = {
     },
 
     /**
+     * Выполнение скриптов внутри загруженного HTML
+     * innerHTML не выполняет скрипты автоматически
+     * SECURITY: Only executes scripts for whitelisted components
+     * @param {HTMLElement} container
+     * @param {string} componentName - name of the component being loaded
+     */
+    executeScripts(container, componentName) {
+        // Security check: only allow script execution for whitelisted components
+        if (!this.allowedComponents.has(componentName)) return;
+
+        const scripts = container.querySelectorAll('script');
+        scripts.forEach(oldScript => {
+            // Block external scripts for additional security
+            if (oldScript.src) return;
+
+            const newScript = document.createElement('script');
+            // Копируем атрибуты (except src which is already blocked)
+            Array.from(oldScript.attributes).forEach(attr => {
+                if (attr.name !== 'src') {
+                    newScript.setAttribute(attr.name, attr.value);
+                }
+            });
+            // Копируем содержимое
+            newScript.textContent = oldScript.textContent;
+            // Заменяем старый скрипт новым (это выполнит его)
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+        });
+    },
+
+    /**
      * Инициализация компонента после загрузки
      * @param {string} name
      * @param {Object} options
@@ -83,9 +133,23 @@ const ComponentLoader = {
                 if (typeof SidebarController !== 'undefined') {
                     SidebarController.init(options);
                 }
+                // Обновляем версию в sidebar после загрузки
+                if (typeof AppVersion !== 'undefined') {
+                    if (AppVersion.version) {
+                        AppVersion.updateAllElements();
+                    } else {
+                        // Версия ещё не загружена - ждём событие
+                        document.addEventListener('app-version-loaded', () => {
+                            AppVersion.updateAllElements();
+                        }, { once: true });
+                    }
+                }
                 break;
             case 'about-modal':
-                // About modal готов к использованию
+                // Инициализируем обработчики событий
+                if (typeof AboutModal !== 'undefined') {
+                    AboutModal.init();
+                }
                 break;
         }
     },

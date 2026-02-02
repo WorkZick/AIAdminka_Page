@@ -9,67 +9,66 @@ const settingsApp = {
     currentUser: null,
     userProfile: null,
 
-    // Mock API режим (для тестирования без backend)
-    USE_MOCK_API: true,
-
-    // ============ MOCK API DATA ============
-
-    mockData: {
-        profile: {
-            email: '',
-            name: 'Тестовый Пользователь',
-            position: 'Менеджер по продажам',
-            reddyId: '123456',
-            crmLogin: 'test.user',
-            corpTelegram: 'work_user',
-            personalTelegram: 'test_user',
-            corpEmail: 'work@company.com',
-            personalEmail: 'personal@mail.com',
-            corpPhone: '+7 999 123-45-67',
-            personalPhone: '+7 999 765-43-21',
-            birthday: '1990-01-15',
-            startDate: '2023-06-01',
-            office: 'Москва',
-            company: 'ООО "Компания"',
-            comment: '',
-            picture: '',
-            role: 'leader',
-            teamId: 'team-001',
-            teamName: 'Команда Alpha',
-            teamLeader: null, // null = сам руководитель
-            status: 'active'
-        }
-    },
-
-    // Названия ролей
-    roleNames: {
-        'admin': 'Администратор',
-        'leader': 'Руководитель',
-        'assistant': 'Помощник руководителя',
-        'sales': 'Менеджер по продажам',
-        'partners_mgr': 'Менеджер по партнёрам',
-        'payments': 'Менеджер платёжных систем',
-        'antifraud': 'Специалист по антифроду',
-        'tech': 'Технический специалист'
-    },
-
-    // Описания ролей
-    roleDescriptions: {
-        'admin': 'Полный доступ ко всем функциям системы и управление всеми командами.',
-        'leader': 'Управление своей командой, одобрение запросов и настройка прав сотрудников.',
-        'assistant': 'Помощь руководителю в управлении командой.',
-        'sales': 'Работа с партнёрами и продажами.',
-        'partners_mgr': 'Управление партнёрскими отношениями.',
-        'payments': 'Работа с платёжными системами и транзакциями.',
-        'antifraud': 'Мониторинг и предотвращение мошенничества.',
-        'tech': 'Техническая поддержка и настройка системы.'
-    },
+    // Названия и описания ролей — из RolesConfig (shared/roles-config.js)
 
     // ============ INITIALIZATION ============
 
     init() {
         this.loadUserData();
         this.loadProfile();
+        this.loadTeamSettings();
+    },
+
+    attachEventListeners() {
+        // Profile form submit
+        const profileForm = document.getElementById('profileForm');
+        if (profileForm) {
+            profileForm.addEventListener('submit', (e) => this.saveProfile(e));
+        }
+
+        // Team name modal input - Enter key
+        const teamNameInput = document.getElementById('teamNameModalInput');
+        if (teamNameInput) {
+            teamNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.saveTeamNameFromModal();
+                }
+            });
+        }
+
+        // Delegate clicks for data-action buttons
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            const action = target.dataset.action;
+            const modal = target.dataset.modal;
+
+            switch (action) {
+                case 'edit-team-name':
+                    this.editTeamName();
+                    break;
+                case 'clear-cache':
+                    this.openModal('clearCacheModal');
+                    break;
+                case 'logout':
+                    this.logout();
+                    break;
+                case 'close-modal':
+                    if (modal) this.closeModal(modal);
+                    break;
+                case 'confirm-logout':
+                    this.confirmLogout();
+                    break;
+                case 'confirm-clear-cache':
+                    this.confirmClearCache();
+                    break;
+                case 'save-team-name':
+                    this.saveTeamNameFromModal();
+                    break;
+            }
+        });
     },
 
     // ============ User Data ============
@@ -84,78 +83,83 @@ const settingsApp = {
                 picture: auth.picture,
                 timestamp: auth.timestamp
             };
-
-            // Обновить mock данные с реальным email
-            if (this.USE_MOCK_API) {
-                this.mockData.profile.email = auth.email;
-                this.mockData.profile.name = auth.name || this.mockData.profile.name;
-                this.mockData.profile.picture = auth.picture || '';
-            }
         }
     },
 
     async loadProfile() {
         try {
-            const result = await this.apiCall('getProfile');
-
-            if (result.error) {
-                console.error('Error loading profile:', result.error);
-                this.updateUI();
-                return;
+            // Инициализируем RoleGuard если ещё не инициализирован
+            if (typeof RoleGuard !== 'undefined' && !RoleGuard.initialized) {
+                await RoleGuard.init();
             }
 
-            this.userProfile = result.profile;
+            // Получаем данные пользователя из RoleGuard
+            const roleGuardUser = typeof RoleGuard !== 'undefined' ? RoleGuard.user : null;
+
+            // Автоинициализация хранилища для leader/admin
+            if (roleGuardUser && (roleGuardUser.role === 'leader' || roleGuardUser.role === 'admin')) {
+                try {
+                    const storageResult = await CloudStorage.initStorage();
+                    // Storage initialized successfully
+                } catch (e) {
+                    // Storage init failed, continue without it
+                }
+            }
+
+            // Ищем данные сотрудника из облака
+            let teamInfoEmployee = null;
+            const currentEmail = this.currentUser?.email;
+
+            // Пытаемся загрузить из CloudStorage
+            if (currentEmail && typeof CloudStorage !== 'undefined' && CloudStorage.isAuthenticated()) {
+                try {
+                    const employees = await CloudStorage.getEmployees();
+                    if (Array.isArray(employees)) {
+                        teamInfoEmployee = employees.find(emp =>
+                            emp.email === currentEmail || emp.id === currentEmail
+                        );
+                    }
+                } catch (e) {
+                    // Cloud load failed, continue with local data
+                }
+            }
+
+            // Формируем профиль из доступных данных (приоритет: cloud > RoleGuard > currentUser)
+            this.userProfile = {
+                email: this.currentUser?.email || '',
+                name: teamInfoEmployee?.fullName || roleGuardUser?.name || this.currentUser?.name || '',
+                picture: teamInfoEmployee?.avatar || this.currentUser?.picture || '',
+                role: roleGuardUser?.role || 'user',
+                reddyId: teamInfoEmployee?.reddyId || roleGuardUser?.reddyId || '',
+                teamId: roleGuardUser?.teamId || '',
+                teamName: roleGuardUser?.teamName || 'Команда',
+                teamLeader: roleGuardUser?.teamLeader || null,
+                status: teamInfoEmployee?.status || roleGuardUser?.status || 'active',
+                position: teamInfoEmployee?.position || roleGuardUser?.position || '',
+                // Контактные данные из карточки сотрудника
+                crmLogin: teamInfoEmployee?.crmLogin || '',
+                corpTelegram: teamInfoEmployee?.corpTelegram || '',
+                personalTelegram: teamInfoEmployee?.personalTelegram || '',
+                corpEmail: this.currentUser?.email || '',
+                personalEmail: teamInfoEmployee?.personalEmail || '',
+                corpPhone: teamInfoEmployee?.corpPhone || '',
+                personalPhone: teamInfoEmployee?.personalPhone || '',
+                birthday: teamInfoEmployee?.birthday || '',
+                startDate: teamInfoEmployee?.startDate || '',
+                office: teamInfoEmployee?.office || '',
+                company: teamInfoEmployee?.company || '',
+                comment: teamInfoEmployee?.comment || ''
+            };
+
             this.updateUI();
             this.fillProfileForm();
 
         } catch (error) {
-            console.error('Error loading profile:', error);
+            ErrorHandler.handle(error, {
+                module: 'settings',
+                action: 'loadProfile'
+            });
             this.updateUI();
-        }
-    },
-
-    // ============ API ============
-
-    async apiCall(action, params = {}) {
-        if (this.USE_MOCK_API) {
-            return this.mockApiCall(action, params);
-        }
-
-        // Реальный API call (будет реализован позже)
-        const url = new URL(CloudStorage.SCRIPT_URL);
-        url.searchParams.set('action', action);
-
-        for (const [key, value] of Object.entries(params)) {
-            if (value !== undefined && value !== null) {
-                url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
-            }
-        }
-
-        const response = await fetch(url.toString(), { method: 'GET' });
-        return response.json();
-    },
-
-    async mockApiCall(action, params = {}) {
-        // Имитация задержки сети
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        switch (action) {
-            case 'getProfile':
-                return {
-                    success: true,
-                    profile: { ...this.mockData.profile }
-                };
-
-            case 'updateProfile':
-                // Обновляем mock данные
-                Object.assign(this.mockData.profile, params);
-                return {
-                    success: true,
-                    message: 'Профиль обновлён'
-                };
-
-            default:
-                return { error: 'Unknown action: ' + action };
         }
     },
 
@@ -204,41 +208,77 @@ const settingsApp = {
 
     updateTeamInfo() {
         const roleEl = document.getElementById('userRole');
-        const teamEl = document.getElementById('userTeam');
         const teamInfoSection = document.getElementById('teamInfoSection');
+        const teamNameDisplay = document.getElementById('teamNameDisplay');
+        const teamNameText = document.getElementById('teamNameText');
         const leaderEl = document.getElementById('teamLeader');
         const descEl = document.getElementById('roleDescription');
 
         if (this.userProfile) {
             // Роль
-            const roleName = this.roleNames[this.userProfile.role] || this.userProfile.role;
+            const roleName = RolesConfig.getName(this.userProfile.role);
             roleEl.textContent = roleName;
             roleEl.className = 'role-badge role-' + this.userProfile.role;
 
-            // Команда
-            if (this.userProfile.teamName) {
-                teamEl.textContent = this.userProfile.teamName;
-            } else if (this.userProfile.role === 'admin') {
-                teamEl.textContent = 'Все команды';
-            } else {
-                teamEl.textContent = '';
+            // Применить цвет для кастомных ролей
+            if (typeof RolesConfig !== 'undefined' && RolesConfig.isCustomRole(this.userProfile.role)) {
+                const color = RolesConfig.getColor(this.userProfile.role);
+                roleEl.style.color = color;
+                roleEl.style.background = color + '20';
+            }
+
+            // Название команды (для руководителей и админов)
+            if (teamNameDisplay && teamNameText) {
+                const savedTeamName = localStorage.getItem('team-name');
+                const teamName = savedTeamName || this.userProfile.teamName || 'Команда';
+                teamNameText.textContent = teamName;
+
+                if (this.userProfile.role === 'leader' || this.userProfile.role === 'admin') {
+                    teamNameDisplay.classList.remove('hidden');
+                } else {
+                    teamNameDisplay.classList.add('hidden');
+                }
             }
 
             // Секция команды (показываем если не руководитель и не админ)
             if (teamInfoSection) {
                 if (this.userProfile.teamLeader && this.userProfile.role !== 'leader' && this.userProfile.role !== 'admin') {
-                    teamInfoSection.style.display = '';
+                    teamInfoSection.classList.remove('hidden');
                     leaderEl.textContent = this.userProfile.teamLeader;
-                    descEl.textContent = this.roleDescriptions[this.userProfile.role] || '';
+                    descEl.textContent = RolesConfig.getDescription(this.userProfile.role);
                 } else {
-                    teamInfoSection.style.display = 'none';
+                    teamInfoSection.classList.add('hidden');
                 }
             }
 
         } else {
             roleEl.textContent = '-';
-            teamEl.textContent = '';
-            if (teamInfoSection) teamInfoSection.style.display = 'none';
+            if (teamInfoSection) teamInfoSection.classList.add('hidden');
+            if (teamNameDisplay) teamNameDisplay.classList.add('hidden');
+        }
+    },
+
+    _populateRoleSelect(selectedRole) {
+        const select = document.getElementById('profilePosition');
+        if (!select) return;
+        select.innerHTML = '';
+
+        if (typeof RolesConfig !== 'undefined') {
+            RolesConfig.ALL_ROLES.filter(r => r !== 'guest').forEach(role => {
+                const opt = document.createElement('option');
+                opt.value = role;
+                opt.textContent = RolesConfig.getName(role);
+                if (role === selectedRole) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        if (selectedRole && !select.value) {
+            const opt = document.createElement('option');
+            opt.value = selectedRole;
+            opt.textContent = (typeof RolesConfig !== 'undefined') ? RolesConfig.getName(selectedRole) : selectedRole;
+            opt.selected = true;
+            select.insertBefore(opt, select.firstChild);
         }
     },
 
@@ -249,7 +289,7 @@ const settingsApp = {
 
         // Основная информация
         document.getElementById('profileName').value = p.name || '';
-        document.getElementById('profilePosition').value = p.position || '';
+        this._populateRoleSelect(p.role || p.position || '');
 
         // Идентификация
         document.getElementById('profileReddyId').value = p.reddyId || '';
@@ -258,7 +298,7 @@ const settingsApp = {
         // Контакты
         document.getElementById('profileCorpTelegram').value = p.corpTelegram || '';
         document.getElementById('profilePersonalTelegram').value = p.personalTelegram || '';
-        document.getElementById('profileCorpEmail').value = p.corpEmail || '';
+        document.getElementById('profileCorpEmail').value = this.currentUser?.email || p.corpEmail || '';
         document.getElementById('profilePersonalEmail').value = p.personalEmail || '';
         document.getElementById('profileCorpPhone').value = p.corpPhone || '';
         document.getElementById('profilePersonalPhone').value = p.personalPhone || '';
@@ -337,7 +377,7 @@ const settingsApp = {
         const profileData = {
             // Основная информация
             name: (formData.get('name') || '').trim(),
-            position: (formData.get('position') || '').trim(),
+            position: document.getElementById('profilePosition').value || '',
 
             // Идентификация (reddyId не редактируется)
             crmLogin: (formData.get('crmLogin') || '').trim(),
@@ -345,7 +385,7 @@ const settingsApp = {
             // Контакты
             corpTelegram: (formData.get('corpTelegram') || '').trim(),
             personalTelegram: (formData.get('personalTelegram') || '').trim(),
-            corpEmail: (formData.get('corpEmail') || '').trim(),
+            corpEmail: this.currentUser?.email || '',
             personalEmail: (formData.get('personalEmail') || '').trim(),
             corpPhone: (formData.get('corpPhone') || '').trim(),
             personalPhone: (formData.get('personalPhone') || '').trim(),
@@ -364,30 +404,30 @@ const settingsApp = {
         btn.textContent = 'Сохранение...';
 
         try {
-            const result = await this.apiCall('updateProfile', profileData);
+            // Обновляем локальный объект профиля
+            Object.assign(this.userProfile, profileData);
+            this.updateUserProfile();
 
-            if (result.error) {
-                throw new Error(result.error);
-            }
+            // Синхронизируем профиль с облаком (модуль "Сотрудники")
+            await this.syncToTeamInfo(profileData);
 
-            if (result.success) {
-                Object.assign(this.userProfile, profileData);
-                this.updateUserProfile();
+            btn.textContent = 'Сохранено';
+            btn.classList.add('success');
+            Toast.success('Профиль синхронизирован');
 
-                btn.textContent = 'Сохранено';
-                btn.classList.add('success');
-
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.classList.remove('success');
-                    btn.textContent = 'Сохранить изменения';
-                }, 2000);
-            }
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.classList.remove('success');
+                btn.textContent = 'Сохранить изменения';
+            }, 2000);
 
         } catch (error) {
             btn.disabled = false;
             btn.textContent = 'Сохранить изменения';
-            alert('Ошибка сохранения: ' + error.message);
+            ErrorHandler.handle(error, {
+                module: 'settings',
+                action: 'saveProfile'
+            });
         }
 
         return false;
@@ -411,10 +451,8 @@ const settingsApp = {
         window.location.href = '../login/index.html';
     },
 
-    clearCache() {
-        if (!confirm('Очистить кэш данных? Данные будут загружены заново из облака при следующем посещении.')) {
-            return;
-        }
+    confirmClearCache() {
+        this.closeModal('clearCacheModal');
 
         localStorage.removeItem('partners-data');
         localStorage.removeItem('traffic-analytics-temp');
@@ -431,7 +469,7 @@ const settingsApp = {
         keysToRemove.forEach(key => localStorage.removeItem(key));
 
         this.calculateStorageSize();
-        alert('Кэш очищен');
+        Toast.success('Кэш очищен');
     },
 
     // ============ Sidebar ============
@@ -477,26 +515,139 @@ const settingsApp = {
         if (bytes < 1024) return bytes + ' Б';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
         return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+    },
+
+    // ============ Team Settings ============
+
+    loadTeamSettings() {
+        // Team name is loaded and displayed in updateTeamInfo()
+    },
+
+    editTeamName() {
+        // TODO: Редактирование названия команды требует API метода updateTeam
+        // Пока показываем информационное сообщение
+        Toast.info('Изменение названия команды доступно в админ-панели');
+    },
+
+    saveTeamNameFromModal() {
+        // TODO: Реализовать через API
+        this.closeModal('teamNameModal');
+    },
+
+    // ============ Sync to Team Info ============
+
+    /**
+     * Синхронизация профиля с модулем "Сотрудники" (team-info)
+     * Создаёт или обновляет карточку сотрудника в CloudStorage
+     */
+    async syncToTeamInfo(profileData) {
+        // Получаем текущий email пользователя
+        const userEmail = this.currentUser?.email || this.userProfile?.email;
+        if (!userEmail) return;
+
+        // Проверяем что пользователь в команде (не guest без команды)
+        const teamId = this.userProfile?.teamId;
+        if (!teamId && this.userProfile?.role !== 'admin') return;
+
+        // Формируем данные сотрудника для облака
+        const employeeData = {
+            email: userEmail,
+            fullName: profileData.name || this.userProfile?.name || '',
+            position: profileData.position || this.userProfile?.position || '',
+            avatar: this.userProfile?.picture || this.currentUser?.picture || '',
+            status: 'Работает',
+            reddyId: this.userProfile?.reddyId || '',
+            crmLogin: profileData.crmLogin || '',
+            corpTelegram: profileData.corpTelegram || '',
+            personalTelegram: profileData.personalTelegram || '',
+            corpEmail: this.currentUser?.email || '',
+            personalEmail: profileData.personalEmail || '',
+            corpPhone: profileData.corpPhone || '',
+            personalPhone: profileData.personalPhone || '',
+            birthday: profileData.birthday || '',
+            startDate: profileData.startDate || '',
+            office: profileData.office || '',
+            company: profileData.company || '',
+            comment: profileData.comment || '',
+            predefinedFields: {},
+            customFields: {}
+        };
+
+        // Добавляем предопределённые поля для совместимости
+        if (employeeData.reddyId) {
+            employeeData.predefinedFields['Reddy'] = employeeData.reddyId;
+        }
+        if (employeeData.corpTelegram) {
+            employeeData.predefinedFields['Корп. Telegram'] = employeeData.corpTelegram;
+        }
+        if (employeeData.corpEmail) {
+            employeeData.predefinedFields['Корп. e-mail'] = employeeData.corpEmail;
+        }
+        if (employeeData.corpPhone) {
+            employeeData.predefinedFields['Корп. телефон'] = employeeData.corpPhone;
+        }
+
+        try {
+            // Проверяем инициализирован ли CloudStorage
+            if (typeof CloudStorage === 'undefined' || !CloudStorage.isAuthenticated()) {
+                console.error('[Settings] CloudStorage not available');
+                Toast.error('Облачное хранилище недоступно');
+                return;
+            }
+
+            // Получаем текущих сотрудников чтобы найти существующего
+            const employees = await CloudStorage.getEmployees();
+            const existing = employees.find(emp => emp.email === userEmail);
+
+            if (existing) {
+                // Обновляем существующего - сохраняем его id
+                employeeData.id = existing.id;
+            }
+
+            // Сохраняем в облако
+            const result = await CloudStorage.saveEmployee(employeeData);
+
+            if (!result.success && !result.id) {
+                console.error('[Settings] Cloud sync failed:', result.error);
+                Toast.error('Ошибка синхронизации: ' + (result.error || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            console.error('[Settings] Failed to sync to cloud:', error);
+            Toast.error('Ошибка сохранения профиля');
+        }
     }
 };
 
-// Для отладки: переключение роли через консоль
-if (settingsApp.USE_MOCK_API) {
-    window.setMockRole = (role) => {
-        settingsApp.mockData.profile.role = role;
-        console.log('Mock role set to:', role);
-        console.log('Available roles:', Object.keys(settingsApp.roleNames).join(', '));
-        settingsApp.loadProfile();
-    };
-    window.setMockTeam = (teamName, leaderName = null) => {
-        settingsApp.mockData.profile.teamName = teamName;
-        settingsApp.mockData.profile.teamLeader = leaderName;
-        console.log('Mock team set to:', teamName);
-        settingsApp.loadProfile();
-    };
-}
-
 // Инициализация
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // Check authentication and role status (waiting_invite/blocked check)
+    if (!await AuthGuard.checkWithRole()) {
+        return; // Will redirect to login or waiting-invite
+    }
+
+    // Initialize ComponentLoader with path to shared folder
+    ComponentLoader.init('../shared');
+
+    // Load sidebar and about modal in parallel
+    await ComponentLoader.loadAll([
+        {
+            name: 'sidebar',
+            target: '#sidebar-container',
+            options: {
+                basePath: '..',
+                activeModule: 'settings'
+            }
+        },
+        {
+            name: 'about-modal',
+            target: '#about-modal-container',
+            options: {
+                basePath: '..'
+            }
+        }
+    ]);
+
+    // Initialize settings app after components are loaded
     settingsApp.init();
+    settingsApp.attachEventListeners();
 });

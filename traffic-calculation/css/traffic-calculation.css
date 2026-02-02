@@ -2240,6 +2240,46 @@
     margin-bottom: 12px;
 }
 
+/* CSP-compliant classes (no inline styles) */
+.flex-1-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.flex-1-overflow {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Preview состояния */
+.preview-error {
+    background: #f8d7da !important;
+    color: #721c24 !important;
+}
+
+/* Иконка-подсказка */
+.tooltip-icon {
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    opacity: 0.6;
+}
+
+.violation-info-icon {
+    display: inline-block;
+    margin-left: 4px;
+    cursor: help;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
     .traffic-settings-form {

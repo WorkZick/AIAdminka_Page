@@ -91,27 +91,27 @@ class UIRenderer {
 
             html += `
                 <div class="template-featured-section">
-                    <div class="template-card-featured ${selectedClass}" onclick="excelApp.selectTemplate('${mainTemplate.id}')">
+                    <div class="template-card-featured ${selectedClass}" data-action="select-template" data-template-id="${mainTemplate.id}">
                         <div class="featured-badge">Общий отчёт</div>
                         <div class="template-header">
-                            ${isSelected ? '<span class="selected-badge"><img src="icons/done.svg" width="12" height="12" alt="✓"> Выбран</span>' : ''}
+                            ${isSelected ? '<span class="selected-badge"><img src="../shared/icons/done.svg" width="12" height="12" alt="✓"> Выбран</span>' : ''}
                         </div>
                         <p class="template-description">${mainTemplate.obj.description}</p>
 
                         <div class="template-components">
-                            <button type="button" class="components-toggle" onclick="excelApp.toggleComponents('${uniqueId}', event)">
+                            <button type="button" class="components-toggle" data-action="toggle-components" data-target-id="${uniqueId}">
                                 <span class="toggle-icon">▶</span>
                                 <span class="toggle-text">Из чего состоит</span>
                                 <span class="components-count">(${reportComponents.length} отчётов)</span>
                             </button>
-                            <div id="${uniqueId}" class="components-list" style="display: none;">
+                            <div id="${uniqueId}" class="components-list hidden">
                                 <ul>
         `;
 
             reportComponents.forEach(({ id, obj }) => {
                 if (!obj) return;
                 html += `
-                    <li class="component-item" onclick="event.stopPropagation(); excelApp.selectTemplate('${id}');">
+                    <li class="component-item" data-action="select-template" data-template-id="${id}">
                         <div class="component-info">
                             <span class="component-name">${obj.name}</span>
                             <span class="component-desc">${obj.description}</span>
@@ -146,7 +146,7 @@ class UIRenderer {
                 <div class="step-header-nav">
                     <div class="nav-left">
                         ${prevStep ? `
-                            <button class="btn btn-ghost" onclick="excelApp.navigateBack()">
+                            <button class="btn btn-ghost" data-action="navigate-back">
                                 Назад
                             </button>
                         ` : ''}
@@ -154,7 +154,7 @@ class UIRenderer {
                     <h2>${config.name}</h2>
                     <div class="nav-right">
                         ${nextStep && isCompleted ? `
-                            <button class="btn btn-ghost" onclick="excelApp.navigateNext()">
+                            <button class="btn btn-ghost" data-action="navigate-next">
                                 Далее
                             </button>
                         ` : ''}
@@ -176,12 +176,12 @@ class UIRenderer {
 
                 html += `
                     <div class="required-columns-block">
-                        <button type="button" class="required-columns-toggle" onclick="excelApp.toggleRequiredColumns('${uniqueId}', event)">
+                        <button type="button" class="required-columns-toggle" data-action="toggle-required-columns" data-target-id="${uniqueId}">
                             <span class="toggle-icon">▶</span>
                             <span class="toggle-text">Требуемые колонки</span>
                             <span class="columns-count">(${firstSubFile.requiredColumns.length})</span>
                         </button>
-                        <div id="${uniqueId}" class="required-columns-list" style="display: none;">
+                        <div id="${uniqueId}" class="required-columns-list hidden">
                             <ul>${columnsList}</ul>
                         </div>
                     </div>
@@ -207,7 +207,10 @@ class UIRenderer {
                             <input type="file"
                                    id="fileInput_${subId}"
                                    accept=".xlsx,.xls"
-                                   onchange="excelApp.handleSubFileUpload('${stepId}', '${subFile.id}', this.files, ${JSON.stringify(subFile).replace(/"/g, '&quot;')})"
+                                   data-action="upload-sub-file"
+                                   data-step-id="${stepId}"
+                                   data-sub-file-id="${subFile.id}"
+                                   data-sub-file-config="${this.utils.escapeHtml(JSON.stringify(subFile))}"
                                    class="file-input">
                             <div class="file-upload-area-compact ${subCompleted ? 'uploaded' : ''}">
                                 <div class="upload-icon-small">📁</div>
@@ -252,12 +255,12 @@ class UIRenderer {
 
                 html += `
                     <div class="required-columns-block">
-                        <button type="button" class="required-columns-toggle" onclick="excelApp.toggleRequiredColumns('${uniqueId}', event)">
+                        <button type="button" class="required-columns-toggle" data-action="toggle-required-columns" data-target-id="${uniqueId}">
                             <span class="toggle-icon">▶</span>
                             <span class="toggle-text">Требуемые колонки</span>
                             <span class="columns-count">(${config.requiredColumns.length})</span>
                         </button>
-                        <div id="${uniqueId}" class="required-columns-list" style="display: none;">
+                        <div id="${uniqueId}" class="required-columns-list hidden">
                             <ul>${columnsList}</ul>
                         </div>
                     </div>
@@ -272,7 +275,8 @@ class UIRenderer {
                                id="fileInput_${stepId}"
                                accept=".xlsx,.xls"
                                ${multipleAttr}
-                               onchange="excelApp.handleFileUpload('${stepId}', this.files)"
+                               data-action="upload-file"
+                               data-step-id="${stepId}"
                                class="file-input">
                         <div class="file-upload-area">
                             <div class="upload-icon">📁</div>
@@ -324,14 +328,14 @@ class UIRenderer {
                 <div class="step-header-nav">
                     <div class="nav-left">
                         ${prevStep ? `
-                            <button class="btn btn-ghost" onclick="excelApp.navigateBack()">
+                            <button class="btn btn-ghost" data-action="navigate-back">
                                 Назад
                             </button>
                         ` : ''}
                     </div>
                     <h2>Обработка данных</h2>
                     <div class="nav-right">
-                        <button class="btn btn-ghost" onclick="excelApp.showResetModal()">
+                        <button class="btn btn-ghost" data-action="show-reset-modal">
                             Начать заново
                         </button>
                     </div>
@@ -366,7 +370,7 @@ class UIRenderer {
                 </div>
 
                 <div class="process-actions">
-                    <button class="btn btn-ghost" onclick="excelApp.processFiles()">
+                    <button class="btn btn-ghost" data-action="process-files">
                         Обработать и экспортировать
                     </button>
                 </div>
@@ -435,13 +439,13 @@ class UIRenderer {
         if (isCompleted) classes.push('completed');
         if (isClickable) classes.push('clickable');
 
-        const onclickAttr = isClickable ? `onclick="excelApp.navigateToStep('${step.id}')"` : '';
+        const actionAttr = isClickable ? `data-action="navigate-to-step" data-step-id="${step.id}"` : '';
 
         return `
             <div class="${classes.join(' ')}"
                  data-step="${step.id}"
                  data-title="${step.name}"
-                 ${onclickAttr}>
+                 ${actionAttr}>
                 <div class="step-number">${index}</div>
                 <div class="step-text">${step.name}</div>
             </div>
@@ -454,12 +458,21 @@ class UIRenderer {
     showLoadingSpinner(message = 'Загрузка...') {
         const spinner = document.createElement('div');
         spinner.id = 'loadingSpinner';
-        spinner.innerHTML = `
-            <div class="spinner-content">
-                <div class="loading-spinner"></div>
-                <div class="spinner-text">${message}</div>
-            </div>
-        `;
+
+        const content = document.createElement('div');
+        content.className = 'spinner-content';
+
+        const spinnerEl = document.createElement('div');
+        spinnerEl.className = 'loading-spinner';
+
+        const textEl = document.createElement('div');
+        textEl.className = 'spinner-text';
+        textEl.textContent = message; // Используем textContent для безопасности
+
+        content.appendChild(spinnerEl);
+        content.appendChild(textEl);
+        spinner.appendChild(content);
+
         document.body.appendChild(spinner);
     }
 
@@ -490,23 +503,38 @@ class UIRenderer {
             failed: results.filter(r => !r.success).length
         };
 
-        let html = '<div class="status-list">';
+        const statusList = document.createElement('div');
+        statusList.className = 'status-list';
 
         results.forEach(result => {
             const icon = result.success ? '✓' : '✗';
             const statusClass = result.success ? 'success' : 'error';
 
-            html += `
-                <div class="status-item ${statusClass}">
-                    <span class="status-icon">${icon}</span>
-                    <span class="status-text">${result.fileName}</span>
-                    ${result.error ? `<span class="status-error">${result.error}</span>` : ''}
-                </div>
-            `;
+            const statusItem = document.createElement('div');
+            statusItem.className = `status-item ${statusClass}`;
+
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'status-icon';
+            iconSpan.textContent = icon;
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'status-text';
+            textSpan.textContent = result.fileName; // Экранируем имя файла
+
+            statusItem.appendChild(iconSpan);
+            statusItem.appendChild(textSpan);
+
+            if (result.error) {
+                const errorSpan = document.createElement('span');
+                errorSpan.className = 'status-error';
+                errorSpan.textContent = result.error; // Экранируем ошибку
+                statusItem.appendChild(errorSpan);
+            }
+
+            statusList.appendChild(statusItem);
         });
 
-        html += '</div>';
-        statusDiv.innerHTML = html;
+        statusDiv.appendChild(statusList);
 
         // Добавляем после секции загрузки файлов
         const uploadSection = document.querySelector('.file-upload-section');

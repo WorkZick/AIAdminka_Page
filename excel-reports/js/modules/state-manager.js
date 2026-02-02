@@ -175,11 +175,6 @@ class StateManager {
 
     // Вывод состояния в консоль для отладки
     debug() {
-        console.log('=== STATE DEBUG ===');
-        console.log('Current Step:', this.get('currentStep'));
-        console.log('Selected Template:', this.get('selectedTemplate')?.name || 'None');
-        console.log('Steps:', this.get('steps'));
-        console.log('===================');
     }
 }
 

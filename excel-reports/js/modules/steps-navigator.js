@@ -56,10 +56,7 @@ class StepsNavigator {
     // Переход к шагу
     navigateTo(stepId) {
         // Проверяем доступность шага
-        if (!this.canNavigateTo(stepId)) {
-            console.warn(`Невозможно перейти к шагу: ${stepId}`);
-            return false;
-        }
+        if (!this.canNavigateTo(stepId)) return false;
 
         // Если возвращаемся к выбору шаблона - очищаем всё состояние
         if (stepId === 'template') {

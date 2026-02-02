@@ -18,6 +18,7 @@ const RoleGuard = {
     // Настройки кеширования
     CACHE_KEY: 'roleGuard',
     CACHE_TTL: 300000, // 5 минут
+    STALE_MAX_AGE: 1800000, // 30 минут — максимальный возраст stale-кеша
 
     // Mock режим для тестирования без backend
     USE_MOCK_API: false,
@@ -124,11 +125,24 @@ const RoleGuard = {
 
     /**
      * Инициализация RoleGuard
+     * Загружает роль и права пользователя с бэкенда
+     *
+     * Стратегия загрузки (stale-while-revalidate):
+     * 1. Свежий кеш (< 5 мин) → мгновенный показ
+     * 2. Stale кеш (5-30 мин) → мгновенный показ + фоновое обновление
+     * 3. Нет кеша или кеш > 30 мин → ждём API
      */
     async init() {
         if (this.initialized) return this;
 
-        // Проверяем кеш
+        // Safety-таймаут: показать UI даже если init зависнет
+        this._safetyTimer = setTimeout(() => {
+            if (!document.body.classList.contains('role-ready')) {
+                document.body.classList.add('role-ready');
+            }
+        }, 5000);
+
+        // 1. Свежий кеш (в пределах TTL)
         const cached = this.getCache();
         if (cached) {
             this.user = cached.user;
@@ -136,41 +150,40 @@ const RoleGuard = {
             this.initialized = true;
             this.applyUI();
             this.initDOMObserver();
-
-            // Badge для руководителя/админа
             if (cached.pendingRequestsCount > 0) {
                 this.showBadge(cached.pendingRequestsCount);
             }
             return this;
         }
 
-        // Запрос к API
+        // 2. Stale кеш (просроченный, но не старше STALE_MAX_AGE)
+        const stale = this.getStaleCache();
+        if (stale) {
+            this.user = stale.user;
+            this.permissions = stale.permissions;
+            this.initialized = true;
+            this.applyUI();
+            this.initDOMObserver();
+            if (stale.pendingRequestsCount > 0) {
+                this.showBadge(stale.pendingRequestsCount);
+            }
+            // Фоновое обновление (не блокируем UI)
+            this.revalidateInBackground();
+            return this;
+        }
+
+        // 3. Нет кеша — ждём API
         try {
             let result;
 
             if (this.USE_MOCK_API) {
                 result = await this.mockGetCurrentUser();
             } else {
-                // Получаем email пользователя из AuthGuard
-                const authUser = AuthGuard.getUser();
-                if (!authUser) {
-                    console.warn('[RoleGuard] No authenticated user');
-                    return this;
+                const apiResponse = await CloudStorage.callApi('getUserRole');
+                if (apiResponse.error) {
+                    throw new Error(apiResponse.error);
                 }
-
-                // Проверяем права админа через существующий API
-                const isAdmin = await CloudStorage.callApi('checkIsAdmin');
-
-                // Строим результат в ожидаемом формате
-                result = {
-                    user: {
-                        email: authUser.email,
-                        name: authUser.name,
-                        role: isAdmin.isAdmin ? 'admin' : 'user'
-                    },
-                    permissions: this.buildPermissions(isAdmin.isAdmin),
-                    pendingRequestsCount: 0 // TODO: получать из API когда будет доступен
-                };
+                result = this.convertApiResponse(apiResponse);
             }
 
             this.user = result.user;
@@ -180,15 +193,73 @@ const RoleGuard = {
             this.applyUI();
             this.initDOMObserver();
 
-            // Badge для руководителя/админа
             if (result.pendingRequestsCount > 0) {
                 this.showBadge(result.pendingRequestsCount);
             }
         } catch (e) {
             console.error('[RoleGuard] Init error:', e);
+
+            // Fallback: базовые данные из AuthGuard с ролью guest
+            const authUser = typeof AuthGuard !== 'undefined' ? AuthGuard.getUser() : null;
+            if (authUser) {
+                this.user = {
+                    email: authUser.email,
+                    name: authUser.name,
+                    role: 'guest',
+                    status: 'unknown'
+                };
+                this.permissions = this.buildPermissions(false);
+                this.initialized = true;
+            }
+            // Показать UI даже при ошибке (с guest-правами)
+            document.body.classList.add('role-ready');
         }
 
         return this;
+    },
+
+    /**
+     * Конвертация ответа API getUserRole в формат RoleGuard
+     * API возвращает { view, edit, delete }, RoleGuard ожидает { canView, canEdit, canDelete }
+     */
+    convertApiResponse(apiResponse) {
+        const user = {
+            email: apiResponse.email,
+            name: apiResponse.name,
+            role: apiResponse.role,
+            isAdmin: apiResponse.isAdmin === true,  // v2.2.0: поддержка isAdmin из API
+            teamId: apiResponse.teamId,
+            teamName: apiResponse.teamName || null,
+            status: apiResponse.status,
+            picture: apiResponse.picture,
+            phone: apiResponse.phone,
+            telegram: apiResponse.telegram,
+            position: apiResponse.position,
+            reddyId: apiResponse.reddyId
+        };
+
+        // Конвертируем permissions из { view, edit, delete } в { canView, canEdit, canDelete }
+        const permissions = {};
+        if (apiResponse.permissions) {
+            for (const [module, perm] of Object.entries(apiResponse.permissions)) {
+                permissions[module] = {
+                    canView: perm.view === true,
+                    canEdit: perm.edit === true,
+                    canDelete: perm.delete === true
+                };
+            }
+        }
+
+        // Применяем кастомные названия ролей если есть
+        if (apiResponse.roleConfig && typeof RolesConfig !== 'undefined') {
+            RolesConfig.applyOverrides(apiResponse.roleConfig);
+        }
+
+        return {
+            user,
+            permissions,
+            pendingRequestsCount: 0 // TODO: получать из API если нужно
+        };
     },
 
     /**
@@ -272,7 +343,7 @@ const RoleGuard = {
                 timestamp: Date.now()
             }));
         } catch (e) {
-            console.warn('[RoleGuard] Cache save error:', e);
+            // Cache save failed silently
         }
     },
 
@@ -287,11 +358,72 @@ const RoleGuard = {
     },
 
     /**
+     * Получить stale-кеш (просроченный, но не старше STALE_MAX_AGE)
+     * Используется для stale-while-revalidate: показать старые данные мгновенно,
+     * обновить в фоне
+     */
+    getStaleCache() {
+        try {
+            const data = localStorage.getItem(this.CACHE_KEY);
+            if (!data) return null;
+
+            const parsed = JSON.parse(data);
+            const age = Date.now() - parsed.timestamp;
+
+            // Если кеш свежий — getCache() уже обработал
+            if (age <= this.CACHE_TTL) return null;
+
+            // Если кеш слишком старый — не используем (безопасность)
+            if (age > this.STALE_MAX_AGE) {
+                localStorage.removeItem(this.CACHE_KEY);
+                return null;
+            }
+
+            return parsed;
+        } catch (e) {
+            return null;
+        }
+    },
+
+    /**
+     * Фоновая ревалидация: обновить данные с API без блокировки UI
+     * Если права изменились — переприменить UI
+     */
+    async revalidateInBackground() {
+        try {
+            let result;
+            if (this.USE_MOCK_API) {
+                result = await this.mockGetCurrentUser();
+            } else {
+                const apiResponse = await CloudStorage.callApi('getUserRole');
+                if (apiResponse.error) throw new Error(apiResponse.error);
+                result = this.convertApiResponse(apiResponse);
+            }
+
+            // Обновить кеш
+            this.setCache(result);
+
+            // Проверить изменились ли права
+            const permChanged = JSON.stringify(this.permissions) !== JSON.stringify(result.permissions);
+            const roleChanged = this.user?.role !== result.user?.role;
+
+            if (permChanged || roleChanged) {
+                this.user = result.user;
+                this.permissions = result.permissions;
+                this.applyUI();
+            }
+        } catch (e) {
+            // Фоновая ревалидация провалилась — stale данные остаются
+        }
+    },
+
+    /**
      * Проверка доступа к модулю (view)
      */
     canAccess(module) {
         if (!this.user) return false;
-        if (this.user.role === 'admin') return true;
+        // v2.2.0: Проверяем role='admin' ИЛИ isAdmin=true (может быть leader и admin одновременно)
+        if (this.user.role === 'admin' || this.user.isAdmin === true) return true;
 
         // Главная страница доступна всем
         if (module === 'home') return true;
@@ -307,7 +439,8 @@ const RoleGuard = {
      */
     canEdit(module) {
         if (!this.user) return false;
-        if (this.user.role === 'admin') return true;
+        // v2.2.0: Проверяем role='admin' ИЛИ isAdmin=true
+        if (this.user.role === 'admin' || this.user.isAdmin === true) return true;
         return this.permissions?.[module]?.canEdit === true;
     },
 
@@ -316,7 +449,8 @@ const RoleGuard = {
      */
     canDelete(module) {
         if (!this.user) return false;
-        if (this.user.role === 'admin') return true;
+        // v2.2.0: Проверяем role='admin' ИЛИ isAdmin=true
+        if (this.user.role === 'admin' || this.user.isAdmin === true) return true;
         return this.permissions?.[module]?.canDelete === true;
     },
 
@@ -331,7 +465,15 @@ const RoleGuard = {
      * Проверка: admin или leader
      */
     isAdminOrLeader() {
-        return this.user?.role === 'admin' || this.user?.role === 'leader';
+        // v2.2.0: Учитываем isAdmin
+        return this.user?.role === 'admin' || this.user?.isAdmin === true || this.user?.role === 'leader';
+    },
+
+    /**
+     * Проверка: является ли пользователь админом (v2.2.0)
+     */
+    isAdmin() {
+        return this.user?.role === 'admin' || this.user?.isAdmin === true;
     },
 
     /**
@@ -342,37 +484,52 @@ const RoleGuard = {
     },
 
     /**
+     * Алиас для getRole() - для совместимости с AuthGuard
+     */
+    getCurrentRole() {
+        return this.getRole();
+    },
+
+    /**
+     * Получить статус пользователя
+     * @returns {'active'|'blocked'|'waiting_invite'|'pending'|null}
+     */
+    getStatus() {
+        return this.user?.status || null;
+    },
+
+    /**
+     * Получить ID команды пользователя
+     */
+    getTeamId() {
+        return this.user?.teamId || null;
+    },
+
+    /**
+     * Получить название команды пользователя
+     */
+    getTeamName() {
+        return this.user?.teamName || null;
+    },
+
+    /**
      * Получить название роли на русском
      */
     getRoleName(role) {
-        const names = {
-            admin: 'Администратор',
-            leader: 'Руководитель',
-            assistant: 'Помощник',
-            sales: 'Менеджер по продажам',
-            partners_mgr: 'Менеджер по партнёрам',
-            payments: 'Платёжные системы',
-            antifraud: 'Антифрод',
-            tech: 'Технический специалист'
-        };
-        return names[role || this.user?.role] || role || 'Неизвестно';
+        if (typeof RolesConfig !== 'undefined') {
+            return RolesConfig.getName(role || this.user?.role);
+        }
+        return role || this.user?.role || 'Неизвестно';
     },
 
     /**
      * Получить цвет badge роли
      */
     getRoleColor(role) {
-        const colors = {
-            admin: '#ff6b6b',
-            leader: '#4dabf7',
-            assistant: '#69db7c',
-            sales: '#ffd43b',
-            partners_mgr: '#da77f2',
-            payments: '#38d9a9',
-            antifraud: '#ff922b',
-            tech: '#748ffc'
-        };
-        return colors[role || this.user?.role] || '#868e96';
+        if (typeof RolesConfig !== 'undefined') {
+            return RolesConfig.getColor(role || this.user?.role);
+        }
+        return '#868e96';
     },
 
     /**
@@ -417,9 +574,9 @@ const RoleGuard = {
             }
         });
 
-        // Элементы только для admin
+        // Элементы только для admin (v2.2.0: учитываем isAdmin)
         document.querySelectorAll('[data-admin-only]').forEach(el => {
-            if (this.user?.role !== 'admin') {
+            if (this.user?.role !== 'admin' && this.user?.isAdmin !== true) {
                 el.style.display = 'none';
             }
         });
@@ -430,6 +587,15 @@ const RoleGuard = {
                 el.style.display = 'none';
             }
         });
+
+        // Сигнал: role-based UI готов — CSS снимает visibility: hidden
+        document.body.classList.add('role-ready');
+
+        // Очищаем safety-таймаут
+        if (this._safetyTimer) {
+            clearTimeout(this._safetyTimer);
+            this._safetyTimer = null;
+        }
     },
 
     /**
@@ -487,7 +653,6 @@ const RoleGuard = {
             attributeFilter: targetAttributes
         });
 
-        console.log('✅ RoleGuard DOM Observer активирован');
     },
 
     /**
@@ -497,7 +662,6 @@ const RoleGuard = {
         if (this.domObserver) {
             this.domObserver.disconnect();
             this.domObserver = null;
-            console.log('🛑 RoleGuard DOM Observer остановлен');
         }
     },
 
@@ -526,8 +690,6 @@ const RoleGuard = {
      */
     checkPageAccess(module) {
         if (!this.canAccess(module)) {
-            console.warn(`[RoleGuard] Access denied to module: ${module}`);
-
             // Определяем путь к главной
             const path = window.location.pathname;
             const isSubfolder = path.includes('/admin/') ||
@@ -554,18 +716,21 @@ const RoleGuard = {
         if (!container || !this.user) return;
 
         const roleName = this.getRoleName();
-        const roleColor = this.getRoleColor();
+        const role = this.user.role || 'employee';
 
         container.innerHTML = `
-            <span class="role-badge" style="
-                background: ${roleColor}20;
-                color: ${roleColor};
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: 600;
-            ">${roleName}</span>
+            <span class="role-badge role-${role}">${roleName}</span>
         `;
+
+        // Применить цвет для кастомных ролей (без CSS-класса)
+        if (typeof RolesConfig !== 'undefined' && RolesConfig.isCustomRole(role)) {
+            const badge = container.querySelector('.role-badge');
+            if (badge) {
+                const color = RolesConfig.getColor(role);
+                badge.style.color = color;
+                badge.style.background = color + '20';
+            }
+        }
     },
 
     // ========== ИЕРАРХИЯ ПРАВ ==========
@@ -578,8 +743,8 @@ const RoleGuard = {
     getAssignablePermissions() {
         if (!this.user) return {};
 
-        // Admin может назначать все
-        if (this.user.role === 'admin') {
+        // Admin может назначать все (v2.2.0: учитываем isAdmin)
+        if (this.user.role === 'admin' || this.user.isAdmin === true) {
             return {
                 partners: { canView: true, canEdit: true, canDelete: true },
                 'team-info': { canView: true, canEdit: true, canDelete: true },
@@ -617,8 +782,8 @@ const RoleGuard = {
     canAssignPermission(module, permission) {
         if (!this.user) return false;
 
-        // Admin может всё
-        if (this.user.role === 'admin') return true;
+        // Admin может всё (v2.2.0: учитываем isAdmin)
+        if (this.user.role === 'admin' || this.user.isAdmin === true) return true;
 
         // Leader - только свои права
         if (this.user.role === 'leader') {
@@ -641,8 +806,8 @@ const RoleGuard = {
     canManageRole(targetRole) {
         if (!this.user) return false;
 
-        // Admin может управлять всеми кроме других админов
-        if (this.user.role === 'admin') {
+        // Admin может управлять всеми кроме других админов (v2.2.0: учитываем isAdmin)
+        if (this.user.role === 'admin' || this.user.isAdmin === true) {
             return targetRole !== 'admin';
         }
 
@@ -660,13 +825,20 @@ const RoleGuard = {
     getAssignableRoles() {
         if (!this.user) return [];
 
-        if (this.user.role === 'admin') {
-            // Admin может назначать все роли кроме admin
+        // v2.2.0: учитываем isAdmin
+        if (this.user.role === 'admin' || this.user.isAdmin === true) {
+            // Admin может назначать все роли кроме admin и guest
+            if (typeof RolesConfig !== 'undefined') {
+                return RolesConfig.ALL_ROLES.filter(r => r !== 'admin' && r !== 'guest');
+            }
             return ['leader', 'assistant', 'sales', 'partners_mgr', 'payments', 'antifraud', 'tech'];
         }
 
         if (this.user.role === 'leader') {
-            // Leader может назначать только роли сотрудников
+            // Leader может назначать только ASSIGNABLE роли
+            if (typeof RolesConfig !== 'undefined') {
+                return [...RolesConfig.ASSIGNABLE_ROLES];
+            }
             return ['assistant', 'sales', 'partners_mgr', 'payments', 'antifraud', 'tech'];
         }
 
@@ -674,13 +846,14 @@ const RoleGuard = {
     }
 };
 
-// Очистка устаревшего кеша при загрузке (только если прошло больше CACHE_TTL)
+// Очистка кеша при загрузке: удаляем только если старше STALE_MAX_AGE (30 мин)
+// Stale кеш (5-30 мин) сохраняется для мгновенного отображения UI
 (function() {
     try {
         const data = localStorage.getItem('roleGuard');
         if (data) {
             const parsed = JSON.parse(data);
-            if (Date.now() - parsed.timestamp > 300000) {
+            if (Date.now() - parsed.timestamp > 1800000) {
                 localStorage.removeItem('roleGuard');
             }
         }

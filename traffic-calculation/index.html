@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Расчет трафика - AIAdminka</title>
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <link rel="stylesheet" href="css/traffic-calculation.css">
@@ -28,47 +28,47 @@
             <div class="content-area">
                 <!-- Steps indicator -->
                 <div class="steps-indicator">
-                    <div class="step active" data-step="1" data-title="Партнёры" onclick="trafficCalc.navigateToStep(1)">
+                    <div class="step active" data-title="Партнёры" data-action="traffic-navigateToStep" data-step="1">
                         <div class="step-number">1</div>
                         <div class="step-text">Партнёры</div>
                     </div>
                     <div class="step-line"></div>
-                    <div class="step" data-step="2" data-title="Пополнения" onclick="trafficCalc.navigateToStep(2)">
+                    <div class="step" data-title="Пополнения" data-action="traffic-navigateToStep" data-step="2">
                         <div class="step-number">2</div>
                         <div class="step-text">Пополнения</div>
                     </div>
                     <div class="step-line"></div>
-                    <div class="step" data-step="3" data-title="Качество" onclick="trafficCalc.navigateToStep(3)">
+                    <div class="step" data-title="Качество" data-action="traffic-navigateToStep" data-step="3">
                         <div class="step-number">3</div>
                         <div class="step-text">Качество</div>
                     </div>
                     <div class="step-line"></div>
-                    <div class="step" data-step="4" data-title="% Работы" onclick="trafficCalc.navigateToStep(4)">
+                    <div class="step" data-title="% Работы" data-action="traffic-navigateToStep" data-step="4">
                         <div class="step-number">4</div>
                         <div class="step-text">% Работы</div>
                     </div>
                     <div class="step-line"></div>
-                    <div class="step" data-step="5" data-title="Автоотключение" onclick="trafficCalc.navigateToStep(5)">
+                    <div class="step" data-title="Автоотключение" data-action="traffic-navigateToStep" data-step="5">
                         <div class="step-number">5</div>
                         <div class="step-text">Автооткл.</div>
                     </div>
                     <div class="step-line"></div>
-                    <div class="step" data-step="6" data-title="Нарушения" onclick="trafficCalc.navigateToStep(6)">
+                    <div class="step" data-title="Нарушения" data-action="traffic-navigateToStep" data-step="6">
                         <div class="step-number">6</div>
                         <div class="step-text">Нарушения</div>
                     </div>
                     <div class="step-line"></div>
-                    <div class="step" data-step="7" data-title="Отчёт" onclick="trafficCalc.navigateToStep(7)">
+                    <div class="step" data-title="Отчёт" data-action="traffic-navigateToStep" data-step="7">
                         <div class="step-number">7</div>
                         <div class="step-text">Отчёт</div>
                     </div>
                     <div class="step-line"></div>
-                    <div class="step" data-step="8" data-title="Настройки" onclick="trafficCalc.navigateToStep(8)">
+                    <div class="step" data-title="Настройки" data-action="traffic-navigateToStep" data-step="8">
                         <div class="step-number">8</div>
                         <div class="step-text">Настройки</div>
                     </div>
                     <div class="step-line"></div>
-                    <div class="step" data-step="9" data-title="Результаты" onclick="trafficCalc.navigateToStep(9)">
+                    <div class="step" data-title="Результаты" data-action="traffic-navigateToStep" data-step="9">
                         <div class="step-number">9</div>
                         <div class="step-text">Результаты</div>
                     </div>
@@ -76,33 +76,33 @@
 
                     <!-- Step 1: Выбор партнеров -->
                     <div id="step1" class="analytics-step active">
-                        <div class="main-section" style="flex: 1; display: flex; flex-direction: column;">
+                        <div class="main-section flex-1-column">
                             <div class="section-header">
                                 <div class="section-title">Выбор партнеров для анализа</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" onclick="trafficCalc.confirmResetAnalytics()" title="Сбросить все данные аналитики">
+                                    <button class="btn-reset" data-action="traffic-confirmResetAnalytics" title="Сбросить все данные аналитики">
                                         Сбросить всё
                                     </button>
                                 </div>
                             </div>
-                            <div class="section-body" style="flex: 1; display: flex; flex-direction: column;">
+                            <div class="section-body flex-1-column">
 
                                 <!-- Toolbar с кнопками выбора (скрыт до загрузки данных) -->
-                                <div id="selectionToolbar" class="selection-toolbar" style="display: none;">
+                                <div id="selectionToolbar" class="selection-toolbar hidden">
                                     <div class="toolbar-group">
                                         <span class="toolbar-label">Выбрать:</span>
-                                        <button class="toolbar-btn" onclick="trafficCalc.selectAll()" title="Выбрать всех партнёров">
+                                        <button class="toolbar-btn" data-action="traffic-selectAll" title="Выбрать всех партнёров">
                                             Всех
                                         </button>
-                                        <button class="toolbar-btn" onclick="trafficCalc.showMethodSelection()" title="Выбрать по методу работы">
+                                        <button class="toolbar-btn" data-action="traffic-showMethodSelection" title="Выбрать по методу работы">
                                             По методу
                                         </button>
-                                        <button class="toolbar-btn" onclick="trafficCalc.showManualSelection()" title="Выбрать вручную">
+                                        <button class="toolbar-btn" data-action="traffic-showManualSelection" title="Выбрать вручную">
                                             Вручную
                                         </button>
                                     </div>
                                     <div class="toolbar-group">
-                                        <button class="toolbar-btn toolbar-btn-clear" onclick="trafficCalc.clearSelection()" title="Очистить выбор">
+                                        <button class="toolbar-btn toolbar-btn-clear" data-action="traffic-clearSelection" title="Очистить выбор">
                                             Очистить
                                         </button>
                                     </div>
@@ -115,53 +115,53 @@
                                 </div>
 
                                 <!-- Подсказка: нет партнёров -->
-                                <div id="noPartnersHint" class="no-partners-hint" style="display: none;">
-                                    <img src="../icons/partners.svg" alt="" class="no-partners-hint-icon">
+                                <div id="noPartnersHint" class="no-partners-hint hidden">
+                                    <img src="../shared/icons/partners.svg" alt="" class="no-partners-hint-icon">
                                     <div class="no-partners-hint-text">Нет партнёров для анализа</div>
                                     <div class="no-partners-hint-subtext">Сначала добавьте партнёров на вкладке "Партнёры"</div>
                                     <a href="../partners/index.html" class="no-partners-hint-link">
-                                        <img src="../icons/partners.svg" alt="">
+                                        <img src="../shared/icons/partners.svg" alt="">
                                         Перейти к партнёрам
                                     </a>
                                 </div>
 
                                 <!-- Панель выбора по методу -->
-                                <div id="methodSelectionPanel" class="selection-panel-modern" style="display: none;">
+                                <div id="methodSelectionPanel" class="selection-panel-modern hidden">
                                     <div class="panel-header">
                                         <h3>Выберите методы</h3>
-                                        <button class="panel-close" onclick="trafficCalc.hideAllPanels()">
+                                        <button class="panel-close" data-action="traffic-hideAllPanels">
                                             <img src="../shared/icons/cross.svg" alt="Закрыть">
                                         </button>
                                     </div>
                                     <div id="methodCheckboxes" class="checkbox-grid"></div>
                                     <div class="panel-actions">
-                                        <button class="btn btn-secondary" onclick="trafficCalc.hideAllPanels()">Отмена</button>
-                                        <button class="btn btn-primary" onclick="trafficCalc.applyMethodSelection()">Применить</button>
+                                        <button class="btn btn-secondary" data-action="traffic-hideAllPanels">Отмена</button>
+                                        <button class="btn btn-primary" data-action="traffic-applyMethodSelection">Применить</button>
                                     </div>
                                 </div>
 
                                 <!-- Панель ручного выбора -->
-                                <div id="manualSelectionPanel" class="selection-panel-modern" style="display: none;">
+                                <div id="manualSelectionPanel" class="selection-panel-modern hidden">
                                     <div class="panel-header">
                                         <h3>Выберите партнеров</h3>
-                                        <button class="panel-close" onclick="trafficCalc.hideAllPanels()">
+                                        <button class="panel-close" data-action="traffic-hideAllPanels">
                                             <img src="../shared/icons/cross.svg" alt="Закрыть">
                                         </button>
                                     </div>
                                     <div id="partnerCheckboxes" class="checkbox-grid"></div>
                                     <div class="panel-actions">
-                                        <button class="btn btn-secondary" onclick="trafficCalc.hideAllPanels()">Отмена</button>
-                                        <button class="btn btn-primary" onclick="trafficCalc.applyManualSelection()">Применить</button>
+                                        <button class="btn btn-secondary" data-action="traffic-hideAllPanels">Отмена</button>
+                                        <button class="btn btn-primary" data-action="traffic-applyManualSelection">Применить</button>
                                     </div>
                                 </div>
 
                                 <!-- Таблица выбранных партнёров (скрыта до загрузки данных) -->
-                                <div class="partners-preview" style="display: none;">
+                                <div class="partners-preview hidden">
                                     <div class="preview-header">
                                         <span class="preview-title">Выбранные партнёры</span>
                                         <span class="partner-count-badge" id="selectedCount">0</span>
                                     </div>
-                                    <div class="table-container" style="flex: 1;">
+                                    <div class="table-container flex-1">
                                         <table class="data-table">
                                             <thead>
                                                 <tr>
@@ -184,7 +184,7 @@
                             <!-- Навигация (вне section-body для постоянной видимости) -->
                             <div class="step-navigation-modern">
                                 <div></div>
-                                <button id="step1NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(2)" disabled>
+                                <button id="step1NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="2" disabled>
                                     Далее
                                 </button>
                             </div>
@@ -193,11 +193,11 @@
 
                     <!-- Step 2: Пополнения и выводы -->
                     <div id="step2" class="analytics-step">
-                        <div class="main-section" style="flex: 1;">
+                        <div class="main-section flex-1">
                             <div class="section-header">
                                 <div class="section-title">Пополнения и выводы</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" onclick="trafficCalc.resetDepositsData()" title="Сбросить данные пополнений и выводов">
+                                    <button class="btn-reset" data-action="traffic-resetDepositsData" title="Сбросить данные пополнений и выводов">
                                         Сбросить
                                     </button>
                                 </div>
@@ -208,29 +208,29 @@
                                     <span>Загрузите Excel-файлы с данными о пополнениях и выводах для подсчета "back" и "cringe"</span>
                                 </div>
 
-                                <div class="upload-zone" onclick="document.getElementById('depositsFileInput').click()">
+                                <div class="upload-zone" data-action="traffic-fileZoneClick" data-file-input-id="depositsFileInput">
                                     <img src="../shared/icons/import.svg" class="upload-zone-icon" alt="">
                                     <div class="upload-zone-text">Перетащите файлы сюда</div>
                                     <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
-                                    <input type="file" id="depositsFileInput" accept=".xlsx" multiple style="display: none;" onchange="trafficCalc.handleDepositsUpload(event)">
+                                    <input type="file" id="depositsFileInput" accept=".xlsx" multiple class="hidden">
                                 </div>
                                 <div id="depositsStatus" class="upload-status"></div>
                             </div>
                             <!-- Навигация (вне section-body для постоянной видимости) -->
                             <div class="step-navigation-modern">
-                                <button class="btn btn-secondary" onclick="trafficCalc.goToStep(1)">Назад</button>
-                                <button id="step2NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(3)" disabled>Далее</button>
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="1">Назад</button>
+                                <button id="step2NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="3" disabled>Далее</button>
                             </div>
                         </div>
                     </div>
 
                     <!-- Step 3: Контроль качества -->
                     <div id="step3" class="analytics-step">
-                        <div class="main-section" style="flex: 1;">
+                        <div class="main-section flex-1">
                             <div class="section-header">
                                 <div class="section-title">Контроль качества</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" onclick="trafficCalc.resetQualityData()" title="Сбросить данные контроля качества">
+                                    <button class="btn-reset" data-action="traffic-resetQualityData" title="Сбросить данные контроля качества">
                                         Сбросить
                                     </button>
                                 </div>
@@ -241,20 +241,20 @@
                                     <span>Загрузите Excel-файлы с данными о контроле качества работы</span>
                                 </div>
 
-                                <div class="upload-zone" onclick="document.getElementById('qualityFileInput').click()">
+                                <div class="upload-zone" data-action="traffic-fileZoneClick" data-file-input-id="qualityFileInput">
                                     <img src="../shared/icons/import.svg" class="upload-zone-icon" alt="">
                                     <div class="upload-zone-text">Перетащите файлы сюда</div>
                                     <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
-                                    <input type="file" id="qualityFileInput" accept=".xlsx" multiple style="display: none;" onchange="trafficCalc.handleQualityUpload(event)">
+                                    <input type="file" id="qualityFileInput" accept=".xlsx" multiple class="hidden">
                                 </div>
                                 <div id="qualityStatus" class="upload-status"></div>
                             </div>
                             <!-- Навигация (вне section-body для постоянной видимости) -->
                             <div class="step-navigation-modern">
-                                <button class="btn btn-secondary" onclick="trafficCalc.goToStep(2)">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="2">
                                     Назад
                                 </button>
-                                <button id="step3NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(4)" disabled>
+                                <button id="step3NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="4" disabled>
                                     Далее
                                 </button>
                             </div>
@@ -263,11 +263,11 @@
 
                     <!-- Step 4: % Времени работы -->
                     <div id="step4" class="analytics-step">
-                        <div class="main-section" style="flex: 1;">
+                        <div class="main-section flex-1">
                             <div class="section-header">
                                 <div class="section-title">% Времени работы</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" onclick="trafficCalc.resetAllWorkTimeData()" title="Сбросить все данные по времени работы">
+                                    <button class="btn-reset" data-action="traffic-resetAllWorkTimeData" title="Сбросить все данные по времени работы">
                                         Сбросить
                                     </button>
                                 </div>
@@ -283,11 +283,11 @@
                                     <div class="worktime-selector">
                                         <div class="form-group">
                                             <label for="partnerSearchInput">Поиск</label>
-                                            <input type="text" id="partnerSearchInput" placeholder="Поиск..." oninput="trafficCalc.filterPartnersList()">
+                                            <input type="text" id="partnerSearchInput" placeholder="Поиск..." data-action="traffic-filterPartnersList">
                                         </div>
                                         <div class="form-group">
                                             <label for="partnerSelectList">Субагент</label>
-                                            <select id="partnerSelectList" size="8" onchange="trafficCalc.loadPartnerManualData()">
+                                            <select id="partnerSelectList" size="8" data-action="traffic-loadPartnerManualData">
                                                 <option value="">Выберите на шаге 1</option>
                                             </select>
                                         </div>
@@ -295,10 +295,10 @@
 
                                     <!-- Правая колонка: форма времени работы -->
                                     <div class="worktime-form-container">
-                                        <div id="manualDataForm" style="display: none;">
+                                        <div id="manualDataForm" class="hidden">
                                             <div class="worktime-form-header">
                                                 <h3 class="worktime-form-title">% Времени: <span id="selectedPartnerName"></span></h3>
-                                                <button class="btn-reset btn-reset-small" onclick="trafficCalc.resetWorkTimeData()" title="Сбросить">
+                                                <button class="btn-reset btn-reset-small" data-action="traffic-resetWorkTimeData" title="Сбросить">
                                                     Сбросить
                                                 </button>
                                             </div>
@@ -307,14 +307,14 @@
                                                 <div class="worktime-item">
                                                     <span class="worktime-label">На пополнения</span>
                                                     <div class="worktime-input-group">
-                                                        <input type="number" id="depositWorkTimePercent" value="0" min="0" max="100" onchange="trafficCalc.saveCurrentManualData()">
+                                                        <input type="number" id="depositWorkTimePercent" value="0" min="0" max="100" data-action="traffic-saveCurrentManualData">
                                                         <span class="percent-sign">%</span>
                                                     </div>
                                                 </div>
                                                 <div class="worktime-item">
                                                     <span class="worktime-label">На вывод</span>
                                                     <div class="worktime-input-group">
-                                                        <input type="number" id="withdrawalWorkTimePercent" value="0" min="0" max="100" onchange="trafficCalc.saveCurrentManualData()">
+                                                        <input type="number" id="withdrawalWorkTimePercent" value="0" min="0" max="100" data-action="traffic-saveCurrentManualData">
                                                         <span class="percent-sign">%</span>
                                                     </div>
                                                 </div>
@@ -325,10 +325,10 @@
                             </div>
                             <!-- Навигация (вне section-body для постоянной видимости) -->
                             <div class="step-navigation-modern">
-                                <button class="btn btn-secondary" onclick="trafficCalc.goToStep(3)">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="3">
                                     Назад
                                 </button>
-                                <button id="step4NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(5)" disabled>
+                                <button id="step4NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="5" disabled>
                                     Далее
                                 </button>
                             </div>
@@ -337,11 +337,11 @@
 
                     <!-- Step 5: Автоотключения -->
                     <div id="step5" class="analytics-step">
-                        <div class="main-section" style="flex: 1;">
+                        <div class="main-section flex-1">
                             <div class="section-header">
                                 <div class="section-title">Автоотключения</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" onclick="trafficCalc.resetPercentData()" title="Сбросить данные автоотключений">
+                                    <button class="btn-reset" data-action="traffic-resetPercentData" title="Сбросить данные автоотключений">
                                         Сбросить
                                     </button>
                                 </div>
@@ -352,20 +352,20 @@
                                     <span>Загрузите Excel-файлы с данными о процентовках для подсчета автоотключений</span>
                                 </div>
 
-                                <div class="upload-zone" onclick="document.getElementById('percentFileInput').click()">
+                                <div class="upload-zone" data-action="traffic-fileZoneClick" data-file-input-id="percentFileInput">
                                     <img src="../shared/icons/import.svg" class="upload-zone-icon" alt="">
                                     <div class="upload-zone-text">Перетащите файлы сюда</div>
                                     <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
-                                    <input type="file" id="percentFileInput" accept=".xlsx" multiple style="display: none;" onchange="trafficCalc.handlePercentUpload(event)">
+                                    <input type="file" id="percentFileInput" accept=".xlsx" multiple class="hidden">
                                 </div>
                                 <div id="percentStatus" class="upload-status"></div>
                             </div>
                             <!-- Навигация (вне section-body для постоянной видимости) -->
                             <div class="step-navigation-modern">
-                                <button class="btn btn-secondary" onclick="trafficCalc.goToStep(4)">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="4">
                                     Назад
                                 </button>
-                                <button id="step5NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(6)" disabled>
+                                <button id="step5NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="6" disabled>
                                     Далее
                                 </button>
                             </div>
@@ -374,11 +374,11 @@
 
                     <!-- Step 6: Нарушения -->
                     <div id="step6" class="analytics-step">
-                        <div class="main-section" style="flex: 1;">
+                        <div class="main-section flex-1">
                             <div class="section-header">
                                 <div class="section-title">Нарушения</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" onclick="trafficCalc.resetAllViolationsData()" title="Сбросить все данные по нарушениям">
+                                    <button class="btn-reset" data-action="traffic-resetAllViolationsData" title="Сбросить все данные по нарушениям">
                                         Сбросить
                                     </button>
                                 </div>
@@ -394,11 +394,11 @@
                                     <div class="violations-selector">
                                         <div class="form-group">
                                             <label for="partnerSearchInput6">Поиск</label>
-                                            <input type="text" id="partnerSearchInput6" placeholder="Поиск..." oninput="trafficCalc.filterPartnersListStep6()">
+                                            <input type="text" id="partnerSearchInput6" placeholder="Поиск..." data-action="traffic-filterPartnersListStep6">
                                         </div>
                                         <div class="form-group">
                                             <label for="partnerSelectList6">Субагент</label>
-                                            <select id="partnerSelectList6" size="8" onchange="trafficCalc.loadPartnerManualDataStep6()">
+                                            <select id="partnerSelectList6" size="8" data-action="traffic-loadPartnerManualDataStep6">
                                                 <option value="">Выберите на шаге 1</option>
                                             </select>
                                         </div>
@@ -406,10 +406,10 @@
 
                                     <!-- Правая колонка: форма нарушений -->
                                     <div class="violations-form-container">
-                                        <div id="manualDataForm6" style="display: none;">
+                                        <div id="manualDataForm6" class="hidden">
                                             <div class="violations-form-header">
                                                 <h3 class="violations-form-title">Нарушения: <span id="selectedPartnerName6"></span></h3>
-                                                <button class="btn-reset btn-reset-small" onclick="trafficCalc.resetViolationsData()" title="Сбросить">
+                                                <button class="btn-reset btn-reset-small" data-action="traffic-resetViolationsData" title="Сбросить">
                                                     Сбросить
                                                 </button>
                                             </div>
@@ -418,11 +418,11 @@
                                                 <div class="violation-item">
                                                     <span class="violation-label">Игнорирование чатов</span>
                                                     <div class="number-input-group">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('chatIgnoring')">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="chatIgnoring">
                                                             <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
-                                                        <input type="number" id="chatIgnoring" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('chatIgnoring')">
+                                                        <input type="number" id="chatIgnoring" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="chatIgnoring">
                                                             <img src="../shared/icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
@@ -430,11 +430,11 @@
                                                 <div class="violation-item">
                                                     <span class="violation-label">Игнор Webmanagement</span>
                                                     <div class="number-input-group">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('webmanagementIgnore')">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="webmanagementIgnore">
                                                             <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
-                                                        <input type="number" id="webmanagementIgnore" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('webmanagementIgnore')">
+                                                        <input type="number" id="webmanagementIgnore" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="webmanagementIgnore">
                                                             <img src="../shared/icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
@@ -442,11 +442,11 @@
                                                 <div class="violation-item">
                                                     <span class="violation-label">Очереди на пополнение</span>
                                                     <div class="number-input-group">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('depositQueues')">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="depositQueues">
                                                             <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
-                                                        <input type="number" id="depositQueues" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('depositQueues')">
+                                                        <input type="number" id="depositQueues" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="depositQueues">
                                                             <img src="../shared/icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
@@ -454,11 +454,11 @@
                                                 <div class="violation-item">
                                                     <span class="violation-label">Очереди на вывод</span>
                                                     <div class="number-input-group">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('withdrawalQueues')">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="withdrawalQueues">
                                                             <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
-                                                        <input type="number" id="withdrawalQueues" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('withdrawalQueues')">
+                                                        <input type="number" id="withdrawalQueues" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="withdrawalQueues">
                                                             <img src="../shared/icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
@@ -466,11 +466,11 @@
                                                 <div class="violation-item">
                                                     <span class="violation-label">Зачисление вне лимитов</span>
                                                     <div class="number-input-group">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('creditsOutsideLimits')">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="creditsOutsideLimits">
                                                             <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
-                                                        <input type="number" id="creditsOutsideLimits" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('creditsOutsideLimits')">
+                                                        <input type="number" id="creditsOutsideLimits" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="creditsOutsideLimits">
                                                             <img src="../shared/icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
@@ -478,11 +478,11 @@
                                                 <div class="violation-item">
                                                     <span class="violation-label">Одобрение неверной суммы</span>
                                                     <div class="number-input-group">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('wrongAmountApproval')">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="wrongAmountApproval">
                                                             <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
-                                                        <input type="number" id="wrongAmountApproval" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('wrongAmountApproval')">
+                                                        <input type="number" id="wrongAmountApproval" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="wrongAmountApproval">
                                                             <img src="../shared/icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
@@ -493,16 +493,16 @@
                                                 <div class="other-violations-header">
                                                     <span class="violation-label">Другие нарушения</span>
                                                     <div class="number-input-group">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.decrementManualValue('otherViolations')">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="otherViolations">
                                                             <img src="../shared/icons/minus.svg" alt="-">
                                                         </button>
-                                                        <input type="number" id="otherViolations" value="0" min="0" onchange="trafficCalc.saveCurrentManualDataStep6()">
-                                                        <button type="button" class="btn-icon" onclick="trafficCalc.incrementManualValue('otherViolations')">
+                                                        <input type="number" id="otherViolations" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="otherViolations">
                                                             <img src="../shared/icons/plus.svg" alt="+">
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <textarea id="otherViolationsDescription" class="violations-description-large" placeholder="Опишите нарушения подробно..." onchange="trafficCalc.saveCurrentManualDataStep6()"></textarea>
+                                                <textarea id="otherViolationsDescription" class="violations-description-large" placeholder="Опишите нарушения подробно..." data-action="traffic-saveCurrentManualDataStep6"></textarea>
                                             </div>
                                         </div>
                                     </div>
@@ -510,10 +510,10 @@
                             </div>
                             <!-- Навигация (вне section-body для постоянной видимости) -->
                             <div class="step-navigation-modern">
-                                <button class="btn btn-secondary" onclick="trafficCalc.goToStep(5)">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="5">
                                     Назад
                                 </button>
-                                <button id="step6NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(7)">
+                                <button id="step6NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="7">
                                     Далее
                                 </button>
                             </div>
@@ -526,19 +526,19 @@
                         <div class="section-header">
                             <div class="section-title">Детальный отчёт</div>
                             <div class="section-actions">
-                                <button class="btn btn-ghost btn-sm" onclick="trafficCalc.exportReportToExcel()">Экспорт в Excel</button>
+                                <button class="btn btn-ghost btn-sm" data-action="traffic-exportReportToExcel">Экспорт в Excel</button>
                             </div>
                         </div>
 
                         <div id="reportNotGenerated" class="report-placeholder">
                             <div class="report-placeholder-content">
-                                <img src="../icons/documents.svg" alt="">
+                                <img src="../shared/icons/documents.svg" alt="">
                                 <p>Отчёт формируется...</p>
                                 <p class="report-hint">Данные собираются на основе предыдущих шагов</p>
                             </div>
                         </div>
 
-                        <div id="reportGenerated" class="step7-table-wrapper" style="display: none;">
+                        <div id="reportGenerated" class="step7-table-wrapper hidden">
                             <div class="step7-table-scroll">
                                 <table class="data-table">
                                     <thead>
@@ -574,30 +574,30 @@
                         </div>
 
                         <div class="step-navigation-modern">
-                            <button class="btn btn-secondary" onclick="trafficCalc.goToStep(6)">Назад</button>
-                            <button id="step7NextBtn" class="btn btn-primary" onclick="trafficCalc.goToStep(8)">Далее</button>
+                            <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="6">Назад</button>
+                            <button id="step7NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="8">Далее</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Step 8: Настройки расчёта -->
                 <div id="step8" class="analytics-step">
-                    <div class="main-section" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="main-section flex-1-column">
                         <div class="section-header">
                             <div class="section-title">Настройки расчёта % трафика</div>
                             <div class="section-actions">
-                                <button class="btn btn-ghost btn-sm" onclick="trafficCalc.toggleHelp()">Справка</button>
-                                <button class="btn btn-ghost btn-sm" onclick="trafficCalc.exportTrafficSettings()">Экспорт</button>
-                                <button class="btn btn-ghost btn-sm" onclick="trafficCalc.importTrafficSettings()">Импорт</button>
+                                <button class="btn btn-ghost btn-sm" data-action="traffic-toggleHelp">Справка</button>
+                                <button class="btn btn-ghost btn-sm" data-action="traffic-exportTrafficSettings">Экспорт</button>
+                                <button class="btn btn-ghost btn-sm" data-action="traffic-importTrafficSettings">Импорт</button>
                             </div>
                         </div>
-                        <div class="section-body" style="flex: 1; overflow-y: auto;">
+                        <div class="section-body flex-1-overflow">
                             <div class="step-hint">
                                 <img src="../shared/icons/pen.svg" alt="">
                                 <span>Укажите диапазоны и баллы. Чем больше баллов — тем меньше % трафика.</span>
                             </div>
 
-                            <div id="trafficHelpContent" class="traffic-help-content" style="display: none;">
+                            <div id="trafficHelpContent" class="traffic-help-content hidden">
                                 <h4>Формула расчета % трафика</h4>
                                 <p><strong>Общий балл партнёра</strong> = сумма баллов по всем параметрам</p>
                                 <p>Каждый параметр имеет 4 уровня оценки:</p>
@@ -613,32 +613,32 @@
                             <div id="trafficSettingsForm" class="traffic-settings-form"></div>
                         </div>
                         <div class="step-navigation-modern">
-                            <button class="btn btn-secondary" onclick="trafficCalc.goToStep(7)">Назад</button>
-                            <button id="step8NextBtn" class="btn btn-primary" onclick="trafficCalc.calculateAndShowResults()">Рассчитать</button>
+                            <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="7">Назад</button>
+                            <button id="step8NextBtn" class="btn btn-primary" data-action="traffic-calculateAndShowResults">Рассчитать</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Step 9: Результаты расчёта -->
                 <div id="step9" class="analytics-step">
-                    <div class="main-section" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="main-section flex-1-column">
                         <div class="section-header">
                             <div class="section-title">Результаты расчёта % трафика</div>
                             <div class="section-actions">
-                                <button class="btn btn-ghost btn-sm" onclick="trafficCalc.exportTrafficResults()">Экспорт в Excel</button>
+                                <button class="btn btn-ghost btn-sm" data-action="traffic-exportTrafficResults">Экспорт в Excel</button>
                             </div>
                         </div>
-                        <div class="section-body" style="flex: 1; display: flex; flex-direction: column;">
+                        <div class="section-body flex-1-column">
                             <div id="resultsNotCalculated" class="report-placeholder">
                                 <div class="report-placeholder-content">
-                                    <img src="../icons/documents.svg" alt="">
+                                    <img src="../shared/icons/documents.svg" alt="">
                                     <p>Расчёт не выполнен</p>
                                     <p class="report-hint">Вернитесь на предыдущий шаг и нажмите "Рассчитать"</p>
                                 </div>
                             </div>
 
-                            <div id="resultsCalculated" class="report-generated" style="display: none;">
-                                <div class="table-container" style="flex: 1;">
+                            <div id="resultsCalculated" class="report-generated hidden">
+                                <div class="table-container flex-1">
                                     <table class="data-table traffic-results-table">
                                         <thead>
                                             <tr>
@@ -659,8 +659,8 @@
                             </div>
                         </div>
                         <div class="step-navigation-modern">
-                            <button class="btn btn-secondary" onclick="trafficCalc.goToStep(8)">Назад</button>
-                            <button class="btn btn-primary" onclick="trafficCalc.confirmResetAnalytics()">Начать заново</button>
+                            <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="8">Назад</button>
+                            <button class="btn btn-primary" data-action="traffic-confirmResetAnalytics">Начать заново</button>
                         </div>
                     </div>
                 </div>
@@ -673,27 +673,18 @@
 
     <script src="../shared/version.js"></script>
     <script src="../shared/storage.js"></script>
+    <script src="../shared/env-config.js"></script>
     <script src="../shared/cloud-storage.js"></script>
     <script src="../shared/sync-manager.js"></script>
     <script src="../shared/auth-guard.js"></script>
+    <script src="../shared/roles-config.js"></script>
     <script src="../shared/role-guard.js"></script>
     <script src="../shared/js/component-loader.js"></script>
     <script src="../shared/js/sidebar-controller.js"></script>
+    <script src="../shared/js/about-modal.js"></script>
     <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/error-handler.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/traffic-calculation.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async function() {
-            ComponentLoader.init('../shared');
-            await ComponentLoader.load('sidebar', '#sidebar-container', {
-                basePath: '..',
-                activeModule: 'traffic'
-            });
-            await ComponentLoader.load('about-modal', '#about-modal-container', {
-                basePath: '..'
-            });
-            SidebarController.init({ basePath: '..' });
-        });
-    </script>
 </body>
 </html>

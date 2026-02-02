@@ -139,6 +139,36 @@
     color: var(--gray);
 }
 
+.team-name-editable {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    color: var(--gray-light);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.team-name-editable:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--yellow);
+    color: var(--white);
+}
+
+.team-name-editable img {
+    opacity: 0.5;
+    filter: brightness(0) invert(1);
+    transition: opacity var(--transition-fast);
+}
+
+.team-name-editable:hover img {
+    opacity: 1;
+}
+
 .btn-logout {
     width: 36px;
     height: 36px;
@@ -235,9 +265,24 @@
     background: rgba(0, 0, 0, 0.4);
 }
 
-.settings-card .form-group input:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.settings-card .form-group input:disabled,
+.settings-card .form-group select:disabled {
+    opacity: 0.6;
+    cursor: default;
+    border-style: dashed;
+}
+
+.settings-card .form-group select {
+    padding: 10px var(--spacing-md);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    color: var(--white);
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
 }
 
 .settings-card .form-group textarea {
@@ -474,4 +519,13 @@
     .settings-card:first-child {
         position: relative;
     }
+}
+
+
+/* =========================================
+   Utility Classes
+   ========================================= */
+
+.hidden {
+    display: none !important;
 }

@@ -21,14 +21,7 @@ const changelog = {
         const fallbackVersion = this.fallbackData.version;
 
         if (jsonVersion !== fallbackVersion) {
-            console.warn(
-                `⚠️ ВНИМАНИЕ: Версии не синхронизированы!\n` +
-                `JSON: ${jsonVersion}\n` +
-                `Fallback: ${fallbackVersion}\n` +
-                `Обновите fallbackData в changelog.js`
-            );
-        } else {
-            console.log(`✅ Версии синхронизированы: ${jsonVersion}`);
+            // Versions not synchronized - fallbackData in changelog.js needs update
         }
     },
 
@@ -36,8 +29,82 @@ const changelog = {
     // Эти данные используются только если не удалось загрузить JSON
     // ВАЖНО: При обновлении changelog.json нужно также обновить эти данные!
     fallbackData: {
-        "version": "2.14.0",
+        "version": "2.16.0",
         "updates": [
+            {
+                "version": "2.16.0",
+                "date": "2026-02-02",
+                "title": "Исправление мерцания ролей, оптимизация загрузки",
+                "changes": [
+                    {
+                        "category": "Исправлено",
+                        "items": [
+                            "Мерцание ролей: гость больше не видит админ-панель и скрытые модули при загрузке",
+                            "CSS-first скрытие role-gated элементов (visibility: hidden до загрузки ролей)"
+                        ]
+                    },
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "Stale-while-revalidate для RoleGuard: мгновенный показ кешированных ролей (до 30 мин)",
+                            "Кеш сайдбара HTML в sessionStorage",
+                            "Персистентный кеш CloudStorage в localStorage",
+                            "Skeleton-заглушки на главной странице",
+                            "Safety-таймаут (5с) при недоступности API"
+                        ]
+                    },
+                    {
+                        "category": "Новое",
+                        "items": [
+                            "shared/css/components/role-guard.css",
+                            "RoleGuard.revalidateInBackground()",
+                            "RoleGuard.getStaleCache()"
+                        ]
+                    }
+                ]
+            },
+            {
+                "version": "2.15.0",
+                "date": "2026-02-02",
+                "title": "Безопасность, обработка ошибок, очистка кода",
+                "changes": [
+                    {
+                        "category": "Безопасность",
+                        "items": [
+                            "XSS: экранирование user.picture, teamName, user.role, user.email в admin.js",
+                            "XSS: экранирование user.picture, user.name, user.email в auth-guard.js",
+                            "Добавлен метод _escapeHtml() в AuthGuard для защиты renderUserInfo()"
+                        ]
+                    },
+                    {
+                        "category": "Исправлено",
+                        "items": [
+                            "CloudStorage.init() в partners.js перенесён внутрь try-catch",
+                            "CloudStorage.init() и loadTickets() в home.js обёрнуты в try-catch",
+                            "ErrorHandler подключён на все страницы (было только 2 из 9)",
+                            "Toast подключён на index.html и excel-reports (отсутствовал)"
+                        ]
+                    },
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "Удалено ~72 отладочных console.log/warn из production кода",
+                            "Оставлены только легитимные логи в модуле логирования excel-reports"
+                        ]
+                    },
+                    {
+                        "category": "Файлы",
+                        "items": [
+                            "admin/js/admin.js (XSS fix)",
+                            "shared/auth-guard.js (XSS fix + _escapeHtml)",
+                            "partners/js/partners.js (error handling)",
+                            "js/home.js (error handling)",
+                            "Все index.html (ErrorHandler подключение)",
+                            "20+ JS файлов (очистка console.log)"
+                        ]
+                    }
+                ]
+            },
             {
                 "version": "2.14.0",
                 "date": "2025-12-08",
@@ -2207,7 +2274,7 @@ const changelog = {
         const dataToUse = this.data || this.fallbackData;
 
         if (!dataToUse) {
-            alert('Не удалось загрузить историю обновлений');
+            Toast.error('Не удалось загрузить историю обновлений');
             return;
         }
 
@@ -2224,7 +2291,7 @@ const changelog = {
                     <div class="changelog-search">
                         <input type="text" id="changelogSearch" placeholder="Поиск по версии или названию..." />
                     </div>
-                    <button class="changelog-close" onclick="this.closest('.changelog-modal').remove()">×</button>
+                    <button class="changelog-close" data-action="close-changelog">×</button>
                 </div>
                 <div class="changelog-body-split">
                     <div class="changelog-versions-list" id="versionsList">
@@ -2238,6 +2305,10 @@ const changelog = {
         `;
 
         document.body.appendChild(modal);
+
+        // Закрытие по кнопке
+        const closeBtn = modal.querySelector('[data-action="close-changelog"]');
+        closeBtn.addEventListener('click', () => modal.remove());
 
         // Поиск
         const searchInput = document.getElementById('changelogSearch');
@@ -2294,7 +2365,7 @@ const changelog = {
             return '<div class="no-results">Ничего не найдено</div>';
         }
 
-        return updates.map((update, filteredIndex) => {
+        return updates.map((update) => {
             const realIndex = dataToUse.updates.indexOf(update);
             const isLatest = realIndex === 0;
             const isActive = realIndex === this.selectedVersionIndex;
@@ -2302,10 +2373,10 @@ const changelog = {
             return `
                 <div class="version-list-item ${isActive ? 'active' : ''} ${isLatest ? 'latest' : ''}" data-index="${realIndex}">
                     <div class="version-list-header">
-                        <span class="version-list-number">v${update.version}</span>
+                        <span class="version-list-number">v${Utils.escapeHtml(update.version)}</span>
                         ${isLatest ? '<span class="version-list-badge">NEW</span>' : ''}
                     </div>
-                    <div class="version-list-title">${update.title}</div>
+                    <div class="version-list-title">${Utils.escapeHtml(update.title)}</div>
                     <div class="version-list-date">${Utils.formatDate(update.date)}</div>
                 </div>
             `;
@@ -2325,12 +2396,12 @@ const changelog = {
         return `
             <div class="changelog-detail-header">
                 <div class="changelog-version">
-                    <span class="version-number">v${update.version}</span>
+                    <span class="version-number">v${Utils.escapeHtml(update.version)}</span>
                     ${isLatest ? '<span class="version-badge">Latest</span>' : ''}
                 </div>
                 <div class="changelog-date">${Utils.formatDate(update.date)}</div>
             </div>
-            <h3 class="changelog-title">${update.title}</h3>
+            <h3 class="changelog-title">${Utils.escapeHtml(update.title)}</h3>
             <div class="changelog-changes-list">
                 ${update.changes.map(change => this.renderChanges(change)).join('')}
             </div>
@@ -2359,11 +2430,11 @@ const changelog = {
                 </div>
                 <div class="changelog-content">
                     <div class="changelog-version">
-                        <span class="version-number">v${update.version}</span>
+                        <span class="version-number">v${Utils.escapeHtml(update.version)}</span>
                         ${isLatest ? '<span class="version-badge">Latest</span>' : ''}
                     </div>
                     <div class="changelog-date">${Utils.formatDate(update.date)}</div>
-                    <h3 class="changelog-title">${update.title}</h3>
+                    <h3 class="changelog-title">${Utils.escapeHtml(update.title)}</h3>
                     ${update.changes.map(change => this.renderChanges(change)).join('')}
                 </div>
             </div>
@@ -2388,10 +2459,10 @@ const changelog = {
         return `
             <div class="changelog-category">
                 <h4 style="color: ${style.color};">
-                    <span style="margin-right: 6px;">${style.symbol}</span>${change.category}
+                    <span style="margin-right: 6px;">${style.symbol}</span>${Utils.escapeHtml(change.category)}
                 </h4>
                 <ul class="changelog-list">
-                    ${change.items.map(item => `<li>${item}</li>`).join('')}
+                    ${change.items.map(item => `<li>${Utils.escapeHtml(item)}</li>`).join('')}
                 </ul>
             </div>
         `;
@@ -2401,6 +2472,39 @@ const changelog = {
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', async () => {
     await changelog.init();
+
+    // Event delegation для всех data-action атрибутов страницы
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+
+        const action = target.dataset.action;
+
+        switch(action) {
+            case 'show-changelog':
+                changelog.show();
+                break;
+            case 'show-icons-modal':
+                if (window.Documentation) {
+                    Documentation.showIconsModal();
+                }
+                break;
+            case 'hide-icons-modal':
+                if (window.Documentation) {
+                    Documentation.hideIconsModal();
+                }
+                break;
+            case 'close-modal-backdrop':
+                if (e.target === target && window.Documentation) {
+                    Documentation.hideIconsModal();
+                }
+                break;
+            case 'copy-icon-name':
+                if (window.Documentation) {
+                    Documentation.copyIconName(target.dataset.iconName, target.dataset.iconPath, target);
+                }
+                break;
+        }
+    });
 });
 
-console.log('✅ Changelog готов к использованию');

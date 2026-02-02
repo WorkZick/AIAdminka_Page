@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- CSP: Разрешён Live Server script для разработки (hash добавлен) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:* ws://localhost:*; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:* ws://localhost:*; frame-ancestors 'self'">
     <title>AIAdminka</title>
     <link rel="stylesheet" href="shared/css/design-system.css">
     <link rel="stylesheet" href="css/home.css">
@@ -24,10 +24,20 @@
             <!-- Content area -->
             <div class="content-area">
                 <div class="modules-grid">
+                    <!-- Skeleton-заглушки (видны пока роли не загружены) -->
+                    <div class="skeleton-modules-placeholder">
+                        <div class="skeleton skeleton-module-card"></div>
+                        <div class="skeleton skeleton-module-card"></div>
+                        <div class="skeleton skeleton-module-card"></div>
+                        <div class="skeleton skeleton-module-card"></div>
+                        <div class="skeleton skeleton-module-card"></div>
+                        <div class="skeleton skeleton-module-card"></div>
+                    </div>
+
                     <!-- Отчеты -->
                     <a href="excel-reports/index.html" class="module-card" data-module-card="reports">
                         <div class="module-icon">
-                            <img src="icons/excel_reports.svg" alt="Отчеты">
+                            <img src="shared/icons/excel_reports.svg" alt="Отчеты">
                         </div>
                         <div class="module-title">Отчеты</div>
                         <div class="module-desc">Работа с отчетами и таблицами</div>
@@ -36,7 +46,7 @@
                     <!-- Сотрудники -->
                     <a href="team-info/index.html" class="module-card" data-module-card="team-info">
                         <div class="module-icon">
-                            <img src="icons/team_info.svg" alt="Сотрудники">
+                            <img src="shared/icons/team_info.svg" alt="Сотрудники">
                         </div>
                         <div class="module-title">Сотрудники</div>
                         <div class="module-desc">Управление командой</div>
@@ -45,7 +55,7 @@
                     <!-- Расчет трафика -->
                     <a href="traffic-calculation/index.html" class="module-card" data-module-card="traffic">
                         <div class="module-icon">
-                            <img src="icons/traffic-calculation.svg" alt="Трафик">
+                            <img src="shared/icons/traffic-calculation.svg" alt="Трафик">
                         </div>
                         <div class="module-title">Расчет трафика</div>
                         <div class="module-desc">Калькулятор трафика</div>
@@ -54,7 +64,7 @@
                     <!-- Партнеры -->
                     <a href="partners/index.html" class="module-card" data-module-card="partners">
                         <div class="module-icon">
-                            <img src="icons/partners.svg" alt="Партнеры">
+                            <img src="shared/icons/partners.svg" alt="Партнеры">
                         </div>
                         <div class="module-title">Партнеры</div>
                         <div class="module-desc">База партнеров</div>
@@ -63,7 +73,7 @@
                     <!-- Документация -->
                     <a href="documentation/index.html" class="module-card" data-module-card="documentation">
                         <div class="module-icon">
-                            <img src="icons/documents.svg" alt="Документация">
+                            <img src="shared/icons/documents.svg" alt="Документация">
                         </div>
                         <div class="module-title">Документация</div>
                         <div class="module-desc">Справка и руководства</div>
@@ -72,7 +82,7 @@
                     <!-- Настройки -->
                     <a href="sync/index.html" class="module-card" data-module-card="settings">
                         <div class="module-icon">
-                            <img src="icons/sync.svg" alt="Настройки">
+                            <img src="shared/icons/sync.svg" alt="Настройки">
                         </div>
                         <div class="module-title">Настройки</div>
                         <div class="module-desc">Облачное хранение данных</div>
@@ -81,7 +91,7 @@
                     <!-- Администрирование -->
                     <a href="admin/index.html" class="module-card module-card-admin" data-module-card="admin-panel">
                         <div class="module-icon">
-                            <img src="icons/admin.svg" alt="Администрирование">
+                            <img src="shared/icons/admin.svg" alt="Администрирование">
                         </div>
                         <div class="module-title">Администрирование</div>
                         <div class="module-desc">Управление системой</div>
@@ -235,9 +245,14 @@
 
     <script src="shared/js/component-loader.js"></script>
     <script src="shared/js/sidebar-controller.js"></script>
+    <script src="shared/js/about-modal.js"></script>
+    <script src="shared/js/toast.js"></script>
+    <script src="shared/js/error-handler.js"></script>
+    <script src="shared/env-config.js"></script>
     <script src="shared/cloud-storage.js"></script>
     <script src="shared/sync-manager.js"></script>
     <script src="shared/auth-guard.js"></script>
+    <script src="shared/roles-config.js"></script>
     <script src="shared/role-guard.js"></script>
     <script src="shared/version.js"></script>
     <script src="js/pacman-game.js"></script>

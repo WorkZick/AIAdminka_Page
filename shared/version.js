@@ -3,6 +3,8 @@
 
 const AppVersion = {
     version: null,
+    // Fallback версия на случай если changelog.json недоступен
+    FALLBACK_VERSION: '2.16.0',
 
     async init() {
         await this.loadVersion();
@@ -23,7 +25,13 @@ const AppVersion = {
                 }
             }
         } catch (e) {
-            console.warn('⚠️ Не удалось загрузить версию из changelog.json');
+            // Failed to load version from changelog.json, will use fallback
+        }
+
+        // Используем fallback версию если загрузка не удалась
+        if (!this.version) {
+            this.version = this.FALLBACK_VERSION;
+            console.info('ℹ️ Используется fallback версия:', this.version);
         }
     },
 
@@ -37,7 +45,7 @@ const AppVersion = {
         }
 
         // Fallback: определяем глубину вложенности
-        const folders = ['partners', 'methods', 'team-info', 'traffic-calculation', 'documentation', 'feedback', 'login', 'excel-reports', 'sync'];
+        const folders = ['partners', 'team-info', 'traffic-calculation', 'documentation', 'login', 'excel-reports', 'sync', 'admin'];
         for (const folder of folders) {
             if (pathname.includes('/' + folder + '/')) {
                 return '../documentation/data/changelog.json';
@@ -61,6 +69,11 @@ const AppVersion = {
         if (versionText) {
             versionText.textContent = 'Version ' + this.version;
         }
+
+        // Отправляем событие что версия обновлена
+        document.dispatchEvent(new CustomEvent('app-version-loaded', {
+            detail: { version: this.version }
+        }));
     },
 
     formatVersion(format) {

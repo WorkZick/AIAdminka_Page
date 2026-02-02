@@ -2,6 +2,13 @@
 const logger = {
     element: null,
 
+    // Экранирование HTML для предотвращения XSS
+    escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    },
+
     init() {
         this.element = document.getElementById('logs');
         this.log('Система логирования запущена', 'info');
@@ -26,10 +33,19 @@ const logger = {
 
         const item = document.createElement('div');
         item.className = `log-item ${type}`;
-        item.innerHTML = `
-            <div class="log-time">${time}</div>
-            <div class="log-message">${message}</div>
-        `;
+
+        // Используем DOM API вместо innerHTML для безопасности
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'log-time';
+        timeDiv.textContent = time;
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'log-message';
+        msgDiv.textContent = message;
+
+        item.appendChild(timeDiv);
+        item.appendChild(msgDiv);
+
         this.element.appendChild(item);
         this.element.scrollTop = this.element.scrollHeight;
 

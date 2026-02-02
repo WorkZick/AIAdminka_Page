@@ -1,0 +1,20 @@
+/* ============================================================
+   Role Guard - CSS-first скрытие role-gated элементов
+   Элементы скрыты по умолчанию и показываются после загрузки ролей.
+   Предотвращает мерцание неавторизованного контента при загрузке страницы.
+   ============================================================ */
+
+/* Скрыть role-gated элементы пока body НЕ имеет класс role-ready */
+body:not(.role-ready) [data-module-card],
+body:not(.role-ready) [data-module],
+body:not(.role-ready) [data-admin-only],
+body:not(.role-ready) [data-leader-only],
+body:not(.role-ready) [data-requires-edit],
+body:not(.role-ready) [data-requires-delete] {
+    visibility: hidden !important;
+}
+
+/* Skeleton-заглушки скрываются после загрузки ролей */
+body.role-ready .skeleton-modules-placeholder {
+    display: none !important;
+}

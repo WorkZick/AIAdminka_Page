@@ -10,6 +10,9 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyeWmZs028zVkzKTrqNT
 // Уникальный ID этого воркера
 const WORKER_ID = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 
+// Лимит размера очереди для предотвращения переполнения памяти
+const MAX_QUEUE_SIZE = 100;
+
 let queue = [];
 let isSyncing = false;
 let accessToken = null; // Используем токен вместо email
@@ -78,6 +81,16 @@ function broadcast(message) {
 
 function addToQueue(operations) {
     for (const op of operations) {
+        // Проверяем лимит очереди
+        if (queue.length >= MAX_QUEUE_SIZE) {
+            console.warn(`Очередь синхронизации переполнена (макс. ${MAX_QUEUE_SIZE})`);
+            broadcast({
+                type: 'QUEUE_OVERFLOW',
+                maxSize: MAX_QUEUE_SIZE
+            });
+            break;
+        }
+
         // Проверяем дубликаты
         const key = getKey(op);
         const exists = queue.some(q => getKey(q) === key);
@@ -142,7 +155,9 @@ async function processQueue() {
 
             if (operation.attempts < 3) {
                 queue.unshift(operation);
-                await delay(1000 * operation.attempts);
+                // Exponential backoff: 1s, 2s, 4s (base * 2^attempt)
+                const backoffDelay = 1000 * Math.pow(2, operation.attempts - 1);
+                await delay(backoffDelay);
             } else {
                 errors.push({ operation, error: error.message });
             }
@@ -176,6 +191,10 @@ async function executeOperation(operation) {
     // Используем GET с URL параметрами (GAS теряет POST body при редиректе)
     const url = new URL(SCRIPT_URL);
     url.searchParams.set('action', action);
+
+    // ⚠️ CRITICAL SECURITY ISSUE: Access Token в URL параметрах
+    // См. подробности в cloud-storage.js:211-224
+    // TODO: Реализовать Authorization header после изменения бекенда
     url.searchParams.set('accessToken', accessToken);
 
     if (type === 'add') {

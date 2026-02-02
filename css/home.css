@@ -19,6 +19,14 @@
 }
 
 /* ===========================================
+   Skeleton Placeholder (loading state)
+   =========================================== */
+
+.skeleton-modules-placeholder {
+    display: contents;
+}
+
+/* ===========================================
    Game Card Variant (not in design-system)
    =========================================== */
 

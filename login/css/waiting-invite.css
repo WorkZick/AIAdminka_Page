@@ -1,0 +1,352 @@
+/* ============================================================
+   Waiting Invite Page - Specific Styles
+   Base styles from login.css
+   ============================================================ */
+
+/* ===========================================
+   Waiting Content
+   =========================================== */
+
+.waiting-content {
+    text-align: center;
+    padding: var(--spacing-lg) 0;
+}
+
+.waiting-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto var(--spacing-xl);
+    background: rgba(253, 190, 47, 0.1);
+    border: 1px solid rgba(253, 190, 47, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.waiting-icon svg {
+    width: 32px;
+    height: 32px;
+    color: var(--yellow);
+}
+
+.waiting-title {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: var(--spacing-md);
+}
+
+.waiting-description {
+    font-size: var(--font-size-md);
+    color: var(--gray-light);
+    line-height: 1.6;
+    margin-bottom: var(--spacing-lg);
+}
+
+/* ===========================================
+   User Role Badge
+   =========================================== */
+
+.user-role-badge {
+    margin-top: 6px;
+}
+
+.user-role-badge .badge {
+    font-size: var(--font-size-xs);
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+}
+
+.badge-info {
+    background: rgba(116, 192, 252, 0.15);
+    color: var(--status-blue);
+    border: 1px solid rgba(116, 192, 252, 0.3);
+}
+
+/* ===========================================
+   Invites Section
+   =========================================== */
+
+.invites-section {
+    margin-top: var(--spacing-2xl);
+    padding-top: var(--spacing-2xl);
+    border-top: 1px solid var(--glass-border);
+}
+
+.invites-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: var(--spacing-lg);
+}
+
+.invites-title svg {
+    width: 18px;
+    height: 18px;
+    color: var(--yellow);
+}
+
+/* ===========================================
+   Invite Cards
+   =========================================== */
+
+.invites-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.invite-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-lg);
+    transition: all var(--transition-fast);
+}
+
+.invite-card:hover {
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border-hover);
+}
+
+.invite-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-md);
+}
+
+.invite-team-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--white);
+}
+
+.invite-role {
+    font-size: var(--font-size-sm);
+    padding: 4px 10px;
+    background: rgba(253, 190, 47, 0.15);
+    color: var(--yellow);
+    border-radius: var(--radius-md);
+}
+
+.invite-body {
+    display: grid;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.invite-info-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-base);
+}
+
+.invite-info-row .label {
+    color: var(--gray);
+    min-width: 80px;
+}
+
+.invite-info-row .value {
+    color: var(--gray-light);
+}
+
+.invite-expires {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--glass-bg-light);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
+.invite-expires.expiring-soon {
+    background: rgba(255, 146, 43, 0.1);
+    color: var(--status-orange);
+}
+
+.invite-actions {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.invite-actions button {
+    flex: 1;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    font-family: var(--font-family);
+    font-size: var(--font-size-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-accept {
+    background: linear-gradient(135deg, var(--yellow), var(--yellow-hover));
+    border: none;
+    color: var(--black);
+}
+
+.btn-accept:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(253, 190, 47, 0.3);
+}
+
+.btn-accept:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-reject {
+    background: transparent;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    color: var(--status-red);
+}
+
+.btn-reject:hover {
+    background: rgba(255, 107, 107, 0.1);
+    border-color: rgba(255, 107, 107, 0.5);
+}
+
+.btn-reject:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ===========================================
+   No Invites State
+   =========================================== */
+
+.no-invites {
+    text-align: center;
+    padding: var(--spacing-2xl) var(--spacing-lg);
+    margin-top: var(--spacing-xl);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+}
+
+.no-invites-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto var(--spacing-lg);
+    background: var(--glass-bg-light);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.no-invites-icon svg {
+    width: 24px;
+    height: 24px;
+    color: var(--gray);
+}
+
+.no-invites p {
+    font-size: var(--font-size-md);
+    color: var(--gray-light);
+    margin-bottom: var(--spacing-sm);
+}
+
+.no-invites-hint {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+    display: block;
+}
+
+/* ===========================================
+   Loading State
+   =========================================== */
+
+.invites-loading {
+    text-align: center;
+    padding: var(--spacing-2xl);
+}
+
+.invites-loading p {
+    font-size: var(--font-size-md);
+    color: var(--gray-light);
+    margin-top: var(--spacing-md);
+}
+
+/* ===========================================
+   Actions
+   =========================================== */
+
+.waiting-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-2xl);
+    padding-top: var(--spacing-xl);
+    border-top: 1px solid var(--glass-border);
+}
+
+.refresh-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    padding: 14px var(--spacing-2xl);
+    background: var(--glass-bg-light);
+    border: 1px solid var(--glass-border);
+    color: var(--gray-light);
+    border-radius: var(--radius-lg);
+    font-family: var(--font-family);
+    font-size: var(--font-size-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.refresh-button:hover {
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border-hover);
+    color: var(--yellow);
+}
+
+.refresh-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.refresh-button svg {
+    width: 18px;
+    height: 18px;
+}
+
+.refresh-button.loading svg {
+    animation: spin 1s linear infinite;
+}
+
+/* ===========================================
+   Responsive
+   =========================================== */
+
+@media (max-width: 480px) {
+    .invite-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .invite-actions {
+        flex-direction: column;
+    }
+
+    .invite-info-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .invite-info-row .label {
+        min-width: auto;
+    }
+}

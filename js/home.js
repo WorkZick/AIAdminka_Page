@@ -18,21 +18,31 @@ const homeApp = {
     // ============ INIT ============
 
     async init() {
-        // Check if CloudStorage is available
-        if (typeof CloudStorage !== 'undefined') {
-            await CloudStorage.init();
+        // Check authentication and role status (waiting_invite/blocked check)
+        if (!await AuthGuard.checkWithRole()) {
+            return; // Will redirect to login or waiting-invite
         }
 
-        // Initialize RoleGuard for role-based UI (includes checkIsAdmin)
-        if (typeof RoleGuard !== 'undefined') {
-            await RoleGuard.init();
-            // Get admin status from RoleGuard (avoids duplicate API call)
-            this.isAdmin = RoleGuard.hasRole('admin');
-        }
+        try {
+            // Check if CloudStorage is available
+            if (typeof CloudStorage !== 'undefined') {
+                await CloudStorage.init();
+            }
 
-        // Load tickets after role initialization
-        if (typeof CloudStorage !== 'undefined') {
-            this.loadTickets();
+            // Get admin status from RoleGuard (already initialized in checkWithRole)
+            if (typeof RoleGuard !== 'undefined') {
+                this.isAdmin = RoleGuard.hasRole('admin');
+            }
+
+            // Load tickets after role initialization
+            if (typeof CloudStorage !== 'undefined') {
+                this.loadTickets();
+            }
+        } catch (error) {
+            console.error('Init error:', error);
+            if (typeof Toast !== 'undefined') {
+                Toast.error('Ошибка загрузки данных: ' + error.message);
+            }
         }
 
         // Setup image upload handler
@@ -212,6 +222,9 @@ const homeApp = {
         }
     },
 
+    /**
+     * Переключить видимость бокового drawer с тикетами
+     */
     toggleTicketsDrawer() {
         const panel = document.getElementById('ticketsPanel');
         const overlay = document.getElementById('ticketsOverlay');
@@ -222,6 +235,17 @@ const homeApp = {
         toggle.style.display = panel.classList.contains('open') ? 'none' : 'flex';
     },
 
+    /**
+     * Отрисовка списка тикетов в drawer
+     *
+     * @description
+     * Сортирует тикеты:
+     * 1. Активные (new, in_progress, need_info) - сначала
+     * 2. Закрытые (resolved, closed) - в конце
+     * 3. Внутри каждой группы - по дате (новые первыми)
+     *
+     * Использует DOM API (createElement, textContent) для защиты от XSS
+     */
     renderTickets() {
         const listEl = document.getElementById('ticketsList');
 
@@ -386,6 +410,18 @@ const homeApp = {
         }
     },
 
+    /**
+     * Отправить новый тикет на сервер
+     *
+     * @description
+     * Процесс отправки:
+     * 1. Валидация заголовка (обязательное поле)
+     * 2. Последовательная загрузка изображений в Google Drive (до 3 шт)
+     * 3. Создание тикета с полученными imageIds
+     * 4. Обновление UI и уведомление пользователя
+     *
+     * Показывает loading состояние кнопки во время отправки
+     */
     async submitTicket() {
         const title = document.getElementById('ticketTitle').value.trim();
         const description = document.getElementById('ticketDescription').value.trim();
@@ -713,10 +749,7 @@ const homeApp = {
 
     openImage(imgId) {
         // Validate imgId - should only contain alphanumeric, dash, underscore
-        if (!imgId || !/^[\w-]+$/.test(imgId)) {
-            console.warn('Invalid image ID:', imgId);
-            return;
-        }
+        if (!imgId || !/^[\w-]+$/.test(imgId)) return;
         window.open(`https://drive.google.com/file/d/${imgId}/view`, '_blank');
     }
 };
@@ -736,50 +769,4 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Initialize app
     homeApp.init();
-
-    // Initialize about modal after component is loaded
-    initAboutModal();
 });
-
-// ============ ABOUT MODAL (Global functions) ============
-function showAboutModal() {
-    const modal = document.getElementById('aboutModal');
-    if (modal) modal.classList.add('active');
-}
-
-function closeAboutModal() {
-    const modal = document.getElementById('aboutModal');
-    if (modal) modal.classList.remove('active');
-}
-
-function initAboutModal() {
-    // Close button handler
-    const closeBtn = document.querySelector('#aboutModal .modal-close');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeAboutModal);
-    }
-
-    // Close by clicking overlay
-    const modal = document.getElementById('aboutModal');
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) closeAboutModal();
-        });
-    }
-
-    // Close by Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            const modal = document.getElementById('aboutModal');
-            if (modal && modal.classList.contains('active')) {
-                closeAboutModal();
-            }
-        }
-    });
-
-    // Version info click handler
-    const versionInfo = document.querySelector('.version-info');
-    if (versionInfo) {
-        versionInfo.addEventListener('click', showAboutModal);
-    }
-}

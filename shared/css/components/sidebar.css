@@ -345,3 +345,108 @@
         margin: 12px 8px;
     }
 }
+
+/* ==================== TOKEN REFRESH PROMPT ==================== */
+.token-prompt-box {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 99999;
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 14px 16px;
+    min-width: 240px;
+    font-family: 'TT Firs Neue', 'Segoe UI', system-ui, sans-serif;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.token-prompt-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.token-prompt-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(253, 190, 47, 0.15);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.token-prompt-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: #fdbe2f;
+}
+
+.token-prompt-text {
+    flex: 1;
+}
+
+.token-prompt-title {
+    color: #f2f2f2;
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.token-prompt-subtitle {
+    color: #6b6b6b;
+    font-size: 11px;
+}
+
+.token-prompt-time {
+    color: #fdbe2f;
+    font-weight: 600;
+}
+
+.token-prompt-time.warning {
+    color: #ff6b6b;
+}
+
+.token-prompt-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.token-prompt-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: none;
+}
+
+.token-prompt-btn-primary {
+    background: rgba(253, 190, 47, 0.15);
+    color: #fdbe2f;
+    border: 1px solid rgba(253, 190, 47, 0.3);
+}
+
+.token-prompt-btn-primary:hover {
+    background: rgba(253, 190, 47, 0.25);
+    border-color: rgba(253, 190, 47, 0.5);
+}
+
+.token-prompt-btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: #6b6b6b;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.token-prompt-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #a0a0a0;
+}

@@ -4,15 +4,52 @@
  */
 
 const CloudStorage = {
-    // Apps Script URL
-    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyeWmZs028zVkzKTrqNTbzTasKK0Z63eCfV1I4RUV6BJWMH8r62kScLh7U5B45bHRRILA/exec',
+    // Environment configuration (делегируем в EnvConfig)
+    get ENVIRONMENTS() {
+        return EnvConfig.ENVIRONMENTS;
+    },
+
+    // Current environment
+    get currentEnv() {
+        return EnvConfig.getCurrentEnv();
+    },
+
+    // Apps Script URL (dynamic based on environment)
+    get SCRIPT_URL() {
+        return EnvConfig.getScriptUrl();
+    },
+
+    /**
+     * Switch environment (test/prod)
+     * @param {string} env - 'test' or 'prod'
+     */
+    setEnvironment(env) {
+        const result = EnvConfig.setEnvironment(env);
+        if (result) {
+            this.clearCache(); // Clear cache when switching
+        }
+        return result;
+    },
+
+    /**
+     * Get current environment info
+     */
+    getEnvironmentInfo() {
+        return EnvConfig.getInfo();
+    },
 
     // Cache settings
     CACHE_TTL: 60000, // 1 минута
-    cache: {},
+    CACHE_PREFIX: 'cs-cache-',
+    cache: {}, // In-memory fallback
 
     // Pending requests для предотвращения race condition
     pendingRequests: new Map(),
+
+    // Request queue для контроля параллельных запросов
+    MAX_CONCURRENT_REQUESTS: 5,
+    requestQueue: [],
+    activeRequests: 0,
 
     // State
     isOnline: navigator.onLine,
@@ -89,6 +126,76 @@ const CloudStorage = {
         };
     },
 
+    // ============ REQUEST QUEUE ============
+
+    /**
+     * Добавить запрос в очередь
+     * Если есть свободные слоты - выполняет сразу, иначе ставит в очередь
+     * @param {Function} requestFn - Функция запроса
+     * @returns {Promise} Promise результата запроса
+     */
+    async enqueueRequest(requestFn) {
+        // Если есть свободные слоты - выполняем сразу
+        if (this.activeRequests < this.MAX_CONCURRENT_REQUESTS) {
+            return this.executeRequest(requestFn);
+        }
+
+        // Иначе добавляем в очередь и ждём
+        return new Promise((resolve, reject) => {
+            this.requestQueue.push({
+                execute: requestFn,
+                resolve,
+                reject
+            });
+        });
+    },
+
+    /**
+     * Выполнить запрос и обработать очередь после завершения
+     * @param {Function} requestFn - Функция запроса
+     * @returns {Promise} Promise результата запроса
+     */
+    async executeRequest(requestFn) {
+        this.activeRequests++;
+
+        try {
+            const result = await requestFn();
+            return result;
+        } finally {
+            this.activeRequests--;
+            this.processQueue();
+        }
+    },
+
+    /**
+     * Обработать следующий запрос в очереди
+     */
+    processQueue() {
+        // Если очередь пустая или нет свободных слотов - выходим
+        if (this.requestQueue.length === 0 || this.activeRequests >= this.MAX_CONCURRENT_REQUESTS) {
+            return;
+        }
+
+        // Берём следующий запрос из очереди
+        const queuedRequest = this.requestQueue.shift();
+
+        // Выполняем запрос
+        this.executeRequest(queuedRequest.execute)
+            .then(queuedRequest.resolve)
+            .catch(queuedRequest.reject);
+    },
+
+    /**
+     * Получить статистику очереди (для отладки)
+     */
+    getQueueStats() {
+        return {
+            activeRequests: this.activeRequests,
+            queuedRequests: this.requestQueue.length,
+            maxConcurrent: this.MAX_CONCURRENT_REQUESTS
+        };
+    },
+
     // ============ API CALLS ============
 
     // Retry settings
@@ -111,11 +218,12 @@ const CloudStorage = {
     },
 
     /**
-     * Вызов Apps Script API (GET с URL параметрами)
-     * GAS теряет POST body при редиректе, поэтому используем GET
-     * Включает retry с exponential backoff
+     * Вызов Apps Script API (GET с URL параметрами или POST с JSON body)
+     * GAS теряет POST body при редиректе, поэтому используем GET для малых данных
+     * Для больших данных (uploadImage) используем POST с JSON body
+     * Включает retry с exponential backoff и request queue
      */
-    async callApi(action, params = {}, retryCount = 0) {
+    async callApi(action, params = {}, retryCount = 0, usePost = false) {
         if (!this.isOnline) {
             throw new Error('Нет подключения к интернету');
         }
@@ -128,24 +236,62 @@ const CloudStorage = {
             return new Promise(() => {});
         }
 
-        try {
+        // Создаём функцию для выполнения запроса
+        const executeApiRequest = async () => {
             const url = new URL(this.SCRIPT_URL);
-            url.searchParams.set('action', action);
-            // TODO: SECURITY - Токен в URL небезопасен (логи сервера/браузера)
-            // Решение: использовать Authorization header (требует изменения Apps Script)
-            // Google Apps Script теряет POST body при редиректе, поэтому используем GET
-            url.searchParams.set('accessToken', accessToken);
 
-            // Добавляем остальные параметры
-            for (const [key, value] of Object.entries(params)) {
-                if (value !== undefined && value !== null) {
-                    url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
+            let fetchOptions;
+
+            if (usePost) {
+                // POST запрос с text/plain для больших данных
+                // text/plain не вызывает CORS preflight (simple request по спецификации CORS)
+                // Бэкенд парсит JSON из text/plain body
+                const postData = {
+                    action: action,
+                    accessToken: accessToken,
+                    ...params
+                };
+
+                fetchOptions = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    },
+                    body: JSON.stringify(postData)
+                };
+            } else {
+                // GET запрос с URL параметрами (для малых данных)
+                url.searchParams.set('action', action);
+
+                // ⚠️ CRITICAL SECURITY ISSUE: Access Token в URL параметрах
+                // Риски:
+                // - Токен логируется в истории браузера (localStorage, browser history)
+                // - Токен логируется в серверных access logs
+                // - Токен может утечь через Referer header при переходах
+                // - Токен уязвим к утечке через XSS (доступ к history.state)
+                //
+                // Решение (требует изменения бекенда):
+                // 1. Apps Script должен читать токен из заголовка Authorization: Bearer <token>
+                // 2. Использовать fetch() с headers: { 'Authorization': `Bearer ${accessToken}` }
+                // 3. Примечание: Google Apps Script теряет POST body при редиректе,
+                //    но headers сохраняются, поэтому можно использовать GET с Authorization
+                //
+                // TODO: Реализовать после изменения Apps Script бекенда
+                url.searchParams.set('accessToken', accessToken);
+
+                // Добавляем остальные параметры
+                for (const [key, value] of Object.entries(params)) {
+                    if (value !== undefined && value !== null) {
+                        url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
+                    }
                 }
+
+                fetchOptions = {
+                    method: 'GET'
+                };
             }
 
-            const response = await fetch(url.toString(), {
-                method: 'GET'
-            });
+            const response = await fetch(url.toString(), fetchOptions);
 
             const result = await response.json();
 
@@ -154,6 +300,11 @@ const CloudStorage = {
             }
 
             return result;
+        };
+
+        try {
+            // Выполняем запрос через очередь
+            return await this.enqueueRequest(executeApiRequest);
         } catch (error) {
             // Retry logic with exponential backoff
             const isRetryable = error.message.includes('Failed to fetch') ||
@@ -165,46 +316,83 @@ const CloudStorage = {
                 const delay = this.INITIAL_DELAY * Math.pow(2, retryCount);
                 console.warn(`CloudStorage: Retry ${retryCount + 1}/${this.MAX_RETRIES} after ${delay}ms...`);
                 await this.sleep(delay);
-                return this.callApi(action, params, retryCount + 1);
+                return this.callApi(action, params, retryCount + 1, usePost);
             }
 
             console.error('CloudStorage API error:', error);
+
+            // Если Access denied - пользователь удалён из системы, разлогиниваем
+            const errorMessage = error.message || String(error);
+            if (errorMessage.includes('Access denied') || errorMessage.includes('User not found')) {
+                if (typeof Toast !== 'undefined') {
+                    Toast.error('Доступ запрещён. Ваш аккаунт не найден в системе.');
+                }
+                // Очищаем данные и редиректим на login
+                localStorage.removeItem('cloud-auth');
+                localStorage.removeItem('roleGuard-cache');
+                setTimeout(() => {
+                    if (typeof AuthGuard !== 'undefined') {
+                        AuthGuard.redirectToLogin();
+                    } else {
+                        window.location.href = '/SimpleAIAdminka/login/';
+                    }
+                }, 1500);
+            }
+
             throw error;
         }
     },
 
     /**
-     * POST запрос для больших данных (legacy, использует callApi)
+     * POST запрос для больших данных (использует POST с JSON body)
      */
     async postApi(action, data) {
-        return this.callApi(action, data);
+        return this.callApi(action, data, 0, true);
     },
 
-    // ============ CACHE ============
+    // ============ CACHE (localStorage с fallback в память) ============
 
     /**
-     * Получение из кэша
+     * Получение из кэша (localStorage → memory fallback)
      */
     getFromCache(key) {
-        const cached = this.cache[key];
-        if (!cached) return null;
+        // Пробуем localStorage
+        try {
+            const raw = localStorage.getItem(this.CACHE_PREFIX + key);
+            if (raw) {
+                const cached = JSON.parse(raw);
+                if (Date.now() - cached.timestamp <= this.CACHE_TTL) {
+                    return cached.data;
+                }
+                localStorage.removeItem(this.CACHE_PREFIX + key);
+                return null;
+            }
+        } catch (e) {
+            // localStorage недоступен — пробуем memory
+        }
 
-        if (Date.now() - cached.timestamp > this.CACHE_TTL) {
+        // Fallback: in-memory кеш
+        const memCached = this.cache[key];
+        if (!memCached) return null;
+        if (Date.now() - memCached.timestamp > this.CACHE_TTL) {
             delete this.cache[key];
             return null;
         }
-
-        return cached.data;
+        return memCached.data;
     },
 
     /**
-     * Сохранение в кэш
+     * Сохранение в кэш (localStorage с fallback в память)
      */
     setCache(key, data) {
-        this.cache[key] = {
-            data: data,
-            timestamp: Date.now()
-        };
+        const entry = { data: data, timestamp: Date.now() };
+
+        try {
+            localStorage.setItem(this.CACHE_PREFIX + key, JSON.stringify(entry));
+        } catch (e) {
+            // localStorage переполнен — используем memory
+            this.cache[key] = entry;
+        }
     },
 
     /**
@@ -213,8 +401,20 @@ const CloudStorage = {
     clearCache(key) {
         if (key) {
             delete this.cache[key];
+            try { localStorage.removeItem(this.CACHE_PREFIX + key); } catch (e) {}
         } else {
             this.cache = {};
+            // Удаляем все cs-cache-* ключи из localStorage
+            try {
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith(this.CACHE_PREFIX)) {
+                        keysToRemove.push(k);
+                    }
+                }
+                keysToRemove.forEach(k => localStorage.removeItem(k));
+            } catch (e) {}
         }
     },
 
@@ -270,7 +470,6 @@ const CloudStorage = {
                         try {
                             p.customFields = JSON.parse(p.customFields);
                         } catch (e) {
-                            console.warn(`Invalid customFields for partner ${p.id}:`, p.customFields);
                             p.customFields = {};
                         }
                     }
@@ -426,6 +625,141 @@ const CloudStorage = {
     async deleteMethod(id) {
         const result = await this.callApi('deleteMethod', { id: id });
         this.clearCache('methods');
+        return result;
+    },
+
+    // ============ STORAGE ============
+
+    /**
+     * Инициализировать хранилище для команды/пользователя
+     * Должен вызываться leader или admin
+     * @returns {Promise<Object>} результат с sheetId, folderId
+     */
+    async initStorage() {
+        const result = await this.callApi('initStorage');
+        return result;
+    },
+
+    // ============ EMPLOYEES (Team Members) ============
+
+    /**
+     * Получить сотрудников команды
+     * @param {boolean} useCache - использовать кеш
+     * @returns {Promise<Array>} массив сотрудников
+     */
+    async getEmployees(useCache = true) {
+        if (useCache) {
+            const cached = this.getFromCache('employees');
+            if (cached) return cached;
+        }
+
+        // Предотвращение race condition
+        if (this.pendingRequests.has('employees')) {
+            return this.pendingRequests.get('employees');
+        }
+
+        const fetchPromise = (async () => {
+            try {
+                const result = await this.callApi('getEmployees');
+                let employees = result.employees || [];
+
+                // Парсим customFields если они в виде строки
+                employees.forEach(emp => {
+                    if (emp.customFields && typeof emp.customFields === 'string') {
+                        try {
+                            emp.customFields = JSON.parse(emp.customFields);
+                        } catch (e) {
+                            emp.customFields = {};
+                        }
+                    }
+                    if (emp.predefinedFields && typeof emp.predefinedFields === 'string') {
+                        try {
+                            emp.predefinedFields = JSON.parse(emp.predefinedFields);
+                        } catch (e) {
+                            emp.predefinedFields = {};
+                        }
+                    }
+                });
+
+                this.setCache('employees', employees);
+                return employees;
+            } finally {
+                this.pendingRequests.delete('employees');
+            }
+        })();
+
+        this.pendingRequests.set('employees', fetchPromise);
+        return fetchPromise;
+    },
+
+    /**
+     * Сохранить сотрудника (создать или обновить)
+     * @param {Object} data - данные сотрудника
+     * @returns {Promise<Object>} результат с id сотрудника
+     */
+    async saveEmployee(data) {
+        // Сериализуем customFields и predefinedFields
+        const dataToSave = { ...data };
+        if (dataToSave.customFields && typeof dataToSave.customFields === 'object') {
+            dataToSave.customFields = JSON.stringify(dataToSave.customFields);
+        }
+        if (dataToSave.predefinedFields && typeof dataToSave.predefinedFields === 'object') {
+            dataToSave.predefinedFields = JSON.stringify(dataToSave.predefinedFields);
+        }
+
+        const result = await this.postApi('saveEmployee', { data: dataToSave });
+        this.clearCache('employees');
+        this.pendingRequests.delete('employees');
+        return result;
+    },
+
+    /**
+     * Удалить сотрудника
+     * @param {string} id - ID сотрудника
+     * @returns {Promise<Object>} результат операции
+     */
+    async deleteEmployee(id) {
+        const result = await this.callApi('deleteEmployee', { id: id });
+        this.clearCache('employees');
+        this.pendingRequests.delete('employees');
+        return result;
+    },
+
+    /**
+     * Получить шаблоны сотрудников
+     * @param {boolean} useCache - использовать кеш
+     * @returns {Promise<Array>} массив шаблонов
+     */
+    async getEmployeeTemplates(useCache = true) {
+        if (useCache) {
+            const cached = this.getFromCache('employeeTemplates');
+            if (cached) return cached;
+        }
+
+        const result = await this.callApi('getEmployeeTemplates');
+        const templates = result.templates || [];
+
+        this.setCache('employeeTemplates', templates);
+        return templates;
+    },
+
+    /**
+     * Сохранить шаблон сотрудника
+     * @param {Object} data - данные шаблона
+     */
+    async saveEmployeeTemplate(data) {
+        const result = await this.postApi('saveEmployeeTemplate', { data: data });
+        this.clearCache('employeeTemplates');
+        return result;
+    },
+
+    /**
+     * Удалить шаблон сотрудника
+     * @param {string} id - ID шаблона
+     */
+    async deleteEmployeeTemplate(id) {
+        const result = await this.callApi('deleteEmployeeTemplate', { id: id });
+        this.clearCache('employeeTemplates');
         return result;
     },
 

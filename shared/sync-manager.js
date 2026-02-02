@@ -27,13 +27,17 @@ const SyncManager = {
     init() {
         this.connectToWorker();
         this.trackUserActivity();
-        console.log('✅ SyncManager инициализирован');
     },
 
     // Отслеживаем активность пользователя
     trackUserActivity() {
+        // Debounce для предотвращения частых обновлений (особенно mousemove)
+        let timeout;
         const updateActivity = () => {
-            this.lastUserActivity = Date.now();
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                this.lastUserActivity = Date.now();
+            }, 100); // Max 10 updates per second
         };
 
         // Отслеживаем различные типы взаимодействия
@@ -47,13 +51,38 @@ const SyncManager = {
         return Date.now() - this.lastUserActivity > idleTime;
     },
 
+    // Проверяем, есть ли несохранённые изменения в формах
+    hasUnsavedChanges() {
+        // Проверяем data-атрибут на формах
+        const unsavedForms = document.querySelector('[data-unsaved="true"]');
+        if (unsavedForms) return true;
+
+        // Проверяем открытые формы с заполненными полями
+        const openForms = document.querySelectorAll('form:not([data-ignore-unsaved])');
+        for (const form of openForms) {
+            const inputs = form.querySelectorAll('input:not([type="hidden"]):not([type="submit"]), textarea, select');
+            for (const input of inputs) {
+                // Проверяем, изменено ли значение от дефолтного
+                if (input.value && input.value !== input.defaultValue) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    },
+
     // Обновить страницу если пользователь неактивен
     reloadIfIdle() {
+        // Проверяем несохранённые изменения
+        if (this.hasUnsavedChanges()) {
+            setTimeout(() => this.reloadIfIdle(), 10000);
+            return;
+        }
+
         if (this.isUserIdle()) {
-            console.log('🔄 Обновление страницы (пользователь неактивен)...');
             window.location.reload();
         } else {
-            console.log('⏳ Пользователь активен, обновление отложено');
             // Пробуем снова через 3 секунды
             setTimeout(() => this.reloadIfIdle(), 3000);
         }
@@ -79,14 +108,11 @@ const SyncManager = {
             this.port.start();
             this.isConnected = true;
 
-            // Устанавливаем email для воркера
-            const email = this.getEmail();
-            if (email) {
-                this.port.postMessage({ type: 'SET_EMAIL', email: email });
+            // Устанавливаем access token для воркера
+            const accessToken = this.getAccessToken();
+            if (accessToken) {
+                this.port.postMessage({ type: 'SET_TOKEN', accessToken: accessToken });
             }
-
-            // Статус приходит автоматически при подключении (onconnect в воркере)
-            console.log('✅ Подключено к SharedWorker');
 
         } catch (e) {
             console.error('Не удалось подключиться к SharedWorker:', e);
@@ -141,6 +167,16 @@ const SyncManager = {
         return null;
     },
 
+    getAccessToken() {
+        try {
+            const auth = localStorage.getItem('cloud-auth');
+            if (auth) {
+                return JSON.parse(auth).accessToken;
+            }
+        } catch (e) {}
+        return null;
+    },
+
     // ============ ОБРАБОТКА СООБЩЕНИЙ ОТ ВОРКЕРА ============
 
     handleWorkerMessage(data) {
@@ -153,7 +189,10 @@ const SyncManager = {
                 // пробуем восстановить из localStorage (только один раз)
                 if (this.queue.length === 0 && !this.isSyncing && !this.syncJustCompleted && !this.restoreAttempted) {
                     this.restoreAttempted = true;
-                    this.restoreFromLocalStorage();
+                    // Используем await для предотвращения race condition
+                    (async () => {
+                        await this.restoreFromLocalStorage();
+                    })();
                 }
 
                 if (this.queue.length > 0 || this.isSyncing) {
@@ -174,7 +213,6 @@ const SyncManager = {
                 this.isSyncing = true;
                 this.restoreAttempted = false; // Сбрасываем для следующего цикла
                 this.showIndicator();
-                console.log('🚀 Синхронизация началась');
                 break;
 
             case 'PROGRESS':
@@ -199,7 +237,6 @@ const SyncManager = {
                 localStorage.removeItem('partners-data');
                 localStorage.removeItem('methods-data');
                 localStorage.removeItem('templates-data');
-                console.log(`🏁 Синхронизация завершена: ${data.processed} операций`);
 
                 this.hideIndicator();
 
@@ -250,7 +287,7 @@ const SyncManager = {
                 try {
                     cloudPartners = await CloudStorage.fetchPartnersFromCloud();
                 } catch (e) {
-                    console.warn('Не удалось загрузить данные из облака:', e);
+                    // Ignore - will use empty cloud data for comparison
                 }
             }
 
@@ -307,7 +344,6 @@ const SyncManager = {
         try {
             if (typeof CloudStorage === 'undefined') return;
 
-            console.log('🔍 Проверка дубликатов в облаке...');
             const partners = await CloudStorage.fetchPartnersFromCloud();
 
             if (!partners || partners.length === 0) return;
@@ -324,7 +360,7 @@ const SyncManager = {
 
             // Находим дубликаты (группы с более чем 1 элементом)
             const duplicatesToDelete = [];
-            groups.forEach((items, key) => {
+            groups.forEach((items) => {
                 if (items.length > 1) {
                     // Оставляем первый (самый старый), удаляем остальные
                     items.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
@@ -335,11 +371,8 @@ const SyncManager = {
             });
 
             if (duplicatesToDelete.length === 0) {
-                console.log('✅ Дубликатов не найдено');
                 return;
             }
-
-            console.log(`🗑️ Найдено ${duplicatesToDelete.length} дубликатов, удаляем...`);
 
             // Удаляем дубликаты из облака
             let deleted = 0;
@@ -353,13 +386,11 @@ const SyncManager = {
             }
 
             if (deleted === 0) {
-                console.log('✅ Дубликаты уже были удалены');
                 return;
             }
 
             // Очищаем кэш
             CloudStorage.clearCache('partners');
-            console.log(`✅ Удалено ${deleted} дубликатов`);
 
         } catch (e) {
             console.error('Ошибка очистки дубликатов:', e);
@@ -370,7 +401,6 @@ const SyncManager = {
 
     addToQueue(type, entity, data, tempId = null) {
         if (!this.isConnected) {
-            console.warn('SharedWorker не подключен');
             return null;
         }
 
@@ -400,7 +430,6 @@ const SyncManager = {
         if (this.isConnected) {
             this.port.postMessage({ type: 'CANCEL' });
         }
-        console.log('⚠️ Синхронизация отменена');
     },
 
     // ============ ЛОКАЛЬНОЕ ХРАНИЛИЩЕ ============
@@ -434,81 +463,41 @@ const SyncManager = {
         let indicator = document.getElementById('sync-indicator');
 
         if (!indicator) {
+            // Создаём элементы программно для безопасности
             indicator = document.createElement('div');
             indicator.id = 'sync-indicator';
-            indicator.innerHTML = `
-                <div class="sync-indicator-content">
-                    <div class="sync-spinner"></div>
-                    <span class="sync-text">Синхронизация</span>
-                    <span class="sync-count"></span>
-                </div>
-                <button class="sync-cancel-btn" title="Отменить">Отмена</button>
-            `;
-            document.body.appendChild(indicator);
 
-            indicator.querySelector('.sync-cancel-btn').addEventListener('click', () => {
-                if (confirm('Отменить синхронизацию?')) {
-                    this.cancelSync();
+            const content = document.createElement('div');
+            content.className = 'sync-indicator-content';
+
+            const spinner = document.createElement('div');
+            spinner.className = 'sync-spinner';
+
+            const text = document.createElement('span');
+            text.className = 'sync-text';
+            text.textContent = 'Синхронизация';
+
+            const count = document.createElement('span');
+            count.className = 'sync-count';
+
+            content.appendChild(spinner);
+            content.appendChild(text);
+            content.appendChild(count);
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'sync-cancel-btn';
+            cancelBtn.title = 'Отменить';
+            cancelBtn.textContent = 'Отмена';
+            cancelBtn.addEventListener('click', () => {
+                this.cancelSync();
+                if (typeof Toast !== 'undefined') {
+                    Toast.warning('Синхронизация отменена');
                 }
             });
 
-            if (!document.getElementById('sync-indicator-styles')) {
-                const styles = document.createElement('style');
-                styles.id = 'sync-indicator-styles';
-                styles.textContent = `
-                    #sync-indicator {
-                        position: fixed;
-                        top: 10px;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        background: #2e2e2e;
-                        color: #f2f2f2;
-                        padding: 6px 14px;
-                        z-index: 10000;
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                        font-family: 'TT Firs Neue', 'Segoe UI', sans-serif;
-                        font-size: 12px;
-                        animation: syncSlideDown 0.3s ease;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-                        border-radius: 6px;
-                    }
-                    @keyframes syncSlideDown {
-                        from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
-                        to { transform: translateX(-50%) translateY(0); opacity: 1; }
-                    }
-                    @keyframes syncSlideUp {
-                        from { transform: translateX(-50%) translateY(0); opacity: 1; }
-                        to { transform: translateX(-50%) translateY(-100%); opacity: 0; }
-                    }
-                    .sync-indicator-content { display: flex; align-items: center; gap: 8px; }
-                    .sync-spinner {
-                        width: 12px; height: 12px;
-                        border: 2px solid rgba(253,190,47,0.3);
-                        border-top-color: #fdbe2f;
-                        border-radius: 50%;
-                        animation: syncSpin 1s linear infinite;
-                    }
-                    @keyframes syncSpin { to { transform: rotate(360deg); } }
-                    .sync-count { color: #8d8d8d; font-size: 11px; }
-                    .sync-cancel-btn {
-                        background: transparent;
-                        border: 1px solid #8d8d8d;
-                        color: #8d8d8d;
-                        font-size: 10px;
-                        cursor: pointer;
-                        padding: 2px 8px;
-                        border-radius: 4px;
-                    }
-                    .sync-cancel-btn:hover { border-color: #f2f2f2; color: #f2f2f2; }
-                    #sync-indicator.sync-complete .sync-spinner { display: none; }
-                    #sync-indicator.sync-complete .sync-text { color: #b8e994; }
-                    #sync-indicator.sync-complete .sync-cancel-btn { display: none; }
-                    #sync-indicator.sync-cancelled .sync-text { color: #fdbe2f; }
-                `;
-                document.head.appendChild(styles);
-            }
+            indicator.appendChild(content);
+            indicator.appendChild(cancelBtn);
+            document.body.appendChild(indicator);
         }
 
         indicator.style.display = 'flex';
@@ -580,5 +569,3 @@ if (document.readyState === 'loading') {
 } else {
     SyncManager.init();
 }
-
-console.log('✅ SyncManager загружен');

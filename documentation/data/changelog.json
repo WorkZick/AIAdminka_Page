@@ -1,6 +1,80 @@
 {
-  "version": "2.14.0",
+  "version": "2.16.0",
   "updates": [
+    {
+      "version": "2.16.0",
+      "date": "2026-02-02",
+      "title": "Исправление мерцания ролей, оптимизация загрузки",
+      "changes": [
+        {
+          "category": "Исправлено",
+          "items": [
+            "Мерцание ролей: гость больше не видит админ-панель и скрытые модули при загрузке",
+            "CSS-first скрытие role-gated элементов (visibility: hidden до загрузки ролей)"
+          ]
+        },
+        {
+          "category": "Улучшено",
+          "items": [
+            "Stale-while-revalidate для RoleGuard: мгновенный показ кешированных ролей (до 30 мин)",
+            "Кеш сайдбара HTML в sessionStorage — нет повторных fetch при навигации",
+            "Персистентный кеш CloudStorage в localStorage (вместо volatile in-memory)",
+            "Skeleton-заглушки на главной странице во время загрузки",
+            "Safety-таймаут (5с) — UI показывается даже при недоступности API"
+          ]
+        },
+        {
+          "category": "Новое",
+          "items": [
+            "shared/css/components/role-guard.css — CSS-компонент для скрытия контента до загрузки ролей",
+            "RoleGuard.revalidateInBackground() — фоновое обновление прав",
+            "RoleGuard.getStaleCache() — чтение просроченного кеша для мгновенного показа"
+          ]
+        }
+      ]
+    },
+    {
+      "version": "2.15.0",
+      "date": "2026-02-02",
+      "title": "Безопасность, обработка ошибок, очистка кода",
+      "changes": [
+        {
+          "category": "Безопасность",
+          "items": [
+            "XSS: экранирование user.picture, teamName, user.role, user.email в admin.js",
+            "XSS: экранирование user.picture, user.name, user.email в auth-guard.js",
+            "Добавлен метод _escapeHtml() в AuthGuard для защиты renderUserInfo()"
+          ]
+        },
+        {
+          "category": "Исправлено",
+          "items": [
+            "CloudStorage.init() в partners.js перенесён внутрь try-catch",
+            "CloudStorage.init() и loadTickets() в home.js обёрнуты в try-catch",
+            "ErrorHandler подключён на все страницы (было только 2 из 9)",
+            "Toast подключён на index.html и excel-reports (отсутствовал)"
+          ]
+        },
+        {
+          "category": "Улучшено",
+          "items": [
+            "Удалено ~72 отладочных console.log/warn из production кода",
+            "Оставлены только легитимные логи в модуле логирования excel-reports"
+          ]
+        },
+        {
+          "category": "Файлы",
+          "items": [
+            "admin/js/admin.js (XSS fix)",
+            "shared/auth-guard.js (XSS fix + _escapeHtml)",
+            "partners/js/partners.js (error handling)",
+            "js/home.js (error handling)",
+            "Все index.html (ErrorHandler подключение)",
+            "20+ JS файлов (очистка console.log)"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.14.0",
       "date": "2025-12-08",

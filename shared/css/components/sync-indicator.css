@@ -1,0 +1,98 @@
+/* ==================== SYNC INDICATOR ==================== */
+#sync-indicator {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2e2e2e;
+    color: #f2f2f2;
+    padding: 6px 14px;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'TT Firs Neue', 'Segoe UI', sans-serif;
+    font-size: 12px;
+    animation: syncSlideDown 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border-radius: 6px;
+}
+
+@keyframes syncSlideDown {
+    from {
+        transform: translateX(-50%) translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes syncSlideUp {
+    from {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(-50%) translateY(-100%);
+        opacity: 0;
+    }
+}
+
+.sync-indicator-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sync-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(253, 190, 47, 0.3);
+    border-top-color: #fdbe2f;
+    border-radius: 50%;
+    animation: syncSpin 1s linear infinite;
+}
+
+@keyframes syncSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.sync-count {
+    color: #8d8d8d;
+    font-size: 11px;
+}
+
+.sync-cancel-btn {
+    background: transparent;
+    border: 1px solid #8d8d8d;
+    color: #8d8d8d;
+    font-size: 10px;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.sync-cancel-btn:hover {
+    border-color: #f2f2f2;
+    color: #f2f2f2;
+}
+
+#sync-indicator.sync-complete .sync-spinner {
+    display: none;
+}
+
+#sync-indicator.sync-complete .sync-text {
+    color: #b8e994;
+}
+
+#sync-indicator.sync-complete .sync-cancel-btn {
+    display: none;
+}
+
+#sync-indicator.sync-cancelled .sync-text {
+    color: #fdbe2f;
+}

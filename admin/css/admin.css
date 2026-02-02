@@ -284,6 +284,62 @@
     color: var(--black);
 }
 
+/* Team members list in card */
+.team-members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.team-member {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.team-member-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--gray-medium);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--white);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.team-member-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.team-member-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.team-member-name {
+    font-size: 12px;
+    color: var(--white);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.team-member-role {
+    font-size: 10px;
+    color: var(--gray);
+}
+
 .team-stats {
     display: flex;
     gap: 16px;
@@ -301,7 +357,7 @@
 .team-stat-value {
     font-size: 18px;
     font-weight: 700;
-    color: var(--status-red);
+    color: var(--white);
 }
 
 .team-stat-label {
@@ -465,22 +521,27 @@
     color: var(--status-orange);
 }
 
-.status-badge .status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
+.status-badge.waiting_invite {
+    background: rgba(116, 192, 252, 0.15);
+    color: var(--status-blue);
 }
 
-.status-badge.active .status-dot {
-    background: var(--status-green);
+
+/* Modal actions (right-aligned group) */
+.modal-actions {
+    display: flex;
+    gap: 12px;
 }
 
-.status-badge.blocked .status-dot {
-    background: var(--status-red);
+/* Delete user warning */
+.delete-warning {
+    color: var(--white);
+    margin-bottom: var(--spacing-sm);
 }
 
-.status-badge.approved_no_team .status-dot {
-    background: var(--status-orange);
+.delete-details {
+    color: var(--gray-light);
+    font-size: var(--font-size-sm);
 }
 
 /* Action buttons */
@@ -647,9 +708,228 @@
     height: 14px;
 }
 
+/* Button aliases for request cards */
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.btn-sm {
+    padding: 8px 12px;
+    font-size: 11px;
+}
+
+.btn-success {
+    background: transparent;
+    color: var(--status-green);
+    border-color: rgba(81, 207, 102, 0.3);
+}
+
+.btn-success:hover {
+    background: rgba(81, 207, 102, 0.1);
+    border-color: var(--status-green);
+}
+
+.btn-danger {
+    background: transparent;
+    color: var(--status-red);
+    border-color: rgba(255, 107, 107, 0.3);
+}
+
+.btn-danger:hover {
+    background: rgba(255, 107, 107, 0.1);
+    border-color: var(--status-red);
+}
+
 /* =========================================
    Permissions Table
    ========================================= */
+
+/* Roles Management Table */
+.roles-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-lg);
+}
+
+.roles-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.roles-table th {
+    text-align: left;
+    font-size: var(--font-size-sm);
+    color: var(--gray-light);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-bottom: 1px solid var(--glass-border);
+    font-weight: 400;
+}
+
+.roles-table td {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    vertical-align: middle;
+}
+
+.roles-col-color { width: 32px; }
+.roles-col-key { width: 120px; }
+.roles-col-actions { width: 36px; }
+
+.role-color-dot {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--glass-border);
+    transition: border-color var(--transition-fast);
+}
+
+.role-color-dot:hover {
+    border-color: var(--white);
+}
+
+.role-key {
+    font-size: var(--font-size-sm);
+    color: var(--gray-light);
+    font-family: monospace;
+}
+
+.role-name-input {
+    padding: 3px 8px;
+    font-size: var(--font-size-base);
+    width: 100%;
+}
+
+.btn-delete-role {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--gray);
+    font-size: 16px;
+    line-height: 1;
+    border-radius: var(--radius-sm);
+    transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.btn-delete-role:hover {
+    color: var(--red-delete);
+    background: rgba(255, 107, 107, 0.1);
+}
+
+.roles-add-btn {
+    margin-top: var(--spacing-sm);
+    width: 100%;
+    text-align: center;
+}
+
+.add-role-form {
+    display: flex;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md) var(--spacing-sm);
+    align-items: center;
+    border-top: 1px solid var(--glass-border);
+}
+
+.add-role-form .form-input {
+    padding: 3px 8px;
+    font-size: var(--font-size-base);
+}
+
+.role-color-picker {
+    width: 28px;
+    height: 28px;
+    border: none;
+    cursor: pointer;
+    background: none;
+    padding: 0;
+    border-radius: var(--radius-sm);
+}
+
+/* Delete Role Modal */
+.delete-role-users {
+    max-height: 150px;
+    overflow-y: auto;
+    margin: var(--spacing-md) 0;
+    padding: var(--spacing-sm);
+    background: var(--glass-bg-light);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+}
+
+.delete-role-user {
+    padding: 3px 0;
+    font-size: var(--font-size-sm);
+    color: var(--gray-light);
+}
+
+.delete-role-no-users {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+    padding: var(--spacing-xs) 0;
+}
+
+.section-header--spaced {
+    margin-top: var(--spacing-2xl);
+}
+
+/* Sub-tabs (внутри permissions tab) */
+.sub-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: var(--spacing-lg);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 4px;
+    width: fit-content;
+}
+
+.sub-tab {
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--gray-light);
+    font-family: inherit;
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.sub-tab:hover:not(.active) {
+    background: var(--glass-bg-hover);
+    color: var(--white);
+}
+
+.sub-tab.active {
+    background: var(--glass-bg-hover);
+    color: var(--white);
+    font-weight: 600;
+    border: 1px solid var(--glass-border);
+}
+
+.sub-tab-content {
+    display: none;
+}
+
+.sub-tab-content.active {
+    display: block;
+}
 
 .permissions-card {
     background: var(--glass-bg);
@@ -1150,4 +1430,13 @@
     .users-table-wrapper {
         overflow-x: auto;
     }
+}
+
+/* =========================================
+   Utility Classes
+   ========================================= */
+
+.pagination-dots {
+    padding: 0 8px;
+    color: var(--gray);
 }

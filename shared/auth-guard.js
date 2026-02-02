@@ -86,9 +86,6 @@ const TokenManager = {
 
         this.warningShown = false;
 
-        const timeRemaining = Math.floor(this.getTimeRemaining() / 60000);
-        console.log(`[TokenManager] 🔄 Мониторинг токена запущен. Истекает через ${timeRemaining} мин`);
-
         // Периодическая проверка
         this.refreshTimer = setInterval(() => {
             this.checkToken();
@@ -123,7 +120,6 @@ const TokenManager = {
         // Скоро истечёт - показываем предупреждение
         if (this.needsWarning() && !this.warningShown) {
             const timeRemaining = Math.floor(this.getTimeRemaining() / 60000);
-            console.log(`[TokenManager] ⏰ Сессия истекает через ${timeRemaining} мин`);
             this.showRefreshPrompt(timeRemaining);
             this.warningShown = true;
         }
@@ -138,97 +134,6 @@ const TokenManager = {
         const prompt = document.createElement('div');
         prompt.id = 'token-refresh-prompt';
         prompt.innerHTML = `
-            <style>
-                .token-prompt-box {
-                    position: fixed;
-                    top: 16px;
-                    right: 16px;
-                    z-index: 99999;
-                    background: rgba(30, 30, 30, 0.85);
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 12px;
-                    padding: 14px 16px;
-                    min-width: 240px;
-                    font-family: 'TT Firs Neue', 'Segoe UI', system-ui, sans-serif;
-                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-                }
-                .token-prompt-content {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-bottom: 12px;
-                }
-                .token-prompt-icon {
-                    width: 32px;
-                    height: 32px;
-                    background: rgba(253, 190, 47, 0.15);
-                    border-radius: 8px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-shrink: 0;
-                }
-                .token-prompt-icon svg {
-                    width: 16px;
-                    height: 16px;
-                    fill: #fdbe2f;
-                }
-                .token-prompt-text {
-                    flex: 1;
-                }
-                .token-prompt-title {
-                    color: #f2f2f2;
-                    font-weight: 600;
-                    font-size: 13px;
-                    margin-bottom: 2px;
-                }
-                .token-prompt-subtitle {
-                    color: #6b6b6b;
-                    font-size: 11px;
-                }
-                .token-prompt-time {
-                    color: #fdbe2f;
-                    font-weight: 600;
-                }
-                .token-prompt-time.warning {
-                    color: #ff6b6b;
-                }
-                .token-prompt-actions {
-                    display: flex;
-                    gap: 8px;
-                }
-                .token-prompt-btn {
-                    flex: 1;
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    font-family: inherit;
-                    font-size: 12px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.15s ease;
-                    border: none;
-                }
-                .token-prompt-btn-primary {
-                    background: rgba(253, 190, 47, 0.15);
-                    color: #fdbe2f;
-                    border: 1px solid rgba(253, 190, 47, 0.3);
-                }
-                .token-prompt-btn-primary:hover {
-                    background: rgba(253, 190, 47, 0.25);
-                    border-color: rgba(253, 190, 47, 0.5);
-                }
-                .token-prompt-btn-secondary {
-                    background: rgba(255, 255, 255, 0.05);
-                    color: #6b6b6b;
-                    border: 1px solid rgba(255, 255, 255, 0.08);
-                }
-                .token-prompt-btn-secondary:hover {
-                    background: rgba(255, 255, 255, 0.08);
-                    color: #a0a0a0;
-                }
-            </style>
             <div class="token-prompt-box">
                 <div class="token-prompt-content">
                     <div class="token-prompt-icon">
@@ -240,12 +145,23 @@ const TokenManager = {
                     </div>
                 </div>
                 <div class="token-prompt-actions">
-                    <button class="token-prompt-btn token-prompt-btn-primary" onclick="TokenManager.extendSession()">Продлить</button>
-                    <button class="token-prompt-btn token-prompt-btn-secondary" onclick="TokenManager.dismissPrompt()">Позже</button>
+                    <button class="token-prompt-btn token-prompt-btn-primary">Продлить</button>
+                    <button class="token-prompt-btn token-prompt-btn-secondary">Позже</button>
                 </div>
             </div>
         `;
         document.body.appendChild(prompt);
+
+        // Добавляем обработчики для кнопок
+        const extendBtn = prompt.querySelector('.token-prompt-btn-primary');
+        const dismissBtn = prompt.querySelector('.token-prompt-btn-secondary');
+
+        if (extendBtn) {
+            extendBtn.addEventListener('click', () => this.extendSession());
+        }
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', () => this.dismissPrompt());
+        }
 
         // Живой таймер
         this.updateCountdown();
@@ -335,18 +251,26 @@ const TokenManager = {
 
         // Следим за обновлением токена
         const originalTimestamp = this.getAuthTimestamp();
+        let attempts = 0;
+        const maxAttempts = 150; // 30 секунд (150 * 200ms)
+
         const checkInterval = setInterval(() => {
-            try {
-                if (popup.closed) {
-                    clearInterval(checkInterval);
-                    const newTimestamp = this.getAuthTimestamp();
-                    if (newTimestamp > originalTimestamp) {
-                        this.warningShown = false;
-                        console.log('[TokenManager] ✅ Сессия продлена на 1 час');
-                    }
-                    sessionStorage.removeItem('oauth_silent');
-                }
-            } catch(e) {}
+            attempts++;
+            const newTimestamp = this.getAuthTimestamp();
+
+            // Проверяем, обновился ли токен
+            if (newTimestamp > originalTimestamp) {
+                clearInterval(checkInterval);
+                this.warningShown = false;
+                sessionStorage.removeItem('oauth_silent');
+                return;
+            }
+
+            // Останавливаем проверку после максимального количества попыток
+            if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                sessionStorage.removeItem('oauth_silent');
+            }
         }, 200);
     },
 
@@ -413,6 +337,20 @@ const AuthGuard = {
             return false;
         }
 
+        // Создать cloud-storage-info если его нет (для обратной совместимости)
+        if (!localStorage.getItem('cloud-storage-info')) {
+            try {
+                const auth = JSON.parse(authData);
+                localStorage.setItem('cloud-storage-info', JSON.stringify({
+                    connected: true,
+                    email: auth.email,
+                    timestamp: Date.now()
+                }));
+            } catch (e) {
+                // Ignore - cloud-storage-info creation failed
+            }
+        }
+
         TokenManager.startAutoRefresh();
         return true;
     },
@@ -422,8 +360,9 @@ const AuthGuard = {
     },
 
     /**
-     * Проверка авторизации + инициализация RoleGuard
+     * Проверка авторизации + инициализация RoleGuard + проверка статуса
      * Используется для страниц, требующих проверки прав доступа
+     * Автоматически редиректит на соответствующий экран в зависимости от статуса
      */
     async checkWithRole(redirect = true) {
         // Сначала обычная проверка токена
@@ -431,10 +370,72 @@ const AuthGuard = {
 
         // Затем инициализация RoleGuard
         if (typeof RoleGuard !== 'undefined') {
-            await RoleGuard.init();
+            try {
+                await RoleGuard.init();
+
+                // Проверяем статус пользователя
+                const status = RoleGuard.getStatus ? RoleGuard.getStatus() : null;
+                const role = RoleGuard.getCurrentRole ? RoleGuard.getCurrentRole() : null;
+
+                if (role) {
+                    // Blocked - показываем экран блокировки
+                    if (status === 'blocked') {
+                        this.showBlockedScreen();
+                        return false;
+                    }
+
+                    // Guest - всегда редирект на экран ожидания приглашения
+                    // (роль guest = пользователь ещё не принял приглашение в команду)
+                    if (role === 'guest') {
+                        window.location.href = this.getBasePath() + '/login/waiting-invite.html';
+                        return false;
+                    }
+                }
+            } catch (error) {
+                console.error('[AuthGuard] RoleGuard init failed:', error);
+
+                // Если Access denied - пользователь удалён из системы, разлогиниваем
+                const errorMessage = error.message || String(error);
+                if (errorMessage.includes('Access denied') || errorMessage.includes('not found')) {
+                    if (typeof Toast !== 'undefined') {
+                        Toast.error('Доступ запрещён. Ваш аккаунт не найден в системе.');
+                    }
+                    // Очищаем данные и редиректим на login
+                    localStorage.removeItem('cloud-auth');
+                    localStorage.removeItem('roleGuard-cache');
+                    setTimeout(() => this.redirectToLogin(), 1500);
+                    return false;
+                }
+                // Продолжаем без проверки роли - возможно бэкенд недоступен временно
+            }
         }
 
         return true;
+    },
+
+    /**
+     * Показать экран блокировки (для заблокированных пользователей)
+     */
+    showBlockedScreen() {
+        // Создаём overlay блокировки
+        const overlay = document.createElement('div');
+        overlay.id = 'auth-blocked-overlay';
+        overlay.innerHTML = `
+            <div class="auth-blocked-card">
+                <div class="auth-blocked-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        <line x1="12" y1="15" x2="12" y2="17"/>
+                    </svg>
+                </div>
+                <h2>Доступ заблокирован</h2>
+                <p>Ваш аккаунт заблокирован администратором.<br>Обратитесь к руководителю вашей команды.</p>
+                <button onclick="AuthGuard.logout()">Выйти</button>
+            </div>
+        `;
+        document.body.innerHTML = '';
+        document.body.appendChild(overlay);
     },
 
     getUser() {
@@ -511,21 +512,35 @@ const AuthGuard = {
 
         const initials = this.getInitials(user.name);
 
+        const esc = this._escapeHtml.bind(this);
         container.innerHTML = `
             <div class="auth-user-info">
                 <div class="auth-user-avatar">
                     ${user.picture
-                        ? `<img src="${user.picture}" alt="">`
+                        ? `<img src="${esc(user.picture)}" alt="">`
                         : initials
                     }
                 </div>
                 <div class="auth-user-details">
-                    <div class="auth-user-name">${user.name || 'Пользователь'}</div>
-                    <div class="auth-user-email">${user.email}</div>
+                    <div class="auth-user-name">${esc(user.name) || 'Пользователь'}</div>
+                    <div class="auth-user-email">${esc(user.email)}</div>
                 </div>
-                <button class="auth-logout-btn" onclick="AuthGuard.logout()" title="Выйти">Выйти</button>
+                <button class="auth-logout-btn" title="Выйти">Выйти</button>
             </div>
         `;
+
+        // Добавляем обработчик на кнопку logout
+        const logoutBtn = container.querySelector('.auth-logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => this.logout());
+        }
+    },
+
+    _escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     },
 
     getInitials(name) {

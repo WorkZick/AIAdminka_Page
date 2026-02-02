@@ -22,3 +22,6 @@
 @import 'components/tables.css';
 @import 'components/upload.css';
 @import 'components/toast.css';
+@import 'components/skeleton.css';
+@import 'components/sync-indicator.css';
+@import 'components/role-guard.css';

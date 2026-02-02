@@ -1,264 +1,239 @@
 /**
- * Гибридное хранилище для Team Info
- * Объединяет данные из API (члены команды) с локальными расширениями
+ * Storage для Team Info - Cloud-based версия
+ * Использует CloudStorage для синхронизации с Google Sheets
+ * @version 3.0
  */
 const storage = {
-    // Ключи localStorage
-    LOCAL_EXTENSIONS_KEY: 'team_info_extensions',  // Локальные дополнения к API данным
-    LOCAL_ONLY_KEY: 'team_info_local',             // Полностью локальные сотрудники
-    TEAM_SETTINGS_KEY: 'team_settings',            // Настройки команды
-
     // Кеш данных
-    _apiMembers: [],
-    _localExtensions: {},
-    _localOnly: [],
-    _teamData: null,
-    _waitingUsers: [],
+    _employees: [],
+    _templates: [],
+    _isLoading: false,
 
     // ============ ОСНОВНЫЕ МЕТОДЫ ============
 
     /**
-     * Загрузить все данные (API + локальные)
-     * @returns {Array} Объединённый массив сотрудников
+     * Загрузить всех сотрудников из облака
+     * @returns {Promise<Array>} массив сотрудников
      */
     async loadData() {
-        // Загружаем локальные данные
-        this._localExtensions = this._loadLocalExtensions();
-        this._localOnly = this._loadLocalOnly();
-
-        // Загружаем данные из API
-        if (typeof TeamAPI !== 'undefined') {
-            try {
-                const result = await TeamAPI.getTeamData();
-                if (result.success) {
-                    this._apiMembers = result.members || [];
-                    this._teamData = result.team || null;
-                    this._waitingUsers = result.waitingUsers || [];
-                }
-            } catch (e) {
-                console.warn('[Storage] API unavailable, using local only:', e);
-            }
+        if (this._isLoading) {
+            // Ждём завершения текущей загрузки
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return this._employees;
         }
 
-        // Объединяем данные
-        return this._mergeData();
+        this._isLoading = true;
+
+        try {
+            // Загружаем из CloudStorage
+            const employees = await CloudStorage.getEmployees();
+            this._employees = employees || [];
+            return this._employees;
+        } catch (error) {
+            console.error('[Storage] Error loading employees:', error);
+            // Fallback на localStorage
+            return this._loadFromLocalStorage();
+        } finally {
+            this._isLoading = false;
+        }
     },
 
     /**
-     * Сохранить данные сотрудника
-     * @param {Object} employee - Данные сотрудника
+     * Сохранить все данные в облако
+     * @param {Array} employees - массив сотрудников
      */
     async saveData(employees) {
-        // Разделяем на API-расширения и локальные
-        const extensions = {};
-        const localOnly = [];
+        this._employees = employees;
 
-        employees.forEach(emp => {
-            if (emp._source === 'local' || !emp.email || !this._isApiMember(emp.email)) {
-                // Полностью локальный сотрудник
-                localOnly.push(emp);
-            } else {
-                // Расширение к API данным
-                extensions[emp.email] = this._extractLocalFields(emp);
-            }
-        });
-
-        this._localExtensions = extensions;
-        this._localOnly = localOnly;
-
-        StorageManager.set(this.LOCAL_EXTENSIONS_KEY, extensions);
-        StorageManager.set(this.LOCAL_ONLY_KEY, localOnly);
+        // Сохраняем каждого сотрудника
+        const promises = employees.map(emp => this.saveEmployee(emp));
+        await Promise.all(promises);
 
         return true;
     },
 
     /**
      * Сохранить одного сотрудника
-     * @param {Object} employee - Данные сотрудника
+     * @param {Object} employee - данные сотрудника
+     * @returns {Promise<Object>} результат с id
      */
     async saveEmployee(employee) {
-        const data = await this.loadData();
-        const index = data.findIndex(e =>
-            (e.id && e.id === employee.id) ||
-            (e.email && e.email === employee.email)
-        );
+        try {
+            const result = await CloudStorage.saveEmployee(employee);
 
-        if (index >= 0) {
-            data[index] = { ...data[index], ...employee };
-        } else {
-            data.push(employee);
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            // Обновляем локальный кеш
+            const index = this._employees.findIndex(e => e.id === employee.id);
+            if (index >= 0) {
+                this._employees[index] = { ...employee, id: result.id || employee.id };
+            } else {
+                this._employees.push({ ...employee, id: result.id || employee.id });
+            }
+
+            return result;
+        } catch (error) {
+            console.error('[Storage] Error saving employee:', error);
+            // Fallback: сохраняем локально
+            this._saveToLocalStorage();
+            return { success: false, error: error.message };
         }
-
-        await this.saveData(data);
-        return employee;
     },
 
     /**
      * Удалить сотрудника
-     * @param {string|number} idOrEmail - ID или email сотрудника
+     * @param {string} id - ID сотрудника
      */
-    async deleteEmployee(idOrEmail) {
-        // Если это API сотрудник - удаляем только локальные расширения
-        if (this._isApiMember(idOrEmail)) {
-            delete this._localExtensions[idOrEmail];
-            StorageManager.set(this.LOCAL_EXTENSIONS_KEY, this._localExtensions);
-            return true;
+    async deleteEmployee(id) {
+        try {
+            const result = await CloudStorage.deleteEmployee(id);
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            // Обновляем локальный кеш
+            this._employees = this._employees.filter(e => e.id !== id);
+
+            return result;
+        } catch (error) {
+            console.error('[Storage] Error deleting employee:', error);
+            return { success: false, error: error.message };
         }
-
-        // Если локальный - удаляем полностью
-        this._localOnly = this._localOnly.filter(e =>
-            e.id !== idOrEmail && e.email !== idOrEmail
-        );
-        StorageManager.set(this.LOCAL_ONLY_KEY, this._localOnly);
-        return true;
     },
 
-    // ============ ДАННЫЕ КОМАНДЫ ============
+    // ============ ШАБЛОНЫ ============
 
     /**
-     * Получить данные команды
+     * Загрузить шаблоны сотрудников
+     * @returns {Promise<Array>} массив шаблонов
      */
-    getTeamData() {
-        return this._teamData;
-    },
+    async loadTemplates() {
+        try {
+            const templates = await CloudStorage.getEmployeeTemplates();
+            this._templates = templates || [];
 
-    /**
-     * Получить ожидающих приглашения
-     */
-    getWaitingUsers() {
-        return this._waitingUsers;
-    },
-
-    /**
-     * Получить API членов (для проверки источника)
-     */
-    getApiMembers() {
-        return this._apiMembers;
-    },
-
-    // ============ ВНУТРЕННИЕ МЕТОДЫ ============
-
-    /**
-     * Загрузить локальные расширения
-     */
-    _loadLocalExtensions() {
-        return StorageManager.get(this.LOCAL_EXTENSIONS_KEY) || {};
-    },
-
-    /**
-     * Загрузить полностью локальных сотрудников
-     */
-    _loadLocalOnly() {
-        return StorageManager.getArray(this.LOCAL_ONLY_KEY);
-    },
-
-    /**
-     * Проверить, является ли email членом API команды
-     */
-    _isApiMember(email) {
-        return this._apiMembers.some(m => m.email === email);
-    },
-
-    /**
-     * Объединить API данные с локальными расширениями
-     */
-    _mergeData() {
-        const result = [];
-
-        // 1. API сотрудники с локальными расширениями
-        this._apiMembers.forEach(apiMember => {
-            const localExt = this._localExtensions[apiMember.email] || {};
-            result.push(this._mergeEmployee(apiMember, localExt));
-        });
-
-        // 2. Полностью локальные сотрудники
-        this._localOnly.forEach(localEmp => {
-            result.push({
-                ...localEmp,
-                _source: 'local'
+            // Парсим fields если строка
+            this._templates.forEach(t => {
+                if (t.fields && typeof t.fields === 'string') {
+                    try {
+                        t.fields = JSON.parse(t.fields);
+                    } catch (e) {
+                        t.fields = [];
+                    }
+                }
             });
-        });
 
-        return result;
+            return this._templates;
+        } catch (error) {
+            console.error('[Storage] Error loading templates:', error);
+            return this._loadTemplatesFromLocalStorage();
+        }
     },
 
     /**
-     * Объединить API данные сотрудника с локальными
+     * Сохранить шаблон
+     * @param {Object} template - данные шаблона
      */
-    _mergeEmployee(apiMember, localExt) {
-        // Маппинг API статуса на расширенный
-        const extendedStatus = localExt.status ||
-            (apiMember.status === 'active' ? 'Работает' : 'Уволен');
+    async saveTemplate(template) {
+        try {
+            const result = await CloudStorage.saveEmployeeTemplate(template);
 
-        return {
-            // ID (используем email как ключ для API, или локальный id)
-            id: localExt.id || apiMember.email,
+            if (result.error) {
+                throw new Error(result.error);
+            }
 
-            // Из API (базовые)
-            email: apiMember.email,
-            reddyId: apiMember.reddyId || localExt.reddyId || '',
-            role: apiMember.role,
-            apiStatus: apiMember.status,
-            picture: apiMember.picture,
+            // Обновляем кеш
+            const index = this._templates.findIndex(t => t.id === template.id);
+            if (index >= 0) {
+                this._templates[index] = { ...template, id: result.id || template.id };
+            } else {
+                this._templates.push({ ...template, id: result.id || template.id });
+            }
 
-            // Переопределяемые (приоритет локальным)
-            fullName: localExt.fullName || apiMember.name,
-            position: localExt.position || apiMember.position || '',
-            avatar: localExt.avatar || apiMember.picture || '',
-            status: extendedStatus,
-
-            // Только локальные поля
-            corpTelegram: localExt.corpTelegram || apiMember.telegram || '',
-            personalTelegram: localExt.personalTelegram || '',
-            corpPhone: localExt.corpPhone || apiMember.phone || '',
-            personalPhone: localExt.personalPhone || '',
-            corpEmail: localExt.corpEmail || '',
-            personalEmail: localExt.personalEmail || '',
-            birthday: localExt.birthday || '',
-            office: localExt.office || '',
-            startDate: localExt.startDate || '',
-            company: localExt.company || '',
-            crmLogin: localExt.crmLogin || '',
-            comment: localExt.comment || '',
-            customFields: localExt.customFields || {},
-            predefinedFields: localExt.predefinedFields || {},
-
-            // Мета
-            _source: Object.keys(localExt).length > 0 ? 'hybrid' : 'api',
-            _apiData: apiMember,
-            createdAt: localExt.createdAt || new Date().toISOString(),
-            updatedAt: localExt.updatedAt || new Date().toISOString()
-        };
+            return result;
+        } catch (error) {
+            console.error('[Storage] Error saving template:', error);
+            return { success: false, error: error.message };
+        }
     },
 
     /**
-     * Извлечь только локальные поля для сохранения
+     * Удалить шаблон
+     * @param {string} id - ID шаблона
      */
-    _extractLocalFields(employee) {
-        return {
-            id: employee.id,
-            fullName: employee.fullName,
-            position: employee.position,
-            avatar: employee.avatar,
-            status: employee.status,
-            reddyId: employee.reddyId,
-            corpTelegram: employee.corpTelegram,
-            personalTelegram: employee.personalTelegram,
-            corpPhone: employee.corpPhone,
-            personalPhone: employee.personalPhone,
-            corpEmail: employee.corpEmail,
-            personalEmail: employee.personalEmail,
-            birthday: employee.birthday,
-            office: employee.office,
-            startDate: employee.startDate,
-            company: employee.company,
-            crmLogin: employee.crmLogin,
-            comment: employee.comment,
-            customFields: employee.customFields,
-            predefinedFields: employee.predefinedFields,
-            createdAt: employee.createdAt,
-            updatedAt: new Date().toISOString()
-        };
+    async deleteTemplate(id) {
+        try {
+            const result = await CloudStorage.deleteEmployeeTemplate(id);
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            this._templates = this._templates.filter(t => t.id !== id);
+
+            return result;
+        } catch (error) {
+            console.error('[Storage] Error deleting template:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
+     * Получить шаблон по ID
+     * @param {string} id - ID шаблона
+     */
+    getTemplate(id) {
+        return this._templates.find(t => t.id === id) || null;
+    },
+
+    /**
+     * Получить все шаблоны (из кеша)
+     */
+    getTemplates() {
+        return this._templates;
+    },
+
+    // ============ FALLBACK НА LOCALSTORAGE ============
+
+    /**
+     * Загрузить из localStorage (fallback)
+     */
+    _loadFromLocalStorage() {
+        try {
+            const saved = localStorage.getItem('team_info_employees');
+            this._employees = saved ? JSON.parse(saved) : [];
+            return this._employees;
+        } catch (e) {
+            console.error('[Storage] Error loading from localStorage:', e);
+            return [];
+        }
+    },
+
+    /**
+     * Сохранить в localStorage (fallback)
+     */
+    _saveToLocalStorage() {
+        try {
+            localStorage.setItem('team_info_employees', JSON.stringify(this._employees));
+        } catch (e) {
+            console.error('[Storage] Error saving to localStorage:', e);
+        }
+    },
+
+    /**
+     * Загрузить шаблоны из localStorage
+     */
+    _loadTemplatesFromLocalStorage() {
+        try {
+            const saved = localStorage.getItem('team_info_templates');
+            this._templates = saved ? JSON.parse(saved) : [];
+            return this._templates;
+        } catch (e) {
+            return [];
+        }
     },
 
     // ============ ЭКСПОРТ/ИМПОРТ ============
@@ -269,12 +244,10 @@ const storage = {
     async exportToFile(data) {
         try {
             const exportData = {
-                data: data,
-                apiMembers: this._apiMembers,
-                localExtensions: this._localExtensions,
-                localOnly: this._localOnly,
+                employees: data || this._employees,
+                templates: this._templates,
                 timestamp: new Date().toISOString(),
-                version: '2.0'
+                version: '3.0'
             };
 
             const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -303,33 +276,40 @@ const storage = {
     async importFromFile(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
                     const content = JSON.parse(e.target.result);
-                    let data = [];
+                    let employees = [];
 
-                    // Новый формат v2.0
-                    if (content.version === '2.0') {
-                        if (content.localExtensions) {
-                            this._localExtensions = content.localExtensions;
-                            StorageManager.set(this.LOCAL_EXTENSIONS_KEY, this._localExtensions);
+                    // v3.0 формат
+                    if (content.version === '3.0') {
+                        employees = content.employees || [];
+                        // Импортируем шаблоны если есть
+                        if (content.templates && content.templates.length > 0) {
+                            for (const template of content.templates) {
+                                await this.saveTemplate(template);
+                            }
                         }
-                        if (content.localOnly) {
-                            this._localOnly = content.localOnly;
-                            StorageManager.set(this.LOCAL_ONLY_KEY, this._localOnly);
-                        }
-                        data = content.data || [];
                     }
-                    // Старый формат v1.0
+                    // v2.0 формат
+                    else if (content.version === '2.0') {
+                        employees = content.data || [];
+                    }
+                    // Старый формат или массив
                     else if (content.data && Array.isArray(content.data)) {
-                        data = this._migrateOldData(content.data);
-                    }
-                    // Массив напрямую
-                    else if (Array.isArray(content)) {
-                        data = this._migrateOldData(content);
+                        employees = content.data;
+                    } else if (Array.isArray(content)) {
+                        employees = content;
                     }
 
-                    resolve(data);
+                    // Сохраняем импортированных сотрудников
+                    for (const emp of employees) {
+                        // Генерируем новый ID для импортируемых
+                        const newEmp = { ...emp, id: 'emp-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5) };
+                        await this.saveEmployee(newEmp);
+                    }
+
+                    resolve(employees);
                 } catch (error) {
                     reject(new Error('Неверный формат файла'));
                 }
@@ -339,29 +319,30 @@ const storage = {
         });
     },
 
+    // ============ ХЕЛПЕРЫ ============
+
     /**
-     * Миграция старых данных
+     * Получить сотрудников из кеша
      */
-    _migrateOldData(data) {
-        return data.map(item => {
-            // Миграция поля title → fullName
-            if (item.title && !item.fullName) {
-                return {
-                    ...item,
-                    fullName: item.title,
-                    position: item.position || '',
-                    predefinedFields: item.predefinedFields || {},
-                    customFields: item.customFields || {},
-                    comment: item.comment || '',
-                    _source: 'local'
-                };
-            }
-            return {
-                ...item,
-                _source: item._source || 'local'
-            };
-        });
+    getEmployees() {
+        return this._employees;
+    },
+
+    /**
+     * Найти сотрудника по ID
+     * @param {string} id - ID сотрудника
+     */
+    getEmployee(id) {
+        return this._employees.find(e => e.id === id) || null;
+    },
+
+    /**
+     * Очистить кеш
+     */
+    clearCache() {
+        this._employees = [];
+        this._templates = [];
+        CloudStorage.clearCache('employees');
+        CloudStorage.clearCache('employeeTemplates');
     }
 };
-
-console.log('✅ Hybrid Storage loaded');

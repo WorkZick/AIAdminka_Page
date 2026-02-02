@@ -16,7 +16,10 @@ const storage = {
                 this.cachedPartners = await CloudStorage.getPartners();
             }
         } catch (e) {
-            console.error('Ошибка загрузки партнёров:', e);
+            ErrorHandler.handle(e, {
+                module: 'traffic-calculation-storage',
+                action: 'loadPartnersFromCloud'
+            });
             this.cachedPartners = [];
         }
     },

@@ -55,13 +55,17 @@ const Toast = {
         toast.innerHTML = `
             <div class="toast-icon">${this.icons[type] || this.icons.info}</div>
             <div class="toast-message">${message}</div>
-            <button class="toast-close" onclick="Toast.close(this.parentElement)">
+            <button class="toast-close">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"/>
                     <line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
             </button>
         `;
+
+        // Добавляем обработчик закрытия
+        const closeBtn = toast.querySelector('.toast-close');
+        closeBtn.addEventListener('click', () => this.close(toast));
 
         this.container.appendChild(toast);
 

@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <!-- Module-specific styles -->
     <link rel="stylesheet" href="css/login.css">
-    <link rel="icon" href="../shared/icons/favicon.ico" type="image/x-icon">
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -17,7 +16,6 @@
         <div class="login-card">
             <!-- Logo -->
             <div class="login-logo">
-                <img src="../shared/icons/logo.svg" alt="AIAdminka" onerror="this.style.display='none'">
                 <h1>AIAdminka</h1>
             </div>
 
@@ -32,7 +30,7 @@
                     Войдите через Google для доступа к системе
                 </p>
 
-                <button class="login-button" id="btnLogin" onclick="loginApp.login()">
+                <button class="login-button" id="btnLogin">
                     <svg class="google-icon" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -44,50 +42,50 @@
             </div>
 
             <!-- Loading State -->
-            <div class="login-loading" id="loginLoading" style="display: none;">
+            <div class="login-loading hidden" id="loginLoading">
                 <div class="spinner"></div>
                 <p>Проверка авторизации...</p>
             </div>
 
             <!-- User Info (after login) -->
-            <div class="login-user" id="loginUser" style="display: none;">
+            <div class="login-user hidden" id="loginUser">
                 <div class="user-avatar" id="userAvatar"></div>
                 <div class="user-info">
                     <div class="user-name" id="userName"></div>
                     <div class="user-email" id="userEmail"></div>
                 </div>
-                <button class="logout-button" onclick="loginApp.logout()">Выйти</button>
+                <button class="logout-button" id="btnLogout">Выйти</button>
             </div>
 
             <!-- Init Storage Button -->
-            <div class="login-actions" id="loginActions" style="display: none;">
+            <div class="login-actions hidden" id="loginActions">
                 <p class="init-description">Первый вход. Нужно создать хранилище данных.</p>
-                <button class="init-button" id="btnInit" onclick="loginApp.initStorage()">
+                <button class="init-button" id="btnInit">
                     Создать хранилище
                 </button>
             </div>
 
             <!-- Continue Button -->
-            <div class="login-continue" id="loginContinue" style="display: none;">
+            <div class="login-continue hidden" id="loginContinue">
                 <a href="../index.html" class="continue-button">
                     Перейти в систему
                 </a>
             </div>
 
             <!-- Error Message -->
-            <div class="login-error" id="loginError" style="display: none;">
+            <div class="login-error hidden" id="loginError">
                 <p id="errorText"></p>
-                <button onclick="loginApp.retry()">Попробовать снова</button>
+                <button id="btnRetry">Попробовать снова</button>
             </div>
 
             <!-- Registration Form - New User -->
-            <div class="login-registration" id="loginRegistration" style="display: none;">
+            <div class="login-registration hidden" id="loginRegistration">
                 <p class="registration-title">Регистрация в системе</p>
                 <p class="registration-description">
                     Укажите ваш Reddy ID для получения доступа
                 </p>
 
-                <form class="registration-form" id="registrationForm" onsubmit="return loginApp.submitRegistration(event)">
+                <form class="registration-form" id="registrationForm">
                     <div class="form-group">
                         <label for="regReddyId">Ваш Reddy ID <span class="required">*</span></label>
                         <input type="text" id="regReddyId" name="reddyId" placeholder="123456" required
@@ -101,7 +99,7 @@
             </div>
 
             <!-- Access Pending - Waiting for Admin -->
-            <div class="login-access-pending" id="loginAccessPending" style="display: none;">
+            <div class="login-access-pending hidden" id="loginAccessPending">
                 <div class="access-icon pending">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/>
@@ -113,13 +111,13 @@
                     Ваш запрос отправлен администратору.<br>
                     Ожидайте одобрения.
                 </p>
-                <button class="retry-button" onclick="loginApp.checkStatus()">
+                <button class="retry-button" id="btnCheckStatus">
                     Проверить статус
                 </button>
             </div>
 
             <!-- Choose Role - After Admin Approval -->
-            <div class="login-choose-role" id="loginChooseRole" style="display: none;">
+            <div class="login-choose-role hidden" id="loginChooseRole">
                 <div class="access-icon success">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/>
@@ -133,7 +131,7 @@
                 </p>
 
                 <div class="role-options">
-                    <button class="role-option" onclick="loginApp.createTeam()">
+                    <button class="role-option" id="btnCreateTeam">
                         <div class="role-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -146,7 +144,7 @@
                         <span class="role-desc">Стать руководителем и приглашать сотрудников</span>
                     </button>
 
-                    <button class="role-option secondary" onclick="loginApp.waitForInvite()">
+                    <button class="role-option secondary" id="btnWaitForInvite">
                         <div class="role-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -162,7 +160,7 @@
             </div>
 
             <!-- Access Rejected -->
-            <div class="login-access-rejected" id="loginAccessRejected" style="display: none;">
+            <div class="login-access-rejected hidden" id="loginAccessRejected">
                 <div class="access-icon rejected">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/>
@@ -175,13 +173,13 @@
                     Руководитель команды отклонил ваш запрос.<br>
                     Обратитесь к руководителю для уточнения.
                 </p>
-                <button class="retry-button" onclick="loginApp.showRegistration()">
+                <button class="retry-button" id="btnShowRegistration">
                     Выбрать другую команду
                 </button>
             </div>
 
             <!-- Access Blocked -->
-            <div class="login-access-blocked" id="loginAccessBlocked" style="display: none;">
+            <div class="login-access-blocked hidden" id="loginAccessBlocked">
                 <div class="access-icon blocked">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -194,7 +192,7 @@
                     Ваш аккаунт заблокирован администратором.<br>
                     Обратитесь к руководителю вашей команды.
                 </p>
-                <button class="logout-button-full" onclick="loginApp.logout()">
+                <button class="logout-button-full" id="btnLogoutBlocked">
                     Выйти
                 </button>
             </div>
@@ -202,10 +200,14 @@
 
         <!-- Footer -->
         <div class="login-footer">
-            <span>AIAdminka v2.14.0</span>
+            <span>AIAdminka <span class="app-version" data-format="short"></span></span>
         </div>
     </div>
 
+    <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/error-handler.js"></script>
+    <script src="../shared/version.js"></script>
+    <script src="../shared/env-config.js"></script>
     <script src="js/login.js"></script>
 </body>
 </html>

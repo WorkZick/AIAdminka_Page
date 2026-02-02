@@ -71,7 +71,7 @@ const trafficCalc = {
         // Скрываем подсказку при закрытии
         const helpContent = document.getElementById('trafficHelpContent');
         const helpBtn = document.querySelector('.help-toggle-btn');
-        if (helpContent) helpContent.style.display = 'none';
+        if (helpContent) helpContent.classList.add('hidden');
         if (helpBtn) helpBtn.classList.remove('active');
     },
 
@@ -79,8 +79,7 @@ const trafficCalc = {
     toggleHelp() {
         const helpContent = document.getElementById('trafficHelpContent');
         if (helpContent) {
-            const isVisible = helpContent.style.display !== 'none';
-            helpContent.style.display = isVisible ? 'none' : 'block';
+            helpContent.classList.toggle('hidden');
         }
     },
 
@@ -100,7 +99,10 @@ const trafficCalc = {
                 localStorage.setItem('trafficSettings', JSON.stringify(settings));
                 return settings;
             } catch (e) {
-                console.error('Error loading traffic settings:', e);
+                ErrorHandler.handle(e, {
+                    module: 'traffic-calculation',
+                    action: 'loadTrafficSettings'
+                });
             }
         }
         return this.getDefaultTrafficSettings();
@@ -218,8 +220,11 @@ const trafficCalc = {
 
                     Toast.success('Настройки успешно импортированы!');
                 } catch (error) {
-                    Toast.error(`Ошибка при импорте настроек: ${error.message}`);
-                    console.error('Import error:', error);
+                    ErrorHandler.handle(error, {
+                        module: 'traffic-calculation',
+                        action: 'importTrafficSettings',
+                        userMessage: `Ошибка при импорте настроек: ${error.message}`
+                    });
                 }
             };
 
@@ -251,13 +256,13 @@ const trafficCalc = {
 
         container.innerHTML = legend + this.trafficParams.map(param => {
             const settings = this.trafficSettings[param.key];
-            
+
             if (param.type === 'text') {
                 // Для текстовых полей
                 return `
                     <div class="traffic-param-section">
                         <div class="traffic-param-header">
-                            <img src="icons/filter.svg" alt="" style="width: 14px; height: 14px;">
+                            <img src="../shared/icons/filter.svg" alt="">
                             ${this.escapeHtml(param.name)}
                         </div>
                         <div class="traffic-param-grid">
@@ -266,12 +271,12 @@ const trafficCalc = {
                                 <div class="form-group">
                                     <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.good.value)}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'value', this.value)">
+                                           data-param="${param.key}" data-level="good" data-field="value">
                                 </div>
                                 <div class="traffic-points-group">
                                     <span>Баллы:</span>
                                     <input type="number" value="${settings.good.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="good" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card normal">
@@ -279,12 +284,12 @@ const trafficCalc = {
                                 <div class="form-group">
                                     <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.normal.value)}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'value', this.value)">
+                                           data-param="${param.key}" data-level="normal" data-field="value">
                                 </div>
                                 <div class="traffic-points-group">
                                     <span>Баллы:</span>
                                     <input type="number" value="${settings.normal.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="normal" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card bad">
@@ -292,12 +297,12 @@ const trafficCalc = {
                                 <div class="form-group">
                                     <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.bad.value)}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'value', this.value)">
+                                           data-param="${param.key}" data-level="bad" data-field="value">
                                 </div>
                                 <div class="traffic-points-group">
                                     <span>Баллы:</span>
                                     <input type="number" value="${settings.bad.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="bad" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card terrible">
@@ -305,12 +310,12 @@ const trafficCalc = {
                                 <div class="form-group">
                                     <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.terrible.value)}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'value', this.value)">
+                                           data-param="${param.key}" data-level="terrible" data-field="value">
                                 </div>
                                 <div class="traffic-points-group">
                                     <span>Баллы:</span>
                                     <input type="number" value="${settings.terrible.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="terrible" data-field="points">
                                 </div>
                             </div>
                         </div>
@@ -321,7 +326,7 @@ const trafficCalc = {
                 return `
                     <div class="traffic-param-section">
                         <div class="traffic-param-header">
-                            <img src="icons/cross.svg" alt="" style="width: 14px; height: 14px;">
+                            <img src="../shared/icons/cross.svg" alt="">
                             ${this.escapeHtml(param.name)}
                         </div>
                         <div class="traffic-multiplier-settings">
@@ -329,7 +334,7 @@ const trafficCalc = {
                                 <div class="traffic-multiplier-info">
                                     <span class="multiplier-label">Штрафные баллы за каждое нарушение:</span>
                                     <input type="number" value="${settings.pointsPerItem || 5}" min="0"
-                                           onchange="trafficCalc.updateTrafficSettingMultiplier('${param.key}', 'pointsPerItem', parseInt(this.value))">
+                                           data-param="${param.key}" data-field="pointsPerItem" data-multiplier="true">
                                 </div>
                                 <div class="multiplier-example">
                                     Пример: 3 нарушения × <span id="${param.key}Multiplier">${settings.pointsPerItem || 5}</span> = <span id="${param.key}Example">+${(settings.pointsPerItem || 5) * 3}</span> штрафных баллов
@@ -343,7 +348,7 @@ const trafficCalc = {
                 return `
                     <div class="traffic-param-section">
                         <div class="traffic-param-header">
-                            <img src="icons/filter.svg" alt="" style="width: 14px; height: 14px;">
+                            <img src="../shared/icons/filter.svg" alt="">
                             ${this.escapeHtml(param.name)}
                         </div>
                         <div class="traffic-param-grid">
@@ -352,17 +357,17 @@ const trafficCalc = {
                                 <div class="traffic-range-group">
                                     <span>От:</span>
                                     <input type="number" value="${settings.good.min}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'min', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="good" data-field="min">
                                 </div>
                                 <div class="traffic-range-group">
                                     <span>До:</span>
                                     <input type="number" value="${settings.good.max}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'max', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="good" data-field="max">
                                 </div>
                                 <div class="traffic-points-group">
                                     <span>Баллы:</span>
                                     <input type="number" value="${settings.good.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="good" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card normal">
@@ -370,17 +375,17 @@ const trafficCalc = {
                                 <div class="traffic-range-group">
                                     <span>От:</span>
                                     <input type="number" value="${settings.normal.min}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'min', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="normal" data-field="min">
                                 </div>
                                 <div class="traffic-range-group">
                                     <span>До:</span>
                                     <input type="number" value="${settings.normal.max}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'max', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="normal" data-field="max">
                                 </div>
                                 <div class="traffic-points-group">
                                     <span>Баллы:</span>
                                     <input type="number" value="${settings.normal.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="normal" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card bad">
@@ -388,17 +393,17 @@ const trafficCalc = {
                                 <div class="traffic-range-group">
                                     <span>От:</span>
                                     <input type="number" value="${settings.bad.min}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'min', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="bad" data-field="min">
                                 </div>
                                 <div class="traffic-range-group">
                                     <span>До:</span>
                                     <input type="number" value="${settings.bad.max}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'max', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="bad" data-field="max">
                                 </div>
                                 <div class="traffic-points-group">
                                     <span>Баллы:</span>
                                     <input type="number" value="${settings.bad.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="bad" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card terrible">
@@ -406,17 +411,17 @@ const trafficCalc = {
                                 <div class="traffic-range-group">
                                     <span>От:</span>
                                     <input type="number" value="${settings.terrible.min}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'min', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="terrible" data-field="min">
                                 </div>
                                 <div class="traffic-range-group">
                                     <span>До:</span>
                                     <input type="number" value="${settings.terrible.max}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'max', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="terrible" data-field="max">
                                 </div>
                                 <div class="traffic-points-group">
                                     <span>Баллы:</span>
                                     <input type="number" value="${settings.terrible.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="terrible" data-field="points">
                                 </div>
                             </div>
                         </div>
@@ -425,6 +430,35 @@ const trafficCalc = {
             }
         }).join('');
 
+        // Event delegation для всех настроек трафика
+        container.addEventListener('change', (e) => {
+            const input = e.target;
+
+            // Обработка множителей
+            if (input.dataset.multiplier) {
+                this.updateTrafficSettingMultiplier(
+                    input.dataset.param,
+                    input.dataset.field,
+                    parseInt(input.value)
+                );
+            }
+            // Обработка обычных настроек
+            else if (input.dataset.param && input.dataset.level && input.dataset.field) {
+                let value = input.value;
+
+                // Преобразуем значение в зависимости от типа
+                if (input.type === 'number') {
+                    value = input.dataset.field === 'points' ? parseInt(value) : parseFloat(value);
+                }
+
+                this.updateTrafficSetting(
+                    input.dataset.param,
+                    input.dataset.level,
+                    input.dataset.field,
+                    value
+                );
+            }
+        });
     },
 
     // Обновить настройку
@@ -477,8 +511,17 @@ const trafficCalc = {
         this.showTrafficResults();
     },
 
-    // Рассчитать процент трафика для каждого партнера (внутри каждого метода отдельно)
-    // Обратная пропорция: чем больше баллов (хуже работа) — тем меньше % трафика
+    /**
+     * Рассчитать процент трафика для каждого партнера
+     * Распределение происходит внутри каждого метода отдельно (100% на метод)
+     * Использует обратную пропорцию: чем больше баллов (хуже работа) — тем меньше % трафика
+     *
+     * @description
+     * 1. Группирует партнеров по методу
+     * 2. Для каждого метода рассчитывает обратные баллы (1/(score+1))
+     * 3. Распределяет 100% трафика пропорционально обратным баллам
+     * 4. Округляет вниз и распределяет остаток по партнёрам с лучшими показателями
+     */
     calculateTrafficPercentages() {
         if (!this.trafficResults || this.trafficResults.length === 0) return;
 
@@ -555,7 +598,20 @@ const trafficCalc = {
         });
     },
 
-    // Оценить одного партнера
+    /**
+     * Оценить качество работы партнера по всем параметрам
+     *
+     * @param {Object} partner - Данные партнера
+     * @param {Object} settings - Настройки оценки (пороги и баллы для каждого параметра)
+     * @returns {Object} Объект с баллами: { good, normal, bad, terrible, total }
+     *
+     * @description
+     * Проходит по всем параметрам (backCount, depositSuccessPercent и т.д.) и:
+     * - Для числовых полей: проверяет попадание в диапазоны (good/normal/bad/terrible)
+     * - Для текстовых полей: сравнивает точное соответствие
+     * - Для множителя: начисляет штрафные баллы за каждое нарушение
+     * Чем больше итоговый балл - тем хуже работает партнер - тем меньше трафика получит
+     */
     evaluatePartner(partner, settings) {
         const scores = {
             good: 0,
@@ -739,6 +795,11 @@ const trafficCalc = {
 
     // Инициализация
     async init() {
+        // Check authentication and role status (waiting_invite/blocked check)
+        if (!await AuthGuard.checkWithRole()) {
+            return; // Will redirect to login or waiting-invite
+        }
+
         // Загружаем партнёров из облака
         await storage.loadPartners();
         this.dataLoaded = true;
@@ -752,14 +813,16 @@ const trafficCalc = {
     },
 
     // Переключение вкладок
-    switchTab(tabName) {
+    switchTab(tabName, event) {
         this.currentTab = tabName;
 
         // Обновляем кнопки вкладок
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        event.target.closest('.tab-btn').classList.add('active');
+        if (event) {
+            event.target.closest('.tab-btn').classList.add('active');
+        }
 
         // Показываем нужный контент
         document.querySelectorAll('.tab-content').forEach(content => {
@@ -865,13 +928,28 @@ const trafficCalc = {
                     <td>${date}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="action-btn" onclick="trafficCalc.editPartner('${partner.id}')" title="Редактировать">Изменить</button>
-                            <button class="action-btn delete" onclick="trafficCalc.deletePartner('${partner.id}')" title="Удалить">Удалить</button>
+                            <button class="action-btn" data-action="edit" data-partner-id="${partner.id}" title="Редактировать">Изменить</button>
+                            <button class="action-btn delete" data-action="delete" data-partner-id="${partner.id}" title="Удалить">Удалить</button>
                         </div>
                     </td>
                 </tr>
             `;
         }).join('');
+
+        // Event delegation для кнопок действий с партнёрами
+        tbody.addEventListener('click', (e) => {
+            const button = e.target.closest('[data-action]');
+            if (!button) return;
+
+            const action = button.dataset.action;
+            const partnerId = button.dataset.partnerId;
+
+            if (action === 'edit') {
+                this.editPartner(partnerId);
+            } else if (action === 'delete') {
+                this.deletePartner(partnerId);
+            }
+        });
     },
 
     // Фильтрация партнеров
@@ -958,16 +1036,24 @@ const trafficCalc = {
         if (!container) return;
 
         if (methods.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #999; font-style: italic;">Методы не добавлены</p>';
+            container.innerHTML = '<p class="empty-state">Методы не добавлены</p>';
             return;
         }
 
         container.innerHTML = methods.map(method => `
             <div class="method-item">
                 <span>${this.escapeHtml(method)}</span>
-                <button onclick="trafficCalc.deleteMethod('${this.escapeHtml(method)}')">Удалить</button>
+                <button data-method="${this.escapeHtml(method)}">Удалить</button>
             </div>
         `).join('');
+
+        // Event delegation для кнопок удаления методов
+        container.addEventListener('click', (e) => {
+            const button = e.target.closest('[data-method]');
+            if (!button) return;
+
+            this.deleteMethod(button.dataset.method);
+        });
     },
 
     addMethod() {
@@ -1022,7 +1108,7 @@ const trafficCalc = {
     showMethodSelection() {
         this.hideAllPanels();
         const panel = document.getElementById('methodSelectionPanel');
-        panel.style.display = 'block';
+        panel.classList.remove('hidden');
 
         this.availableMethods = storage.getMethods();
         const container = document.getElementById('methodCheckboxes');
@@ -1059,7 +1145,7 @@ const trafficCalc = {
     showManualSelection() {
         this.hideAllPanels();
         const panel = document.getElementById('manualSelectionPanel');
-        panel.style.display = 'block';
+        panel.classList.remove('hidden');
 
         const partners = storage.getPartners();
         const container = document.getElementById('partnerCheckboxes');
@@ -1089,8 +1175,8 @@ const trafficCalc = {
 
     // Скрыть все панели выбора
     hideAllPanels() {
-        document.getElementById('methodSelectionPanel').style.display = 'none';
-        document.getElementById('manualSelectionPanel').style.display = 'none';
+        document.getElementById('methodSelectionPanel').classList.add('hidden');
+        document.getElementById('manualSelectionPanel').classList.add('hidden');
     },
 
     // Обновление предпросмотра выбранных партнеров
@@ -1109,29 +1195,29 @@ const trafficCalc = {
 
         // Пока данные не загружены - показываем спиннер
         if (!this.dataLoaded) {
-            if (loadingSpinner) loadingSpinner.style.display = 'flex';
-            if (selectionToolbar) selectionToolbar.style.display = 'none';
-            if (partnersPreview) partnersPreview.style.display = 'none';
-            if (noPartnersHint) noPartnersHint.style.display = 'none';
+            if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+            if (selectionToolbar) selectionToolbar.classList.add('hidden');
+            if (partnersPreview) partnersPreview.classList.add('hidden');
+            if (noPartnersHint) noPartnersHint.classList.add('hidden');
             return;
         }
 
         // Данные загружены - скрываем спиннер
-        if (loadingSpinner) loadingSpinner.style.display = 'none';
+        if (loadingSpinner) loadingSpinner.classList.add('hidden');
 
         if (allPartners.length === 0) {
             // Нет партнёров вообще - показываем подсказку, скрываем остальное
-            if (noPartnersHint) noPartnersHint.style.display = 'flex';
-            if (selectionToolbar) selectionToolbar.style.display = 'none';
-            if (partnersPreview) partnersPreview.style.display = 'none';
+            if (noPartnersHint) noPartnersHint.classList.remove('hidden');
+            if (selectionToolbar) selectionToolbar.classList.add('hidden');
+            if (partnersPreview) partnersPreview.classList.add('hidden');
             const nextBtn = document.getElementById('step1NextBtn');
             if (nextBtn) nextBtn.disabled = true;
             return;
         } else {
             // Есть партнёры - скрываем подсказку, показываем элементы
-            if (noPartnersHint) noPartnersHint.style.display = 'none';
-            if (selectionToolbar) selectionToolbar.style.display = 'flex';
-            if (partnersPreview) partnersPreview.style.display = 'block';
+            if (noPartnersHint) noPartnersHint.classList.add('hidden');
+            if (selectionToolbar) selectionToolbar.classList.remove('hidden');
+            if (partnersPreview) partnersPreview.classList.remove('hidden');
         }
 
         document.getElementById('selectedCount').textContent = selected.length;
@@ -1274,13 +1360,13 @@ const trafficCalc = {
     // Показать результаты расчёта на шаге 9
     showTrafficResultsInStep() {
         if (!this.trafficResults || this.trafficResults.length === 0) {
-            document.getElementById('resultsNotCalculated').style.display = 'flex';
-            document.getElementById('resultsCalculated').style.display = 'none';
+            document.getElementById('resultsNotCalculated').classList.remove('hidden');
+            document.getElementById('resultsCalculated').classList.add('hidden');
             return;
         }
 
-        document.getElementById('resultsNotCalculated').style.display = 'none';
-        document.getElementById('resultsCalculated').style.display = 'flex';
+        document.getElementById('resultsNotCalculated').classList.add('hidden');
+        document.getElementById('resultsCalculated').classList.remove('hidden');
 
         // Сортируем результаты по методу и проценту
         const sortedResults = [...this.trafficResults].sort((a, b) => {
@@ -1401,7 +1487,10 @@ const trafficCalc = {
             event.target.value = '';
 
         } catch (error) {
-            console.error('Error processing files:', error);
+            ErrorHandler.handle(error, {
+                module: 'traffic-calculation',
+                action: 'handleDepositsUpload'
+            });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
         }
@@ -1459,7 +1548,10 @@ const trafficCalc = {
             event.target.value = '';
 
         } catch (error) {
-            console.error('Error processing files:', error);
+            ErrorHandler.handle(error, {
+                module: 'traffic-calculation',
+                action: 'handlePercentUpload'
+            });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
         }
@@ -1533,7 +1625,10 @@ const trafficCalc = {
             event.target.value = '';
 
         } catch (error) {
-            console.error('Error processing files:', error);
+            ErrorHandler.handle(error, {
+                module: 'traffic-calculation',
+                action: 'handleQualityUpload'
+            });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
         }
@@ -1630,19 +1725,19 @@ const trafficCalc = {
 
         // Очищаем шаг 4 (ручные данные)
         document.getElementById('partnerSearchInput').value = '';
-        document.getElementById('manualDataForm').style.display = 'none';
+        document.getElementById('manualDataForm').classList.add('hidden');
 
         // Очищаем шаг 7 (отчёт)
         const reportNotGenerated = document.getElementById('reportNotGenerated');
         const reportGenerated = document.getElementById('reportGenerated');
-        if (reportNotGenerated) reportNotGenerated.style.display = 'flex';
-        if (reportGenerated) reportGenerated.style.display = 'none';
+        if (reportNotGenerated) reportNotGenerated.classList.remove('hidden');
+        if (reportGenerated) reportGenerated.classList.add('hidden');
 
         // Очищаем шаг 9 (результаты расчёта)
         const resultsNotCalculated = document.getElementById('resultsNotCalculated');
         const resultsCalculated = document.getElementById('resultsCalculated');
-        if (resultsNotCalculated) resultsNotCalculated.style.display = 'flex';
-        if (resultsCalculated) resultsCalculated.style.display = 'none';
+        if (resultsNotCalculated) resultsNotCalculated.classList.remove('hidden');
+        if (resultsCalculated) resultsCalculated.classList.add('hidden');
 
         // Очищаем input файлов
         const depositsInput = document.getElementById('depositsFileInput');
@@ -1800,7 +1895,7 @@ const trafficCalc = {
     loadPartnerManualData() {
         const select = document.getElementById('partnerSelectList');
         if (!select || !select.value) {
-            document.getElementById('manualDataForm').style.display = 'none';
+            document.getElementById('manualDataForm').classList.add('hidden');
             return;
         }
 
@@ -1819,7 +1914,7 @@ const trafficCalc = {
 
         // Отображаем форму
         document.getElementById('selectedPartnerName').textContent = partner.subagent;
-        document.getElementById('manualDataForm').style.display = 'block';
+        document.getElementById('manualDataForm').classList.remove('hidden');
 
         // Загружаем сохраненные значения только для процентов времени работы
         document.getElementById('depositWorkTimePercent').value = partner.depositWorkTimePercent || 0;
@@ -2002,7 +2097,7 @@ const trafficCalc = {
     loadPartnerManualDataStep6() {
         const select = document.getElementById('partnerSelectList6');
         if (!select || !select.value) {
-            document.getElementById('manualDataForm6').style.display = 'none';
+            document.getElementById('manualDataForm6').classList.add('hidden');
             return;
         }
 
@@ -2021,7 +2116,7 @@ const trafficCalc = {
 
         // Отображаем форму
         document.getElementById('selectedPartnerName6').textContent = partner.subagent;
-        document.getElementById('manualDataForm6').style.display = 'block';
+        document.getElementById('manualDataForm6').classList.remove('hidden');
 
         // Загружаем сохраненные значения нарушений
         document.getElementById('chatIgnoring').value = partner.chatIgnoring || 0;
@@ -2187,10 +2282,7 @@ const trafficCalc = {
         });
         const paramsIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('доп. параметры №'));
 
-        if (subagentIdIndex === -1 || paramsIndex === -1) {
-            console.warn('Не найдены необходимые колонки в файле');
-            return;
-        }
+        if (subagentIdIndex === -1 || paramsIndex === -1) return;
 
         // Обрабатываем строки (пропускаем заголовки)
         for (let i = 1; i < data.length; i++) {
@@ -2236,10 +2328,7 @@ const trafficCalc = {
      */
     countAutoDisables(excelData, counters) {
         // Проверка: есть ли данные в файле?
-        if (!excelData || excelData.length < 2) {
-            console.warn('Файл пуст или содержит только заголовки');
-            return;
-        }
+        if (!excelData || excelData.length < 2) return;
 
         // Шаг 1: Находим индексы нужных колонок
         const headerRow = excelData[0]; // Первая строка - заголовки
@@ -2321,10 +2410,7 @@ const trafficCalc = {
      */
     parseQualityControlData(excelData, qualityData) {
         // Проверка: есть ли данные в файле?
-        if (!excelData || excelData.length < 2) {
-            console.warn('Файл пуст или содержит только заголовки');
-            return;
-        }
+        if (!excelData || excelData.length < 2) return;
 
         // Шаг 1: Находим индексы всех нужных колонок по точным названиям
         const headerRow = excelData[0];
@@ -2479,7 +2565,9 @@ const trafficCalc = {
                     <td>${partner.withdrawalQueues || 0}</td>
                     <td>${partner.creditsOutsideLimits || 0}</td>
                     <td>${partner.wrongAmountApproval || 0}</td>
-                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>${partner.otherViolations || 0}${partner.otherViolationsDescription ? ' <img src="icons/filter.svg" alt="info" style="width:14px;height:14px;vertical-align:middle;opacity:0.6;">' : ''}</td>
+                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>
+                        <span>${partner.otherViolations || 0}</span>${partner.otherViolationsDescription ? ' <span class="violation-info-icon"><img src="../shared/icons/filter.svg" alt="info" class="tooltip-icon"></span>' : ''}
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -2488,8 +2576,8 @@ const trafficCalc = {
         this.currentReportData = reportData;
 
         // Показываем отчет, скрываем плейсхолдер
-        document.getElementById('reportNotGenerated').style.display = 'none';
-        document.getElementById('reportGenerated').style.display = 'block';
+        document.getElementById('reportNotGenerated').classList.add('hidden');
+        document.getElementById('reportGenerated').classList.remove('hidden');
 
     },
 
@@ -2641,7 +2729,8 @@ const trafficCalc = {
 
         // Сброс состояния
         fileInput.value = '';
-        preview.style.display = 'none';
+        preview.classList.add('hidden');
+        preview.classList.remove('preview-error');
         preview.innerHTML = '';
         importBtn.disabled = true;
 
@@ -2649,7 +2738,7 @@ const trafficCalc = {
         fileInput.onchange = (e) => {
             const file = e.target.files[0];
             if (!file) {
-                preview.style.display = 'none';
+                preview.classList.add('hidden');
                 importBtn.disabled = true;
                 return;
             }
@@ -2665,7 +2754,7 @@ const trafficCalc = {
                     }
 
                     // Показываем превью
-                    preview.style.display = 'block';
+                    preview.classList.remove('hidden', 'preview-error');
                     preview.innerHTML = `
                         <strong>Файл готов к импорту:</strong><br>
                         Партнеров в файле: ${jsonData.partners.length}<br>
@@ -2674,18 +2763,16 @@ const trafficCalc = {
 
                     importBtn.disabled = false;
                 } catch (error) {
-                    preview.style.display = 'block';
-                    preview.style.background = '#f8d7da';
-                    preview.style.color = '#721c24';
+                    preview.classList.remove('hidden');
+                    preview.classList.add('preview-error');
                     preview.innerHTML = `<strong>Ошибка:</strong> ${error.message}`;
                     importBtn.disabled = true;
                 }
             };
 
             reader.onerror = () => {
-                preview.style.display = 'block';
-                preview.style.background = '#f8d7da';
-                preview.style.color = '#721c24';
+                preview.classList.remove('hidden');
+                preview.classList.add('preview-error');
                 preview.innerHTML = '<strong>Ошибка:</strong> Не удалось прочитать файл';
                 importBtn.disabled = true;
             };
@@ -2792,8 +2879,11 @@ const trafficCalc = {
 
                 Toast.success(`Успешно импортировано ${processedPartners.length} партнер(ов)!`);
             } catch (error) {
-                Toast.error(`Ошибка при импорте: ${error.message}`);
-                console.error('Import error:', error);
+                ErrorHandler.handle(error, {
+                    module: 'traffic-calculation',
+                    action: 'importPartners',
+                    userMessage: `Ошибка при импорте: ${error.message}`
+                });
             }
         };
 
@@ -2808,4 +2898,102 @@ const trafficCalc = {
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
     trafficCalc.init();
+});
+
+// Event delegation для всех data-action="traffic-*" атрибутов
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action^="traffic-"]');
+    if (!target) return;
+
+    const action = target.dataset.action.replace('traffic-', '');
+
+    // Специальная обработка для fileZoneClick
+    if (action === 'fileZoneClick') {
+        const fileInputId = target.dataset.fileInputId;
+        if (fileInputId) {
+            document.getElementById(fileInputId).click();
+        }
+        return;
+    }
+
+    // Специальная обработка для navigateToStep
+    if (action === 'navigateToStep') {
+        const step = parseInt(target.dataset.step, 10);
+        if (!isNaN(step)) {
+            trafficCalc.navigateToStep(step);
+        }
+        return;
+    }
+
+    // Специальная обработка для goToStep
+    if (action === 'goToStep') {
+        const step = parseInt(target.dataset.step, 10);
+        if (!isNaN(step)) {
+            trafficCalc.goToStep(step);
+        }
+        return;
+    }
+
+    // Специальная обработка для increment/decrement
+    if (action === 'incrementManualValue' || action === 'decrementManualValue') {
+        const fieldId = target.dataset.field;
+        if (fieldId) {
+            trafficCalc[action](fieldId);
+        }
+        return;
+    }
+
+    // Стандартный вызов метода
+    if (typeof trafficCalc[action] === 'function') {
+        trafficCalc[action]();
+    }
+});
+
+// Event delegation для input событий
+document.addEventListener('input', (e) => {
+    const target = e.target.closest('[data-action^="traffic-"]');
+    if (!target) return;
+
+    const action = target.dataset.action.replace('traffic-', '');
+
+    if (typeof trafficCalc[action] === 'function') {
+        trafficCalc[action]();
+    }
+});
+
+// Event delegation для change событий
+document.addEventListener('change', (e) => {
+    // Обработка file inputs
+    if (e.target.type === 'file') {
+        if (e.target.id === 'depositsFileInput') {
+            trafficCalc.handleDepositsUpload(e);
+        } else if (e.target.id === 'qualityFileInput') {
+            trafficCalc.handleQualityUpload(e);
+        } else if (e.target.id === 'percentFileInput') {
+            trafficCalc.handlePercentUpload(e);
+        }
+        return;
+    }
+
+    const target = e.target.closest('[data-action^="traffic-"]');
+    if (!target) return;
+
+    const action = target.dataset.action.replace('traffic-', '');
+
+    if (typeof trafficCalc[action] === 'function') {
+        trafficCalc[action]();
+    }
+});
+
+// Инициализация компонентов
+document.addEventListener('DOMContentLoaded', async function() {
+    ComponentLoader.init('../shared');
+    await ComponentLoader.load('sidebar', '#sidebar-container', {
+        basePath: '..',
+        activeModule: 'traffic'
+    });
+    await ComponentLoader.load('about-modal', '#about-modal-container', {
+        basePath: '..'
+    });
+    SidebarController.init({ basePath: '..' });
 });

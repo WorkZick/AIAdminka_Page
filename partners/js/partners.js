@@ -23,21 +23,134 @@ const partnersApp = {
     currentTemplateId: null,
     templateFields: [],
 
+    // ==================== DIALOG HELPERS ====================
+
+    /**
+     * Показать диалог подтверждения (замена confirm)
+     * @param {string} message - Текст сообщения
+     * @param {string} title - Заголовок диалога
+     * @returns {Promise<boolean>} true если подтверждено
+     */
+    showConfirm(message, title = 'Подтверждение') {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('confirmDialog');
+            const titleEl = document.getElementById('confirmDialogTitle');
+            const messageEl = document.getElementById('confirmDialogMessage');
+            const okBtn = document.getElementById('confirmDialogOk');
+            const cancelBtn = document.getElementById('confirmDialogCancel');
+
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            modal.classList.add('active');
+
+            const cleanup = () => {
+                modal.classList.remove('active');
+                okBtn.removeEventListener('click', handleOk);
+                cancelBtn.removeEventListener('click', handleCancel);
+                modal.removeEventListener('click', handleBackdrop);
+            };
+
+            const handleOk = () => {
+                cleanup();
+                resolve(true);
+            };
+
+            const handleCancel = () => {
+                cleanup();
+                resolve(false);
+            };
+
+            const handleBackdrop = (e) => {
+                if (e.target === modal) {
+                    handleCancel();
+                }
+            };
+
+            okBtn.addEventListener('click', handleOk);
+            cancelBtn.addEventListener('click', handleCancel);
+            modal.addEventListener('click', handleBackdrop);
+        });
+    },
+
+    /**
+     * Показать диалог ввода (замена prompt)
+     * @param {string} message - Текст сообщения
+     * @param {string} defaultValue - Значение по умолчанию
+     * @param {string} title - Заголовок диалога
+     * @returns {Promise<string|null>} введённое значение или null
+     */
+    showPrompt(message, defaultValue = '', title = 'Ввод') {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('promptDialog');
+            const titleEl = document.getElementById('promptDialogTitle');
+            const messageEl = document.getElementById('promptDialogMessage');
+            const inputEl = document.getElementById('promptDialogInput');
+            const okBtn = document.getElementById('promptDialogOk');
+            const cancelBtn = document.getElementById('promptDialogCancel');
+
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            inputEl.value = defaultValue;
+            modal.classList.add('active');
+
+            // Фокус на input
+            setTimeout(() => inputEl.focus(), 100);
+
+            const cleanup = () => {
+                modal.classList.remove('active');
+                okBtn.removeEventListener('click', handleOk);
+                cancelBtn.removeEventListener('click', handleCancel);
+                inputEl.removeEventListener('keydown', handleKeydown);
+                modal.removeEventListener('click', handleBackdrop);
+            };
+
+            const handleOk = () => {
+                const value = inputEl.value.trim();
+                cleanup();
+                resolve(value || null);
+            };
+
+            const handleCancel = () => {
+                cleanup();
+                resolve(null);
+            };
+
+            const handleKeydown = (e) => {
+                if (e.key === 'Enter') {
+                    handleOk();
+                } else if (e.key === 'Escape') {
+                    handleCancel();
+                }
+            };
+
+            const handleBackdrop = (e) => {
+                if (e.target === modal) {
+                    handleCancel();
+                }
+            };
+
+            okBtn.addEventListener('click', handleOk);
+            cancelBtn.addEventListener('click', handleCancel);
+            inputEl.addEventListener('keydown', handleKeydown);
+            modal.addEventListener('click', handleBackdrop);
+        });
+    },
+
     // ==================== INITIALIZATION ====================
 
     async init() {
-        // Check authentication
-        if (!AuthGuard.check()) {
-            return; // Will redirect to login
+        // Check authentication and role status (waiting_invite/blocked check)
+        if (!await AuthGuard.checkWithRole()) {
+            return; // Will redirect to login or waiting-invite
         }
-
-        // Initialize CloudStorage
-        await CloudStorage.init();
 
         // Show loading
         this.showLoading(true);
 
         try {
+            // Initialize CloudStorage
+            await CloudStorage.init();
+
             // Load data from cloud
             await this.loadAllData();
 
@@ -58,7 +171,6 @@ const partnersApp = {
 
         // Слушаем завершение синхронизации для обновления данных
         window.addEventListener('sync-complete', () => {
-            console.log('🔄 Синхронизация завершена, обновляем данные...');
             this.loadDataFromCloud();
         });
     },
@@ -106,7 +218,6 @@ const partnersApp = {
             this.renderColumnsMenu();
             this.renderTableHeader();
             this.render();
-            console.log('✅ Данные обновлены с сервера');
         } catch (e) {
             console.error('Ошибка обновления данных с сервера:', e);
         }
@@ -121,11 +232,11 @@ const partnersApp = {
         const emptyState = document.getElementById('emptyState');
 
         if (show) {
-            if (loadingState) loadingState.style.display = 'flex';
-            if (table) table.style.display = 'none';
-            if (emptyState) emptyState.style.display = 'none';
+            if (loadingState) loadingState.classList.remove('hidden');
+            if (table) table.classList.add('hidden');
+            if (emptyState) emptyState.classList.add('hidden');
         } else {
-            if (loadingState) loadingState.style.display = 'none';
+            if (loadingState) loadingState.classList.add('hidden');
             // Table visibility will be set by render()
         }
     },
@@ -197,8 +308,22 @@ const partnersApp = {
             this.cachedMethods = this.cachedMethods.filter(m => m.id !== methodId);
             this.renderMethodsList();
             this.updateMethodsCount();
+            Toast.success('Метод удален');
         } catch (error) {
-            this.showError('Ошибка удаления метода: ' + error.message);
+            // Если метод не найден на сервере, обновляем кеш из облака
+            if (error.message.includes('Method not found') || error.message.includes('not found')) {
+                try {
+                    // Обновляем список методов из облака
+                    this.cachedMethods = await CloudStorage.getMethods(false);
+                    this.renderMethodsList();
+                    this.updateMethodsCount();
+                    Toast.warning('Метод уже был удален. Список обновлен.');
+                } catch (refreshError) {
+                    this.showError('Ошибка обновления списка методов: ' + refreshError.message);
+                }
+            } else {
+                this.showError('Ошибка удаления метода: ' + error.message);
+            }
         }
     },
 
@@ -213,20 +338,24 @@ const partnersApp = {
         item.classList.add('editing');
         item.innerHTML = `
             <input type="text" class="method-item-input" id="editMethodInput_${methodId}"
-                   value="${this.escapeHtml(method.name)}"
-                   onkeypress="if(event.key==='Enter')partnersApp.saveEditMethod('${methodId}')"
-                   onkeydown="if(event.key==='Escape')partnersApp.renderMethodsList()">
+                   value="${this.escapeHtml(method.name)}">
             <div class="method-edit-actions">
-                <button class="method-edit-btn save" onclick="partnersApp.saveEditMethod('${methodId}')" title="Сохранить">
+                <button class="method-edit-btn save" data-action="partners-saveEditMethod" data-method-id="${methodId}" title="Сохранить">
                     <img src="../shared/icons/done.svg" alt="Сохранить">
                 </button>
-                <button class="method-edit-btn cancel" onclick="partnersApp.renderMethodsList()" title="Отмена">
+                <button class="method-edit-btn cancel" data-action="partners-cancelEditMethod" title="Отмена">
                     <img src="../shared/icons/cross.svg" alt="Отмена">
                 </button>
             </div>
         `;
 
         const input = document.getElementById(`editMethodInput_${methodId}`);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.saveEditMethod(methodId);
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.renderMethodsList();
+        });
         input.focus();
         input.select();
     },
@@ -268,9 +397,25 @@ const partnersApp = {
             this.syncPartnersToLocalStorage();
             this.renderMethodsList();
             this.render();
+            Toast.success('Метод обновлен');
         } catch (error) {
-            this.showError('Ошибка сохранения метода: ' + error.message);
+            // Если метод не найден на сервере, обновляем кеш из облака
+            if (error.message.includes('Method not found') || error.message.includes('not found')) {
+                try {
+                    this.cachedMethods = await CloudStorage.getMethods(false);
+                    this.renderMethodsList();
+                    Toast.warning('Метод не найден. Список обновлен.');
+                } catch (refreshError) {
+                    this.showError('Ошибка обновления списка методов: ' + refreshError.message);
+                }
+            } else {
+                this.showError('Ошибка сохранения метода: ' + error.message);
+            }
         }
+    },
+
+    cancelEditMethod() {
+        this.renderMethodsList();
     },
 
     renderMethodsList() {
@@ -292,10 +437,10 @@ const partnersApp = {
             <div class="method-item" data-method-id="${method.id}">
                 <span class="method-item-name">${this.escapeHtml(method.name)}</span>
                 <div class="method-item-actions">
-                    <button class="method-action-btn" onclick="partnersApp.startEditMethod('${method.id}')" title="Редактировать">
+                    <button class="method-action-btn" data-action="partners-startEditMethod" data-method-id="${method.id}" title="Редактировать">
                         <img src="../shared/icons/pen.svg" alt="Редактировать">
                     </button>
-                    <button class="method-action-btn delete" onclick="partnersApp.deleteMethod('${method.id}')" title="Удалить">
+                    <button class="method-action-btn delete" data-action="partners-deleteMethod" data-method-id="${method.id}" title="Удалить">
                         <img src="../shared/icons/cross.svg" alt="Удалить">
                     </button>
                 </div>
@@ -434,7 +579,7 @@ const partnersApp = {
         visibleColumns.forEach(col => {
             if (col.sortable) {
                 html += `<th data-column="${col.id}">
-                    <div class="sort-header" onclick="partnersApp.sortBy('${col.id}')">
+                    <div class="sort-header" data-action="partners-sortBy" data-column-id="${col.id}">
                         ${this.escapeHtml(col.label)}
                         <img src="../shared/icons/filter.svg" width="16" height="16" alt="Сортировка">
                     </div>
@@ -465,12 +610,8 @@ const partnersApp = {
                      data-column-id="${col.id}"
                      data-index="${index}"
                      draggable="true"
-                     onclick="partnersApp.toggleColumn('${col.id}')"
-                     ondragstart="partnersApp.handleColumnDragStart(event)"
-                     ondragover="partnersApp.handleColumnDragOver(event)"
-                     ondrop="partnersApp.handleColumnDrop(event)"
-                     ondragend="partnersApp.handleColumnDragEnd(event)">
-                    <div class="column-item-drag" onmousedown="event.stopPropagation()">
+                     data-action="partners-toggleColumn">
+                    <div class="column-item-drag">
                         <svg viewBox="0 0 24 24" fill="currentColor">
                             <path d="M9 5h2v2H9V5zm4 0h2v2h-2V5zM9 9h2v2H9V9zm4 0h2v2h-2V9zm-4 4h2v2H9v-2zm4 0h2v2h-2v-2zm-4 4h2v2H9v-2zm4 0h2v2h-2v-2z"/>
                         </svg>
@@ -488,11 +629,26 @@ const partnersApp = {
         html += `
             <div class="columns-menu-footer">
                 <span>${visibleCount}/${this.maxVisibleColumns}</span>
-                <button class="columns-reset-btn" onclick="event.stopPropagation(); partnersApp.resetColumnsConfig()">Сбросить</button>
+                <button class="columns-reset-btn" data-action="partners-resetColumnsConfig">Сбросить</button>
             </div>
         `;
 
         columnsList.innerHTML = html;
+
+        // Add drag&drop event listeners
+        const columnItems = columnsList.querySelectorAll('.column-item');
+        columnItems.forEach(item => {
+            item.addEventListener('dragstart', (e) => this.handleColumnDragStart(e));
+            item.addEventListener('dragover', (e) => this.handleColumnDragOver(e));
+            item.addEventListener('drop', (e) => this.handleColumnDrop(e));
+            item.addEventListener('dragend', (e) => this.handleColumnDragEnd(e));
+
+            // Prevent click when dragging
+            const dragHandle = item.querySelector('.column-item-drag');
+            if (dragHandle) {
+                dragHandle.addEventListener('mousedown', (e) => e.stopPropagation());
+            }
+        });
     },
 
     resetColumnsConfig() {
@@ -606,11 +762,11 @@ const partnersApp = {
         const table = document.querySelector('.partners-table');
 
         if (partnersData.length === 0) {
-            emptyState.style.display = 'block';
-            table.style.display = 'none';
+            emptyState.classList.remove('hidden');
+            table.classList.add('hidden');
         } else {
-            emptyState.style.display = 'none';
-            table.style.display = 'table';
+            emptyState.classList.add('hidden');
+            table.classList.remove('hidden');
 
             let sortedData = [...partnersData];
             if (this.sortField) {
@@ -665,7 +821,7 @@ const partnersApp = {
                     const avatarDiv = tr.querySelector('.partner-avatar');
                     if (avatarDiv) {
                         const placeholder = avatarDiv.querySelector('.avatar-placeholder');
-                        if (placeholder) placeholder.style.display = 'none';
+                        if (placeholder) placeholder.classList.add('hidden');
                         const img = document.createElement('img');
                         img.src = avatar;
                         img.alt = '';
@@ -714,7 +870,11 @@ const partnersApp = {
 
         rows.forEach(row => {
             const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(searchValue) ? '' : 'none';
+            if (text.includes(searchValue)) {
+                row.classList.remove('hidden');
+            } else {
+                row.classList.add('hidden');
+            }
         });
     },
 
@@ -740,9 +900,9 @@ const partnersApp = {
     },
 
     showHintPanel() {
-        document.getElementById('hintPanel').style.display = 'flex';
-        document.getElementById('partnerCard').style.display = 'none';
-        document.getElementById('partnerForm').style.display = 'none';
+        document.getElementById('hintPanel').classList.remove('hidden');
+        document.getElementById('partnerCard').classList.add('hidden');
+        document.getElementById('partnerForm').classList.add('hidden');
     },
 
     showPartnerCard(id) {
@@ -750,9 +910,9 @@ const partnersApp = {
         const partner = partners.find(p => p.id === id);
         if (!partner) return;
 
-        document.getElementById('hintPanel').style.display = 'none';
-        document.getElementById('partnerCard').style.display = 'flex';
-        document.getElementById('partnerForm').style.display = 'none';
+        document.getElementById('hintPanel').classList.add('hidden');
+        document.getElementById('partnerCard').classList.remove('hidden');
+        document.getElementById('partnerForm').classList.add('hidden');
 
         const cardAvatar = document.getElementById('cardAvatar');
         const cardAvatarPlaceholder = document.getElementById('cardAvatarPlaceholder');
@@ -760,12 +920,12 @@ const partnersApp = {
         const avatarUrl = partner.avatarFileId ? CloudStorage.getImageUrl(partner.avatarFileId) : '';
         if (avatarUrl) {
             cardAvatar.src = avatarUrl;
-            cardAvatar.style.display = 'block';
-            if (cardAvatarPlaceholder) cardAvatarPlaceholder.style.display = 'none';
+            cardAvatar.classList.remove('hidden');
+            if (cardAvatarPlaceholder) cardAvatarPlaceholder.classList.add('hidden');
         } else {
             cardAvatar.src = '';
-            cardAvatar.style.display = 'none';
-            if (cardAvatarPlaceholder) cardAvatarPlaceholder.style.display = 'flex';
+            cardAvatar.classList.add('hidden');
+            if (cardAvatarPlaceholder) cardAvatarPlaceholder.classList.remove('hidden');
         }
 
         document.getElementById('cardFullName').textContent = partner.subagent || '-';
@@ -834,10 +994,16 @@ const partnersApp = {
     toggleStatusDropdown() {
         const dropdown = document.getElementById('cardStatusDropdown');
         const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
-        const isOpen = dropdown.style.display === 'none';
-        dropdown.style.display = isOpen ? 'flex' : 'none';
+        const isOpen = dropdown.classList.contains('hidden');
+        dropdown.classList.toggle('hidden');
         if (arrow) {
-            arrow.style.transform = isOpen ? 'rotate(-90deg)' : 'rotate(0deg)';
+            if (isOpen) {
+                arrow.classList.add('dropdown-arrow-open');
+                arrow.classList.remove('dropdown-arrow-closed');
+            } else {
+                arrow.classList.add('dropdown-arrow-closed');
+                arrow.classList.remove('dropdown-arrow-open');
+            }
         }
     },
 
@@ -862,9 +1028,12 @@ const partnersApp = {
             statusText.textContent = status;
             statusText.className = 'status-badge ' + this.getStatusColor(status);
 
-            document.getElementById('cardStatusDropdown').style.display = 'none';
+            document.getElementById('cardStatusDropdown').classList.add('hidden');
             const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
-            if (arrow) arrow.style.transform = 'rotate(0deg)';
+            if (arrow) {
+                arrow.classList.add('dropdown-arrow-closed');
+                arrow.classList.remove('dropdown-arrow-open');
+            }
 
             this.render();
         } catch (error) {
@@ -875,10 +1044,16 @@ const partnersApp = {
     toggleFormStatusDropdown() {
         const dropdown = document.getElementById('formStatusDropdown');
         const arrow = document.querySelector('#formStatusBadge .status-dropdown-icon');
-        const isOpen = dropdown.style.display === 'none';
-        dropdown.style.display = isOpen ? 'flex' : 'none';
+        const isOpen = dropdown.classList.contains('hidden');
+        dropdown.classList.toggle('hidden');
         if (arrow) {
-            arrow.style.transform = isOpen ? 'rotate(-90deg)' : 'rotate(0deg)';
+            if (isOpen) {
+                arrow.classList.add('dropdown-arrow-open');
+                arrow.classList.remove('dropdown-arrow-closed');
+            } else {
+                arrow.classList.add('dropdown-arrow-closed');
+                arrow.classList.remove('dropdown-arrow-open');
+            }
         }
     },
 
@@ -888,9 +1063,12 @@ const partnersApp = {
         statusText.textContent = status;
         statusText.className = 'status-badge ' + this.getStatusColor(status);
 
-        document.getElementById('formStatusDropdown').style.display = 'none';
+        document.getElementById('formStatusDropdown').classList.add('hidden');
         const arrow = document.querySelector('#formStatusBadge .status-dropdown-icon');
-        if (arrow) arrow.style.transform = 'rotate(0deg)';
+        if (arrow) {
+            arrow.classList.add('dropdown-arrow-closed');
+            arrow.classList.remove('dropdown-arrow-open');
+        }
     },
 
     showAddModal() {
@@ -900,20 +1078,20 @@ const partnersApp = {
         this.formStatus = 'Открыт';
         this.render();
 
-        document.getElementById('hintPanel').style.display = 'none';
-        document.getElementById('partnerCard').style.display = 'none';
-        document.getElementById('partnerForm').style.display = 'flex';
+        document.getElementById('hintPanel').classList.add('hidden');
+        document.getElementById('partnerCard').classList.add('hidden');
+        document.getElementById('partnerForm').classList.remove('hidden');
 
         document.getElementById('formTitle').textContent = 'Добавить партнера';
         document.getElementById('formSaveBtnText').textContent = 'Добавить партнера';
-        document.getElementById('formDeleteBtn').style.display = 'none';
+        document.getElementById('formDeleteBtn').classList.add('hidden');
 
-        document.getElementById('formTemplateSelector').style.display = 'flex';
-        document.getElementById('templateFieldsContainer').style.display = 'none';
-        document.getElementById('formBody').style.display = 'block';
-        document.getElementById('formCounters').style.display = 'block';
+        document.getElementById('formTemplateSelector').classList.remove('hidden');
+        document.getElementById('templateFieldsContainer').classList.add('hidden');
+        document.getElementById('formBody').classList.remove('hidden');
+        document.getElementById('formCounters').classList.remove('hidden');
         document.getElementById('formCounters').classList.remove('disabled');
-        document.querySelector('.form-partner-info').style.display = 'flex';
+        document.querySelector('.form-partner-info').classList.remove('hidden');
 
         const subagentInput = document.getElementById('formSubagent');
         const subagentIdInput = document.getElementById('formSubagentId');
@@ -929,12 +1107,10 @@ const partnersApp = {
         methodInput.disabled = false;
 
         if (methodWrapper) {
-            methodWrapper.classList.remove('disabled');
-            methodWrapper.style.pointerEvents = '';
+            methodWrapper.classList.remove('disabled', 'pointer-events-none');
         }
         if (formAvatar) {
-            formAvatar.classList.remove('disabled');
-            formAvatar.style.pointerEvents = '';
+            formAvatar.classList.remove('disabled', 'pointer-events-none');
         }
 
         this.removeDynamicFields();
@@ -950,8 +1126,8 @@ const partnersApp = {
 
         const formAvatarImg = document.getElementById('formAvatar');
         formAvatarImg.src = '';
-        formAvatarImg.style.display = 'none';
-        document.querySelector('.form-avatar-placeholder').style.display = 'block';
+        formAvatarImg.classList.add('hidden');
+        document.querySelector('.form-avatar-placeholder').classList.remove('hidden');
 
         const statusText = document.getElementById('formStatusText');
         statusText.textContent = 'Открыт';
@@ -971,20 +1147,20 @@ const partnersApp = {
         this.isTemplateMode = false;
         this.formStatus = partner.status || 'Открыт';
 
-        document.getElementById('hintPanel').style.display = 'none';
-        document.getElementById('partnerCard').style.display = 'none';
-        document.getElementById('partnerForm').style.display = 'flex';
+        document.getElementById('hintPanel').classList.add('hidden');
+        document.getElementById('partnerCard').classList.add('hidden');
+        document.getElementById('partnerForm').classList.remove('hidden');
 
         document.getElementById('formTitle').textContent = 'Редактировать партнера';
         document.getElementById('formSaveBtnText').textContent = 'Сохранить изменения';
-        document.getElementById('formDeleteBtn').style.display = 'inline-block';
+        document.getElementById('formDeleteBtn').classList.remove('hidden');
 
-        document.getElementById('formTemplateSelector').style.display = 'none';
-        document.getElementById('templateFieldsContainer').style.display = 'none';
-        document.getElementById('formBody').style.display = 'block';
-        document.getElementById('formCounters').style.display = 'block';
+        document.getElementById('formTemplateSelector').classList.add('hidden');
+        document.getElementById('templateFieldsContainer').classList.add('hidden');
+        document.getElementById('formBody').classList.remove('hidden');
+        document.getElementById('formCounters').classList.remove('hidden');
         document.getElementById('formCounters').classList.remove('disabled');
-        document.querySelector('.form-partner-info').style.display = 'flex';
+        document.querySelector('.form-partner-info').classList.remove('hidden');
 
         const subagentInput = document.getElementById('formSubagent');
         const subagentIdInput = document.getElementById('formSubagentId');
@@ -1000,12 +1176,10 @@ const partnersApp = {
         methodInput.disabled = false;
 
         if (methodWrapper) {
-            methodWrapper.classList.remove('disabled');
-            methodWrapper.style.pointerEvents = '';
+            methodWrapper.classList.remove('disabled', 'pointer-events-none');
         }
         if (formAvatarWrapper) {
-            formAvatarWrapper.classList.remove('disabled');
-            formAvatarWrapper.style.pointerEvents = '';
+            formAvatarWrapper.classList.remove('disabled', 'pointer-events-none');
         }
 
         this.removeDynamicFields();
@@ -1025,12 +1199,12 @@ const partnersApp = {
         const avatarUrl = partner.avatarFileId ? CloudStorage.getImageUrl(partner.avatarFileId) : '';
         if (avatarUrl) {
             formAvatar.src = avatarUrl;
-            formAvatar.style.display = 'block';
-            placeholder.style.display = 'none';
+            formAvatar.classList.remove('hidden');
+            placeholder.classList.add('hidden');
         } else {
             formAvatar.src = '';
-            formAvatar.style.display = 'none';
-            placeholder.style.display = 'block';
+            formAvatar.classList.add('hidden');
+            placeholder.classList.remove('hidden');
         }
 
         const statusText = document.getElementById('formStatusText');
@@ -1056,15 +1230,15 @@ const partnersApp = {
         this.isTemplateMode = false;
         this.editingTemplateId = null;
 
-        document.getElementById('templateFieldsSection').style.display = 'none';
-        document.getElementById('templateFieldsContainer').style.display = 'none';
+        document.getElementById('templateFieldsSection').classList.add('hidden');
+        document.getElementById('templateFieldsContainer').classList.add('hidden');
 
-        document.getElementById('formBody').style.display = 'block';
+        document.getElementById('formBody').classList.remove('hidden');
         const formCounters = document.getElementById('formCounters');
-        formCounters.style.display = 'block';
+        formCounters.classList.remove('hidden');
         formCounters.classList.remove('disabled');
 
-        document.querySelector('.form-partner-info').style.display = 'flex';
+        document.querySelector('.form-partner-info').classList.remove('hidden');
 
         this.removeDynamicFields();
 
@@ -1075,9 +1249,8 @@ const partnersApp = {
         const formStatusBadge = document.getElementById('formStatusBadge');
 
         if (formAvatar) {
-            formAvatar.style.display = 'flex';
-            formAvatar.classList.remove('disabled');
-            formAvatar.style.pointerEvents = 'auto';
+            formAvatar.classList.remove('hidden', 'disabled', 'pointer-events-none');
+            formAvatar.classList.add('pointer-events-auto');
         }
         if (subagentInput) {
             subagentInput.classList.remove('disabled');
@@ -1092,7 +1265,7 @@ const partnersApp = {
             methodInput.readOnly = false;
         }
         if (formStatusBadge) {
-            formStatusBadge.style.display = 'flex';
+            formStatusBadge.classList.remove('hidden');
             formStatusBadge.classList.remove('disabled');
         }
 
@@ -1151,7 +1324,7 @@ const partnersApp = {
             const delta = e.deltaY > 0 ? -0.1 : 0.1;
             this.cropData.scale = Math.max(0.5, Math.min(3, this.cropData.scale + delta));
             this.updateCropTransform();
-        });
+        }, { passive: false });
 
         cropPreview.addEventListener('mousedown', (e) => {
             this.cropData.isDragging = true;
@@ -1191,30 +1364,90 @@ const partnersApp = {
             previewHeight / imgHeight
         );
 
-        // Set base size to cover the container
-        cropImage.style.width = imgWidth * scaleToFit + 'px';
-        cropImage.style.height = imgHeight * scaleToFit + 'px';
-        cropImage.style.left = '50%';
-        cropImage.style.top = '50%';
-
-        // Apply transform: center image + user offset + user scale
-        cropImage.style.transform = `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(${scale})`;
+        // Set base size to cover the container using CSS custom properties (CSP compliant)
+        cropImage.style.setProperty('--crop-width', imgWidth * scaleToFit + 'px');
+        cropImage.style.setProperty('--crop-height', imgHeight * scaleToFit + 'px');
+        cropImage.style.setProperty('--crop-translate-x', translateX + 'px');
+        cropImage.style.setProperty('--crop-translate-y', translateY + 'px');
+        cropImage.style.setProperty('--crop-scale', scale);
     },
 
     applyCrop() {
-        // Сохраняем оригинальное изображение без обрезки
-        // Обрезка только визуальная (CSS object-fit: cover)
+        // Сохраняем оригинал для загрузки в Drive
         const originalData = this.cropData.originalSrc;
 
-        const formAvatar = document.getElementById('formAvatar');
-        const placeholder = document.querySelector('.form-avatar-placeholder');
-        formAvatar.src = originalData;
-        formAvatar.style.display = 'block';
-        if (placeholder) placeholder.style.display = 'none';
+        // Создаём сжатую версию для предпросмотра в UI (быстро)
+        this.compressImage(originalData, 400, 0.85).then(compressedPreview => {
+            const formAvatar = document.getElementById('formAvatar');
+            const placeholder = document.querySelector('.form-avatar-placeholder');
 
-        this.closeCropModal();
+            // Показываем сжатый предпросмотр в UI
+            formAvatar.src = compressedPreview;
+            formAvatar.classList.remove('hidden');
+            if (placeholder) placeholder.classList.add('hidden');
+
+            // Сохраняем оригинал для отправки в Drive (в data-атрибуте)
+            formAvatar.dataset.originalSrc = originalData;
+
+            this.closeCropModal();
+        });
     },
 
+    /**
+     * Сжатие изображения для оптимизации загрузки
+     * @param {string} base64 - Base64 изображения
+     * @param {number} maxSize - Максимальный размер стороны (px)
+     * @param {number} quality - Качество JPEG (0-1)
+     * @returns {Promise<string>} - Сжатый base64
+     */
+    compressImage(base64, maxSize = 800, quality = 0.8) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                // Вычисляем новый размер с сохранением пропорций
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxSize) {
+                        height = Math.round((height * maxSize) / width);
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width = Math.round((width * maxSize) / height);
+                        height = maxSize;
+                    }
+                }
+
+                // Создаём canvas и рисуем сжатое изображение
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Конвертируем в JPEG с указанным качеством
+                const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedBase64);
+            };
+            img.src = base64;
+        });
+    },
+
+    /**
+     * Сохранить партнера из формы (добавление или редактирование)
+     *
+     * @description
+     * Использует Optimistic Update паттерн:
+     * 1. Сохраняет текущее состояние для возможного отката
+     * 2. Немедленно обновляет UI (создает temp_id для новых партнеров)
+     * 3. Отправляет данные на сервер
+     * 4. При успехе - обновляет temp_id на реальный
+     * 5. При ошибке - откатывает изменения (rollback)
+     *
+     * Преимущества: UI отзывчивый, пользователь видит изменения сразу
+     */
     async saveFromForm() {
         if (this.isTemplateMode) {
             this.saveTemplate();
@@ -1224,7 +1457,10 @@ const partnersApp = {
         const subagent = document.getElementById('formSubagent').value.trim();
         const subagentId = document.getElementById('formSubagentId').value.trim();
         const method = document.getElementById('formMethod').value.trim();
-        const avatar = document.getElementById('formAvatar').src || '';
+
+        // Берём оригинал из dataset (для отправки в Drive), или сжатый предпросмотр
+        const formAvatarEl = document.getElementById('formAvatar');
+        const avatar = formAvatarEl.dataset.originalSrc || formAvatarEl.src || '';
 
         const dep = parseInt(document.getElementById('formDep').value) || 0;
         const withVal = parseInt(document.getElementById('formWith').value) || 0;
@@ -1267,15 +1503,51 @@ const partnersApp = {
             withdrawals: withVal,
             compensation: comp,
             status: this.formStatus,
-            avatarFileId: currentAvatarFileId, // Будет обновлён если загружен новый аватар
-            customFields
+            avatarFileId: currentAvatarFileId,
+            customFields,
+            // Локальные поля для UI
+            dep: dep,
+            with: withVal,
+            comp: comp
         };
 
+        // OPTIMISTIC UPDATE: Сохраняем состояние для отката
+        const previousPartners = [...this.cachedPartners];
+        const isEditing = !!this.editingPartnerId;
+        const tempId = isEditing ? this.editingPartnerId : `temp_${Date.now()}`;
+
+        // OPTIMISTIC UPDATE: Обновляем UI сразу
+        if (isEditing) {
+            partnerData.id = this.editingPartnerId;
+            const index = this.cachedPartners.findIndex(p => p.id === this.editingPartnerId);
+            if (index !== -1) {
+                this.cachedPartners[index] = { ...this.cachedPartners[index], ...partnerData };
+            }
+            this.selectedPartnerId = this.editingPartnerId;
+        } else {
+            partnerData.id = tempId;
+            this.cachedPartners.push(partnerData);
+            this.selectedPartnerId = tempId;
+        }
+
+        this.editingPartnerId = null;
+        this.syncPartnersToLocalStorage();
+        this.renderColumnsMenu();
+        this.render();
+        this.showPartnerCard(this.selectedPartnerId);
+
         this.showLoading(true);
+
+        // Индикатор загрузки аватара
+        const saveBtnText = document.getElementById('formSaveBtnText');
+        const originalBtnText = saveBtnText.textContent;
 
         try {
             // Если есть новый avatar, загружаем в Google Drive
             if (isNewAvatar) {
+                // Показываем индикатор загрузки аватара
+                saveBtnText.textContent = 'Загрузка аватара...';
+
                 // Удаляем старый аватар, чтобы не было дубликатов
                 if (currentAvatarFileId) {
                     try {
@@ -1285,63 +1557,90 @@ const partnersApp = {
                     }
                 }
 
-                // Загружаем новый аватар
-                const fileName = `partner_avatar_${this.editingPartnerId || 'new'}_${Date.now()}.jpg`;
+                // Загружаем новый аватар (оригинал в полном качестве)
+                const fileName = `partner_avatar_${tempId}_${Date.now()}.jpg`;
                 const uploadResult = await CloudStorage.uploadImage('partners', fileName, avatar);
                 if (uploadResult && uploadResult.fileId) {
                     partnerData.avatarFileId = uploadResult.fileId;
                 }
+
+                // Возвращаем текст кнопки
+                saveBtnText.textContent = 'Сохранение...';
             }
 
-            // Добавляем локальные поля для UI (dep/with/comp)
-            partnerData.dep = partnerData.deposits || 0;
-            partnerData.with = partnerData.withdrawals || 0;
-            partnerData.comp = partnerData.compensation || 0;
+            // Отправляем на сервер
+            if (isEditing) {
+                await CloudStorage.updatePartner(tempId, partnerData);
 
-            if (this.editingPartnerId) {
-                partnerData.id = this.editingPartnerId;
-                await CloudStorage.updatePartner(this.editingPartnerId, partnerData);
-
-                const index = this.cachedPartners.findIndex(p => p.id === this.editingPartnerId);
+                // Обновляем avatarFileId в cachedPartners после загрузки аватара
+                const index = this.cachedPartners.findIndex(p => p.id === tempId);
                 if (index !== -1) {
-                    this.cachedPartners[index] = { ...this.cachedPartners[index], ...partnerData };
+                    this.cachedPartners[index].avatarFileId = partnerData.avatarFileId;
                 }
-
-                this.selectedPartnerId = this.editingPartnerId;
-                this.editingPartnerId = null;
-                this.syncPartnersToLocalStorage();
-                this.renderColumnsMenu();
-                this.render();
-                this.showPartnerCard(this.selectedPartnerId);
             } else {
                 const result = await CloudStorage.addPartner(partnerData);
-                partnerData.id = result.id;
-                this.cachedPartners.push(partnerData);
-                this.syncPartnersToLocalStorage();
-
+                // Обновляем временный ID на реальный
+                const index = this.cachedPartners.findIndex(p => p.id === tempId);
+                if (index !== -1) {
+                    this.cachedPartners[index].id = result.id;
+                    this.cachedPartners[index].avatarFileId = partnerData.avatarFileId;
+                }
                 this.selectedPartnerId = result.id;
-                this.editingPartnerId = null;
-                this.renderColumnsMenu();
-                this.render();
+                this.syncPartnersToLocalStorage();
+            }
+
+            // Обновляем UI после успешного сохранения (включая новый аватар)
+            this.syncPartnersToLocalStorage();
+            this.render();
+            if (this.selectedPartnerId) {
                 this.showPartnerCard(this.selectedPartnerId);
             }
+
+            Toast.success(isEditing ? 'Партнёр обновлён' : 'Партнёр добавлен');
         } catch (error) {
+            // ROLLBACK: Откатываем изменения при ошибке
+            this.cachedPartners = previousPartners;
+            this.selectedPartnerId = isEditing ? tempId : null;
+            this.syncPartnersToLocalStorage();
+            this.renderColumnsMenu();
+            this.render();
+            if (this.selectedPartnerId) {
+                this.showPartnerCard(this.selectedPartnerId);
+            } else {
+                this.showHintPanel();
+            }
+
             this.showError('Ошибка сохранения: ' + error.message);
         } finally {
             this.showLoading(false);
+            // Восстанавливаем текст кнопки
+            saveBtnText.textContent = originalBtnText;
         }
     },
 
     async deleteFromCard() {
         if (!this.selectedPartnerId) return;
 
-        if (!confirm('Вы уверены, что хотите удалить этого партнера?')) return;
+        const confirmed = await this.showConfirm('Вы уверены, что хотите удалить этого партнера?', 'Удаление партнера');
+        if (!confirmed) return;
+
+        // OPTIMISTIC UPDATE: Сохраняем состояние для отката
+        const previousPartners = [...this.cachedPartners];
+        const deletedId = this.selectedPartnerId;
+        const partnerToDelete = this.cachedPartners.find(p => p.id === deletedId);
+
+        // OPTIMISTIC UPDATE: Удаляем из UI сразу
+        this.cachedPartners = this.cachedPartners.filter(p => p.id !== deletedId);
+        this.syncPartnersToLocalStorage();
+        this.selectedPartnerId = null;
+        this.cleanupUnusedColumns();
+        this.render();
+        this.showHintPanel();
 
         this.showLoading(true);
 
         try {
-            const partnerToDelete = this.cachedPartners.find(p => p.id === this.selectedPartnerId);
-            await CloudStorage.deletePartner(this.selectedPartnerId);
+            await CloudStorage.deletePartner(deletedId);
 
             // Удаляем аватар из Google Drive если есть
             if (partnerToDelete?.avatarFileId) {
@@ -1352,13 +1651,16 @@ const partnersApp = {
                 }
             }
 
-            this.cachedPartners = this.cachedPartners.filter(p => p.id !== this.selectedPartnerId);
+            Toast.success('Партнёр удалён');
+        } catch (error) {
+            // ROLLBACK: Откатываем удаление при ошибке
+            this.cachedPartners = previousPartners;
             this.syncPartnersToLocalStorage();
-            this.selectedPartnerId = null;
+            this.selectedPartnerId = deletedId;
             this.cleanupUnusedColumns();
             this.render();
-            this.showHintPanel();
-        } catch (error) {
+            this.showPartnerCard(deletedId);
+
             this.showError('Ошибка удаления: ' + error.message);
         } finally {
             this.showLoading(false);
@@ -1368,13 +1670,27 @@ const partnersApp = {
     async deleteFromForm() {
         if (!this.editingPartnerId) return;
 
-        if (!confirm('Вы уверены, что хотите удалить этого партнера?')) return;
+        const confirmed = await this.showConfirm('Вы уверены, что хотите удалить этого партнера?', 'Удаление партнера');
+        if (!confirmed) return;
+
+        // OPTIMISTIC UPDATE: Сохраняем состояние для отката
+        const previousPartners = [...this.cachedPartners];
+        const deletedId = this.editingPartnerId;
+        const partnerToDelete = this.cachedPartners.find(p => p.id === deletedId);
+
+        // OPTIMISTIC UPDATE: Удаляем из UI сразу
+        this.cachedPartners = this.cachedPartners.filter(p => p.id !== deletedId);
+        this.syncPartnersToLocalStorage();
+        this.editingPartnerId = null;
+        this.selectedPartnerId = null;
+        this.cleanupUnusedColumns();
+        this.render();
+        this.showHintPanel();
 
         this.showLoading(true);
 
         try {
-            const partnerToDelete = this.cachedPartners.find(p => p.id === this.editingPartnerId);
-            await CloudStorage.deletePartner(this.editingPartnerId);
+            await CloudStorage.deletePartner(deletedId);
 
             // Удаляем аватар из Google Drive если есть
             if (partnerToDelete?.avatarFileId) {
@@ -1385,14 +1701,16 @@ const partnersApp = {
                 }
             }
 
-            this.cachedPartners = this.cachedPartners.filter(p => p.id !== this.editingPartnerId);
+            Toast.success('Партнёр удалён');
+        } catch (error) {
+            // ROLLBACK: Откатываем удаление при ошибке
+            this.cachedPartners = previousPartners;
             this.syncPartnersToLocalStorage();
-            this.editingPartnerId = null;
+            this.editingPartnerId = deletedId;
             this.selectedPartnerId = null;
             this.cleanupUnusedColumns();
             this.render();
-            this.showHintPanel();
-        } catch (error) {
+
             this.showError('Ошибка удаления: ' + error.message);
         } finally {
             this.showLoading(false);
@@ -1483,7 +1801,7 @@ const partnersApp = {
         });
         optionsText += '\nВведите номер шаблона:';
 
-        const input = prompt(optionsText);
+        const input = await this.showPrompt(optionsText, '', 'Удаление шаблона');
 
         if (!input) {
             this.restoreTemplateSelection();
@@ -1500,7 +1818,8 @@ const partnersApp = {
 
         const templateToDelete = templateList[index];
 
-        if (confirm(`Удалить шаблон "${templateToDelete.name}"?`)) {
+        const confirmed = await this.showConfirm(`Удалить шаблон "${templateToDelete.name}"?`, 'Удаление шаблона');
+        if (confirmed) {
             this.showLoading(true);
             try {
                 await CloudStorage.deleteTemplate(templateToDelete.id);
@@ -1536,7 +1855,7 @@ const partnersApp = {
         });
         optionsText += '\nВведите номер шаблона:';
 
-        const input = prompt(optionsText);
+        const input = await this.showPrompt(optionsText, '', 'Переименование шаблона');
 
         if (!input) {
             this.restoreTemplateSelection();
@@ -1553,14 +1872,14 @@ const partnersApp = {
 
         const templateToRename = templateList[index];
 
-        const newName = prompt(`Введите новое название для шаблона "${templateToRename.name}":`, templateToRename.name);
+        const newName = await this.showPrompt(`Введите новое название для шаблона "${templateToRename.name}":`, templateToRename.name, 'Переименование шаблона');
 
         if (!newName || !newName.trim()) {
             this.restoreTemplateSelection();
             return;
         }
 
-        const makeDefault = confirm('Установить этот шаблон как основной?\n(Основной шаблон будет автоматически выбран при добавлении партнера)');
+        const makeDefault = await this.showConfirm('Установить этот шаблон как основной?\n(Основной шаблон будет автоматически выбран при добавлении партнера)', 'Основной шаблон');
 
         this.showLoading(true);
         try {
@@ -1583,7 +1902,7 @@ const partnersApp = {
         }
     },
 
-    showEditTemplateDialog() {
+    async showEditTemplateDialog() {
         const templateList = Object.values(this.cachedTemplates);
 
         if (templateList.length === 0) {
@@ -1599,7 +1918,7 @@ const partnersApp = {
         });
         optionsText += '\nВведите номер шаблона:';
 
-        const input = prompt(optionsText);
+        const input = await this.showPrompt(optionsText, '', 'Редактирование полей шаблона');
 
         if (!input) {
             this.restoreTemplateSelection();
@@ -1622,19 +1941,19 @@ const partnersApp = {
     },
 
     showTemplateEditor(existingTemplate = null) {
-        document.getElementById('formTemplateSelector').style.display = 'none';
+        document.getElementById('formTemplateSelector').classList.add('hidden');
         document.getElementById('formTitle').textContent = existingTemplate ? 'Редактировать шаблон' : 'Добавить шаблон';
         document.getElementById('formSaveBtnText').textContent = 'Сохранить шаблон';
-        document.getElementById('formBody').style.display = 'none';
+        document.getElementById('formBody').classList.add('hidden');
 
         const formCounters = document.getElementById('formCounters');
-        formCounters.style.display = 'block';
+        formCounters.classList.remove('hidden');
         formCounters.classList.add('disabled');
         document.getElementById('formDep').value = '0';
         document.getElementById('formWith').value = '0';
         document.getElementById('formComp').value = '0';
 
-        document.querySelector('.form-partner-info').style.display = 'flex';
+        document.querySelector('.form-partner-info').classList.remove('hidden');
 
         const subagentInput = document.getElementById('formSubagent');
         const subagentIdInput = document.getElementById('formSubagentId');
@@ -1657,17 +1976,15 @@ const partnersApp = {
 
         const methodWrapper = document.querySelector('.form-method-wrapper');
         if (methodWrapper) {
-            methodWrapper.classList.add('disabled');
-            methodWrapper.style.pointerEvents = 'none';
+            methodWrapper.classList.add('disabled', 'pointer-events-none');
         }
 
         if (formAvatar) {
-            formAvatar.classList.add('disabled');
-            formAvatar.style.pointerEvents = 'none';
+            formAvatar.classList.add('disabled', 'pointer-events-none');
         }
 
-        document.getElementById('templateFieldsSection').style.display = 'block';
-        document.getElementById('templateFieldsContainer').style.display = 'block';
+        document.getElementById('templateFieldsSection').classList.remove('hidden');
+        document.getElementById('templateFieldsContainer').classList.remove('hidden');
         document.getElementById('templateFieldsList').innerHTML = '';
 
         if (existingTemplate && existingTemplate.fields) {
@@ -1675,6 +1992,20 @@ const partnersApp = {
             existingTemplate.fields.forEach(field => {
                 const fieldHtml = this.createTemplateFieldHtml(field.id, field.label, field.type);
                 document.getElementById('templateFieldsList').insertAdjacentHTML('beforeend', fieldHtml);
+
+                // Add event listeners for this field
+                const fieldRow = document.querySelector(`[data-field-id="${field.id}"]`);
+                if (fieldRow) {
+                    const inputField = fieldRow.querySelector('.template-field-input');
+                    const selectField = fieldRow.querySelector('.template-field-type');
+
+                    if (inputField) {
+                        inputField.addEventListener('change', (e) => this.updateTemplateFieldLabel(field.id, e.target.value));
+                    }
+                    if (selectField) {
+                        selectField.addEventListener('change', (e) => this.updateTemplateFieldType(field.id, e.target.value));
+                    }
+                }
             });
         } else {
             this.templateFields = [];
@@ -1684,14 +2015,13 @@ const partnersApp = {
     createTemplateFieldHtml(fieldId, label = '', type = 'text') {
         return `
             <div class="template-field-row" data-field-id="${fieldId}">
-                <div class="form-field" style="flex: 2;">
+                <div class="form-field">
                     <label>Название поля</label>
-                    <input type="text" class="template-field-input" placeholder="Например: Telegram" value="${this.escapeHtml(label)}"
-                        onchange="partnersApp.updateTemplateFieldLabel('${fieldId}', this.value)">
+                    <input type="text" class="template-field-input" placeholder="Например: Telegram" value="${this.escapeHtml(label)}" data-field-id="${fieldId}">
                 </div>
-                <div class="form-field" style="flex: 1;">
+                <div class="form-field">
                     <label>Тип</label>
-                    <select class="template-field-type" onchange="partnersApp.updateTemplateFieldType('${fieldId}', this.value)">
+                    <select class="template-field-type" data-field-id="${fieldId}">
                         <option value="text" ${type === 'text' ? 'selected' : ''}>Текст</option>
                         <option value="email" ${type === 'email' ? 'selected' : ''}>Email</option>
                         <option value="tel" ${type === 'tel' ? 'selected' : ''}>Телефон</option>
@@ -1699,7 +2029,7 @@ const partnersApp = {
                         <option value="textarea" ${type === 'textarea' ? 'selected' : ''}>Многострочный</option>
                     </select>
                 </div>
-                <button class="template-field-delete" onclick="partnersApp.removeTemplateField('${fieldId}')" title="Удалить">
+                <button class="template-field-delete" data-action="partners-removeTemplateField" data-field-id="${fieldId}" title="Удалить">
                     <img src="../shared/icons/cross.svg" width="14" height="14" alt="Удалить">
                 </button>
             </div>
@@ -1720,9 +2050,20 @@ const partnersApp = {
         const fieldHtml = this.createTemplateFieldHtml(fieldId, '', 'text');
         document.getElementById('templateFieldsList').insertAdjacentHTML('beforeend', fieldHtml);
 
-        // Focus on the new field's input
-        const newField = document.querySelector(`[data-field-id="${fieldId}"] .template-field-input`);
-        if (newField) newField.focus();
+        // Add event listeners for the new field
+        const fieldRow = document.querySelector(`[data-field-id="${fieldId}"]`);
+        if (fieldRow) {
+            const inputField = fieldRow.querySelector('.template-field-input');
+            const selectField = fieldRow.querySelector('.template-field-type');
+
+            if (inputField) {
+                inputField.addEventListener('change', (e) => this.updateTemplateFieldLabel(fieldId, e.target.value));
+                inputField.focus();
+            }
+            if (selectField) {
+                selectField.addEventListener('change', (e) => this.updateTemplateFieldType(fieldId, e.target.value));
+            }
+        }
     },
 
     updateTemplateFieldLabel(fieldId, label) {
@@ -1783,7 +2124,7 @@ const partnersApp = {
             return;
         }
 
-        const templateName = prompt('Введите название шаблона:', this.editingTemplateId ? this.cachedTemplates[this.editingTemplateId].name : '');
+        const templateName = await this.showPrompt('Введите название шаблона:', this.editingTemplateId ? this.cachedTemplates[this.editingTemplateId].name : '', 'Название шаблона');
         if (!templateName || !templateName.trim()) {
             return;
         }
@@ -1809,8 +2150,8 @@ const partnersApp = {
 
             const formAvatar = document.querySelector('.form-avatar');
             if (formAvatar) {
-                formAvatar.classList.remove('disabled');
-                formAvatar.style.pointerEvents = 'auto';
+                formAvatar.classList.remove('disabled', 'pointer-events-none');
+                formAvatar.classList.add('pointer-events-auto');
             }
 
             const subagentInput = document.getElementById('formSubagent');
@@ -1835,10 +2176,10 @@ const partnersApp = {
             }
 
             const formCounters = document.getElementById('formCounters');
-            formCounters.style.display = 'block';
+            formCounters.classList.remove('hidden');
             formCounters.classList.remove('disabled');
 
-            document.querySelector('.form-partner-info').style.display = 'flex';
+            document.querySelector('.form-partner-info').classList.remove('hidden');
 
             this.closeForm();
             this.updateTemplateList();
@@ -1937,8 +2278,13 @@ const partnersApp = {
             btn.classList.toggle('active', btn.dataset.type === type);
         });
 
-        document.getElementById('jsonExportSection').style.display = type === 'json' ? 'block' : 'none';
-        document.getElementById('excelExportSection').style.display = type === 'excel' ? 'block' : 'none';
+        if (type === 'json') {
+            document.getElementById('jsonExportSection').classList.remove('hidden');
+            document.getElementById('excelExportSection').classList.add('hidden');
+        } else {
+            document.getElementById('jsonExportSection').classList.add('hidden');
+            document.getElementById('excelExportSection').classList.remove('hidden');
+        }
 
         if (type === 'excel') {
             this.updateExportPreview();
@@ -2079,7 +2425,7 @@ const partnersApp = {
         document.getElementById('importModal').classList.add('active');
         document.getElementById('importFileInput').value = '';
         document.getElementById('importExcelInput').value = '';
-        document.getElementById('importPreview').style.display = 'none';
+        document.getElementById('importPreview').classList.add('hidden');
         document.getElementById('importBtn').disabled = true;
         this.pendingImportData = null;
         this.importType = 'json';
@@ -2103,15 +2449,20 @@ const partnersApp = {
     setImportType(type) {
         this.importType = type;
         this.pendingImportData = null;
-        document.getElementById('importPreview').style.display = 'none';
+        document.getElementById('importPreview').classList.add('hidden');
         document.getElementById('importBtn').disabled = true;
 
         document.querySelectorAll('.import-type-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.type === type);
         });
 
-        document.getElementById('jsonImportSection').style.display = type === 'json' ? 'block' : 'none';
-        document.getElementById('excelImportSection').style.display = type === 'excel' ? 'block' : 'none';
+        if (type === 'json') {
+            document.getElementById('jsonImportSection').classList.remove('hidden');
+            document.getElementById('excelImportSection').classList.add('hidden');
+        } else {
+            document.getElementById('jsonImportSection').classList.add('hidden');
+            document.getElementById('excelImportSection').classList.remove('hidden');
+        }
 
         document.getElementById('importFileInput').value = '';
         document.getElementById('importExcelInput').value = '';
@@ -2126,9 +2477,9 @@ const partnersApp = {
     },
 
     goToImportStep1() {
-        document.getElementById('excelImportStep1').style.display = 'block';
-        document.getElementById('excelImportStep2').style.display = 'none';
-        document.getElementById('importPreview').style.display = 'none';
+        document.getElementById('excelImportStep1').classList.remove('hidden');
+        document.getElementById('excelImportStep2').classList.add('hidden');
+        document.getElementById('importPreview').classList.add('hidden');
         document.getElementById('importBtn').disabled = true;
         document.getElementById('importExcelInput').value = '';
         this.pendingImportData = null;
@@ -2138,8 +2489,8 @@ const partnersApp = {
     },
 
     goToImportStep2() {
-        document.getElementById('excelImportStep1').style.display = 'none';
-        document.getElementById('excelImportStep2').style.display = 'block';
+        document.getElementById('excelImportStep1').classList.add('hidden');
+        document.getElementById('excelImportStep2').classList.remove('hidden');
         this.updateExcelHint();
     },
 
@@ -2326,13 +2677,13 @@ const partnersApp = {
                     this.pendingImportData = data.data;
 
                     const preview = document.getElementById('importPreview');
-                    preview.style.display = 'block';
+                    preview.classList.remove('hidden');
                     preview.innerHTML = `<strong>Найдено партнеров:</strong> ${data.data.length}<br><small>Дата экспорта: ${new Date(data.exportDate).toLocaleString('ru-RU')}</small>`;
 
                     document.getElementById('importBtn').disabled = false;
                 } catch (err) {
                     Toast.error('Ошибка чтения файла: ' + err.message);
-                    document.getElementById('importPreview').style.display = 'none';
+                    document.getElementById('importPreview').classList.add('hidden');
                     document.getElementById('importBtn').disabled = true;
                     this.resetFileLabel(jsonLabel, 'Выберите JSON файл', 'или перетащите сюда');
                 }
@@ -2457,7 +2808,7 @@ const partnersApp = {
                     this.pendingExtraColumns = extraColumns;
 
                     const preview = document.getElementById('importPreview');
-                    preview.style.display = 'block';
+                    preview.classList.remove('hidden');
 
                     if (extraColumns.length > 0) {
                         const extraColsTags = extraColumns.map(c => `<span class="extra-column-tag">${this.escapeHtml(c)}</span>`).join('');
@@ -2468,10 +2819,10 @@ const partnersApp = {
                                 <div class="extra-columns-warning-title">Обнаружены дополнительные колонки:</div>
                                 <div class="extra-columns-list">${extraColsTags}</div>
                                 <div class="extra-columns-actions">
-                                    <button class="btn-create-template-from-import" onclick="partnersApp.createTemplateFromExtraColumns()">
+                                    <button class="btn-create-template-from-import" data-action="partners-createTemplateFromExtraColumns">
                                         Создать шаблон с этими полями
                                     </button>
-                                    <button class="btn-ignore-extra-columns" onclick="partnersApp.ignoreExtraColumns()">
+                                    <button class="btn-ignore-extra-columns" data-action="partners-ignoreExtraColumns">
                                         Игнорировать
                                     </button>
                                 </div>
@@ -2484,7 +2835,7 @@ const partnersApp = {
                     document.getElementById('importBtn').disabled = false;
                 } catch (err) {
                     Toast.error('Ошибка чтения файла: ' + err.message);
-                    document.getElementById('importPreview').style.display = 'none';
+                    document.getElementById('importPreview').classList.add('hidden');
                     document.getElementById('importBtn').disabled = true;
                     this.resetFileLabel(excelLabel, 'Выберите Excel файл', '.xlsx или .xls');
                 }
@@ -2675,8 +3026,6 @@ const partnersApp = {
                         this.showError(`Ошибки синхронизации: ${errors.length}. Проверьте консоль.`);
                     }
                 };
-            } else {
-                console.warn('SyncManager не найден, синхронизация не будет выполнена');
             }
 
         } catch (error) {
@@ -2693,7 +3042,7 @@ const partnersApp = {
             progressModal.id = 'importProgressModal';
             progressModal.className = 'modal active';
             progressModal.innerHTML = `
-                <div class="modal-dialog" style="max-width: 400px;">
+                <div class="modal-dialog modal-dialog-crop">
                     <div class="modal-header">
                         <h2 class="modal-title">Импорт данных</h2>
                     </div>
@@ -2705,50 +3054,18 @@ const partnersApp = {
                         <div class="import-progress-count" id="importProgressCount">0 / 0</div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary" onclick="partnersApp.cancelImport()">Отмена</button>
+                        <button class="btn btn-secondary" data-action="partners-cancelImport">Отмена</button>
                     </div>
                 </div>
             `;
 
-            // Add styles
-            const style = document.createElement('style');
-            style.textContent = `
-                .import-progress-status {
-                    font-size: 14px;
-                    margin-bottom: 12px;
-                    color: #666;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-                .import-progress-bar-container {
-                    width: 100%;
-                    height: 8px;
-                    background: rgba(0,0,0,0.1);
-                    border-radius: 4px;
-                    overflow: hidden;
-                    margin-bottom: 8px;
-                }
-                .import-progress-bar {
-                    height: 100%;
-                    background: #fdbe2f;
-                    border-radius: 4px;
-                    transition: width 0.3s ease;
-                    width: 0%;
-                }
-                .import-progress-count {
-                    font-size: 13px;
-                    color: #888;
-                    text-align: center;
-                }
-            `;
-            document.head.appendChild(style);
             document.body.appendChild(progressModal);
         }
 
         const percent = total > 0 ? Math.round((current / total) * 100) : 0;
         document.getElementById('importProgressStatus').textContent = status;
-        document.getElementById('importProgressBar').style.width = percent + '%';
+        const progressBar = document.getElementById('importProgressBar');
+        progressBar.style.setProperty('--progress-width', percent + '%');
         document.getElementById('importProgressCount').textContent = `${current} / ${total} (${percent}%)`;
 
         progressModal.classList.add('active');
@@ -2796,7 +3113,8 @@ const partnersApp = {
             return;
         }
 
-        if (!confirm(`Найдено дубликатов: ${duplicateIds.length}\n\nУдалить их?`)) {
+        const confirmed = await this.showConfirm(`Найдено дубликатов: ${duplicateIds.length}\n\nУдалить их?`, 'Удаление дубликатов');
+        if (!confirmed) {
             return;
         }
 
@@ -2810,7 +3128,7 @@ const partnersApp = {
                     this.cachedPartners = this.cachedPartners.filter(p => p.id !== id);
                     deleted++;
                 } catch (e) {
-                    console.warn('Failed to delete duplicate:', id, e);
+                    // Failed to delete duplicate, continue with next
                 }
             }
 
@@ -2832,7 +3150,19 @@ const partnersApp = {
 };
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize components
+    ComponentLoader.init('../shared');
+    await ComponentLoader.load('sidebar', '#sidebar-container', {
+        basePath: '..',
+        activeModule: 'partners'
+    });
+    await ComponentLoader.load('about-modal', '#about-modal-container', {
+        basePath: '..'
+    });
+    SidebarController.init({ basePath: '..' });
+
+    // Initialize partners app
     partnersApp.init();
 });
 
@@ -2845,8 +3175,8 @@ document.addEventListener('keydown', (e) => {
         if (document.getElementById('cropModal').classList.contains('active')) {
             partnersApp.closeCropModal();
         }
-        document.getElementById('cardStatusDropdown').style.display = 'none';
-        document.getElementById('formStatusDropdown').style.display = 'none';
+        document.getElementById('cardStatusDropdown').classList.add('hidden');
+        document.getElementById('formStatusDropdown').classList.add('hidden');
     }
 });
 
@@ -2873,16 +3203,113 @@ document.addEventListener('click', (e) => {
     const columnsMenu = document.getElementById('columnsMenu');
 
     if (cardStatusBadge && cardStatusDropdown && !cardStatusBadge.contains(e.target)) {
-        cardStatusDropdown.style.display = 'none';
+        cardStatusDropdown.classList.add('hidden');
         const arrow = cardStatusBadge.querySelector('.status-dropdown-icon');
-        if (arrow) arrow.style.transform = 'rotate(0deg)';
+        if (arrow) {
+            arrow.classList.add('dropdown-arrow-closed');
+            arrow.classList.remove('dropdown-arrow-open');
+        }
     }
     if (formStatusBadge && formStatusDropdown && !formStatusBadge.contains(e.target)) {
-        formStatusDropdown.style.display = 'none';
+        formStatusDropdown.classList.add('hidden');
         const arrow = formStatusBadge.querySelector('.status-dropdown-icon');
-        if (arrow) arrow.style.transform = 'rotate(0deg)';
+        if (arrow) {
+            arrow.classList.add('dropdown-arrow-closed');
+            arrow.classList.remove('dropdown-arrow-open');
+        }
     }
     if (columnsSettings && columnsMenu && !columnsSettings.contains(e.target)) {
         columnsMenu.classList.remove('active');
     }
 });
+
+// Event delegation для всех data-action="partners-*" атрибутов
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action^="partners-"]');
+    if (!target) return;
+
+    // Игнорируем file input - он обрабатывается через change event
+    if (target.type === 'file') return;
+
+    const action = target.dataset.action.replace('partners-', '');
+    const value = target.dataset.value;
+    const methodId = target.dataset.methodId;
+    const columnId = target.dataset.columnId;
+    const fieldId = target.dataset.fieldId;
+
+    // Для status dropdown нужно остановить всплытие
+    if (action.includes('changeStatus') || action.includes('changeFormStatus')) {
+        e.stopPropagation();
+    }
+
+    // Для toggleColumn нужно получить columnId из data-column-id родителя
+    if (action === 'toggleColumn') {
+        const columnItem = target.closest('.column-item');
+        if (columnItem) {
+            partnersApp[action](columnItem.dataset.columnId);
+        }
+        return;
+    }
+
+    // Вызов соответствующего метода
+    if (typeof partnersApp[action] === 'function') {
+        // Передаем параметры в зависимости от того, что есть
+        if (methodId !== undefined) {
+            partnersApp[action](methodId);
+        } else if (columnId !== undefined) {
+            partnersApp[action](columnId);
+        } else if (fieldId !== undefined) {
+            partnersApp[action](fieldId);
+        } else if (value !== undefined) {
+            partnersApp[action](value);
+        } else {
+            partnersApp[action]();
+        }
+    }
+});
+
+// Event delegation для input событий
+document.addEventListener('input', (e) => {
+    const target = e.target.closest('[data-action^="partners-"]');
+    if (!target) return;
+
+    // Игнорируем file input - он обрабатывается через change event
+    if (target.type === 'file') return;
+
+    const action = target.dataset.action.replace('partners-', '');
+
+    if (typeof partnersApp[action] === 'function') {
+        partnersApp[action]();
+    }
+});
+
+// Event delegation для change событий
+document.addEventListener('change', (e) => {
+    const target = e.target.closest('[data-action^="partners-"]');
+    if (!target) return;
+
+    const action = target.dataset.action.replace('partners-', '');
+
+    if (action === 'handleAvatarUpload') {
+        partnersApp.handleAvatarUpload(e);
+    } else if (typeof partnersApp[action] === 'function') {
+        partnersApp[action]();
+    }
+});
+
+// Event delegation для keypress событий
+document.addEventListener('keypress', (e) => {
+    const target = e.target.closest('[data-action^="partners-"]');
+    if (!target) return;
+
+    const action = target.dataset.action.replace('partners-', '');
+
+    if (action === 'methodInputKeypress' && e.key === 'Enter') {
+        partnersApp.addMethod();
+    }
+});
+
+// Добавить метод avatarClick
+partnersApp.avatarClick = function() {
+    document.getElementById('formAvatarInput').click();
+};

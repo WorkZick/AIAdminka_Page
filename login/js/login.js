@@ -18,14 +18,17 @@ const loginApp = {
         return 'https://workzick.github.io/AIAdminka_Page/login/callback.html';
     },
 
-    // Apps Script URL
-    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyeWmZs028zVkzKTrqNTbzTasKK0Z63eCfV1I4RUV6BJWMH8r62kScLh7U5B45bHRRILA/exec',
+    // Apps Script URL (делегируем в EnvConfig)
+    get SCRIPT_URL() {
+        return EnvConfig.getScriptUrl();
+    },
 
     // Mock API режим (для тестирования без backend)
     USE_MOCK_API: false,
 
     // State
     currentUser: null,
+    currentRole: null,  // Роль пользователя из checkAccess
     storageReady: false,
     pendingRequest: null,
 
@@ -53,19 +56,81 @@ const loginApp = {
     // ============ INITIALIZATION ============
 
     init() {
-        this.checkExistingAuth();
-        this.checkAuthCallback();
+        // Сначала проверяем существующую авторизацию
+        const hasExistingAuth = this.checkExistingAuth();
+
+        // Если существующей авторизации нет, проверяем callback
+        if (!hasExistingAuth) {
+            this.checkAuthCallback();
+        }
 
         // Для отладки: переключение состояний через консоль
         if (this.USE_MOCK_API) {
             window.setMockState = (state) => {
                 this.mockData.userState = state;
-                console.log('Mock state set to:', state);
-                console.log('Available states: new, pending, approved, rejected, blocked');
                 this.retry();
             };
-            console.log('Mock API enabled. Use setMockState("state") to test different states.');
-            console.log('Available states: new, pending, approved, rejected, blocked');
+        }
+    },
+
+    attachEventListeners() {
+        // Login button
+        const btnLogin = document.getElementById('btnLogin');
+        if (btnLogin) {
+            btnLogin.addEventListener('click', () => this.login());
+        }
+
+        // Logout buttons
+        const btnLogout = document.getElementById('btnLogout');
+        if (btnLogout) {
+            btnLogout.addEventListener('click', () => this.logout());
+        }
+
+        const btnLogoutBlocked = document.getElementById('btnLogoutBlocked');
+        if (btnLogoutBlocked) {
+            btnLogoutBlocked.addEventListener('click', () => this.logout());
+        }
+
+        // Init storage button
+        const btnInit = document.getElementById('btnInit');
+        if (btnInit) {
+            btnInit.addEventListener('click', () => this.initStorage());
+        }
+
+        // Retry button
+        const btnRetry = document.getElementById('btnRetry');
+        if (btnRetry) {
+            btnRetry.addEventListener('click', () => this.retry());
+        }
+
+        // Registration form
+        const registrationForm = document.getElementById('registrationForm');
+        if (registrationForm) {
+            registrationForm.addEventListener('submit', (e) => this.submitRegistration(e));
+        }
+
+        // Check status button
+        const btnCheckStatus = document.getElementById('btnCheckStatus');
+        if (btnCheckStatus) {
+            btnCheckStatus.addEventListener('click', () => this.checkStatus());
+        }
+
+        // Create team button
+        const btnCreateTeam = document.getElementById('btnCreateTeam');
+        if (btnCreateTeam) {
+            btnCreateTeam.addEventListener('click', () => this.createTeam());
+        }
+
+        // Wait for invite button
+        const btnWaitForInvite = document.getElementById('btnWaitForInvite');
+        if (btnWaitForInvite) {
+            btnWaitForInvite.addEventListener('click', () => this.waitForInvite());
+        }
+
+        // Show registration button
+        const btnShowRegistration = document.getElementById('btnShowRegistration');
+        if (btnShowRegistration) {
+            btnShowRegistration.addEventListener('click', () => this.showRegistration());
         }
     },
 
@@ -75,7 +140,7 @@ const loginApp = {
         const authData = localStorage.getItem('cloud-auth');
         if (!authData) {
             this.showLoginForm();
-            return;
+            return false;
         }
 
         const auth = JSON.parse(authData);
@@ -84,7 +149,7 @@ const loginApp = {
         if (Date.now() - auth.timestamp > 3500000) {
             localStorage.removeItem('cloud-auth');
             this.showLoginForm();
-            return;
+            return false;
         }
 
         this.currentUser = {
@@ -96,6 +161,7 @@ const loginApp = {
 
         this.showLoading('Проверка доступа...');
         this.checkAccess();
+        return true;
     },
 
     checkAuthCallback() {
@@ -141,6 +207,7 @@ const loginApp = {
         localStorage.removeItem('traffic-analytics-temp');
         localStorage.removeItem('roleGuard');
         this.currentUser = null;
+        this.currentRole = null;
         this.storageReady = false;
         this.pendingRequest = null;
         this.showLoginForm();
@@ -154,18 +221,41 @@ const loginApp = {
             return this.mockApiCall(action, params);
         }
 
-        const url = new URL(this.SCRIPT_URL);
-        url.searchParams.set('action', action);
-        url.searchParams.set('accessToken', this.currentUser.accessToken);
-
-        for (const [key, value] of Object.entries(params)) {
-            if (value !== undefined && value !== null) {
-                url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
-            }
+        // Проверяем наличие токена
+        if (!this.currentUser?.accessToken) {
+            console.error('secureApiCall: No access token available');
+            return { error: 'No access token' };
         }
 
-        const response = await fetch(url.toString(), { method: 'GET' });
-        return response.json();
+        try {
+            // Используем GET запрос с URL параметрами (как CloudStorage)
+            // GAS теряет POST body при редиректе, поэтому GET надёжнее
+            const url = new URL(this.SCRIPT_URL);
+            url.searchParams.set('action', action);
+            url.searchParams.set('accessToken', this.currentUser.accessToken);
+
+            // Добавляем остальные параметры
+            for (const [key, value] of Object.entries(params)) {
+                if (value !== undefined && value !== null) {
+                    url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
+                }
+            }
+
+            const response = await fetch(url.toString(), { method: 'GET' });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            // Проверяем тип ошибки
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new Error('Ошибка сети. Проверьте подключение к интернету.');
+            }
+            throw error;
+        }
     },
 
     // ============ MOCK API ============
@@ -280,24 +370,80 @@ const loginApp = {
         try {
             const result = await this.secureApiCall('checkAccess');
 
-            // DEBUG: Логируем ответ от API для отладки
-            console.log('checkAccess API response:', result);
-
             if (result.error) {
+                // Если токен недействителен - очищаем auth данные и показываем логин
+                if (result.error.includes('access token') || result.error.includes('Access denied') || result.error.includes('Invalid')) {
+                    localStorage.removeItem('cloud-auth');
+                    localStorage.removeItem('roleGuard-cache');
+                    this.currentUser = null;
+                    this.showLoginForm();
+                    return;
+                }
                 throw new Error(result.error);
             }
 
-            // Адаптер: преобразуем старый формат бэкенда в новый
+            // Адаптер: поддержка старого и нового формата API
+            // Старый формат: { allowed, pendingRequest }
+            // Новый формат: { hasAccess, status, role, teamId }
             let status;
-            if (result.allowed === true) {
-                status = 'approved';
-            } else if (result.pendingRequest === true) {
-                status = result.status || 'pending';
-            } else if (result.allowed === false && result.pendingRequest === false) {
-                status = 'new';
+
+            // Определяем формат ответа
+            const isNewFormat = 'hasAccess' in result || ('status' in result && !('allowed' in result));
+
+            if (isNewFormat) {
+                // Новый формат API (AppsScript_Test.js)
+                // ВАЖНО: Сначала проверяем специальные статусы, потом hasAccess
+                if (result.status === 'waiting_invite') {
+                    // Пользователь одобрен, но ждёт приглашения в команду
+                    status = 'waiting_invite';
+                } else if (result.status === 'blocked') {
+                    status = 'blocked';
+                } else if (result.hasAccess === true) {
+                    // Полный доступ - активный пользователь в команде
+                    status = 'approved';
+                } else if (!result.email && !result.role) {
+                    // Пользователь не найден в системе
+                    status = 'new';
+                } else {
+                    // hasAccess === false, смотрим на status
+                    switch (result.status) {
+                        case 'active':
+                            // Активный пользователь без доступа (нет команды?)
+                            // Админы могут входить даже без команды
+                            if (result.role === 'admin' || result.teamId) {
+                                status = 'approved';
+                            } else {
+                                status = 'approved_no_team';
+                            }
+                            break;
+                        case 'pending':
+                            status = 'pending';
+                            break;
+                        default:
+                            status = result.status || 'new';
+                    }
+                }
             } else {
-                // Если уже новый формат с полем status
-                status = result.status;
+                // Старый формат API (production)
+                if (result.allowed === true) {
+                    status = 'approved';
+                } else if (result.pendingRequest === true) {
+                    status = result.status || 'pending';
+                } else if (result.allowed === false && result.pendingRequest === false) {
+                    status = 'new';
+                } else {
+                    status = result.status;
+                }
+            }
+
+            // Сохраняем роль для последующих проверок (например, в checkStorage)
+            this.currentRole = result.role || null;
+
+            // ВАЖНО: Guest всегда редиректится на waiting-invite, независимо от статуса
+            // (роль guest = пользователь ещё не принял приглашение в команду)
+            if (result.role === 'guest') {
+                window.location.href = 'waiting-invite.html';
+                return;
             }
 
             switch (status) {
@@ -326,6 +472,11 @@ const loginApp = {
                     this.showAccessBlocked();
                     break;
 
+                case 'waiting_invite':
+                    // Редирект на страницу ожидания приглашения
+                    window.location.href = 'waiting-invite.html';
+                    break;
+
                 default:
                     console.error('Unknown access status:', status, 'Full response:', result);
                     this.showError(`Неизвестное состояние доступа: ${status || 'undefined'}`);
@@ -344,7 +495,7 @@ const loginApp = {
 
         this.hideAll();
         this.showUserInfo();
-        document.getElementById('loginRegistration').style.display = 'block';
+        document.getElementById('loginRegistration').classList.remove('hidden');
         this.updateStatus('Регистрация', '');
     },
 
@@ -358,7 +509,7 @@ const loginApp = {
         const reddyId = formData.get('reddyId').trim();
 
         if (!reddyId) {
-            Toast.warning('Введите Reddy ID');
+            this.showToast('warning', 'Введите Reddy ID');
             return false;
         }
 
@@ -395,7 +546,7 @@ const loginApp = {
     showChooseRole() {
         this.hideAll();
         this.showUserInfo();
-        document.getElementById('loginChooseRole').style.display = 'block';
+        document.getElementById('loginChooseRole').classList.remove('hidden');
         this.updateStatus('Выберите роль', 'success');
     },
 
@@ -423,10 +574,17 @@ const loginApp = {
         this.showUserInfo();
 
         // Показываем специальный экран ожидания приглашения
-        document.getElementById('loginAccessPending').style.display = 'block';
-        document.querySelector('#loginAccessPending .access-title').textContent = 'Ожидайте приглашение';
-        document.querySelector('#loginAccessPending .access-description').innerHTML =
-            'Ваш аккаунт активен.<br>Руководитель пригласит вас в команду по Reddy ID.';
+        const pendingEl = document.getElementById('loginAccessPending');
+        if (pendingEl) {
+            pendingEl.classList.remove('hidden');
+
+            const titleEl = pendingEl.querySelector('.access-title');
+            if (titleEl) titleEl.textContent = 'Ожидайте приглашение';
+
+            const descEl = pendingEl.querySelector('.access-description');
+            if (descEl) descEl.innerHTML = 'Ваш аккаунт активен.<br>Руководитель пригласит вас в команду по Reddy ID.';
+        }
+
         this.updateStatus('Ожидание приглашения', 'pending');
     },
 
@@ -444,6 +602,12 @@ const loginApp = {
             const result = await this.secureApiCall('checkStorage');
 
             if (result.error) {
+                // Если action не существует (test AppsScript), пропускаем проверку
+                if (result.error.includes('Unknown action')) {
+                    this.storageReady = true;
+                    this.showSuccess();
+                    return;
+                }
                 throw new Error(result.error);
             }
 
@@ -455,7 +619,18 @@ const loginApp = {
                 }));
                 this.showSuccess();
             } else {
-                this.showInitStorage();
+                // Хранилище не существует - проверяем роль
+                const canInitStorage = this.currentRole === 'admin' || this.currentRole === 'leader';
+
+                if (canInitStorage) {
+                    // Admin/Leader могут создать хранилище
+                    this.showInitStorage();
+                } else {
+                    // Остальные роли - пропускаем инициализацию и пускаем в систему
+                    // Хранилище будет создано когда leader войдёт
+                    this.storageReady = false;  // Отмечаем что хранилище не готово
+                    this.showSuccess();
+                }
             }
 
         } catch (error) {
@@ -496,13 +671,13 @@ const loginApp = {
 
     showLoginForm() {
         this.hideAll();
-        document.getElementById('loginContent').style.display = 'block';
+        document.getElementById('loginContent').classList.remove('hidden');
         this.updateStatus('Требуется авторизация', '');
     },
 
     showLoading(text) {
         this.hideAll();
-        document.getElementById('loginLoading').style.display = 'block';
+        document.getElementById('loginLoading').classList.remove('hidden');
         document.querySelector('#loginLoading p').textContent = text || 'Загрузка...';
     },
 
@@ -511,45 +686,51 @@ const loginApp = {
         this.showUserInfo();
 
         // Сбросить текст на дефолтный
-        document.querySelector('#loginAccessPending .access-title').textContent = 'Запрос отправлен';
-        document.querySelector('#loginAccessPending .access-description').innerHTML =
-            'Ваш запрос отправлен администратору.<br>Ожидайте одобрения.';
+        const pendingEl = document.getElementById('loginAccessPending');
+        if (pendingEl) {
+            const titleEl = pendingEl.querySelector('.access-title');
+            if (titleEl) titleEl.textContent = 'Запрос отправлен';
 
-        document.getElementById('loginAccessPending').style.display = 'block';
+            const descEl = pendingEl.querySelector('.access-description');
+            if (descEl) descEl.innerHTML = 'Ваш запрос отправлен администратору.<br>Ожидайте одобрения.';
+
+            pendingEl.classList.remove('hidden');
+        }
+
         this.updateStatus('Ожидание одобрения', 'pending');
     },
 
     showAccessRejected() {
         this.hideAll();
         this.showUserInfo();
-        document.getElementById('loginAccessRejected').style.display = 'block';
+        document.getElementById('loginAccessRejected').classList.remove('hidden');
         this.updateStatus('Запрос отклонён', 'error');
     },
 
     showAccessBlocked() {
         this.hideAll();
         this.showUserInfo();
-        document.getElementById('loginAccessBlocked').style.display = 'block';
+        document.getElementById('loginAccessBlocked').classList.remove('hidden');
         this.updateStatus('Доступ заблокирован', 'error');
     },
 
     showInitStorage() {
         this.hideAll();
         this.showUserInfo();
-        document.getElementById('loginActions').style.display = 'block';
+        document.getElementById('loginActions').classList.remove('hidden');
         this.updateStatus('Хранилище не найдено', '');
     },
 
     showSuccess() {
         this.hideAll();
         this.showUserInfo();
-        document.getElementById('loginContinue').style.display = 'block';
+        document.getElementById('loginContinue').classList.remove('hidden');
         this.updateStatus('Авторизация успешна', 'success');
     },
 
     showError(message) {
         this.hideAll();
-        document.getElementById('loginError').style.display = 'block';
+        document.getElementById('loginError').classList.remove('hidden');
         document.getElementById('errorText').textContent = message;
         this.updateStatus('Ошибка', 'error');
     },
@@ -580,7 +761,7 @@ const loginApp = {
 
         nameEl.textContent = this.currentUser.name || 'Пользователь';
         emailEl.textContent = this.currentUser.email;
-        userEl.style.display = 'flex';
+        userEl.classList.remove('hidden');
     },
 
     hideAll() {
@@ -600,7 +781,7 @@ const loginApp = {
 
         elements.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
+            if (el) el.classList.add('hidden');
         });
     },
 
@@ -621,6 +802,15 @@ const loginApp = {
 
     // ============ HELPERS ============
 
+    showToast(type, message) {
+        // Безопасный вызов Toast с fallback на консоль
+        if (typeof Toast !== 'undefined') {
+            Toast[type](message);
+        } else {
+            console.warn(`[${type.toUpperCase()}] ${message}`);
+        }
+    },
+
     getInitials(name) {
         if (!name) return '?';
         const parts = name.trim().split(' ');
@@ -634,4 +824,5 @@ const loginApp = {
 // Initialize on load
 document.addEventListener('DOMContentLoaded', function() {
     loginApp.init();
+    loginApp.attachEventListeners();
 });

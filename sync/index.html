@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Настройки - AIAdminka</title>
     <!-- Design System (base styles) -->
     <link rel="stylesheet" href="../shared/css/design-system.css">
@@ -42,7 +42,10 @@
                                     <div class="profile-email" id="userEmail">-</div>
                                     <div class="profile-role">
                                         <span class="role-badge" id="userRole">-</span>
-                                        <span class="team-name" id="userTeam"></span>
+                                        <span class="team-name-editable" id="teamNameDisplay" data-leader-only data-action="edit-team-name">
+                                            <span id="teamNameText">Команда</span>
+                                            <img src="../shared/icons/pen.svg" width="12" height="12" alt="Редактировать">
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -51,7 +54,7 @@
                         <!-- Profile Form -->
                         <div class="settings-card">
                             <div class="card-title">Профиль</div>
-                            <form class="profile-form" id="profileForm" onsubmit="return settingsApp.saveProfile(event)">
+                            <form class="profile-form" id="profileForm">
                                 <!-- Основная информация -->
                                 <div class="form-section">
                                     <div class="form-section-title">Основная информация</div>
@@ -61,8 +64,8 @@
                                             <input type="text" id="profileName" name="name" placeholder="Иванов Иван Иванович">
                                         </div>
                                         <div class="form-group">
-                                            <label>Должность</label>
-                                            <input type="text" id="profilePosition" name="position" placeholder="Менеджер">
+                                            <label>Роль</label>
+                                            <select id="profilePosition" name="position" disabled></select>
                                         </div>
                                     </div>
                                 </div>
@@ -104,7 +107,7 @@
                                     <div class="form-row">
                                         <div class="form-group">
                                             <label>Рабочая почта</label>
-                                            <input type="email" id="profileCorpEmail" name="corpEmail" placeholder="work@company.com">
+                                            <input type="email" id="profileCorpEmail" name="corpEmail" placeholder="work@company.com" readonly disabled>
                                         </div>
                                         <div class="form-group">
                                             <label>Личная почта</label>
@@ -168,7 +171,7 @@
                     <div class="settings-column settings-column-side">
 
                         <!-- Team Info (for non-leaders) -->
-                        <div class="settings-card" id="teamInfoSection" style="display: none;">
+                        <div class="settings-card hidden" id="teamInfoSection">
                             <div class="card-title">Команда</div>
                             <div class="info-row">
                                 <span class="info-label">Руководитель</span>
@@ -219,7 +222,7 @@
                                     <span class="system-label">Локальный кэш</span>
                                     <span class="system-value" id="localCacheSize">-</span>
                                 </div>
-                                <button class="btn btn-ghost btn-sm" onclick="settingsApp.clearCache()">Очистить</button>
+                                <button class="btn btn-ghost btn-sm" data-action="clear-cache">Очистить</button>
                             </div>
                         </div>
 
@@ -227,7 +230,7 @@
                         <div class="settings-card card-danger">
                             <div class="card-title">Опасная зона</div>
                             <p class="card-hint">Выход из системы удалит локальные данные авторизации.</p>
-                            <button class="btn btn-danger" onclick="settingsApp.logout()">Выйти из аккаунта</button>
+                            <button class="btn btn-danger" data-action="logout">Выйти из аккаунта</button>
                         </div>
 
                     </div>
@@ -244,7 +247,7 @@
         <div class="modal-dialog modal-sm">
             <div class="modal-header">
                 <h2 class="modal-title">Выход из аккаунта</h2>
-                <button class="modal-close" onclick="settingsApp.closeModal('logoutModal')">
+                <button class="modal-close" data-action="close-modal" data-modal="logoutModal">
                     <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
                 </button>
             </div>
@@ -252,8 +255,49 @@
                 <p>Вы уверены, что хотите выйти?</p>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="settingsApp.closeModal('logoutModal')">Отмена</button>
-                <button class="btn btn-danger" onclick="settingsApp.confirmLogout()">Выйти</button>
+                <button class="btn btn-secondary" data-action="close-modal" data-modal="logoutModal">Отмена</button>
+                <button class="btn btn-danger" data-action="confirm-logout">Выйти</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Team Name Modal -->
+    <div class="modal" id="teamNameModal">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Название команды</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="teamNameModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Введите название</label>
+                    <input type="text" class="form-input" id="teamNameModalInput" placeholder="Название команды">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="close-modal" data-modal="teamNameModal">Отмена</button>
+                <button class="btn btn-primary" data-action="save-team-name">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear Cache Confirmation Modal -->
+    <div class="modal" id="clearCacheModal">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Очистить кэш</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="clearCacheModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Очистить кэш данных? Данные будут загружены заново из облака при следующем посещении.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="close-modal" data-modal="clearCacheModal">Отмена</button>
+                <button class="btn btn-danger" data-action="confirm-clear-cache">Очистить</button>
             </div>
         </div>
     </div>
@@ -261,40 +305,19 @@
     <!-- Shared JS -->
     <script src="../shared/js/component-loader.js"></script>
     <script src="../shared/js/sidebar-controller.js"></script>
+    <script src="../shared/js/about-modal.js"></script>
+    <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/error-handler.js"></script>
     <script src="../shared/version.js"></script>
+    <script src="../shared/storage.js"></script>
+    <script src="../shared/env-config.js"></script>
     <script src="../shared/cloud-storage.js"></script>
     <script src="../shared/sync-manager.js"></script>
     <script src="../shared/auth-guard.js"></script>
+    <script src="../shared/roles-config.js"></script>
     <script src="../shared/role-guard.js"></script>
 
     <!-- Module JS -->
     <script src="js/settings.js"></script>
-
-    <script>
-        // Initialize ComponentLoader and load shared components
-        document.addEventListener('DOMContentLoaded', async function() {
-            // Initialize ComponentLoader with path to shared folder
-            ComponentLoader.init('../shared');
-
-            // Load sidebar and about modal in parallel
-            await ComponentLoader.loadAll([
-                {
-                    name: 'sidebar',
-                    target: '#sidebar-container',
-                    options: {
-                        basePath: '..',
-                        activeModule: 'settings'
-                    }
-                },
-                {
-                    name: 'about-modal',
-                    target: '#about-modal-container',
-                    options: {
-                        basePath: '..'
-                    }
-                }
-            ]);
-        });
-    </script>
 </body>
 </html>

@@ -1,37 +1,75 @@
 /**
  * AIAdminka Sidebar Controller
  * Управление состоянием sidebar
- * @version 1.0
+ * @version 1.1 - Добавлена динамическая генерация модулей
  */
 
 const SidebarController = {
     sidebar: null,
     activeModule: null,
+    basePath: '',
+
+    // Конфигурация всех модулей системы
+    MODULES_CONFIG: [
+        { id: 'home', name: 'Главная', icon: 'main_page', href: '/index.html', alwaysVisible: true },
+        { id: 'reports', name: 'Отчеты', icon: 'excel_reports', href: '/excel-reports/index.html' },
+        { id: 'team-info', name: 'Сотрудники', icon: 'team_info', href: '/team-info/index.html' },
+        { id: 'traffic', name: 'Расчет трафика', icon: 'traffic-calculation', href: '/traffic-calculation/index.html' },
+        { id: 'partners', name: 'Партнеры', icon: 'partners', href: '/partners/index.html' },
+        { id: 'documentation', name: 'Документация', icon: 'documents', href: '/documentation/index.html' },
+        { id: 'settings', name: 'Настройки', icon: 'sync', href: '/sync/index.html' },
+        // Разделитель перед админкой
+        { id: 'separator', type: 'separator' },
+        { id: 'admin-panel', name: 'Администрирование', icon: 'admin', href: '/admin/index.html', hasBadge: true }
+    ],
 
     /**
      * Инициализация контроллера
      * @param {Object} options
      * @param {string} options.activeModule - текущий модуль для подсветки
+     * @param {string} options.basePath - базовый путь для ссылок
+     * @param {boolean} options.dynamicModules - использовать динамическую генерацию модулей
      */
     init(options = {}) {
         this.sidebar = document.getElementById('sidebar');
-        if (!this.sidebar) {
-            console.warn('[SidebarController] Sidebar element not found');
-            return;
-        }
+        if (!this.sidebar) return;
 
         this.activeModule = options.activeModule || null;
+        this.basePath = options.basePath || '';
 
         // Восстанавливаем состояние collapsed из localStorage
         this.restoreState();
+
+        // Подключаем toggle button
+        this.initToggleButton();
+
+        // Динамическая генерация модулей или применение RoleGuard
+        if (options.dynamicModules) {
+            this.renderDynamicModules();
+        } else {
+            // Применяем RoleGuard если доступен
+            this.applyRoleGuard();
+        }
 
         // Устанавливаем активный пункт меню
         if (this.activeModule) {
             this.setActiveItem(this.activeModule);
         }
+    },
 
-        // Применяем RoleGuard если доступен
-        this.applyRoleGuard();
+    /**
+     * Инициализация кнопки toggle
+     */
+    initToggleButton() {
+        const toggleBtn = this.sidebar?.querySelector('#sidebarToggleBtn');
+        if (!toggleBtn) return;
+
+        // Убираем предыдущий обработчик (защита от повторного init)
+        if (this._toggleHandler) {
+            toggleBtn.removeEventListener('click', this._toggleHandler);
+        }
+        this._toggleHandler = () => this.toggle();
+        toggleBtn.addEventListener('click', this._toggleHandler);
     },
 
     /**
@@ -119,6 +157,72 @@ const SidebarController = {
                 item.style.display = 'none';
             }
         });
+    },
+
+    /**
+     * Динамическая генерация модулей на основе прав пользователя
+     * Используется когда RoleGuard инициализирован
+     */
+    renderDynamicModules() {
+        if (!this.sidebar) return;
+
+        const menuContainer = this.sidebar.querySelector('.sidebar-menu');
+        if (!menuContainer) return;
+
+        // Очищаем текущие модули
+        menuContainer.innerHTML = '';
+
+        // Получаем права пользователя
+        const hasRoleGuard = typeof RoleGuard !== 'undefined' && RoleGuard.initialized;
+
+        // Генерируем элементы меню
+        this.MODULES_CONFIG.forEach(module => {
+            // Разделитель
+            if (module.type === 'separator') {
+                const separator = document.createElement('div');
+                separator.className = 'menu-separator';
+                menuContainer.appendChild(separator);
+                return;
+            }
+
+            // Проверка доступа
+            const canAccess = module.alwaysVisible ||
+                !hasRoleGuard ||
+                RoleGuard.canAccess(module.id);
+
+            if (!canAccess) return;
+
+            // Создаём элемент меню
+            const menuItem = document.createElement('a');
+            menuItem.href = this.basePath + module.href;
+            menuItem.className = 'menu-item';
+            menuItem.dataset.module = module.id;
+
+            menuItem.innerHTML = `
+                <span>${this.escapeHtml(module.name)}</span>
+                <img src="${this.basePath}/shared/icons/${module.icon}.svg" width="18" height="18" alt="">
+                ${module.hasBadge ? '<span class="requests-badge" id="adminRequestsBadge"></span>' : ''}
+            `;
+
+            menuContainer.appendChild(menuItem);
+        });
+
+        // Устанавливаем активный пункт если задан
+        if (this.activeModule) {
+            this.setActiveItem(this.activeModule);
+        }
+    },
+
+    /**
+     * Экранирование HTML для безопасности
+     * @param {string} text
+     * @returns {string}
+     */
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     },
 
     /**

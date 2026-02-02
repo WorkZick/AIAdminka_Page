@@ -145,6 +145,26 @@
     color: var(--status-purple);
 }
 
+.role-badge.role-partners_mgr {
+    background: rgba(218, 119, 242, 0.2);
+    color: #da77f2;
+}
+
+.role-badge.role-payments {
+    background: rgba(56, 217, 169, 0.2);
+    color: #38d9a9;
+}
+
+.role-badge.role-antifraud {
+    background: rgba(255, 146, 43, 0.2);
+    color: #ff922b;
+}
+
+.role-badge.role-tech {
+    background: rgba(116, 143, 252, 0.2);
+    color: #748ffc;
+}
+
 /* ==================== COUNT BADGE ==================== */
 .count-badge {
     display: inline-flex;
