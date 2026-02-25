@@ -5,25 +5,38 @@ const OnboardingForm = (() => {
 
     let _fileDataUrls = {};
 
+    function _shouldShowField(field, stepData, step) {
+        if (!field.showWhen) return true;
+        if (field.showWhen.phase === 'fill' && step.dynamicExecutor) {
+            // Handoff completed → show all fields (readonly rendering handles display)
+            if (stepData._handoff_complete) return true;
+            const creator = stepData[step.dynamicExecutor.field];
+            if (!creator) return false;
+            // onlyCreator: show only when specific creator is chosen
+            if (field.showWhen.onlyCreator && creator !== field.showWhen.onlyCreator) return false;
+            const myRole = OnboardingState.get('userRole');
+            const isAdminLike = myRole === 'admin' || myRole === 'leader';
+            if (isAdminLike) return true;
+            if (creator === step.dynamicExecutor.executorValue && myRole === 'executor') return true;
+            if (creator === step.dynamicExecutor.reviewerValue && myRole === 'reviewer') return true;
+            return false;
+        }
+        return true;
+    }
+
     function render(request, stepNumber) {
         const step = OnboardingConfig.getStep(stepNumber);
         if (!step) return;
 
         _fileDataUrls = {};
 
-        // Render steps indicator
-        OnboardingSteps.render('formSteps', stepNumber);
+        // Sidebar: vertical steps + info
+        OnboardingSteps.renderVertical('formSteps', stepNumber);
+        OnboardingSteps.renderInfo('formInfo', request);
 
-        // Render banner (reject comment)
+        // Main: banner + form fields + submit button
         _renderBanner(request);
-
-        // Render previous steps (readonly)
-        _renderPrevSteps(request, stepNumber);
-
-        // Render form fields
         _renderFields(step, request.stageData[stepNumber] || {}, request);
-
-        // Update submit button text
         _updateSubmitButton(step, stepNumber);
     }
 
@@ -34,7 +47,7 @@ const OnboardingForm = (() => {
         if (request.lastComment) {
             banner.classList.remove('hidden');
             banner.innerHTML = `<div class="banner-warning">
-                <img src="../shared/icons/warning.svg" width="16" height="16" alt="">
+                <img src="../shared/icons/alert-triangle.svg" width="16" height="16" alt="">
                 <div class="banner-text">
                     <strong>Замечание:</strong> ${Utils.escapeHtml(request.lastComment)}
                 </div>
@@ -45,51 +58,57 @@ const OnboardingForm = (() => {
         }
     }
 
-    function _renderPrevSteps(request, currentStep) {
-        const container = document.getElementById('formPrevSteps');
-        if (!container) return;
-
-        if (currentStep <= 1) {
-            container.innerHTML = '';
-            return;
-        }
-
-        let html = '';
-        for (let i = 1; i < currentStep; i++) {
-            const step = OnboardingConfig.getStep(i);
-            const data = request.stageData[i] || {};
-            html += `<div class="prev-step-section">
-                <div class="prev-step-header" data-action="onb-togglePrevStep" data-value="${i}">
-                    <span class="prev-step-title">${Utils.escapeHtml(step.name)}</span>
-                    <img class="prev-step-arrow" src="../shared/icons/arrow.svg" width="12" height="12" alt="">
-                </div>
-                <div class="prev-step-body hidden" id="prevStep${i}">
-                    ${_renderReadonlyFields(step, data, request)}
-                </div>
-            </div>`;
-        }
-        container.innerHTML = html;
-    }
-
     function _renderFields(step, data, request) {
         const container = document.getElementById('formFields');
         if (!container) return;
 
+        const myRole = OnboardingState.get('userRole');
+        const stepData = data;
+
+        const isHandoffComplete = step.dynamicExecutor && stepData._handoff_complete;
+
         const html = step.fields.map(field => {
+            if (!_shouldShowField(field, stepData, step)) return '';
+
             // Handle autofill
             let value = data[field.id];
             if (value === undefined && field.autofill) {
                 const sourceData = request.stageData[field.autofill.step] || {};
                 value = sourceData[field.autofill.field] || '';
-                // For select autofill, resolve label
                 if (field.autofill.field === 'method_name') {
                     value = OnboardingConfig.getOptionLabel(OnboardingConfig.METHOD_NAMES, value) || value;
                 }
             }
+
+            // Readonly for all fields when handoff completed (executor views reviewer's data)
+            if (isHandoffComplete) {
+                let display = value || '—';
+                if (field.type === 'select') {
+                    display = OnboardingConfig.getOptionLabel(field.options || [], value) || value || '—';
+                }
+                return `<div class="readonly-field">
+                    <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
+                    <span class="readonly-value">${Utils.escapeHtml(String(display))}</span>
+                </div>`;
+            }
+
+            // Readonly for account_creator when reviewer fills
+            if (step.dynamicExecutor && field.id === step.dynamicExecutor.field) {
+                const creator = data[step.dynamicExecutor.field];
+                if (creator === step.dynamicExecutor.reviewerValue && myRole === 'reviewer') {
+                    const label = OnboardingConfig.getOptionLabel(field.options || [], creator);
+                    return `<div class="form-group" data-field="${field.id}">
+                        <label class="form-label">${Utils.escapeHtml(field.label)}</label>
+                        <div class="form-input readonly-input">${Utils.escapeHtml(label)}</div>
+                        <input type="hidden" id="field_${field.id}" name="${field.id}" value="${Utils.escapeHtml(creator)}">
+                    </div>`;
+                }
+            }
+
             return _renderField(field, value || '');
         }).join('');
 
-        container.innerHTML = `<h3 class="form-step-title">${Utils.escapeHtml(step.name)}</h3>${html}`;
+        container.innerHTML = `<h3 class="form-step-title">${Utils.escapeHtml(OnboardingConfig.getStepLabel(step.number))}</h3>${html}`;
 
         // Setup file inputs
         container.querySelectorAll('input[type="file"]').forEach(input => {
@@ -189,57 +208,6 @@ const OnboardingForm = (() => {
         }
     }
 
-    function _renderReadonlyFields(step, data, request) {
-        return step.fields.map(field => {
-            let value = data[field.id];
-            if (value === undefined) return '';
-
-            let displayValue = '';
-            switch (field.type) {
-                case 'select':
-                    displayValue = OnboardingConfig.getOptionLabel(field.options || [], value) || value;
-                    break;
-                case 'file':
-                    if (value) {
-                        const safeUrl = String(value).startsWith('data:') ? value : Utils.escapeHtml(String(value));
-                        displayValue = `<img class="readonly-photo" src="${safeUrl}" alt="" data-action="onb-openPhoto">`;
-                        return `<div class="readonly-field">
-                            <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
-                            <span class="readonly-value">${displayValue}</span>
-                        </div>`;
-                    }
-                    return '';
-                case 'list':
-                    if (Array.isArray(value) && value.length) {
-                        displayValue = value.map(v => Utils.escapeHtml(v)).join(', ');
-                    } else {
-                        return '';
-                    }
-                    break;
-                case 'checklist':
-                    if (typeof value === 'object' && value !== null) {
-                        const items = field.items || [];
-                        displayValue = items.map((item, idx) =>
-                            `<span class="checklist-readonly-item ${value[idx] ? 'checked' : ''}">${value[idx] ? '&#10003;' : '&#10007;'} ${Utils.escapeHtml(item.label)}</span>`
-                        ).join('');
-                        return `<div class="readonly-field">
-                            <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
-                            <div class="readonly-checklist">${displayValue}</div>
-                        </div>`;
-                    }
-                    return '';
-                default:
-                    displayValue = Utils.escapeHtml(String(value || ''));
-            }
-
-            if (!displayValue) return '';
-            return `<div class="readonly-field">
-                <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
-                <span class="readonly-value">${displayValue}</span>
-            </div>`;
-        }).join('');
-    }
-
     function _updateSubmitButton(step, stepNumber) {
         const btn = document.getElementById('btnFormSubmit');
         if (!btn) return;
@@ -253,6 +221,19 @@ const OnboardingForm = (() => {
 
         if (stepNumber === OnboardingConfig.STEPS.length) {
             btn.textContent = 'Завершить';
+        } else if (step.dynamicExecutor && request) {
+            const data = request.stageData[stepNumber] || {};
+            const creator = data[step.dynamicExecutor.field];
+            const myRole = OnboardingState.get('userRole');
+            if (data._handoff_complete) {
+                btn.textContent = 'Далее';
+            } else if (creator === step.dynamicExecutor.reviewerValue && myRole !== 'reviewer' && myRole !== 'admin' && myRole !== 'leader') {
+                btn.textContent = 'Отправить на создание';
+            } else if (creator === step.dynamicExecutor.reviewerValue && myRole === 'reviewer') {
+                btn.textContent = 'Отправить экзекьютору';
+            } else {
+                btn.textContent = 'Далее';
+            }
         } else if (step.reviewer) {
             btn.textContent = 'Отправить на проверку';
         } else {
@@ -335,13 +316,17 @@ const OnboardingForm = (() => {
 
         const data = collectFormData(stepNumber);
         const request = OnboardingState.get('currentRequest');
+        const existing = (request && request.stageData && request.stageData[stepNumber]) || {};
+        const merged = { ...existing, ...data };
         const errors = [];
 
         // Check required
         step.fields.forEach(field => {
+            if (!_shouldShowField(field, merged, step)) return;
             if (!field.required) return;
 
-            const value = data[field.id];
+            // For file fields, also check existing stageData (files aren't re-read on every render)
+            const value = field.type === 'file' ? (data[field.id] || existing[field.id]) : data[field.id];
             if (field.type === 'checklist') {
                 // All items must be checked
                 if (typeof value !== 'object') {

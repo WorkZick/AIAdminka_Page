@@ -7,22 +7,13 @@ const OnboardingReview = (() => {
         const step = OnboardingConfig.getStep(stepNumber);
         if (!step) return;
 
-        // Steps indicator
-        OnboardingSteps.render('reviewSteps', stepNumber);
+        // Sidebar: vertical steps + info
+        OnboardingSteps.renderVertical('reviewSteps', stepNumber);
+        OnboardingSteps.renderInfo('reviewInfo', request);
 
-        // Header with status
+        // Main: header + current step data + actions
         _renderHeader(request, step);
-
-        // Previous steps readonly
-        _renderPrevSteps(request, stepNumber);
-
-        // Current step data
         _renderCurrentStep(step, request.stageData[stepNumber] || {}, request);
-
-        // History
-        _renderHistory(request);
-
-        // Update action buttons visibility
         _updateActions(request);
     }
 
@@ -31,55 +22,34 @@ const OnboardingReview = (() => {
         if (!header) return;
 
         const statusConf = OnboardingConfig.STATUSES[request.status] || {};
-        header.innerHTML = `<div class="review-step-name">${Utils.escapeHtml(step.name)}</div>
+        header.innerHTML = `<div class="review-step-name">${Utils.escapeHtml(OnboardingConfig.getStepLabel(step.number))}</div>
             <span class="status-badge ${Utils.escapeHtml(statusConf.cssClass || '')}">${Utils.escapeHtml(statusConf.label || request.status)}</span>`;
-    }
-
-    function _renderPrevSteps(request, currentStep) {
-        const container = document.getElementById('reviewPrevSteps');
-        if (!container) return;
-
-        if (currentStep <= 1) {
-            container.innerHTML = '';
-            return;
-        }
-
-        let html = '';
-        for (let i = 1; i < currentStep; i++) {
-            const step = OnboardingConfig.getStep(i);
-            const data = request.stageData[i] || {};
-            html += `<div class="prev-step-section">
-                <div class="prev-step-header" data-action="onb-togglePrevStep" data-value="${i}">
-                    <span class="prev-step-title">${Utils.escapeHtml(step.name)}</span>
-                    <img class="prev-step-arrow" src="../shared/icons/arrow.svg" width="12" height="12" alt="">
-                </div>
-                <div class="prev-step-body hidden" id="reviewPrevStep${i}">
-                    ${_renderReadonly(step, data, request)}
-                </div>
-            </div>`;
-        }
-        container.innerHTML = html;
     }
 
     function _renderCurrentStep(step, data, request) {
         const container = document.getElementById('reviewFields');
         if (!container) return;
 
-        container.innerHTML = `<h3 class="review-step-title">${Utils.escapeHtml(step.name)}</h3>
-            <div class="review-fields-list">${_renderReadonly(step, data, request)}</div>`;
+        container.innerHTML = `<div class="review-fields-list">${_renderReadonly(step, data, request)}</div>`;
     }
 
     function _renderReadonly(step, data, request) {
         return step.fields.map(field => {
+            // Hide showWhen fields that have no data (e.g. login/password not yet filled)
+            if (field.showWhen && field.showWhen.phase === 'fill') {
+                const value = data[field.id];
+                if (value === undefined || value === '' || value === null) return '';
+            }
+
             let value = data[field.id];
-            if (value === undefined || value === '') return '';
+            const empty = value === undefined || value === '' || value === null;
 
             switch (field.type) {
                 case 'select':
-                    return _field(field.label, OnboardingConfig.getOptionLabel(field.options || [], value) || value);
+                    return _field(field.label, empty ? '—' : (OnboardingConfig.getOptionLabel(field.options || [], value) || value));
 
                 case 'file':
-                    if (!value) return '';
+                    if (empty) return _field(field.label, '—');
                     const safeUrl = String(value).startsWith('data:') ? value : Utils.escapeHtml(String(value));
                     return `<div class="readonly-field">
                         <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
@@ -87,11 +57,19 @@ const OnboardingReview = (() => {
                     </div>`;
 
                 case 'list':
-                    if (!Array.isArray(value) || !value.length) return '';
+                    if (!Array.isArray(value) || !value.length) return _field(field.label, '—');
                     return _field(field.label, value.map(v => Utils.escapeHtml(v)).join(', '));
 
                 case 'checklist':
-                    if (typeof value !== 'object' || value === null) return '';
+                    if (typeof value !== 'object' || value === null) {
+                        const emptyItems = (field.items || []).map(item =>
+                            `<span class="checklist-readonly-item">&#10007; ${Utils.escapeHtml(item.label)}</span>`
+                        ).join('');
+                        return `<div class="readonly-field">
+                            <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
+                            <div class="readonly-checklist">${emptyItems}</div>
+                        </div>`;
+                    }
                     const items = (field.items || []).map((item, idx) =>
                         `<span class="checklist-readonly-item ${value[idx] ? 'checked' : ''}">${value[idx] ? '&#10003;' : '&#10007;'} ${Utils.escapeHtml(item.label)}</span>`
                     ).join('');
@@ -101,7 +79,7 @@ const OnboardingReview = (() => {
                     </div>`;
 
                 default:
-                    return _field(field.label, Utils.escapeHtml(String(value)));
+                    return _field(field.label, empty ? '—' : Utils.escapeHtml(String(value)));
             }
         }).join('');
     }
@@ -113,61 +91,42 @@ const OnboardingReview = (() => {
         </div>`;
     }
 
-    function _renderHistory(request) {
-        const container = document.getElementById('reviewHistory');
-        if (!container) return;
-
-        const history = request.history || [];
-        if (history.length === 0) {
-            container.innerHTML = '';
-            return;
-        }
-
-        const items = history.map(entry => {
-            const actionLabel = OnboardingConfig.getHistoryActionLabel(entry.action);
-            const stepName = entry.stepName || `Шаг ${entry.step}`;
-            const time = entry.timestamp ? new Date(entry.timestamp).toLocaleString('ru-RU') : '';
-            const comment = entry.comment ? `<div class="history-comment">${Utils.escapeHtml(entry.comment)}</div>` : '';
-
-            return `<div class="history-entry">
-                <div class="history-entry-header">
-                    <span class="history-action">${Utils.escapeHtml(actionLabel)}</span>
-                    <span class="history-step">${Utils.escapeHtml(stepName)}</span>
-                    <span class="history-time">${Utils.escapeHtml(time)}</span>
-                </div>
-                <div class="history-actor">${Utils.escapeHtml(entry.actor || '')}</div>
-                ${comment}
-            </div>`;
-        }).reverse().join('');
-
-        container.innerHTML = `<div class="history-section">
-            <div class="history-title" data-action="onb-toggleHistory">
-                История
-                <img class="history-arrow" src="../shared/icons/arrow.svg" width="12" height="12" alt="">
-            </div>
-            <div class="history-list hidden" id="historyList">${items}</div>
-        </div>`;
-    }
-
     function _updateActions(request) {
         const myRole = OnboardingState.get('userRole');
         const myEmail = OnboardingState.get('userEmail');
-        const withdrawBtn = document.getElementById('btnWithdraw');
+        const step = OnboardingConfig.getStep(request.currentStep);
+        const isAdminLike = myRole === 'admin' || myRole === 'leader';
+        const isReviewer = step && (step.reviewer === myRole || isAdminLike);
+        const isExecutor = step && step.executor === myRole;
+        const isTerminal = request.status === 'completed' || request.status === 'cancelled';
+        const isOnReview = request.status === 'on_review';
 
-        if (withdrawBtn) {
-            // Withdraw visible only if executor (owner) and status is on_review
-            const step = OnboardingConfig.getStep(request.currentStep);
-            const canWithdraw = request.status === 'on_review' &&
-                step && step.executor === myRole &&
-                (request.assigneeEmail === myEmail || request.createdBy === myEmail);
-            withdrawBtn.classList.toggle('hidden', !canWithdraw);
-        }
+        // Dynamic handoff: executor can withdraw when they handed off to reviewer (on_review)
+        const effectiveExecutor = OnboardingConfig.getStepEffectiveExecutor(request.currentStep, request.stageData);
+        const isDynamicHandoff = step && step.dynamicExecutor && effectiveExecutor !== step.executor && step.executor === myRole;
 
-        // Review comment + approve/reject visible only if reviewer
+        const canReview = !isTerminal && isOnReview && isReviewer;
+        const canWithdraw = !isTerminal && isOnReview && (
+            (isExecutor && (request.assigneeEmail === myEmail || request.createdBy === myEmail)) ||
+            isDynamicHandoff
+        );
+
+        // Reviewer buttons: Вернуть, Одобрить, Комментарий
+        const btnReject = document.getElementById('btnReject');
+        const btnApprove = document.getElementById('btnApprove');
+        const commentRow = document.getElementById('reviewCommentRow');
+        if (btnReject) btnReject.classList.toggle('hidden', !canReview);
+        if (btnApprove) btnApprove.classList.toggle('hidden', !canReview);
+        if (commentRow) commentRow.classList.toggle('hidden', !canReview);
+
+        // Executor button: Отозвать
+        const btnWithdraw = document.getElementById('btnWithdraw');
+        if (btnWithdraw) btnWithdraw.classList.toggle('hidden', !canWithdraw);
+
+        // Entire actions bar: hide only if nothing to show (terminal + no role match)
         const reviewActions = document.getElementById('reviewActions');
         if (reviewActions) {
-            const isTerminal = request.status === 'completed' || request.status === 'cancelled';
-            reviewActions.classList.toggle('hidden', isTerminal);
+            reviewActions.classList.toggle('hidden', !canReview && !canWithdraw);
         }
     }
 

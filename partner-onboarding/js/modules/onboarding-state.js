@@ -14,7 +14,7 @@ const OnboardingState = (() => {
             status: '',
             search: ''
         },
-        userRole: 'sales',
+        userRole: 'executor',
         userEmail: '',
         loading: false
     };

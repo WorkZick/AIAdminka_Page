@@ -7,32 +7,45 @@ const PartnerOnboarding = (() => {
     const ID_COUNTER_KEY = 'onboarding-v2-id-counter';
 
     let _confirmCallback = null;
+    const _debouncedSearch = Utils.debounce(() => OnboardingList.applyFilters(), 150);
+    const _debouncedAutosave = Utils.debounce(() => _autosaveDraft(), 500);
 
     // ── Init ──
 
     function init() {
         OnboardingList.init();
+        _loadUserData();
         _setupDevRoleSwitcher();
         _loadRequests();
         OnboardingList.setupDefaultFilters();
         OnboardingList.applyFilters();
     }
 
-    // ── Storage (localStorage mock) ──
+    function _loadUserData() {
+        const systemRole = (typeof RoleGuard !== 'undefined' && RoleGuard.getCurrentRole)
+            ? RoleGuard.getCurrentRole() : 'executor';
+        const email = (typeof RoleGuard !== 'undefined' && RoleGuard.user)
+            ? RoleGuard.user.email || '' : '';
+
+        // Map system roles to module roles
+        const roleMap = { sales: 'executor', partners_mgr: 'executor', assistant: 'reviewer', antifraud: 'reviewer' };
+        const moduleRole = roleMap[systemRole] || systemRole; // admin/leader stay as-is
+
+        OnboardingState.set('userRole', moduleRole);
+        OnboardingState.set('userEmail', email);
+    }
+
+    // ── Storage (localStorage) ──
 
     function _loadRequests() {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
             const parsed = raw ? JSON.parse(raw) : null;
-            const requests = (Array.isArray(parsed) && parsed.length > 0) ? parsed : _getMockData();
+            const requests = Array.isArray(parsed) ? parsed : [];
             OnboardingState.set('requests', requests);
             _syncIdCounter(requests);
-            if (!raw) _saveRequests();
         } catch {
-            const requests = _getMockData();
-            OnboardingState.set('requests', requests);
-            _syncIdCounter(requests);
-            _saveRequests();
+            OnboardingState.set('requests', []);
         }
     }
 
@@ -76,33 +89,31 @@ const PartnerOnboarding = (() => {
         document.getElementById('viewForm').classList.toggle('hidden', view !== 'form');
         document.getElementById('viewReview').classList.toggle('hidden', view !== 'review');
 
-        const btnBack = document.getElementById('btnBack');
-        btnBack.classList.toggle('hidden', view === 'list');
-
         const headerTitle = document.getElementById('headerTitle');
         const headerRequestId = document.getElementById('headerRequestId');
-        const headerActions = document.getElementById('headerActions');
 
         if (view === 'list') {
             headerTitle.textContent = 'Заведение партнёра';
             headerRequestId.classList.add('hidden');
-            headerActions.innerHTML = '';
         } else {
             const request = OnboardingState.get('currentRequest');
             if (request) {
                 headerRequestId.textContent = request.id;
                 headerRequestId.classList.remove('hidden');
-                _renderHeaderActions(request);
+                _renderAdminActions(request);
             }
         }
     }
 
-    function _renderHeaderActions(request) {
-        const container = document.getElementById('headerActions');
+    function _renderAdminActions(request) {
         const myRole = OnboardingState.get('userRole');
         const isAdminLike = myRole === 'admin' || myRole === 'leader';
-        let html = '';
+        const view = OnboardingState.get('view');
+        const containerId = view === 'form' ? 'formAdminActions' : 'reviewAdminActions';
+        const container = document.getElementById(containerId);
+        if (!container) return;
 
+        let html = '';
         if (request.status !== 'completed' && request.status !== 'cancelled') {
             if (isAdminLike || OnboardingConfig.isReviewer(request.currentStep, myRole)) {
                 html += `<button class="btn btn-ghost" data-action="onb-showReassign">Передать</button>`;
@@ -112,11 +123,9 @@ const PartnerOnboarding = (() => {
                 html += `<button class="btn btn-ghost btn-danger-text" data-action="onb-cancelRequest">Отменить</button>`;
             }
         }
-
         if (request.status === 'cancelled' && isAdminLike) {
             html += `<button class="btn btn-ghost" data-action="onb-reactivateRequest">Восстановить</button>`;
         }
-
         container.innerHTML = html;
     }
 
@@ -137,11 +146,9 @@ const PartnerOnboarding = (() => {
             case 'onb-goToStep': _goToStep(parseInt(value, 10)); break;
 
             // Filters
-            case 'onb-filterOwnership': _filterOwnership(target); break;
-            case 'onb-filterStatus': _filterStatus(); break;
+            case 'onb-mainFilter': _mainFilter(); break;
 
             // Form actions
-            case 'onb-saveDraft': _saveDraft(); break;
             case 'onb-submit': _submitStep(); break;
 
             // Review actions
@@ -149,11 +156,15 @@ const PartnerOnboarding = (() => {
             case 'onb-reject': _rejectStep(); break;
             case 'onb-withdraw': _withdrawStep(); break;
 
-            // Header actions
+            // Admin actions (bottom bar)
             case 'onb-cancelRequest': _showConfirm('Отменить заявку?', 'Заявка будет отменена.', _confirmCancelRequest); break;
             case 'onb-reactivateRequest': _showConfirm('Восстановить заявку?', 'Заявка будет возобновлена.', _confirmReactivateRequest); break;
             case 'onb-showReassign': _showReassignModal(); break;
             case 'onb-showRollback': _showRollbackModal(); break;
+
+            // History modal
+            case 'onb-showHistory': _showHistoryModal(); break;
+            case 'onb-closeHistory': _closeModal('historyModal'); break;
 
             // Reassign modal
             case 'onb-closeReassign': _closeModal('reassignModal'); break;
@@ -177,10 +188,6 @@ const PartnerOnboarding = (() => {
             }
             case 'onb-openPhoto': _openPhotoLightbox(target); break;
 
-            // Collapsible sections
-            case 'onb-togglePrevStep': _toggleCollapsible(value, 'prevStep', 'reviewPrevStep'); break;
-            case 'onb-toggleHistory': _toggleHistory(); break;
-
             // DEV
             case 'onb-devRole': _switchDevRole(value, target); break;
         }
@@ -190,14 +197,36 @@ const PartnerOnboarding = (() => {
         const target = e.target;
         if (target.dataset.action === 'onb-search') {
             OnboardingState.set('filters.search', target.value);
-            OnboardingList.applyFilters();
+            _debouncedSearch();
+            return;
+        }
+        // Autosave draft on any form field input
+        if (OnboardingState.get('view') === 'form' && target.closest('#formFields')) {
+            _debouncedAutosave();
         }
     }
 
     function _handleChange(e) {
         const target = e.target;
-        if (target.dataset.action === 'onb-filterStatus') {
-            _filterStatus();
+        if (target.dataset.action === 'onb-mainFilter') {
+            _mainFilter();
+            return;
+        }
+        // Dynamic executor: re-render form when account_creator changes
+        if (target.name === 'account_creator') {
+            const request = OnboardingState.get('currentRequest');
+            const stepNumber = OnboardingState.get('currentStep');
+            if (request) {
+                if (!request.stageData) request.stageData = {};
+                if (!request.stageData[stepNumber]) request.stageData[stepNumber] = {};
+                request.stageData[stepNumber].account_creator = target.value;
+                OnboardingForm.render(request, stepNumber);
+            }
+            return;
+        }
+        // Autosave draft on select/checkbox changes
+        if (OnboardingState.get('view') === 'form' && target.closest('#formFields')) {
+            _debouncedAutosave();
         }
     }
 
@@ -226,7 +255,7 @@ const PartnerOnboarding = (() => {
             assigneeName: '',
             lastComment: '',
             stageData: {},
-            history: [{ step: 0, stepName: '', action: 'create', actor: myEmail, timestamp: new Date().toISOString(), comment: '' }]
+            history: [{ step: 0, action: 'create', actor: myEmail, timestamp: new Date().toISOString(), comment: '' }]
         };
 
         const requests = OnboardingState.get('requests') || [];
@@ -251,14 +280,26 @@ const PartnerOnboarding = (() => {
         const myEmail = OnboardingState.get('userEmail');
         const step = OnboardingConfig.getStep(request.currentStep);
         const isAdminLike = myRole === 'admin' || myRole === 'leader';
+        const effectiveExecutor = OnboardingConfig.getStepEffectiveExecutor(request.currentStep, request.stageData);
 
         // Decide view
-        if (request.status === 'in_progress' && step.executor === myRole) {
+        // Dynamic handoff on_review: executor sees review (readonly + withdraw)
+        if (request.status === 'on_review' && step.dynamicExecutor && step.executor === myRole) {
+            OnboardingReview.render(request, request.currentStep);
+            _showView('review');
+        // Dynamic handoff on_review: reviewer (or admin) fills form
+        } else if (request.status === 'on_review' && step.dynamicExecutor && (effectiveExecutor === myRole || isAdminLike)) {
             OnboardingForm.render(request, request.currentStep);
             _showView('form');
+        // Standard in_progress: executor fills form
+        } else if (request.status === 'in_progress' && step.executor === myRole) {
+            OnboardingForm.render(request, request.currentStep);
+            _showView('form');
+        // Standard on_review: reviewer sees review
         } else if (request.status === 'on_review' && (step.reviewer === myRole || isAdminLike)) {
             OnboardingReview.render(request, request.currentStep);
             _showView('review');
+        // Admin fallback for in_progress
         } else if (isAdminLike && request.status === 'in_progress') {
             OnboardingForm.render(request, request.currentStep);
             _showView('form');
@@ -282,16 +323,16 @@ const PartnerOnboarding = (() => {
         }
 
         // Scroll to top
-        const scroll = document.querySelector('.onb-view:not(.hidden) .onb-scroll');
+        const scroll = document.querySelector('.onb-view:not(.hidden) .detail-main-scroll');
         if (scroll) scroll.scrollTop = 0;
     }
 
     // ── Actions ──
 
-    function _saveDraft() {
+    function _autosaveDraft() {
         const request = OnboardingState.get('currentRequest');
         const stepNumber = OnboardingState.get('currentStep');
-        if (!request) return;
+        if (!request || OnboardingState.get('view') !== 'form') return;
 
         const data = OnboardingForm.collectFormData(stepNumber);
         if (!request.stageData) request.stageData = {};
@@ -304,13 +345,41 @@ const PartnerOnboarding = (() => {
         }
 
         _updateRequest(request.id, updates);
-        Toast.success('Черновик сохранён');
     }
 
     function _submitStep() {
         const request = OnboardingState.get('currentRequest');
         const stepNumber = OnboardingState.get('currentStep');
         if (!request) return;
+
+        const step = OnboardingConfig.getStep(stepNumber);
+        const myRole = OnboardingState.get('userRole');
+
+        // Executor confirms handoff-completed data → skip validation, advance
+        if (step && step.dynamicExecutor && (request.stageData[stepNumber] || {})._handoff_complete) {
+            if (stepNumber !== request.currentStep) return;
+            _addHistory(request, stepNumber, 'approve');
+            const nextStep = stepNumber + 1;
+            if (nextStep > OnboardingConfig.STEPS.length) {
+                _addHistory(request, stepNumber, 'complete');
+                _updateRequest(request.id, { stageData: request.stageData, currentStep: stepNumber, status: 'completed', lastComment: '' });
+                Toast.success('Заявка завершена!');
+                _showView('list');
+            } else {
+                _updateRequest(request.id, { stageData: request.stageData, currentStep: nextStep, status: 'in_progress', lastComment: '' });
+                const nextStepConf = OnboardingConfig.getStep(nextStep);
+                if (nextStepConf.executor === myRole) {
+                    const updated = _getRequest(request.id);
+                    OnboardingState.set('currentRequest', updated);
+                    OnboardingState.set('currentStep', nextStep);
+                    OnboardingForm.render(updated, nextStep);
+                } else {
+                    Toast.success('Шаг выполнен');
+                    _showView('list');
+                }
+            }
+            return;
+        }
 
         // Validate
         const { valid, errors } = OnboardingForm.validate(stepNumber);
@@ -319,9 +388,9 @@ const PartnerOnboarding = (() => {
             return;
         }
 
-        // Block submit on past steps (only save allowed)
+        // Block submit on past steps (autosave handles saving)
         if (stepNumber !== request.currentStep) {
-            _saveDraft();
+            _autosaveDraft();
             return;
         }
 
@@ -335,7 +404,35 @@ const PartnerOnboarding = (() => {
             request.leadSource = data.lead_source;
         }
 
-        const step = OnboardingConfig.getStep(stepNumber);
+        // Dynamic executor: executor chose "reviewer" → hand off to reviewer
+        if (step.dynamicExecutor) {
+            const creator = data[step.dynamicExecutor.field];
+            const isAdminLike = myRole === 'admin' || myRole === 'leader';
+            if (creator === step.dynamicExecutor.reviewerValue && myRole !== 'reviewer' && !isAdminLike) {
+                _addHistory(request, stepNumber, 'submit', 'Запрос на создание аккаунта');
+                _updateRequest(request.id, {
+                    stageData: request.stageData,
+                    leadSource: request.leadSource,
+                    status: 'on_review'
+                });
+                Toast.success('Запрос на создание аккаунта отправлен');
+                _showView('list');
+                return;
+            }
+            // Reviewer completed → send data back to executor
+            if (creator === step.dynamicExecutor.reviewerValue && myRole === 'reviewer') {
+                request.stageData[stepNumber]._handoff_complete = true;
+                _addHistory(request, stepNumber, 'submit', 'Данные аккаунта отправлены');
+                _updateRequest(request.id, {
+                    stageData: request.stageData,
+                    leadSource: request.leadSource,
+                    status: 'in_progress'
+                });
+                Toast.success('Данные отправлены экзекьютору');
+                _showView('list');
+                return;
+            }
+        }
 
         // Antifraud: if failed → cancel
         if (data.antifraud_result === 'failed') {
@@ -389,7 +486,6 @@ const PartnerOnboarding = (() => {
 
                 // Check if next step executor is different
                 const nextStepConf = OnboardingConfig.getStep(nextStep);
-                const myRole = OnboardingState.get('userRole');
                 if (nextStepConf.executor === myRole) {
                     // Continue editing
                     const updated = _getRequest(request.id);
@@ -397,7 +493,7 @@ const PartnerOnboarding = (() => {
                     OnboardingState.set('currentStep', nextStep);
                     OnboardingForm.render(updated, nextStep);
                 } else {
-                    Toast.success('Шаг выполнен, ожидание ' + nextStepConf.executor);
+                    Toast.success('Шаг выполнен, передано ' + nextStepConf.executor + '\'у');
                     _showView('list');
                 }
             }
@@ -442,8 +538,25 @@ const PartnerOnboarding = (() => {
 
     function _withdrawStep() {
         const request = OnboardingState.get('currentRequest');
-        if (!request || request.status !== 'on_review') return;
+        if (!request) return;
 
+        const step = OnboardingConfig.getStep(request.currentStep);
+        const effectiveExecutor = OnboardingConfig.getStepEffectiveExecutor(request.currentStep, request.stageData);
+
+        // Dynamic handoff withdraw: reset account_creator choice, status back to in_progress
+        if (step && step.dynamicExecutor && effectiveExecutor !== step.executor && request.status === 'on_review') {
+            _addHistory(request, request.currentStep, 'withdraw');
+            if (request.stageData && request.stageData[request.currentStep]) {
+                delete request.stageData[request.currentStep][step.dynamicExecutor.field];
+            }
+            _updateRequest(request.id, { stageData: request.stageData, status: 'in_progress' });
+            Toast.info('Запрос на создание отозван');
+            _showView('list');
+            return;
+        }
+
+        // Standard withdraw from on_review
+        if (request.status !== 'on_review') return;
         _addHistory(request, request.currentStep, 'withdraw');
         _updateRequest(request.id, { status: 'in_progress' });
         Toast.info('Заявка отозвана с проверки');
@@ -470,23 +583,22 @@ const PartnerOnboarding = (() => {
         _showView('list');
     }
 
+    // ── History Modal ──
+
+    function _showHistoryModal() {
+        const request = OnboardingState.get('currentRequest');
+        if (!request) return;
+        OnboardingSteps.renderHistoryModal(request);
+        _openModal('historyModal');
+    }
+
     // ── Reassign ──
 
     function _showReassignModal() {
-        // Populate target (mock sales list)
+        // TODO: populate from real team data via CloudStorage
         const targetSelect = document.getElementById('reassignTarget');
-        if (targetSelect && targetSelect.options.length <= 1) {
-            const mockSales = [
-                { email: 'sales1@test.com', name: 'Иван Петров' },
-                { email: 'sales2@test.com', name: 'Мария Сидорова' },
-                { email: 'sales3@test.com', name: 'Алексей Козлов' }
-            ];
-            mockSales.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.email;
-                opt.textContent = s.name;
-                targetSelect.appendChild(opt);
-            });
+        if (targetSelect) {
+            targetSelect.innerHTML = '<option value="">Выберите менеджера</option>';
         }
 
         // Populate reasons
@@ -506,7 +618,9 @@ const PartnerOnboarding = (() => {
         const request = OnboardingState.get('currentRequest');
         if (!request) return;
 
-        const target = document.getElementById('reassignTarget').value;
+        const targetSelect = document.getElementById('reassignTarget');
+        const target = targetSelect.value;
+        const targetName = targetSelect.options[targetSelect.selectedIndex]?.text || target;
         const reason = document.getElementById('reassignReason').value;
         const comment = document.getElementById('reassignComment').value.trim();
 
@@ -514,7 +628,7 @@ const PartnerOnboarding = (() => {
         if (!reason) { Toast.error('Выберите причину'); return; }
 
         _addHistory(request, request.currentStep, 'reassign', comment);
-        _updateRequest(request.id, { assigneeEmail: target, assigneeName: target });
+        _updateRequest(request.id, { assigneeEmail: target, assigneeName: targetName });
         _closeModal('reassignModal');
         Toast.success('Заявка передана');
         _showView('list');
@@ -532,7 +646,7 @@ const PartnerOnboarding = (() => {
             const step = OnboardingConfig.getStep(i);
             const opt = document.createElement('option');
             opt.value = i;
-            opt.textContent = `${i}. ${step.name}`;
+            opt.textContent = OnboardingConfig.getStepLabel(i);
             select.appendChild(opt);
         }
         _openModal('rollbackModal');
@@ -558,10 +672,8 @@ const PartnerOnboarding = (() => {
 
     function _addHistory(request, step, action, comment) {
         if (!request.history) request.history = [];
-        const stepConf = OnboardingConfig.getStep(step);
         request.history.push({
             step,
-            stepName: stepConf ? stepConf.name : '',
             action,
             actor: OnboardingState.get('userEmail'),
             timestamp: new Date().toISOString(),
@@ -569,31 +681,20 @@ const PartnerOnboarding = (() => {
         });
     }
 
-    function _filterOwnership(target) {
-        const value = target.dataset.value;
-        OnboardingState.set('filters.ownership', value);
-        document.querySelectorAll('#ownershipFilter .filter-tab').forEach(t =>
-            t.classList.toggle('active', t.dataset.value === value)
-        );
-        OnboardingList.applyFilters();
-    }
+    function _mainFilter() {
+        const select = document.getElementById('mainFilter');
+        const value = select.value;
 
-    function _filterStatus() {
-        const select = document.getElementById('statusFilter');
-        OnboardingState.set('filters.status', select.value);
-        OnboardingList.applyFilters();
-    }
-
-    function _toggleCollapsible(value, ...prefixes) {
-        for (const prefix of prefixes) {
-            const el = document.getElementById(prefix + value);
-            if (el) el.classList.toggle('hidden');
+        if (value.startsWith('status:')) {
+            // Status filter: show all ownership, filter by status
+            OnboardingState.set('filters.ownership', 'all');
+            OnboardingState.set('filters.status', value.replace('status:', ''));
+        } else {
+            // Ownership filter: clear status filter
+            OnboardingState.set('filters.ownership', value);
+            OnboardingState.set('filters.status', '');
         }
-    }
-
-    function _toggleHistory() {
-        const el = document.getElementById('historyList');
-        if (el) el.classList.toggle('hidden');
+        OnboardingList.applyFilters();
     }
 
     function _openPhotoLightbox(target) {
@@ -638,7 +739,7 @@ const PartnerOnboarding = (() => {
         const switcher = document.getElementById('roleSwitcher');
         if (isLocal && switcher) {
             switcher.classList.remove('hidden');
-            OnboardingState.set('userRole', 'assistant');
+            OnboardingState.set('userRole', 'reviewer');
             OnboardingState.set('userEmail', 'dev@test.com');
         }
     }
@@ -658,91 +759,23 @@ const PartnerOnboarding = (() => {
         }
     }
 
-    // ── Mock Data ──
-
-    function _getMockData() {
-        const now = new Date();
-        return [
-            {
-                id: 'ONB000001',
-                leadSource: 'telegram',
-                currentStep: 3,
-                status: 'in_progress',
-                createdBy: 'dev@test.com',
-                createdDate: new Date(now - 86400000 * 2).toISOString(),
-                assigneeEmail: 'dev@test.com',
-                assigneeName: 'Иван Петров',
-                lastComment: '',
-                stageData: {
-                    1: { lead_source: 'telegram', contact_name: 'Алексей Смирнов', tg_username: '@alexsm', geo_country: 'kz' },
-                    2: { method_type: 'bank_transfer', method_name: 'kaspi', deal_conditions: 'Стандартные условия', document_number: 'KZ12345', country: 'Казахстан' }
-                },
-                history: [
-                    { step: 0, stepName: '', action: 'create', actor: 'dev@test.com', timestamp: new Date(now - 86400000 * 2).toISOString(), comment: '' },
-                    { step: 1, stepName: 'Регистрация лида', action: 'approve', actor: 'dev@test.com', timestamp: new Date(now - 86400000 * 2).toISOString(), comment: '' },
-                    { step: 2, stepName: 'Данные партнёра', action: 'submit', actor: 'dev@test.com', timestamp: new Date(now - 86400000).toISOString(), comment: '' },
-                    { step: 2, stepName: 'Данные партнёра', action: 'approve', actor: 'assistant@test.com', timestamp: new Date(now - 43200000).toISOString(), comment: '' }
-                ]
-            },
-            {
-                id: 'ONB000002',
-                leadSource: 'referral',
-                currentStep: 2,
-                status: 'on_review',
-                createdBy: 'dev@test.com',
-                createdDate: new Date(now - 86400000).toISOString(),
-                assigneeEmail: 'dev@test.com',
-                assigneeName: 'Иван Петров',
-                lastComment: '',
-                stageData: {
-                    1: { lead_source: 'referral', contact_name: 'Мария Козлова', phone: '+7 777 123 4567', geo_country: 'uz' },
-                    2: { method_type: 'crypto', method_name: 'usdt_trc20', deal_conditions: 'VIP условия', document_number: 'UZ98765', country: 'Узбекистан' }
-                },
-                history: [
-                    { step: 0, stepName: '', action: 'create', actor: 'dev@test.com', timestamp: new Date(now - 86400000).toISOString(), comment: '' },
-                    { step: 1, stepName: 'Регистрация лида', action: 'approve', actor: 'dev@test.com', timestamp: new Date(now - 86400000).toISOString(), comment: '' },
-                    { step: 2, stepName: 'Данные партнёра', action: 'submit', actor: 'dev@test.com', timestamp: new Date(now - 3600000).toISOString(), comment: '' }
-                ]
-            },
-            {
-                id: 'ONB000003',
-                leadSource: 'cold_call',
-                currentStep: 1,
-                status: 'in_progress',
-                createdBy: 'dev@test.com',
-                createdDate: new Date(now - 3600000).toISOString(),
-                assigneeEmail: 'dev@test.com',
-                assigneeName: 'Иван Петров',
-                lastComment: '',
-                stageData: {},
-                history: [
-                    { step: 0, stepName: '', action: 'create', actor: 'dev@test.com', timestamp: new Date(now - 3600000).toISOString(), comment: '' }
-                ]
-            }
-        ];
-    }
-
-    // ── Escape handler ──
+    // ── Escape handler (modals handled by PageLifecycle) ──
 
     function _handleKeydown(e) {
-        if (e.key === 'Escape') {
-            // Close modals first
-            const activeModal = document.querySelector('.modal.active');
-            if (activeModal) {
-                activeModal.classList.remove('active');
-                _confirmCallback = null;
-                return;
-            }
-            // Close lightbox
-            const lightbox = document.querySelector('.photo-lightbox');
-            if (lightbox) {
-                lightbox.remove();
-                return;
-            }
-            // Back to list
-            if (OnboardingState.get('view') !== 'list') {
-                _showView('list');
-            }
+        if (e.key !== 'Escape') return;
+
+        // Modals are handled by PageLifecycle — skip if any modal is active
+        if (document.querySelector('.modal.active')) return;
+
+        // Close lightbox
+        const lightbox = document.querySelector('.photo-lightbox');
+        if (lightbox) {
+            lightbox.remove();
+            return;
+        }
+        // Back to list
+        if (OnboardingState.get('view') !== 'list') {
+            _showView('list');
         }
     }
 
@@ -777,7 +810,8 @@ const PartnerOnboarding = (() => {
         modals: {
             '#reassignModal': () => _closeModal('reassignModal'),
             '#rollbackModal': () => _closeModal('rollbackModal'),
-            '#confirmModal': () => _closeModal('confirmModal')
+            '#confirmModal': () => _closeModal('confirmModal'),
+            '#historyModal': () => _closeModal('historyModal')
         }
     });
 
