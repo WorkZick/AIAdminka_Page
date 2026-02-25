@@ -1,593 +1,264 @@
-/**
- * OnboardingConfig — Конфигурация шагов заведения партнёра
- * Определяет шаги, роли executor/reviewer, поля форм, фазы, статусы
- * В будущем: загрузка с бэкенда через PropertiesService
- */
+/* onboarding-config.js — Конфигурация шагов, полей, статусов */
 
-const OnboardingConfig = {
-    TEMPLATE_ID: 'TTPL_PARTNER_ONBOARDING',
+const OnboardingConfig = (() => {
+    'use strict';
 
-    /** Статусы заявки */
-    STATUSES: {
-        executor: { label: 'У исполнителя', cssClass: 'status-badge--executor' },
-        reviewer: { label: 'На проверке', cssClass: 'status-badge--reviewer' },
-        revision: { label: 'На доработке', cssClass: 'status-badge--revision' },
-        declined: { label: 'Отклонено', cssClass: 'status-badge--declined' },
-        completed: { label: 'Завершено', cssClass: 'status-badge--completed' },
-        cancelled: { label: 'Отменено', cssClass: 'status-badge--cancelled' }
-    },
+    const STATUSES = {
+        in_progress: { label: 'В работе', cssClass: 'status--in-progress' },
+        on_review: { label: 'На проверке', cssClass: 'status--on-review' },
+        completed: { label: 'Завершено', cssClass: 'status--completed' },
+        cancelled: { label: 'Отменено', cssClass: 'status--cancelled' }
+    };
 
-    /** Источники лидов */
-    LEAD_SOURCES: [
-        { id: 'telegram', label: 'Telegram' },
-        { id: 'banner', label: 'Баннер' },
-        { id: 'referral', label: 'Реферал' },
-        { id: 'cold_call', label: 'Холодный звонок' },
-        { id: 'conference', label: 'Конференция' },
-        { id: 'website', label: 'Сайт' },
-        { id: 'other', label: 'Другое' }
-    ],
+    const LEAD_SOURCES = [
+        { value: 'telegram', label: 'Telegram' },
+        { value: 'banner', label: 'Баннер' },
+        { value: 'referral', label: 'Реферал' },
+        { value: 'cold_call', label: 'Холодный звонок' },
+        { value: 'conference', label: 'Конференция' },
+        { value: 'website', label: 'Сайт' },
+        { value: 'other', label: 'Другое' }
+    ];
 
-    /** Получить label источника лида */
-    getLeadSourceLabel(id) {
-        return this.LEAD_SOURCES.find(s => s.id === id)?.label || id;
-    },
+    const GEO_COUNTRIES = [
+        { value: 'kz', label: 'Казахстан' },
+        { value: 'uz', label: 'Узбекистан' },
+        { value: 'kg', label: 'Кыргызстан' }
+    ];
 
-    /** Причины передачи */
-    REASSIGN_REASONS: {
-        vacation: 'Отпуск',
-        sick: 'Болезнь',
-        fired: 'Увольнение',
-        rebalance: 'Перераспределение нагрузки'
-    },
+    const METHOD_TYPES = [
+        { value: 'bank_transfer', label: 'Банковский перевод' },
+        { value: 'crypto', label: 'Криптовалюта' },
+        { value: 'e_wallet', label: 'Электронный кошелёк' }
+    ];
 
-    /** Labels действий в истории (generic, переиспользуемые) */
-    HISTORY_ACTIONS: {
-        approve: { label: 'Одобрено', icon: '&#10003;', iconClass: 'approved' },
-        complete: { label: 'Завершено', icon: '&#10003;', iconClass: 'approved' },
-        reject: { label: 'Возвращено', icon: '&#10007;', iconClass: 'rejected' },
-        reassign: { label: 'Передано', icon: '&#8634;', iconClass: 'reassigned' },
-        withdraw: { label: 'Отозвано', icon: '&#8630;', iconClass: 'reassigned' },
-        reactivate: { label: 'Восстановлено', icon: '&#8635;', iconClass: 'approved' },
-        rollback: { label: 'Откат', icon: '&#8634;', iconClass: 'rejected' },
-        cancel: { label: 'Отменено', icon: '&#10007;', iconClass: 'rejected' }
-    },
+    const METHOD_NAMES = [
+        { value: 'kaspi', label: 'Kaspi' },
+        { value: 'halyk', label: 'Halyk Bank' },
+        { value: 'jusan', label: 'Jusan' },
+        { value: 'uzcard', label: 'UzCard' },
+        { value: 'humo', label: 'Humo' },
+        { value: 'usdt_trc20', label: 'USDT TRC-20' },
+        { value: 'usdt_erc20', label: 'USDT ERC-20' },
+        { value: 'btc', label: 'Bitcoin' },
+        { value: 'other', label: 'Другое' }
+    ];
 
-    /** Получить данные действия истории (generic или phase-specific) */
-    getHistoryAction(action) {
-        // Generic actions
-        if (this.HISTORY_ACTIONS[action]) return this.HISTORY_ACTIONS[action];
+    const REASSIGN_REASONS = [
+        { value: 'vacation', label: 'Отпуск' },
+        { value: 'sick', label: 'Больничный' },
+        { value: 'fired', label: 'Увольнение' },
+        { value: 'rebalance', label: 'Перераспределение' }
+    ];
 
-        // Phase-specific: format "phase:{step}:{phase_id}"
-        if (action.startsWith('phase:')) {
-            const parts = action.split(':');
-            const stepNum = parseInt(parts[1], 10);
-            const phaseId = parts[2];
-            const stage = this.getStage(stepNum);
-            const phase = stage?.phases?.find(p => p.id === phaseId);
-            if (phase) {
-                return { label: phase.label, icon: '&#9881;', iconClass: 'reassigned' };
-            }
-        }
+    const HISTORY_ACTIONS = {
+        create: { label: 'Создано' },
+        submit: { label: 'Отправлено' },
+        approve: { label: 'Одобрено' },
+        reject: { label: 'Возвращено' },
+        reassign: { label: 'Передано' },
+        rollback: { label: 'Откат' },
+        withdraw: { label: 'Отозвано' },
+        complete: { label: 'Завершено' },
+        cancel: { label: 'Отменено' },
+        reactivate: { label: 'Восстановлено' }
+    };
 
-        return null;
-    },
+    const ANTIFRAUD_RESULTS = [
+        { value: 'passed', label: 'Пройдено' },
+        { value: 'failed', label: 'Не пройдено' }
+    ];
 
-    /** Статусы лида (Шаг 1) */
-    LEAD_STATUSES: [
-        { value: 'new', label: 'Новый' },
-        { value: 'in_conversation', label: 'В переписке' },
-        { value: 'ignored', label: 'Игнор' },
-        { value: 'refused', label: 'Отказ' }
-    ],
-
-    /** Страны ГЕО (Шаг 1) */
-    GEO_COUNTRIES: [
-        { value: 'mongolia', label: 'Монголия' },
-        { value: 'iran', label: 'Иран' },
-        { value: 'afghanistan', label: 'Афганистан' }
-    ],
-
-    /** Типы методов */
-    METHOD_TYPES: [
-        { value: 'bank_transfer', label: 'BankTransfer' },
-        { value: 'team_cash', label: 'TeamCash' },
-        { value: 'affiliate', label: 'Affiliate' }
-    ],
-
-    /** Названия методов: country → method_type → [names] */
-    METHOD_NAMES: {
-        mongolia: {
-            bank_transfer: [
-                { value: 'khaanbank', label: 'KhaanBank' },
-                { value: 'golomtbank', label: 'GolomtBank' },
-                { value: 'mbank', label: 'MBank' }
-            ]
-        },
-        afghanistan: {
-            bank_transfer: [
-                { value: 'hesabpay', label: 'HesabPay' },
-                { value: 'atomapay', label: 'AtomaPay' },
-                { value: 'mhawala', label: 'mHawala' }
-            ]
-        }
-    },
-
-    /** Условия сделки: country → method_type → [{label, value}] */
-    DEAL_CONDITIONS: {
-        afghanistan: {
-            bank_transfer: [
-                { id: 'deal_1', label: 'Пополнения', value: '7%' },
-                { id: 'deal_2', label: 'Выводы', value: '3%' },
-                { id: 'deal_3', label: 'Компенсация', value: '6%' }
-            ]
-        }
-    },
-
-    /** Сумма предоплаты: country → method_type → amount (строка) */
-    PREPAYMENT_AMOUNTS: {
-        _default: '100$'
-    },
-
-    /** Получить названия методов по ГЕО + тип */
-    getMethodNames(country, methodType) {
-        return this.METHOD_NAMES[country]?.[methodType] || [];
-    },
-
-    /** Получить условия сделки по ГЕО + тип метода */
-    getDealConditions(country, methodType) {
-        return this.DEAL_CONDITIONS[country]?.[methodType] || [];
-    },
-
-    /** Получить сумму предоплаты по ГЕО + тип метода */
-    getPrepaymentAmount(country, methodType) {
-        return this.PREPAYMENT_AMOUNTS[country]?.[methodType]
-            || this.PREPAYMENT_AMOUNTS._default
-            || '';
-    },
-
-    /** Шаги процесса заведения партнёра */
-    stages: [
+    const STEPS = [
         {
             number: 1,
-            name: 'Входящий лид',
+            name: 'Регистрация лида',
             shortName: 'Лид',
-            description: 'Регистрация входящего лида',
-            executorRole: 'sales',
-            reviewerRole: 'assistant',
-            noApproval: true,
-            estimatedDays: 1,
+            executor: 'sales',
+            reviewer: null,
             fields: [
-                {
-                    id: 'lead_source',
-                    type: 'select',
-                    label: 'Источник лида',
-                    required: true,
-                    options: [
-                        { value: 'telegram', label: 'Telegram' },
-                        { value: 'banner', label: 'Баннер' },
-                        { value: 'referral', label: 'Реферал' },
-                        { value: 'cold_call', label: 'Холодный звонок' },
-                        { value: 'conference', label: 'Конференция' },
-                        { value: 'website', label: 'Сайт' },
-                        { value: 'other', label: 'Другое' }
-                    ]
-                },
-                {
-                    id: 'lead_status',
-                    type: 'select',
-                    label: 'Статус',
-                    required: true,
-                    options: [
-                        { value: 'new', label: 'Новый' },
-                        { value: 'in_conversation', label: 'В переписке' },
-                        { value: 'ignored', label: 'Игнор' },
-                        { value: 'refused', label: 'Отказ' }
-                    ]
-                },
-                {
-                    id: 'lead_date',
-                    type: 'date',
-                    label: 'Дата обращения',
-                    required: true
-                },
-                {
-                    id: 'geo_country',
-                    type: 'select',
-                    label: 'Страна поиска партнера',
-                    required: true,
-                    options: [
-                        { value: 'mongolia', label: 'Монголия' },
-                        { value: 'iran', label: 'Иран' },
-                        { value: 'afghanistan', label: 'Афганистан' }
-                    ]
-                },
-                {
-                    id: 'contact_name',
-                    type: 'text',
-                    label: 'ФИО',
-                    placeholder: 'Имя контактного лица'
-                },
-                {
-                    id: 'tg_username',
-                    type: 'text',
-                    label: 'Юзернейм ТГ',
-                    placeholder: '@username',
-                    helpText: 'Обязательно, если не заполнен телефон',
-                    oneOf: 'contact_required'
-                },
-                {
-                    id: 'phone',
-                    type: 'text',
-                    label: 'Номер телефона',
-                    placeholder: '+7 999 123 45 67',
-                    helpText: 'Обязательно, если не заполнен юзернейм ТГ',
-                    oneOf: 'contact_required'
-                },
-                {
-                    id: 'email',
-                    type: 'email',
-                    label: 'Почта',
-                    placeholder: 'email@example.com'
-                },
-                {
-                    id: 'reject_reason',
-                    type: 'textarea',
-                    label: 'Причина отказа',
-                    placeholder: 'Укажите причину отказа...',
-                    showWhen: { field: 'lead_status', value: 'refused' },
-                    requiredWhen: { field: 'lead_status', value: 'refused' }
-                }
+                { id: 'lead_source', type: 'select', label: 'Источник', required: true, options: LEAD_SOURCES },
+                { id: 'contact_name', type: 'text', label: 'Имя контакта', required: true, placeholder: 'Иван Иванов' },
+                { id: 'tg_username', type: 'text', label: 'Telegram', placeholder: '@username', oneOf: 'contact_required' },
+                { id: 'phone', type: 'text', label: 'Телефон', placeholder: '+7 (___) ___-__-__', oneOf: 'contact_required' },
+                { id: 'email', type: 'email', label: 'Email', placeholder: 'email@example.com' },
+                { id: 'geo_country', type: 'select', label: 'Страна', required: true, options: GEO_COUNTRIES }
             ]
         },
         {
             number: 2,
-            name: 'Полная информация',
-            shortName: 'Инфо',
-            description: 'Полная информация о лиде (документы, фото, кошельки)',
-            executorRole: 'sales',
-            reviewerRole: 'assistant',
-            estimatedDays: 2,
+            name: 'Данные партнёра',
+            shortName: 'Данные',
+            executor: 'sales',
+            reviewer: 'assistant',
             fields: [
-                {
-                    id: 'method_type',
-                    type: 'select',
-                    label: 'Тип метода',
-                    required: true,
-                    options: [
-                        { value: 'bank_transfer', label: 'BankTransfer' },
-                        { value: 'team_cash', label: 'TeamCash' },
-                        { value: 'affiliate', label: 'Affiliate' }
-                    ]
-                },
-                {
-                    id: 'method_name',
-                    type: 'select',
-                    label: 'Название метода',
-                    required: true,
-                    dynamic: true,
-                    options: []
-                },
-                {
-                    id: 'deal_1',
-                    type: 'text',
-                    label: 'Условие 1',
-                    dynamicDeal: true,
-                    editableBy: ['reviewer']
-                },
-                {
-                    id: 'deal_2',
-                    type: 'text',
-                    label: 'Условие 2',
-                    dynamicDeal: true,
-                    editableBy: ['reviewer']
-                },
-                {
-                    id: 'deal_3',
-                    type: 'text',
-                    label: 'Условие 3',
-                    dynamicDeal: true,
-                    editableBy: ['reviewer']
-                },
-                {
-                    id: 'prepayment_amount',
-                    type: 'text',
-                    label: 'Сумма предоплаты',
-                    dynamicDeal: true,
-                    editableBy: ['reviewer']
-                },
-                {
-                    id: 'prepayment_method',
-                    type: 'select',
-                    label: 'Способ предоплаты',
-                    required: true,
-                    options: [
-                        { value: 'tether_trc20', label: 'Tether on Tron TRC20' }
-                    ]
-                },
-                {
-                    id: 'country',
-                    type: 'text',
-                    label: 'Страна из документа',
-                    required: true
-                },
-                {
-                    id: 'city',
-                    type: 'text',
-                    label: 'Город',
-                    required: true
-                },
-                {
-                    id: 'birth_date',
-                    type: 'date',
-                    label: 'Дата рождения',
-                    required: true
-                },
-                {
-                    id: 'phone',
-                    type: 'text',
-                    label: 'Номер телефона',
-                    required: true
-                },
-                {
-                    id: 'email',
-                    type: 'email',
-                    label: 'Электронная почта',
-                    required: true
-                },
-                {
-                    id: 'document_number',
-                    type: 'text',
-                    label: 'Номер документа',
-                    required: true
-                },
-                {
-                    id: 'wallets',
-                    type: 'list',
-                    label: 'Номера кошельков',
-                    required: true,
-                    placeholder: 'Номер кошелька',
-                    helpText: 'Добавьте один или несколько кошельков'
-                },
-                {
-                    id: 'document_photo',
-                    type: 'file',
-                    label: 'Фото документа',
-                    required: true,
-                    accept: 'image/*',
-                    helpText: 'Загрузите фото документа'
-                },
-                {
-                    id: 'selfie_photo',
-                    type: 'file',
-                    label: 'Фото селфи с документом',
-                    required: true,
-                    accept: 'image/*',
-                    helpText: 'Загрузите селфи с документом'
-                }
+                { id: 'method_type', type: 'select', label: 'Тип метода', required: true, options: METHOD_TYPES },
+                { id: 'method_name', type: 'select', label: 'Метод', required: true, options: METHOD_NAMES },
+                { id: 'deal_conditions', type: 'textarea', label: 'Условия сделки', required: true, placeholder: 'Опишите условия...' },
+                { id: 'prepayment_amount', type: 'text', label: 'Сумма предоплаты', placeholder: '0' },
+                { id: 'country', type: 'text', label: 'Страна проживания', required: true },
+                { id: 'city', type: 'text', label: 'Город' },
+                { id: 'birth_date', type: 'date', label: 'Дата рождения' },
+                { id: 'document_number', type: 'text', label: 'Номер документа', required: true },
+                { id: 'wallets', type: 'list', label: 'Кошельки', placeholder: 'Добавить кошелёк' },
+                { id: 'document_photo', type: 'file', label: 'Фото документа', required: true, accept: 'image/*' },
+                { id: 'selfie_photo', type: 'file', label: 'Селфи с документом', accept: 'image/*' }
             ]
         },
         {
             number: 3,
-            name: 'Аккаунт и ЛК',
+            name: 'Создание аккаунта',
             shortName: 'Аккаунт',
-            description: 'Создание аккаунта и заполнение ЛК партнёром',
-            executorRole: 'sales',
-            reviewerRole: 'assistant',
-            estimatedDays: 3,
-            phases: [
-                { id: 'waiting', label: 'Ожидание создания аккаунта', owner: 'reviewer' },
-                { id: 'created', label: 'Аккаунт создан', owner: 'executor' },
-                { id: 'filled', label: 'Профиль заполнен', owner: 'reviewer' }
-            ],
+            executor: 'assistant',
+            reviewer: null,
             fields: [
-                {
-                    id: 'account_creator',
-                    type: 'select',
-                    label: 'Кто создаёт аккаунт',
-                    required: true,
-                    options: [
-                        { value: 'reviewer', label: 'Reviewer (ассистент)' },
-                        { value: 'partner', label: 'Партнёр (самостоятельно)' }
-                    ]
-                },
-                {
-                    id: 'phase',
-                    type: 'internal',
-                    label: 'Фаза шага'
-                },
-                {
-                    id: 'account_login',
-                    type: 'text',
-                    label: 'Логин',
-                    placeholder: 'Логин аккаунта',
-                    editableBy: ['reviewer'],
-                    showWhen: { field: 'phase', value: ['waiting', 'created', 'filled'] }
-                },
-                {
-                    id: 'account_password',
-                    type: 'text',
-                    label: 'Пароль',
-                    placeholder: 'Пароль аккаунта',
-                    editableBy: ['reviewer'],
-                    showWhen: { field: 'phase', value: ['waiting', 'created', 'filled'] }
-                },
-                {
-                    id: 'profile_checklist',
-                    type: 'checklist',
-                    label: 'Чеклист заполнения ЛК',
-                    showWhen: { field: 'phase', value: ['created', 'filled'] },
-                    items: [
-                        { label: 'ФИО' },
-                        { label: 'Контактные данные' },
-                        { label: 'Банковские реквизиты' },
-                        { label: 'Документы' },
-                        { label: 'Фото профиля' }
-                    ]
-                }
+                { id: 'account_login', type: 'text', label: 'Логин аккаунта', required: true, placeholder: 'Логин ЛК партнёра' },
+                { id: 'account_password', type: 'text', label: 'Пароль аккаунта', required: true, placeholder: 'Пароль ЛК партнёра' }
             ]
         },
         {
             number: 4,
-            name: 'Антифрод проверка',
-            shortName: 'Антифрод',
-            description: 'Проверка через антифрод-отдел',
-            executorRole: 'sales',
-            reviewerRole: 'assistant',
-            autoSubmit: true,
-            estimatedDays: 3,
-            phases: [
-                { id: 'check', label: 'Ожидание проверки', owner: 'reviewer', onReject: 'declined' },
-                { id: 'approved', label: 'Ожидание пополнения', owner: 'executor' },
-                { id: 'deposit_ok', label: 'Проверка пополнения', owner: 'reviewer' }
-            ],
-            fields: []
-        },
-        {
-            number: 5,
-            name: 'Корп. мессенджер',
-            shortName: 'Мессенджер',
-            description: 'Создание аккаунта в корпоративном мессенджере',
-            executorRole: 'sales',
-            reviewerRole: 'assistant',
-            estimatedDays: 1,
-            phases: [
-                { id: 'waiting', label: 'Ожидание создания мессенджера', owner: 'reviewer' },
-                { id: 'created', label: 'Мессенджер создан', owner: 'executor' },
-                { id: 'logged', label: 'Подтверждение входа', owner: 'reviewer' }
-            ],
+            name: 'Заполнение профиля',
+            shortName: 'Профиль',
+            executor: 'sales',
+            reviewer: 'assistant',
             fields: [
                 {
-                    id: 'phase',
-                    type: 'internal',
-                    label: 'Фаза шага'
-                },
-                {
-                    id: 'messenger_login',
-                    type: 'text',
-                    label: 'Логин',
-                    placeholder: 'Логин аккаунта',
-                    editableBy: ['reviewer'],
-                    showWhen: { field: 'phase', value: ['waiting', 'created', 'logged'] }
-                },
-                {
-                    id: 'messenger_password',
-                    type: 'text',
-                    label: 'Пароль',
-                    placeholder: 'Пароль аккаунта',
-                    editableBy: ['reviewer'],
-                    showWhen: { field: 'phase', value: ['waiting', 'created', 'logged'] }
+                    id: 'profile_checklist', type: 'checklist', label: 'Профиль заполнен', required: true,
+                    items: [
+                        { label: 'ФИО заполнено' },
+                        { label: 'Контактные данные указаны' },
+                        { label: 'Банковские реквизиты добавлены' },
+                        { label: 'Документы загружены' },
+                        { label: 'Фото профиля установлено' }
+                    ]
                 }
             ]
         },
         {
-            number: 6,
-            name: 'Финализация карточки',
-            shortName: 'Карточка',
-            description: 'Заполнение финальных данных для создания карточки партнёра',
-            executorRole: 'assistant',
-            reviewerRole: null,
-            noApproval: true,
-            estimatedDays: 1,
+            number: 5,
+            name: 'Антифрод проверка',
+            shortName: 'Антифрод',
+            executor: 'assistant',
+            reviewer: null,
             fields: [
-                { id: 'subagent', type: 'text', label: 'Имя субагента', required: true },
-                { id: 'subagentId', type: 'text', label: 'Номер субагента', required: true },
-                { id: 'method', type: 'text', label: 'Метод', required: true }
+                { id: 'antifraud_result', type: 'select', label: 'Результат проверки', required: true, options: ANTIFRAUD_RESULTS },
+                { id: 'antifraud_comment', type: 'textarea', label: 'Комментарий', placeholder: 'Детали проверки...' }
+            ]
+        },
+        {
+            number: 6,
+            name: 'Пополнение счёта',
+            shortName: 'Депозит',
+            executor: 'sales',
+            reviewer: 'assistant',
+            fields: [
+                {
+                    id: 'deposit_checklist', type: 'checklist', label: 'Подтверждение', required: true,
+                    items: [
+                        { label: 'Партнёр пополнил счёт' }
+                    ]
+                },
+                { id: 'deposit_amount', type: 'text', label: 'Сумма пополнения', placeholder: '0' },
+                { id: 'deposit_comment', type: 'textarea', label: 'Комментарий', placeholder: 'Детали...' }
             ]
         },
         {
             number: 7,
-            name: 'Завершение',
-            shortName: 'Готово',
-            description: 'Заведение партнёра завершено',
-            executorRole: 'system',
-            reviewerRole: null,
-            auto: true,
-            estimatedDays: 0,
-            fields: []
+            name: 'Корп. мессенджер',
+            shortName: 'Мессенджер',
+            executor: 'assistant',
+            reviewer: null,
+            fields: [
+                { id: 'messenger_login', type: 'text', label: 'Логин мессенджера', required: true },
+                { id: 'messenger_password', type: 'text', label: 'Пароль мессенджера', required: true },
+                {
+                    id: 'messenger_checklist', type: 'checklist', label: 'Подтверждение',
+                    items: [
+                        { label: 'Партнёр вошёл в мессенджер' }
+                    ]
+                }
+            ]
+        },
+        {
+            number: 8,
+            name: 'Финализация',
+            shortName: 'Карточка',
+            executor: 'assistant',
+            reviewer: null,
+            fields: [
+                { id: 'subagent', type: 'text', label: 'Субагент', required: true, autofill: { step: 1, field: 'contact_name' } },
+                { id: 'subagent_id', type: 'text', label: 'ID субагента', required: true },
+                { id: 'method', type: 'text', label: 'Метод', required: true, autofill: { step: 2, field: 'method_name' } }
+            ]
         }
-    ],
+    ];
 
-    /** Получить шаг по номеру */
-    getStage(number) {
-        return this.stages.find(s => s.number === number) || null;
-    },
-
-    /** Общее количество шагов */
-    get totalStages() {
-        return this.stages.length;
-    },
-
-    /** Получить label статуса */
-    getStatusLabel(status) {
-        return this.STATUSES[status]?.label || status;
-    },
-
-    /** Получить CSS класс статуса */
-    getStatusClass(status) {
-        return this.STATUSES[status]?.cssClass || '';
-    },
-
-    /** Получить label причины передачи */
-    getReasonLabel(reason) {
-        return this.REASSIGN_REASONS[reason] || reason;
-    },
-
-    /** Получить фазу шага по ID */
-    getPhase(stageNumber, phaseId) {
-        const stage = this.getStage(stageNumber);
-        return stage?.phases?.find(p => p.id === phaseId) || null;
-    },
-
-    /** Получить label фазы */
-    getPhaseLabel(stageNumber, phaseId) {
-        const phase = this.getPhase(stageNumber, phaseId);
-        return phase?.label || '';
-    },
-
-    /** Проверить, является ли пользователь executor на данном шаге */
-    isExecutor(stageNumber, userRole) {
-        const stage = this.getStage(stageNumber);
-        if (!stage) return false;
-        if (stage.auto) return false;
-        if (userRole === 'admin' || userRole === 'leader') return true;
-        return stage.executorRole === userRole;
-    },
-
-    /** Проверить, является ли пользователь reviewer на данном шаге */
-    isReviewer(stageNumber, userRole) {
-        const stage = this.getStage(stageNumber);
-        if (!stage || !stage.reviewerRole) return false;
-        if (stage.auto) return false;
-        if (userRole === 'admin' || userRole === 'leader') return true;
-        return stage.reviewerRole === userRole;
-    },
-
-    /** Название роли (через RolesConfig если доступен) */
-    getRoleName(role) {
-        if (role === 'system') return 'Система';
-        if (typeof RolesConfig !== 'undefined') {
-            return RolesConfig.getName(role);
-        }
-        return role;
-    },
-
-    /** Проверить совпадение showWhen (поддержка массива значений) */
-    matchesShowWhen(showWhen, formData) {
-        if (!showWhen) return true;
-        const condValue = formData?.[showWhen.field];
-        if (Array.isArray(showWhen.value)) return showWhen.value.includes(condValue);
-        return condValue === showWhen.value;
-    },
-
-    /** Получить поля формы, отфильтрованные по видимости */
-    getVisibleFields(stageNumber, formData) {
-        const stage = this.getStage(stageNumber);
-        if (!stage || !stage.fields) return [];
-
-        return stage.fields.filter(field => {
-            if (field.type === 'internal') return false;
-            return this.matchesShowWhen(field.showWhen, formData);
-        });
+    function getStep(number) {
+        return STEPS.find(s => s.number === number);
     }
-};
+
+    function isExecutor(stepNumber, role) {
+        const step = getStep(stepNumber);
+        return step && step.executor === role;
+    }
+
+    function isReviewer(stepNumber, role) {
+        const step = getStep(stepNumber);
+        return step && step.reviewer === role;
+    }
+
+    function hasReviewer(stepNumber) {
+        const step = getStep(stepNumber);
+        return step && step.reviewer !== null;
+    }
+
+    function getStepExecutor(stepNumber) {
+        const step = getStep(stepNumber);
+        return step ? step.executor : null;
+    }
+
+    function getStepReviewer(stepNumber) {
+        const step = getStep(stepNumber);
+        return step ? step.reviewer : null;
+    }
+
+    function getStatusLabel(status) {
+        return STATUSES[status] ? STATUSES[status].label : status;
+    }
+
+    function getStatusClass(status) {
+        return STATUSES[status] ? STATUSES[status].cssClass : '';
+    }
+
+    function getHistoryActionLabel(action) {
+        return HISTORY_ACTIONS[action] ? HISTORY_ACTIONS[action].label : action;
+    }
+
+    function getOptionLabel(options, value) {
+        const opt = options.find(o => o.value === value);
+        return opt ? opt.label : value;
+    }
+
+    return {
+        STEPS,
+        STATUSES,
+        LEAD_SOURCES,
+        GEO_COUNTRIES,
+        METHOD_TYPES,
+        METHOD_NAMES,
+        ANTIFRAUD_RESULTS,
+        REASSIGN_REASONS,
+        HISTORY_ACTIONS,
+        getStep,
+        isExecutor,
+        isReviewer,
+        hasReviewer,
+        getStepExecutor,
+        getStepReviewer,
+        getStatusLabel,
+        getStatusClass,
+        getHistoryActionLabel,
+        getOptionLabel
+    };
+})();

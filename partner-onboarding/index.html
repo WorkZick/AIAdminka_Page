@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Заведение партнёра - AIAdminka</title>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <link rel="stylesheet" href="../shared/css/design-system.css">
@@ -11,201 +11,128 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar Container -->
-        <div id="sidebar-container"></div>
+        <div id="sidebar-container" data-component="sidebar"></div>
 
-        <!-- Loading state (visible until lifecycle-ready) -->
         <div class="page-loading">
             <div class="spinner"></div>
             <div class="loading-text">Загрузка...</div>
         </div>
 
-        <!-- Main wrapper -->
         <div class="main-wrapper">
-            <!-- Global header -->
             <header class="global-header">
-                <div class="header-title">Заведение партнёра</div>
-                <!-- DEV: Role switcher (admin only) -->
-                <div class="role-switcher" id="roleSwitcher">
-                    <span class="role-switcher-label">Роль:</span>
-                    <div class="role-switcher-pills" id="roleSwitcherPills">
-                        <button class="role-pill active" data-role="admin">Admin</button>
-                        <button class="role-pill" data-role="sales">Sales</button>
-                        <button class="role-pill" data-role="assistant">Reviewer</button>
-                    </div>
+                <div class="header-left">
+                    <button class="btn btn-ghost btn-back hidden" id="btnBack" data-action="onb-back">
+                        <img src="../shared/icons/arrow-left.svg" width="16" height="16" alt="Назад">
+                        Назад
+                    </button>
+                    <div class="header-title" id="headerTitle">Заведение партнёра</div>
+                    <span class="header-request-id hidden" id="headerRequestId"></span>
+                </div>
+                <div class="header-actions" id="headerActions">
+                    <!-- Dynamic: Cancel / Reactivate buttons for admin/leader -->
                 </div>
             </header>
 
-            <!-- Content area -->
             <div class="content-area">
-                <!-- Sub-tabs -->
-                <div class="sub-tabs">
-                    <button class="sub-tab active" data-action="onboarding-switchSubtab" data-value="list">Заявки</button>
-                    <button class="sub-tab" data-action="onboarding-switchSubtab" data-value="new" id="subtabNewBtn">Новая заявка</button>
-                </div>
-
-                <!-- Sub-tab: Заявки (список) -->
-                <div class="sub-tab-content active" id="subtab-list">
-                    <!-- Filters -->
-                    <div class="onboarding-filters">
-                        <div class="filters-left">
-                            <select class="form-select filter-select" id="filterOwnership" data-action="onboarding-applyFilters">
-                                <option value="my">Мои заявки</option>
-                                <option value="review">На проверку</option>
-                                <option value="all">Все заявки</option>
-                            </select>
-                            <select class="form-select filter-select" id="filterStatus" data-action="onboarding-applyFilters">
-                                <option value="all">Все статусы</option>
-                                <option value="executor">У исполнителя</option>
-                                <option value="reviewer">На проверке</option>
-                                <option value="revision">На доработке</option>
-                                <option value="declined">Отклонено</option>
+                <!-- VIEW: List -->
+                <div class="onb-view" id="viewList">
+                    <div class="list-toolbar">
+                        <div class="list-filters">
+                            <div class="filter-tabs" id="ownershipFilter">
+                                <button class="filter-tab active" data-action="onb-filterOwnership" data-value="my">Мои</button>
+                                <button class="filter-tab" data-action="onb-filterOwnership" data-value="review">На проверку</button>
+                                <button class="filter-tab" data-action="onb-filterOwnership" data-value="all">Все</button>
+                            </div>
+                            <select class="form-select filter-status" id="statusFilter" data-action="onb-filterStatus">
+                                <option value="">Все статусы</option>
+                                <option value="in_progress">В работе</option>
+                                <option value="on_review">На проверке</option>
                                 <option value="completed">Завершено</option>
                                 <option value="cancelled">Отменено</option>
                             </select>
                         </div>
-                        <div class="search-box">
-                            <img class="search-icon" src="../shared/icons/search.svg" width="16" height="16" alt="Поиск">
-                            <input type="text" class="search-input" placeholder="Поиск по названию..." id="searchInput" data-action="onboarding-applyFilters">
+                        <div class="list-right">
+                            <div class="search-box">
+                                <img class="search-icon" src="../shared/icons/search.svg" width="16" height="16" alt="Поиск">
+                                <input type="text" class="form-input search-input" id="searchInput" placeholder="Поиск..." data-action="onb-search">
+                            </div>
+                            <button class="btn btn-primary" id="btnNewRequest" data-action="onb-newRequest">Новая заявка</button>
                         </div>
                     </div>
 
-                    <!-- Requests list -->
-                    <div class="onboarding-cards" id="requestsList">
+                    <div class="requests-list" id="requestsList">
                         <!-- Generated by JS -->
                     </div>
 
-                    <!-- Loading spinner -->
-                    <div class="loading-state" id="listLoadingState">
+                    <div class="loading-state hidden" id="listLoading">
                         <div class="spinner"></div>
                         <div class="loading-text">Загрузка заявок...</div>
                     </div>
 
-                    <!-- Empty state -->
-                    <div class="empty-state hidden" id="emptyState">
-                        <img class="empty-state-icon" src="../shared/icons/handshake.svg" alt="Заявки">
-                        <div class="empty-state-title">Заявок пока нет</div>
+                    <div class="empty-state hidden" id="listEmpty">
+                        <img class="empty-state-icon" src="../shared/icons/partners.svg" width="48" height="48" alt="">
+                        <div class="empty-state-title">Заявок нет</div>
                         <div class="empty-state-text">Создайте первую заявку на заведение партнёра</div>
-                        <button class="btn btn-primary" data-action="onboarding-switchSubtab" data-value="new">Создать заявку</button>
+                        <button class="btn btn-primary" data-action="onb-newRequest">Новая заявка</button>
                     </div>
                 </div>
 
-                <!-- Sub-tab: Новая заявка (простая форма создания) -->
-                <div class="sub-tab-content" id="subtab-new">
-                    <div class="onboarding-step-content">
-                        <div class="step-header">
-                            <h2 class="step-title">Новая заявка</h2>
+                <!-- VIEW: Form (executor) -->
+                <div class="onb-view hidden" id="viewForm">
+                    <div class="onb-steps" id="formSteps">
+                        <!-- Generated by onboarding-steps.js -->
+                    </div>
+
+                    <div class="onb-banner hidden" id="formBanner">
+                        <!-- Reject comment from reviewer -->
+                    </div>
+
+                    <div class="onb-scroll" id="formScroll">
+                        <div class="onb-prev-steps" id="formPrevSteps">
+                            <!-- Previous steps readonly -->
                         </div>
-                        <!-- Поля Шага 1 рендерятся сюда JS-ом -->
-                        <div id="newRequestFields"></div>
-                        <div class="step-actions">
-                            <div></div>
-                            <div class="step-actions-right">
-                                <button class="btn btn-primary" data-action="onboarding-createRequest">Создать</button>
-                            </div>
+                        <div class="onb-form-fields" id="formFields">
+                            <!-- Current step form fields -->
                         </div>
+                    </div>
+
+                    <div class="onb-actions" id="formActions">
+                        <button class="btn btn-ghost" data-action="onb-saveDraft">Сохранить</button>
+                        <button class="btn btn-primary" id="btnFormSubmit" data-action="onb-submit">Отправить</button>
                     </div>
                 </div>
 
-                <!-- Sub-tab: Редактирование заявки (steps view) -->
-                <div class="sub-tab-content" id="subtab-edit">
-                    <!-- Step content area -->
-                    <div class="onboarding-step-content" id="stepContent">
-                        <!-- Steps Indicator (inside card) -->
-                        <div class="steps-indicator" id="stepsIndicator"></div>
+                <!-- VIEW: Review (reviewer) -->
+                <div class="onb-view hidden" id="viewReview">
+                    <div class="onb-steps" id="reviewSteps">
+                        <!-- Generated by onboarding-steps.js -->
+                    </div>
 
-                        <!-- Sub-status banner (pinned under steps, always visible) -->
-                        <div class="step-status-banner hidden" id="stepStatusBanner"></div>
+                    <div class="onb-review-header" id="reviewHeader">
+                        <!-- Step name + status badge -->
+                    </div>
 
-                        <!-- Step header -->
-                        <div class="step-header" id="stepHeader">
-                            <h2 class="step-title" id="stepTitle">Шаг 1</h2>
+                    <div class="onb-scroll" id="reviewScroll">
+                        <div class="onb-prev-steps" id="reviewPrevSteps">
+                            <!-- Previous steps readonly -->
                         </div>
-
-                        <!-- Scrollable content area -->
-                        <div class="step-content-scroll">
-                            <!-- Form area (executor) -->
-                            <div class="step-form" id="stepForm">
-                                <div class="step-form-placeholder">
-                                    <img src="../shared/icons/handshake.svg" width="48" height="48" alt="">
-                                    <p>Поля формы будут добавлены позже</p>
-                                </div>
-                            </div>
-
-                            <!-- Review area (reviewer) — readonly view -->
-                            <div class="step-review hidden" id="stepReview">
-                                <div class="review-data" id="reviewData"></div>
-                                <div id="reviewHistory"></div>
-                                <div class="review-comment-section">
-                                    <label class="form-label">Комментарий</label>
-                                    <textarea class="form-textarea" id="reviewComment" rows="3" placeholder="Комментарий к проверке..."></textarea>
-                                </div>
-                            </div>
+                        <div class="onb-review-fields" id="reviewFields">
+                            <!-- Current step data readonly -->
                         </div>
-
-                        <!-- Step actions (pinned at bottom) -->
-                        <div class="step-actions" id="stepActions">
-                            <div class="step-actions-right">
-                                <button class="btn btn-ghost hidden" id="btnSaveDraft" data-action="onboarding-saveDraft">
-                                    Сохранить
-                                </button>
-                                <button class="btn btn-primary hidden" id="btnSubmitReview" data-action="onboarding-submitForReview">
-                                    Отправить на проверку
-                                </button>
-                                <button class="btn btn-danger hidden" id="btnReject" data-action="onboarding-rejectStep">
-                                    Отклонить
-                                </button>
-                                <button class="btn btn-primary hidden" id="btnApprove" data-action="onboarding-approveStep">
-                                    Одобрить
-                                </button>
-                            </div>
+                        <div class="onb-history" id="reviewHistory">
+                            <!-- Action history -->
                         </div>
                     </div>
-                </div>
 
-                <!-- Sub-tab: Детальный вид заявки (для reviewer) -->
-                <div class="sub-tab-content" id="subtab-detail">
-                    <!-- Detail card -->
-                    <div class="onboarding-detail" id="detailView">
-                        <!-- Compact header -->
-                        <div class="detail-header" id="detailHeader">
-                            <div class="detail-header-left">
-                                <h2 class="detail-title" id="detailTitle">Заявка</h2>
-                                <span class="detail-id" id="detailId">#TSK000000</span>
-                            </div>
-                            <div class="detail-header-right">
-                                <span class="status-badge" id="detailStatus">Статус</span>
-                            </div>
+                    <div class="onb-actions" id="reviewActions">
+                        <div class="review-comment-row">
+                            <textarea class="form-textarea" id="reviewComment" placeholder="Комментарий (обязателен при возврате)..." rows="2"></textarea>
                         </div>
-                        <div class="detail-subtitle" id="detailSubtitle"></div>
-
-                        <!-- Steps indicator -->
-                        <div class="steps-indicator detail-steps" id="detailSteps"></div>
-
-                        <!-- Sub-status banner (pinned under steps) -->
-                        <div class="step-status-banner hidden" id="detailStatusBanner"></div>
-
-                        <!-- Scrollable content area -->
-                        <div class="detail-content-scroll">
-                            <div class="detail-step-content" id="detailStepContent"></div>
-                        </div>
-
-                        <!-- Detail actions (pinned at bottom) -->
-                        <div class="detail-actions" id="detailActions">
-                            <div class="detail-actions-left">
-                                <div class="rollback-group hidden" id="detailRollbackGroup">
-                                    <select class="form-select rollback-select" id="rollbackStepSelect" data-action="onboarding-onRollbackSelect">
-                                        <option value="">Откатить на шаг...</option>
-                                    </select>
-                                </div>
-                                <button class="btn btn-ghost hidden" id="detailBtnReassign" data-action="onboarding-showReassignModal">Передать</button>
-                            </div>
-                            <div class="detail-actions-right">
-                                <button class="btn btn-ghost hidden" id="detailBtnWithdraw" data-action="onboarding-withdrawReview">Отозвать</button>
-                                <button class="btn btn-danger hidden" id="detailBtnCancel" data-action="onboarding-cancelRequest">Отменить</button>
-                                <button class="btn btn-primary hidden" id="detailBtnReactivate" data-action="onboarding-reactivateRequest">Восстановить</button>
-                                <button class="btn btn-danger hidden" id="detailBtnReject" data-action="onboarding-rejectStep">Отклонить</button>
-                                <button class="btn btn-primary hidden" id="detailBtnApprove" data-action="onboarding-approveStep">Одобрить</button>
+                        <div class="review-buttons">
+                            <button class="btn btn-ghost" data-action="onb-reject">Вернуть</button>
+                            <div class="review-buttons-right">
+                                <button class="btn btn-ghost" id="btnWithdraw" data-action="onb-withdraw">Отозвать</button>
+                                <button class="btn btn-primary" data-action="onb-approve">Одобрить</button>
                             </div>
                         </div>
                     </div>
@@ -218,44 +145,65 @@
     <div class="modal" id="reassignModal">
         <div class="modal-dialog modal-dialog-sm">
             <div class="modal-header">
-                <h2 class="modal-title">Передача заявки</h2>
-                <button class="modal-close" data-action="onboarding-closeReassignModal">
+                <h2 class="modal-title">Передать заявку</h2>
+                <button class="modal-close" data-action="onb-closeReassign">
                     <img src="../shared/icons/cross.svg" width="16" height="16" alt="Закрыть">
                 </button>
             </div>
             <div class="modal-body">
-                <div class="reassign-info" id="reassignInfo">
-                    <!-- Current assignee info -->
-                </div>
                 <div class="form-group">
-                    <label class="form-label">Передать менеджеру</label>
+                    <label class="form-label">Менеджер</label>
                     <select class="form-select" id="reassignTarget">
-                        <option value="">Выберите менеджера...</option>
+                        <option value="">Выберите менеджера</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Причина</label>
                     <select class="form-select" id="reassignReason">
-                        <option value="">Выберите причину...</option>
-                        <option value="vacation">Отпуск</option>
-                        <option value="sick">Болезнь</option>
-                        <option value="fired">Увольнение</option>
-                        <option value="rebalance">Перераспределение нагрузки</option>
+                        <option value="">Выберите причину</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Комментарий</label>
-                    <textarea class="form-textarea" id="reassignComment" rows="2" placeholder="Дополнительная информация..."></textarea>
+                    <textarea class="form-textarea" id="reassignComment" rows="2" placeholder="Необязательно..."></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" data-action="onboarding-closeReassignModal">Отмена</button>
-                <button class="btn btn-primary" data-action="onboarding-confirmReassign" id="reassignConfirmBtn">Передать</button>
+                <button class="btn btn-ghost" data-action="onb-closeReassign">Отмена</button>
+                <button class="btn btn-primary" data-action="onb-confirmReassign">Передать</button>
             </div>
         </div>
     </div>
 
-    <!-- Confirm Dialog -->
+    <!-- Rollback Modal -->
+    <div class="modal" id="rollbackModal">
+        <div class="modal-dialog modal-dialog-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Откатить на шаг</h2>
+                <button class="modal-close" data-action="onb-closeRollback">
+                    <img src="../shared/icons/cross.svg" width="16" height="16" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Откатить на</label>
+                    <select class="form-select" id="rollbackTarget">
+                        <!-- Generated by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Комментарий</label>
+                    <textarea class="form-textarea" id="rollbackComment" rows="2" placeholder="Причина отката..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" data-action="onb-closeRollback">Отмена</button>
+                <button class="btn btn-primary" data-action="onb-confirmRollback">Откатить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
     <div class="modal" id="confirmModal">
         <div class="modal-dialog modal-dialog-sm">
             <div class="modal-header">
@@ -265,14 +213,22 @@
                 <p id="confirmMessage"></p>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" id="confirmCancelBtn">Отмена</button>
-                <button class="btn btn-danger" id="confirmOkBtn">Подтвердить</button>
+                <button class="btn btn-ghost" data-action="onb-closeConfirm">Отмена</button>
+                <button class="btn btn-danger" id="confirmOk" data-action="onb-confirmAction">Подтвердить</button>
             </div>
         </div>
     </div>
 
     <!-- About Modal Container -->
-    <div id="about-modal-container"></div>
+    <div id="about-modal-container" data-component="about-modal"></div>
+
+    <!-- DEV: Role Switcher (localhost only) -->
+    <div class="dev-role-switcher hidden" id="roleSwitcher">
+        <span class="dev-label">DEV:</span>
+        <button class="dev-role-btn" data-action="onb-devRole" data-value="admin">Admin</button>
+        <button class="dev-role-btn" data-action="onb-devRole" data-value="sales">Sales</button>
+        <button class="dev-role-btn active" data-action="onb-devRole" data-value="assistant">Reviewer</button>
+    </div>
 
     <script src="../shared/version.js"></script>
     <script src="../shared/storage.js"></script>
@@ -290,7 +246,6 @@
     <script src="../shared/js/error-handler.js"></script>
     <script src="../shared/js/page-lifecycle.js"></script>
 
-    <!-- Module -->
     <script src="js/modules/onboarding-config.js"></script>
     <script src="js/modules/onboarding-state.js"></script>
     <script src="js/modules/onboarding-list.js"></script>

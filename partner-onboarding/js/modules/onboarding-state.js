@@ -1,96 +1,57 @@
-/**
- * OnboardingState — Pub/Sub состояние модуля
- * Централизованное управление состоянием + подписки на изменения
- */
+/* onboarding-state.js — StateManager (Pub/Sub) */
 
-const OnboardingState = {
-    _state: {
-        /** Все заявки */
+const OnboardingState = (() => {
+    'use strict';
+
+    const _state = {
         requests: [],
-        /** Отфильтрованные заявки */
         filteredRequests: [],
-        /** Текущая открытая заявка */
         currentRequest: null,
-        /** Текущий шаг (номер) */
         currentStep: 1,
-        /** Режим: 'list' | 'new' | 'detail' */
-        view: 'list',
-        /** Фильтры */
+        view: 'list',           // list | form | review
         filters: {
-            ownership: 'my',
-            status: 'all',
+            ownership: 'my',    // my | review | all
+            status: '',
             search: ''
         },
-        /** Роль текущего пользователя */
-        userRole: null,
-        /** Email текущего пользователя */
-        userEmail: null,
-        /** Текущий шаг в detail view */
-        detailStep: null,
-        /** Загрузка данных */
+        userRole: 'sales',
+        userEmail: '',
         loading: false
-    },
+    };
 
-    _subscribers: {},
+    const _subscribers = {};
 
-    /** Получить значение */
-    get(key) {
-        const keys = key.split('.');
-        let value = this._state;
-        for (const k of keys) {
-            if (value == null) return undefined;
-            value = value[k];
+    function get(path) {
+        const parts = path.split('.');
+        let val = _state;
+        for (const part of parts) {
+            if (val == null) return undefined;
+            val = val[part];
         }
-        return value;
-    },
-
-    /** Установить значение + уведомить подписчиков */
-    set(key, value) {
-        const keys = key.split('.');
-        let obj = this._state;
-        for (let i = 0; i < keys.length - 1; i++) {
-            if (obj[keys[i]] == null) obj[keys[i]] = {};
-            obj = obj[keys[i]];
-        }
-        const lastKey = keys[keys.length - 1];
-        const oldValue = obj[lastKey];
-        if (oldValue === value) return;
-        obj[lastKey] = value;
-        this._notify(key, value, oldValue);
-    },
-
-    /** Подписка на изменение ключа */
-    subscribe(key, callback) {
-        if (!this._subscribers[key]) {
-            this._subscribers[key] = [];
-        }
-        this._subscribers[key].push(callback);
-        return () => {
-            this._subscribers[key] = this._subscribers[key].filter(cb => cb !== callback);
-        };
-    },
-
-    /** Уведомить подписчиков */
-    _notify(key, value, oldValue) {
-        // Exact match
-        if (this._subscribers[key]) {
-            this._subscribers[key].forEach(cb => cb(value, oldValue));
-        }
-        // Parent key subscribers (e.g. 'filters' for 'filters.status')
-        const parts = key.split('.');
-        if (parts.length > 1) {
-            const parentKey = parts[0];
-            if (this._subscribers[parentKey]) {
-                this._subscribers[parentKey].forEach(cb => cb(this._state[parentKey]));
-            }
-        }
-    },
-
-    /** Сброс состояния */
-    reset() {
-        this._state.currentRequest = null;
-        this._state.currentStep = 1;
-        this._state.detailStep = null;
-        this._state.view = 'list';
+        return val;
     }
-};
+
+    function set(path, value) {
+        const parts = path.split('.');
+        let obj = _state;
+        for (let i = 0; i < parts.length - 1; i++) {
+            if (obj[parts[i]] == null) obj[parts[i]] = {};
+            obj = obj[parts[i]];
+        }
+        obj[parts[parts.length - 1]] = value;
+        _notify(parts[0]);
+    }
+
+    function subscribe(key, callback) {
+        if (!_subscribers[key]) _subscribers[key] = [];
+        _subscribers[key].push(callback);
+    }
+
+    function _notify(key) {
+        if (_subscribers[key]) {
+            _subscribers[key].forEach(cb => cb(_state[key]));
+        }
+    }
+
+    return { get, set, subscribe };
+})();
