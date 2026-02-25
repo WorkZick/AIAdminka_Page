@@ -68,45 +68,44 @@ const adminApp = {
     // ============ INITIALIZATION ============
 
     async init() {
-        // Check authentication and role status (waiting_invite/blocked check)
-        if (!await AuthGuard.checkWithRole()) {
-            return; // Will redirect to login or waiting-invite
-        }
-
+        const loadingState = document.getElementById('adminLoadingState');
         this.loadUserData();
-
-        this.loadAllData();
+        try {
+            await this.loadAllData();
+        } finally {
+            if (loadingState) loadingState.classList.add('hidden');
+            const tabs = document.getElementById('adminTabsContainer');
+            const activeTab = document.querySelector('.tab-content.active');
+            if (tabs) tabs.classList.remove('hidden');
+            if (activeTab) activeTab.classList.remove('hidden');
+        }
     },
 
     attachEventListeners() {
-        // Delegate for all input/change events (filters, searches)
-        document.addEventListener('input', (e) => {
-            const target = e.target;
-            const action = target.dataset.action;
-
-            if (action === 'filter-teams') {
-                this.filterTeams();
-            } else if (action === 'filter-users') {
-                this.filterUsers();
-            } else if (action === 'filter-audit') {
-                this.filterAudit();
-            }
-        });
+        // Delegate for all input events (filters, searches) — debounced
+        this._filterTimer = null;
+        this._inputHandler = (e) => {
+            const action = e.target.dataset.action;
+            if (!action) return;
+            clearTimeout(this._filterTimer);
+            this._filterTimer = setTimeout(() => {
+                if (action === 'filter-teams') this.filterTeams();
+                else if (action === 'filter-users') this.filterUsers();
+                else if (action === 'filter-audit') this.filterAudit();
+            }, 150);
+        };
+        document.addEventListener('input', this._inputHandler);
 
         // Delegate for all change events (selects)
-        document.addEventListener('change', (e) => {
-            const target = e.target;
-            const action = target.dataset.action;
-
-            if (action === 'filter-users') {
-                this.filterUsers();
-            } else if (action === 'filter-audit') {
-                this.filterAudit();
-            }
-        });
+        this._changeHandler = (e) => {
+            const action = e.target.dataset.action;
+            if (action === 'filter-users') this.filterUsers();
+            else if (action === 'filter-audit') this.filterAudit();
+        };
+        document.addEventListener('change', this._changeHandler);
 
         // Delegate for all click events
-        document.addEventListener('click', (e) => {
+        this._clickHandler = (e) => {
             const target = e.target.closest('[data-action]');
             if (!target) return;
 
@@ -202,7 +201,8 @@ const adminApp = {
                     }
                     break;
             }
-        });
+        };
+        document.addEventListener('click', this._clickHandler);
 
         // Form submissions
         const createTeamForm = document.getElementById('createTeamForm');
@@ -899,10 +899,16 @@ const adminApp = {
         if (!this.editingUser) return;
 
         const teamId = document.getElementById('modalUserTeam').value;
-        const role = document.getElementById('modalUserRole').value;
-        const isWaiting = this.editingUserOriginalStatus === 'waiting_invite';
-        const status = this.editingStatus === 'blocked' ? 'blocked' :
-                      (teamId ? 'active' : (isWaiting ? 'waiting_invite' : 'approved_no_team'));
+        let role = document.getElementById('modalUserRole').value;
+        const isBlocked = this.editingStatus === 'blocked';
+
+        // Без команды и не admin → guest + waiting_invite
+        if (!teamId && role !== 'admin' && !isBlocked) {
+            role = 'guest';
+        }
+
+        const status = isBlocked ? 'blocked' :
+                      (teamId ? 'active' : (role === 'guest' ? 'waiting_invite' : 'approved_no_team'));
 
         try {
             const result = await this.apiCall('updateUser', {
@@ -1143,6 +1149,11 @@ const adminApp = {
     },
 
     pickRoleColor(dot, role) {
+        // Guard: remove previous picker if exists
+        if (this._activePicker && this._activePicker.parentNode) {
+            this._activePicker.parentNode.removeChild(this._activePicker);
+        }
+
         const picker = document.createElement('input');
         picker.type = 'color';
         picker.value = this._pendingColors[role] || RolesConfig.getColor(role);
@@ -1151,17 +1162,19 @@ const adminApp = {
         picker.style.width = '0';
         picker.style.height = '0';
         document.body.appendChild(picker);
+        this._activePicker = picker;
+
+        const cleanup = () => {
+            if (picker.parentNode) picker.parentNode.removeChild(picker);
+            if (this._activePicker === picker) this._activePicker = null;
+        };
 
         picker.addEventListener('input', () => {
             dot.style.background = picker.value;
             this._pendingColors[role] = picker.value;
         });
-        picker.addEventListener('change', () => {
-            document.body.removeChild(picker);
-        });
-        picker.addEventListener('blur', () => {
-            if (picker.parentNode) document.body.removeChild(picker);
-        });
+        picker.addEventListener('change', cleanup);
+        picker.addEventListener('blur', cleanup);
         picker.click();
     },
 
@@ -1809,9 +1822,29 @@ const adminApp = {
 
     escapeHtml(text) {
         if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    },
+
+    destroy() {
+        if (this._inputHandler) {
+            document.removeEventListener('input', this._inputHandler);
+            this._inputHandler = null;
+        }
+        if (this._changeHandler) {
+            document.removeEventListener('change', this._changeHandler);
+            this._changeHandler = null;
+        }
+        if (this._clickHandler) {
+            document.removeEventListener('click', this._clickHandler);
+            this._clickHandler = null;
+        }
+        clearTimeout(this._filterTimer);
+        this._paginationCallbacks = null;
     }
 };
 
@@ -1836,29 +1869,14 @@ if (adminApp.USE_MOCK_API) {
     };
 }
 
-// Инициализация
-document.addEventListener('DOMContentLoaded', async function() {
-    // Инициализация компонентов
-    ComponentLoader.init('../shared');
-    await ComponentLoader.load('sidebar', '#sidebar-container', {
-        basePath: '..',
-        activeModule: 'admin-panel'
-    });
-    await ComponentLoader.load('about-modal', '#about-modal-container', {
-        basePath: '..'
-    });
-    SidebarController.init({ basePath: '..' });
-
-    // Инициализация приложения
-    adminApp.init();
-    adminApp.attachEventListeners();
-});
-
-// Закрытие модалок по клику на оверлей
-document.querySelectorAll('.modal').forEach(modal => {
-    modal.addEventListener('click', function(e) {
-        if (e.target === this) {
-            adminApp.closeModal(this.id);
-        }
-    });
+// Initialize via PageLifecycle
+PageLifecycle.init({
+    module: 'admin-panel',
+    async onInit() {
+        await adminApp.init();
+        adminApp.attachEventListeners();
+    },
+    onDestroy() {
+        adminApp.destroy();
+    }
 });

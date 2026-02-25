@@ -21,34 +21,7 @@ const Documentation = {
 
     escapeHandler: null,
 
-    async init() {
-        // Проверка авторизации и инициализация ролей
-        if (typeof AuthGuard !== 'undefined') {
-            await AuthGuard.checkWithRole();
-        }
-
-        // Initialize ComponentLoader with path to shared folder
-        ComponentLoader.init('../shared');
-
-        // Load sidebar and about modal in parallel
-        await ComponentLoader.loadAll([
-            {
-                name: 'sidebar',
-                target: '#sidebar-container',
-                options: {
-                    basePath: '..',
-                    activeModule: 'documentation'
-                }
-            },
-            {
-                name: 'about-modal',
-                target: '#about-modal-container',
-                options: {
-                    basePath: '..'
-                }
-            }
-        ]);
-
+    initContent() {
         // Current date
         const currentDateEl = document.getElementById('currentDate');
         if (currentDateEl) {
@@ -238,10 +211,17 @@ const Documentation = {
     }
 };
 
-// Экспорт для глобального доступа (до DOMContentLoaded)
+// Экспорт для глобального доступа
 window.Documentation = Documentation;
 
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', async () => {
-    await Documentation.init();
+// Initialize via PageLifecycle
+PageLifecycle.init({
+    module: 'documentation',
+    needsCloudStorage: false,
+    onInit() {
+        Documentation.initContent();
+    },
+    modals: {
+        '#iconsModal': () => Documentation.hideIconsModal()
+    }
 });

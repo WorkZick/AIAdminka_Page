@@ -658,8 +658,7 @@ const partnersApp = {
         this.render();
     },
 
-    toggleColumnsMenu(event) {
-        event.stopPropagation();
+    toggleColumnsMenu() {
         const menu = document.getElementById('columnsMenu');
         menu.classList.toggle('active');
     },
@@ -3149,47 +3148,15 @@ const partnersApp = {
     }
 };
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize components
-    ComponentLoader.init('../shared');
-    await ComponentLoader.load('sidebar', '#sidebar-container', {
-        basePath: '..',
-        activeModule: 'partners'
-    });
-    await ComponentLoader.load('about-modal', '#about-modal-container', {
-        basePath: '..'
-    });
-    SidebarController.init({ basePath: '..' });
-
-    // Initialize partners app
-    partnersApp.init();
-});
-
-// Close modals on escape key
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        if (document.getElementById('importModal').classList.contains('active')) {
-            partnersApp.closeImportDialog();
-        }
-        if (document.getElementById('cropModal').classList.contains('active')) {
-            partnersApp.closeCropModal();
-        }
-        document.getElementById('cardStatusDropdown').classList.add('hidden');
-        document.getElementById('formStatusDropdown').classList.add('hidden');
-    }
-});
-
-// Close modals on backdrop click
-document.getElementById('importModal')?.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        partnersApp.closeImportDialog();
-    }
-});
-
-document.getElementById('cropModal')?.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        partnersApp.closeCropModal();
+// Initialize via PageLifecycle
+PageLifecycle.init({
+    module: 'partners',
+    async onInit() {
+        partnersApp.init();
+    },
+    modals: {
+        '#importModal': () => partnersApp.closeImportDialog(),
+        '#cropModal': () => partnersApp.closeCropModal()
     }
 });
 

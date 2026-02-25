@@ -39,9 +39,11 @@ const CloudStorage = {
     },
 
     // Cache settings
-    CACHE_TTL: 60000, // 1 минута
+    CACHE_TTL: 60000, // 1 минута (fresh)
+    STALE_MAX_AGE: 300000, // 5 минут (stale-while-revalidate)
     CACHE_PREFIX: 'cs-cache-',
     cache: {}, // In-memory fallback
+    _staleKeys: new Set(), // Ключи, отданные как stale
 
     // Pending requests для предотвращения race condition
     pendingRequests: new Map(),
@@ -63,10 +65,14 @@ const CloudStorage = {
      * @returns {Promise<boolean>} true если авторизован и хранилище готово
      */
     async init() {
+        if (this.isInitialized) return this.isAuthenticated();
+
         // Проверяем онлайн статус
         this.isOnline = navigator.onLine;
-        window.addEventListener('online', () => this.isOnline = true);
-        window.addEventListener('offline', () => this.isOnline = false);
+        this._onlineHandler = () => this.isOnline = true;
+        this._offlineHandler = () => this.isOnline = false;
+        window.addEventListener('online', this._onlineHandler);
+        window.addEventListener('offline', this._offlineHandler);
 
         // Проверяем авторизацию
         const auth = this.getAuthData();
@@ -321,15 +327,22 @@ const CloudStorage = {
 
             console.error('CloudStorage API error:', error);
 
-            // Если Access denied - пользователь удалён из системы, разлогиниваем
             const errorMessage = error.message || String(error);
+
+            // Permission denied — роль могла смениться, принудительно перепроверяем
+            if (errorMessage.includes('Permission denied') && typeof RoleGuard !== 'undefined' && !this._revalidating) {
+                this._revalidating = true;
+                RoleGuard.revalidateInBackground().finally(() => { this._revalidating = false; });
+            }
+
+            // Если Access denied - пользователь удалён из системы, разлогиниваем
             if (errorMessage.includes('Access denied') || errorMessage.includes('User not found')) {
                 if (typeof Toast !== 'undefined') {
                     Toast.error('Доступ запрещён. Ваш аккаунт не найден в системе.');
                 }
                 // Очищаем данные и редиректим на login
                 localStorage.removeItem('cloud-auth');
-                localStorage.removeItem('roleGuard-cache');
+                localStorage.removeItem('roleGuard');
                 setTimeout(() => {
                     if (typeof AuthGuard !== 'undefined') {
                         AuthGuard.redirectToLogin();
@@ -361,7 +374,11 @@ const CloudStorage = {
             const raw = localStorage.getItem(this.CACHE_PREFIX + key);
             if (raw) {
                 const cached = JSON.parse(raw);
-                if (Date.now() - cached.timestamp <= this.CACHE_TTL) {
+                const age = Date.now() - cached.timestamp;
+                if (age <= this.STALE_MAX_AGE) {
+                    if (age > this.CACHE_TTL) {
+                        this._staleKeys.add(key);
+                    }
                     return cached.data;
                 }
                 localStorage.removeItem(this.CACHE_PREFIX + key);
@@ -374,9 +391,13 @@ const CloudStorage = {
         // Fallback: in-memory кеш
         const memCached = this.cache[key];
         if (!memCached) return null;
-        if (Date.now() - memCached.timestamp > this.CACHE_TTL) {
+        const age = Date.now() - memCached.timestamp;
+        if (age > this.STALE_MAX_AGE) {
             delete this.cache[key];
             return null;
+        }
+        if (age > this.CACHE_TTL) {
+            this._staleKeys.add(key);
         }
         return memCached.data;
     },
@@ -451,7 +472,12 @@ const CloudStorage = {
     async getPartners(useCache = true) {
         if (useCache) {
             const cached = this.getFromCache('partners');
-            if (cached) return cached;
+            if (cached) {
+                if (this._staleKeys.delete('partners')) {
+                    this.getPartners(false).catch(() => {});
+                }
+                return cached;
+            }
         }
 
         // Предотвращение race condition: возвращаем существующий Promise если запрос уже в процессе
@@ -555,7 +581,12 @@ const CloudStorage = {
     async getTemplates(useCache = true) {
         if (useCache) {
             const cached = this.getFromCache('templates');
-            if (cached) return cached;
+            if (cached) {
+                if (this._staleKeys.delete('templates')) {
+                    this.getTemplates(false).catch(() => {});
+                }
+                return cached;
+            }
         }
 
         const result = await this.callApi('getTemplates');
@@ -591,7 +622,12 @@ const CloudStorage = {
     async getMethods(useCache = true) {
         if (useCache) {
             const cached = this.getFromCache('methods');
-            if (cached) return cached;
+            if (cached) {
+                if (this._staleKeys.delete('methods')) {
+                    this.getMethods(false).catch(() => {});
+                }
+                return cached;
+            }
         }
 
         const result = await this.callApi('getMethods');
@@ -650,7 +686,12 @@ const CloudStorage = {
     async getEmployees(useCache = true) {
         if (useCache) {
             const cached = this.getFromCache('employees');
-            if (cached) return cached;
+            if (cached) {
+                if (this._staleKeys.delete('employees')) {
+                    this.getEmployees(false).catch(() => {});
+                }
+                return cached;
+            }
         }
 
         // Предотвращение race condition
@@ -733,7 +774,12 @@ const CloudStorage = {
     async getEmployeeTemplates(useCache = true) {
         if (useCache) {
             const cached = this.getFromCache('employeeTemplates');
-            if (cached) return cached;
+            if (cached) {
+                if (this._staleKeys.delete('employeeTemplates')) {
+                    this.getEmployeeTemplates(false).catch(() => {});
+                }
+                return cached;
+            }
         }
 
         const result = await this.callApi('getEmployeeTemplates');
@@ -816,70 +862,6 @@ const CloudStorage = {
         const result = await this.postApi('importAll', { data: data });
         this.clearCache();
         return result;
-    },
-
-    // ============ TICKETS (Предложения/Баги) ============
-
-    /**
-     * Получить все тикеты
-     */
-    async getTickets(useCache = true) {
-        if (useCache) {
-            const cached = this.getFromCache('tickets');
-            if (cached) return cached;
-        }
-
-        const result = await this.callApi('getTickets');
-        const tickets = result.tickets || [];
-
-        this.setCache('tickets', tickets);
-        return tickets;
-    },
-
-    /**
-     * Создать тикет
-     * @param {Object} data - { title, description, images: [fileId, ...] }
-     */
-    async createTicket(data) {
-        const result = await this.postApi('createTicket', { data: data });
-        this.clearCache('tickets');
-        return result;
-    },
-
-    /**
-     * Обновить статус тикета (только админ)
-     * @param {string} id - ID тикета
-     * @param {string} status - новый статус (new, in_progress, need_info, resolved, closed)
-     */
-    async updateTicketStatus(id, status) {
-        const result = await this.callApi('updateTicketStatus', { id: id, status: status });
-        this.clearCache('tickets');
-        return result;
-    },
-
-    /**
-     * Добавить комментарий к тикету
-     * @param {string} id - ID тикета
-     * @param {string} comment - текст комментария
-     */
-    async addTicketComment(id, comment) {
-        const result = await this.callApi('addTicketComment', { id: id, comment: comment });
-        this.clearCache('tickets');
-        return result;
-    },
-
-    /**
-     * Проверить, является ли текущий пользователь админом
-     */
-    async checkIsAdmin() {
-        const cached = this.getFromCache('isAdmin');
-        if (cached !== null) return cached;
-
-        const result = await this.callApi('checkIsAdmin');
-        const isAdmin = result.isAdmin || false;
-
-        this.setCache('isAdmin', isAdmin);
-        return isAdmin;
     },
 
     // ============ LOGS ============

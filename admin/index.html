@@ -6,6 +6,7 @@
     <!-- CSP: 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' только для Live Server (dev) -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Администрирование - AIAdminka</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <link rel="stylesheet" href="css/admin.css">
 </head>
@@ -13,6 +14,12 @@
     <div class="app-container">
         <!-- Sidebar Container -->
         <div id="sidebar-container"></div>
+
+        <!-- Loading state (visible until lifecycle-ready) -->
+        <div class="page-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
 
         <!-- Main wrapper -->
         <div class="main-wrapper">
@@ -31,8 +38,14 @@
 
             <!-- Content area -->
             <div class="content-area">
-                <!-- Tabs -->
-                <div class="tabs-container">
+                <!-- Loading state -->
+                <div class="loading-state" id="adminLoadingState">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Загрузка данных...</div>
+                </div>
+
+                <!-- Tabs (hidden until data loads) -->
+                <div class="tabs-container hidden" id="adminTabsContainer">
                     <div class="tabs">
                         <button class="tab active" data-tab="teams" data-action="switch-tab">
                             Команды
@@ -56,7 +69,7 @@
                 </div>
 
                 <!-- Tab: Teams -->
-                <div class="tab-content active" id="tab-teams">
+                <div class="tab-content active hidden" id="tab-teams">
                     <div class="section-header">
                         <div class="section-title">Все команды</div>
                         <div class="section-actions">
@@ -504,6 +517,7 @@
     <script src="../shared/js/component-loader.js"></script>
     <script src="../shared/js/sidebar-controller.js"></script>
     <script src="../shared/js/about-modal.js"></script>
+    <script src="../shared/js/page-lifecycle.js"></script>
     <script src="js/admin.js"></script>
 </body>
 </html>

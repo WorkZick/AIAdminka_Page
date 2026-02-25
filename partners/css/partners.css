@@ -516,65 +516,6 @@
     text-align: center;
 }
 
-/* Empty state */
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 80px 40px;
-    text-align: center;
-}
-
-.empty-state-icon {
-    width: 64px;
-    height: 64px;
-    filter: brightness(0) invert(1);
-    opacity: 0.2;
-    margin-bottom: var(--spacing-xl);
-}
-
-.empty-state-title {
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    color: var(--white);
-    margin-bottom: var(--spacing-sm);
-}
-
-.empty-state-text {
-    font-size: var(--font-size-md);
-    color: var(--gray);
-    margin-bottom: var(--spacing-2xl);
-}
-
-/* Loading state */
-.loading-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 80px 40px;
-    gap: var(--spacing-lg);
-}
-
-.spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--glass-border);
-    border-top-color: var(--yellow);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.loading-text {
-    color: var(--gray);
-    font-size: var(--font-size-md);
-}
-
 /* ============ RIGHT PANEL ============ */
 .right-panel {
     width: 360px;

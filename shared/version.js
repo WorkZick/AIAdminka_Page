@@ -4,7 +4,7 @@
 const AppVersion = {
     version: null,
     // Fallback версия на случай если changelog.json недоступен
-    FALLBACK_VERSION: '2.16.0',
+    FALLBACK_VERSION: '2.23.0',
 
     async init() {
         await this.loadVersion();
@@ -45,7 +45,7 @@ const AppVersion = {
         }
 
         // Fallback: определяем глубину вложенности
-        const folders = ['partners', 'team-info', 'traffic-calculation', 'documentation', 'login', 'excel-reports', 'sync', 'admin'];
+        const folders = ['partners', 'partner-onboarding', 'team-info', 'traffic-calculation', 'documentation', 'login', 'excel-reports', 'sync', 'admin'];
         for (const folder of folders) {
             if (pathname.includes('/' + folder + '/')) {
                 return '../documentation/data/changelog.json';

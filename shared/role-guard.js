@@ -295,7 +295,7 @@ const RoleGuard = {
      * @returns {object} - объект permissions
      */
     buildPermissions(isAdmin) {
-        const allModules = ['partners', 'team-info', 'traffic', 'reports', 'settings', 'documentation', 'team-management', 'admin-panel'];
+        const allModules = ['partners', 'partner-onboarding', 'team-info', 'traffic', 'reports', 'settings', 'documentation', 'team-management', 'admin-panel'];
         const permissions = {};
 
         if (isAdmin) {
@@ -411,6 +411,18 @@ const RoleGuard = {
                 this.user = result.user;
                 this.permissions = result.permissions;
                 this.applyUI();
+
+                // Роль сменилась на guest — редирект на ожидание приглашения
+                if (roleChanged && result.user?.role === 'guest' && typeof AuthGuard !== 'undefined') {
+                    window.location.href = AuthGuard.getBasePath() + '/login/waiting-invite.html';
+                    return;
+                }
+
+                // Статус blocked — показать экран блокировки
+                if (result.user?.status === 'blocked' && typeof AuthGuard !== 'undefined') {
+                    AuthGuard.showBlockedScreen();
+                    return;
+                }
             }
         } catch (e) {
             // Фоновая ревалидация провалилась — stale данные остаются
@@ -614,15 +626,16 @@ const RoleGuard = {
             'data-leader-only'
         ];
 
+        let applyScheduled = false;
         this.domObserver = new MutationObserver((mutations) => {
+            if (applyScheduled) return;
+
             let needsReapply = false;
 
             for (const mutation of mutations) {
-                // Проверяем добавленные узлы
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
                     for (const node of mutation.addedNodes) {
                         if (node.nodeType === Node.ELEMENT_NODE) {
-                            // Проверяем сам элемент и его потомков
                             if (targetAttributes.some(attr => node.hasAttribute?.(attr)) ||
                                 targetAttributes.some(attr => node.querySelector?.(`[${attr}]`))) {
                                 needsReapply = true;
@@ -632,7 +645,6 @@ const RoleGuard = {
                     }
                 }
 
-                // Проверяем изменения атрибутов
                 if (mutation.type === 'attributes' && targetAttributes.includes(mutation.attributeName)) {
                     needsReapply = true;
                 }
@@ -641,7 +653,11 @@ const RoleGuard = {
             }
 
             if (needsReapply) {
-                this.applyUI();
+                applyScheduled = true;
+                requestAnimationFrame(() => {
+                    applyScheduled = false;
+                    this.applyUI();
+                });
             }
         });
 

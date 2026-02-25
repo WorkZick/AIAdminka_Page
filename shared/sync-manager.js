@@ -22,6 +22,10 @@ const SyncManager = {
     onSyncComplete: null,
     onSyncError: null,
 
+    // Activity tracking
+    _activityHandler: null,
+    _activityEvents: ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'],
+
     // ============ ИНИЦИАЛИЗАЦИЯ ============
 
     init() {
@@ -31,19 +35,34 @@ const SyncManager = {
 
     // Отслеживаем активность пользователя
     trackUserActivity() {
-        // Debounce для предотвращения частых обновлений (особенно mousemove)
+        if (this._activityHandler) return; // Guard от повторных вызовов
+
         let timeout;
-        const updateActivity = () => {
+        this._activityHandler = () => {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
                 this.lastUserActivity = Date.now();
-            }, 100); // Max 10 updates per second
+            }, 100);
         };
 
-        // Отслеживаем различные типы взаимодействия
-        ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'].forEach(event => {
-            document.addEventListener(event, updateActivity, { passive: true });
+        this._activityEvents.forEach(event => {
+            document.addEventListener(event, this._activityHandler, { passive: true });
         });
+    },
+
+    // Очистка ресурсов
+    destroy() {
+        if (this._activityHandler) {
+            this._activityEvents.forEach(event => {
+                document.removeEventListener(event, this._activityHandler);
+            });
+            this._activityHandler = null;
+        }
+        if (this.port) {
+            this.port.close();
+            this.port = null;
+        }
+        this.isConnected = false;
     },
 
     // Проверяем, неактивен ли пользователь (более 5 секунд)
@@ -150,7 +169,7 @@ const SyncManager = {
             return match[1];
         }
         // Fallback - используем относительный путь
-        const folders = ['partners', 'methods', 'team-info', 'traffic-calculation', 'documentation', 'feedback', 'login', 'excel-reports', 'sync'];
+        const folders = ['partners', 'team-info', 'traffic-calculation', 'documentation', 'login', 'excel-reports', 'sync', 'admin'];
         for (const folder of folders) {
             if (path.includes('/' + folder + '/')) return '../';
         }

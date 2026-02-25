@@ -13,10 +13,16 @@ const settingsApp = {
 
     // ============ INITIALIZATION ============
 
-    init() {
+    async init() {
+        const loadingState = document.getElementById('settingsLoadingState');
+        const layout = document.getElementById('settingsLayout');
         this.loadUserData();
-        this.loadProfile();
-        this.loadTeamSettings();
+        try {
+            await this.loadProfile();
+        } finally {
+            if (loadingState) loadingState.classList.add('hidden');
+            if (layout) layout.classList.remove('hidden');
+        }
     },
 
     attachEventListeners() {
@@ -38,7 +44,7 @@ const settingsApp = {
         }
 
         // Delegate clicks for data-action buttons
-        document.addEventListener('click', (e) => {
+        this._clickHandler = (e) => {
             const target = e.target.closest('[data-action]');
             if (!target) return;
 
@@ -68,7 +74,8 @@ const settingsApp = {
                     this.saveTeamNameFromModal();
                     break;
             }
-        });
+        };
+        document.addEventListener('click', this._clickHandler);
     },
 
     // ============ User Data ============
@@ -472,14 +479,6 @@ const settingsApp = {
         Toast.success('Кэш очищен');
     },
 
-    // ============ Sidebar ============
-
-    toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('collapsed');
-        localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
-    },
-
     // ============ Modals ============
 
     openModal(modalId) {
@@ -519,10 +518,6 @@ const settingsApp = {
 
     // ============ Team Settings ============
 
-    loadTeamSettings() {
-        // Team name is loaded and displayed in updateTeamInfo()
-    },
-
     editTeamName() {
         // TODO: Редактирование названия команды требует API метода updateTeam
         // Пока показываем информационное сообщение
@@ -540,6 +535,13 @@ const settingsApp = {
      * Синхронизация профиля с модулем "Сотрудники" (team-info)
      * Создаёт или обновляет карточку сотрудника в CloudStorage
      */
+    destroy() {
+        if (this._clickHandler) {
+            document.removeEventListener('click', this._clickHandler);
+            this._clickHandler = null;
+        }
+    },
+
     async syncToTeamInfo(profileData) {
         // Получаем текущий email пользователя
         const userEmail = this.currentUser?.email || this.userProfile?.email;
@@ -618,36 +620,14 @@ const settingsApp = {
     }
 };
 
-// Инициализация
-document.addEventListener('DOMContentLoaded', async function() {
-    // Check authentication and role status (waiting_invite/blocked check)
-    if (!await AuthGuard.checkWithRole()) {
-        return; // Will redirect to login or waiting-invite
+// Initialize via PageLifecycle
+PageLifecycle.init({
+    module: 'settings',
+    async onInit() {
+        await settingsApp.init();
+        settingsApp.attachEventListeners();
+    },
+    onDestroy() {
+        settingsApp.destroy();
     }
-
-    // Initialize ComponentLoader with path to shared folder
-    ComponentLoader.init('../shared');
-
-    // Load sidebar and about modal in parallel
-    await ComponentLoader.loadAll([
-        {
-            name: 'sidebar',
-            target: '#sidebar-container',
-            options: {
-                basePath: '..',
-                activeModule: 'settings'
-            }
-        },
-        {
-            name: 'about-modal',
-            target: '#about-modal-container',
-            options: {
-                basePath: '..'
-            }
-        }
-    ]);
-
-    // Initialize settings app after components are loaded
-    settingsApp.init();
-    settingsApp.attachEventListeners();
 });

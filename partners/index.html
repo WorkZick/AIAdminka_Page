@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.sheetjs.com https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Партнеры - AIAdminka</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <link rel="stylesheet" href="css/partners.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"
@@ -15,6 +16,12 @@
     <div class="app-container">
         <!-- Sidebar Container -->
         <div id="sidebar-container"></div>
+
+        <!-- Loading state (visible until lifecycle-ready) -->
+        <div class="page-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
 
         <!-- Main wrapper -->
         <div class="main-wrapper">
@@ -44,7 +51,7 @@
                                 <div class="stat-badge red" title="Закрыт"><span id="closedCount">0</span></div>
                             </div>
                             <div class="columns-settings">
-                                <button class="columns-btn" data-action="partners-toggleColumnsMenu(event)" title="Настройка колонок">
+                                <button class="columns-btn" data-action="partners-toggleColumnsMenu" title="Настройка колонок">
                                     <img src="../shared/icons/settings.svg" width="14" height="14" alt="Колонки">
                                 </button>
                                 <div class="columns-menu" id="columnsMenu">
@@ -545,6 +552,7 @@
     <script src="../shared/js/about-modal.js"></script>
     <script src="../shared/js/toast.js"></script>
     <script src="../shared/js/error-handler.js"></script>
+    <script src="../shared/js/page-lifecycle.js"></script>
     <script src="js/partners.js"></script>
 </body>
 </html>

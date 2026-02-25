@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Настройки - AIAdminka</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <!-- Design System (base styles) -->
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <!-- Module-specific styles -->
@@ -14,6 +15,12 @@
     <div class="app-container">
         <!-- Sidebar Container (loaded via ComponentLoader) -->
         <div id="sidebar-container"></div>
+
+        <!-- Loading state (visible until lifecycle-ready) -->
+        <div class="page-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
 
         <!-- Main wrapper -->
         <div class="main-wrapper">
@@ -28,7 +35,13 @@
 
             <!-- Content area -->
             <div class="content-area">
-                <div class="settings-layout">
+                <!-- Loading state -->
+                <div class="loading-state" id="settingsLoadingState">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Загрузка профиля...</div>
+                </div>
+
+                <div class="settings-layout hidden" id="settingsLayout">
 
                     <!-- Left Column: Profile -->
                     <div class="settings-column settings-column-main">
@@ -316,6 +329,7 @@
     <script src="../shared/auth-guard.js"></script>
     <script src="../shared/roles-config.js"></script>
     <script src="../shared/role-guard.js"></script>
+    <script src="../shared/js/page-lifecycle.js"></script>
 
     <!-- Module JS -->
     <script src="js/settings.js"></script>

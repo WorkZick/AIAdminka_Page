@@ -91,14 +91,15 @@ const TeamNavigation = {
 
         // Установка аватара с валидацией URL
         const cardAvatar = document.getElementById('cardAvatar');
+        const cardPlaceholder = document.getElementById('cardAvatarPlaceholder');
         if (employee.avatar && TeamUtils.isValidImageUrl(employee.avatar)) {
             cardAvatar.src = employee.avatar;
             cardAvatar.classList.remove('hidden');
-            cardAvatar.classList.add('visible');
+            if (cardPlaceholder) cardPlaceholder.classList.add('hidden');
         } else {
             cardAvatar.src = '';
-            cardAvatar.classList.remove('visible');
             cardAvatar.classList.add('hidden');
+            if (cardPlaceholder) cardPlaceholder.classList.remove('hidden');
         }
 
         const cardBody = document.getElementById('cardBody');

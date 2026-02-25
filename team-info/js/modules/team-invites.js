@@ -6,25 +6,22 @@
 
 const TeamInvites = {
     /**
-     * Переключение вкладки (статистика / приглашения)
-     * @param {string} tabName - Имя вкладки ('stats' или 'invite')
+     * Переключение sub-tab (список сотрудников / приглашения)
+     * @param {string} subtab - 'employees' или 'invites'
      */
-    switchTab(tabName) {
-        // Обновить кнопки вкладок
-        document.querySelectorAll('.hint-panel > .tabs .tab').forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.tab === tabName);
+    switchSubtab(subtab) {
+        document.querySelectorAll('.sub-tabs .sub-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === subtab);
         });
 
-        // Обновить контент вкладок
-        document.querySelectorAll('.hint-panel > .tab-content').forEach(content => {
-            content.classList.remove('active');
+        document.querySelectorAll('.content-area > .sub-tab-content').forEach(el => {
+            el.classList.remove('active');
         });
 
-        if (tabName === 'stats') {
-            document.getElementById('tabStats').classList.add('active');
-        } else if (tabName === 'invite') {
-            document.getElementById('tabInvite').classList.add('active');
-            // Загрузить список гостей при открытии вкладки
+        const target = document.getElementById('subtab-' + subtab);
+        if (target) target.classList.add('active');
+
+        if (subtab === 'invites') {
             this.loadGuestUsers();
         }
     },
@@ -55,7 +52,7 @@ const TeamInvites = {
         TeamState.currentInviteType = type;
 
         // Обновить кнопки переключения
-        document.querySelectorAll('.invite-toggle .tab').forEach(btn => {
+        document.querySelectorAll('.invite-mode-toggle .invite-mode').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.type === type);
         });
 
@@ -64,16 +61,10 @@ const TeamInvites = {
         const manualSection = document.getElementById('inviteManual');
 
         if (guestsSection && manualSection) {
-            if (type === 'guests') {
-                guestsSection.classList.remove('hidden');
-                guestsSection.classList.add('visible-block');
-                manualSection.classList.remove('visible-flex');
-                manualSection.classList.add('hidden');
-            } else {
-                guestsSection.classList.remove('visible-block');
-                guestsSection.classList.add('hidden');
-                manualSection.classList.remove('hidden');
-                manualSection.classList.add('visible-flex');
+            guestsSection.classList.toggle('hidden', type !== 'guests');
+            manualSection.classList.toggle('hidden', type !== 'manual');
+
+            if (type === 'manual') {
                 this.populateManualRoleSelect();
             }
         }
@@ -104,8 +95,8 @@ const TeamInvites = {
         const container = document.getElementById('guestsList');
         if (!container) return;
 
-        // Показать skeleton/loading
-        container.innerHTML = '<div class="loading-text">Загрузка списка гостей...</div>';
+        // Показать loading state
+        container.innerHTML = '<div class="loading-state"><div class="spinner"></div><div class="loading-text">Загрузка списка гостей...</div></div>';
 
         try {
             // Загружаем гостей
@@ -149,6 +140,10 @@ const TeamInvites = {
     renderGuestsList() {
         const container = document.getElementById('guestsList');
         if (!container) return;
+
+        // Обновить счётчик гостей
+        const countEl = document.getElementById('guestsCount');
+        if (countEl) countEl.textContent = TeamState.availableGuests.length;
 
         // Проверяем, нужен ли селектор команд (для Admin без команды)
         const currentRole = RoleGuard.getCurrentRole();
@@ -200,8 +195,7 @@ const TeamInvites = {
                 <div class="guest-info">
                     <img src="${guest.picture || '../shared/icons/add.svg'}"
                          alt="${TeamUtils.escapeHtml(guest.name)}"
-                         class="guest-avatar"
-                         onerror="this.src='../shared/icons/add.svg'">
+                         class="guest-avatar">
                     <div class="guest-details">
                         <div class="guest-name">${TeamUtils.escapeHtml(guest.name)}</div>
                         <div class="guest-email">${TeamUtils.escapeHtml(guest.email)}</div>
@@ -222,6 +216,11 @@ const TeamInvites = {
         `).join('');
 
         container.innerHTML = teamSelectorHtml + guestsHtml;
+
+        // CSP-safe: назначаем onerror программно вместо inline handler
+        container.querySelectorAll('.guest-avatar').forEach(img => {
+            img.onerror = () => { img.src = '../shared/icons/add.svg'; img.onerror = null; };
+        });
     },
 
     /**
@@ -431,13 +430,11 @@ const TeamInvites = {
         if (!container || !list) return;
 
         if (TeamState.pendingInvites.length === 0) {
-            container.classList.remove('visible-block');
             container.classList.add('hidden');
             return;
         }
 
         container.classList.remove('hidden');
-        container.classList.add('visible-block');
         countEl.textContent = TeamState.pendingInvites.length;
 
         list.innerHTML = TeamState.pendingInvites.map(invite => `

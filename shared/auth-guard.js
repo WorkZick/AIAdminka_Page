@@ -402,7 +402,7 @@ const AuthGuard = {
                     }
                     // Очищаем данные и редиректим на login
                     localStorage.removeItem('cloud-auth');
-                    localStorage.removeItem('roleGuard-cache');
+                    localStorage.removeItem('roleGuard');
                     setTimeout(() => this.redirectToLogin(), 1500);
                     return false;
                 }

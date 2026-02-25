@@ -29,8 +29,165 @@ const changelog = {
     // Эти данные используются только если не удалось загрузить JSON
     // ВАЖНО: При обновлении changelog.json нужно также обновить эти данные!
     fallbackData: {
-        "version": "2.16.0",
+        "version": "2.23.0",
         "updates": [
+            {
+                "version": "2.23.0",
+                "date": "2026-02-12",
+                "title": "Модуль «Заведение партнёра» — полный workflow",
+                "changes": [
+                    {
+                        "category": "Новое",
+                        "items": [
+                            "Новый модуль «Заведение партнёра» (partner-onboarding) — пошаговый процесс онбординга",
+                            "4 настраиваемых шага с ролями executor/reviewer для каждого",
+                            "Карточки заявок с мини-прогрессом, данными сейлза и статусом",
+                            "Детальный вид заявки с секциями по шагам, историей проверок",
+                            "Создание новых заявок, сохранение черновиков, отправка на проверку",
+                            "Фильтры и передача заявки другому sales-менеджеру",
+                            "Карточка модуля на главной странице"
+                        ]
+                    },
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "Approve → переход к следующему шагу, Reject → возврат executor с комментарием",
+                            "Ролевая изоляция: sales видит только свои заявки, reviewer — все"
+                        ]
+                    }
+                ]
+            },
+            {
+                "version": "2.22.0",
+                "date": "2026-02-12",
+                "title": "Единый полноэкранный спиннер на всех страницах",
+                "changes": [
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "Полноэкранный спиннер .page-loading добавлен на все 8 страниц",
+                            "lifecycle-ready после onInit(), стили в shared lifecycle.css"
+                        ]
+                    }
+                ]
+            },
+            {
+                "version": "2.21.0",
+                "date": "2026-02-12",
+                "title": "Приглашения в отдельной вкладке, исправления UI",
+                "changes": [
+                    {
+                        "category": "Новое",
+                        "items": [
+                            "Приглашения вынесены в отдельную вкладку (sub-tab) на странице Сотрудники",
+                            "shared/css/components/sub-tabs.css — переиспользуемый компонент sub-tabs"
+                        ]
+                    },
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "Invite page: full-width layout вместо узкой правой панели",
+                            "Invite page: pill-toggle переключатель (Одобренные гости / Ручной ввод)",
+                            "Invite page: glassmorphism панели в едином стиле с остальным проектом"
+                        ]
+                    },
+                    {
+                        "category": "Исправлено",
+                        "items": [
+                            "Аватар в карточке сотрудника: placeholder не скрывался при наличии фото",
+                            "Партнёры: кнопка настройки колонок не работала (некорректный data-action)"
+                        ]
+                    }
+                ]
+            },
+            {
+                "version": "2.20.0",
+                "date": "2026-02-12",
+                "title": "Loading UX на главной, унификация Steps компонента",
+                "changes": [
+                    {
+                        "category": "Новое",
+                        "items": [
+                            "Спиннер загрузки на главной странице до полной инициализации",
+                            "Унифицированный Steps компонент (shared/css/components/steps.css)"
+                        ]
+                    },
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "Steps: единый CSS для excel-reports и traffic-calculation (~280 строк дублирования удалено)",
+                            "Steps: tooltip с названием шага при наведении через data-title"
+                        ]
+                    },
+                    {
+                        "category": "Исправлено",
+                        "items": [
+                            "Некрасивый пустой экран на главной при загрузке (до lifecycle-ready)",
+                            "Tooltip шагов не отображался в Отчётах (overflow: hidden на родителе)"
+                        ]
+                    }
+                ]
+            },
+            {
+                "version": "2.19.1",
+                "date": "2026-02-09",
+                "title": "Единообразная загрузка страниц, оптимизация admin/settings",
+                "changes": [
+                    {
+                        "category": "Новое",
+                        "items": [
+                            "shared/css/components/loading.css — общие стили спиннера и пустого состояния",
+                            "Спиннер загрузки в админ-панели и настройках",
+                            "lifecycle-ready теперь срабатывает до onInit — спиннеры видны сразу"
+                        ]
+                    },
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "admin.js: escapeHtml через string regex вместо DOM-based",
+                            "admin.js: debounce 150мс на фильтры + хранение ссылок на обработчики",
+                            "Единообразный loading UX на всех страницах"
+                        ]
+                    },
+                    {
+                        "category": "Исправлено",
+                        "items": [
+                            "Пустой экран 1-3с при загрузке admin, settings, team-info",
+                            "Утечка памяти: event listeners без cleanup в admin.js и settings.js"
+                        ]
+                    }
+                ]
+            },
+            {
+                "version": "2.19.0",
+                "date": "2026-02-09",
+                "title": "Централизованная загрузка страниц (PageLifecycle), оптимизация",
+                "changes": [
+                    {
+                        "category": "Новое",
+                        "items": [
+                            "shared/js/page-lifecycle.js — централизованный менеджер загрузки страниц",
+                            "shared/css/components/lifecycle.css — плавное появление контента (fade-in)",
+                            "PageLifecycle.init() заменяет 15-35 строк boilerplate на каждой странице"
+                        ]
+                    },
+                    {
+                        "category": "Улучшено",
+                        "items": [
+                            "Stale-while-revalidate кеш CloudStorage (60с fresh, 300с stale)",
+                            "SyncManager: guard от повторных вызовов + метод destroy()",
+                            "Все 8 модулей мигрированы на PageLifecycle.init()"
+                        ]
+                    },
+                    {
+                        "category": "Исправлено",
+                        "items": [
+                            "Утечка памяти: дублирование event listeners в SyncManager и CloudStorage",
+                            "Дублирование AuthGuard/CloudStorage вызовов в admin.js и team-info.js"
+                        ]
+                    }
+                ]
+            },
             {
                 "version": "2.16.0",
                 "date": "2026-02-02",
@@ -80,7 +237,7 @@ const changelog = {
                         "category": "Исправлено",
                         "items": [
                             "CloudStorage.init() в partners.js перенесён внутрь try-catch",
-                            "CloudStorage.init() и loadTickets() в home.js обёрнуты в try-catch",
+                            "CloudStorage.init() в home.js обёрнут в try-catch",
                             "ErrorHandler подключён на все страницы (было только 2 из 9)",
                             "Toast подключён на index.html и excel-reports (отсутствовал)"
                         ]
@@ -108,12 +265,11 @@ const changelog = {
             {
                 "version": "2.14.0",
                 "date": "2025-12-08",
-                "title": "Pac-Man, Excel Reports 2.0, улучшения безопасности",
+                "title": "Excel Reports 2.0, улучшения безопасности",
                 "changes": [
                     {
                         "category": "Новое",
                         "items": [
-                            "Мини-игра «Охота за конкурентами» (Pac-Man) на главной странице",
                             "Модульная архитектура Excel Reports (StateManager, StepsNavigator, UIRenderer, FileProcessor, Utils)",
                             "Множественная загрузка файлов с объединением данных (Аналитика Т9, B-TAG)",
                             "Валидация обязательных колонок при загрузке файлов",
@@ -159,8 +315,6 @@ const changelog = {
                     {
                         "category": "Файлы",
                         "items": [
-                            "index.html, js/home.js, css/home.css (Pac-Man игра)",
-                            "icons/game/ (5 иконок персонажей)",
                             "excel-reports/js/modules/ (5 новых модулей)",
                             "excel-reports/js/excel-reports.js (рефакторинг)",
                             "excel-reports/css/excel-reports.css (+800 строк)",
@@ -265,8 +419,6 @@ const changelog = {
                         "items": [
                             "Тёмная тема модального окна «Настройки расчета % трафика»",
                             "Тёмная тема модального окна «Результаты расчета % трафика»",
-                            "Выдвижная панель тикетов (drawer) на главной странице",
-                            "Бейдж с количеством непрочитанных тикетов",
                             "Легенда уровней оценки в настройках трафика"
                         ]
                     },
@@ -283,8 +435,7 @@ const changelog = {
                     {
                         "category": "Изменено",
                         "items": [
-                            "Значения по умолчанию: 1/2/3/4 балла для уровней, 5 для множителя",
-                            "Панель тикетов вынесена из основного контента в drawer"
+                            "Значения по умолчанию: 1/2/3/4 балла для уровней, 5 для множителя"
                         ]
                     },
                     {
@@ -433,43 +584,6 @@ const changelog = {
                             "shared/cloud-storage.js - метод fetchPartnersFromCloud",
                             "shared/version.js - исправлен путь к changelog.json",
                             "traffic-calculation/js/storage.js - адаптирован для CloudStorage"
-                        ]
-                    }
-                ]
-            },
-            {
-                "version": "2.9.0",
-                "date": "2025-12-01",
-                "title": "Система обратной связи и тикетов",
-                "changes": [
-                    {
-                        "category": "Новое",
-                        "items": [
-                            "Карточка 'Предложить улучшение' на главной странице для отправки идей, багов и пожеланий",
-                            "Форма создания тикета с заголовком, описанием и загрузкой до 3 скриншотов",
-                            "Секция 'Обратная связь' на главной для отображения тикетов",
-                            "Система статусов: Новый, В работе, Нужна информация, Решено, Закрыт",
-                            "Комментарии к тикетам от администратора и пользователей",
-                            "Email-уведомления администратору о новых тикетах",
-                            "Админ-панель для управления статусами и ответов на тикеты"
-                        ]
-                    },
-                    {
-                        "category": "Улучшено",
-                        "items": [
-                            "Пользователи видят только свои тикеты, администратор - все",
-                            "Цветовая индикация статусов тикетов",
-                            "Просмотр скриншотов в полном размере по клику"
-                        ]
-                    },
-                    {
-                        "category": "Файлы",
-                        "items": [
-                            "index.html - карточка тикетов, модальные окна создания и просмотра",
-                            "css/home.css - стили для тикетов, форм, статусов",
-                            "js/home.js - логика работы с тикетами",
-                            "shared/cloud-storage.js - методы API для тикетов",
-                            "Google Apps Script - функции getTickets, createTicket, updateTicketStatus, addTicketComment"
                         ]
                     }
                 ]

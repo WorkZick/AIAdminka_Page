@@ -4,215 +4,194 @@
  */
 
 const WaitingInvite = {
-    // Интервал автоматического обновления (30 секунд)
     REFRESH_INTERVAL: 30000,
 
-    // ID интервала
-    refreshIntervalId: null,
-
-    // Состояние
+    _refreshIntervalId: null,
+    _clickHandler: null,
+    _beforeUnloadHandler: null,
+    _keydownHandler: null,
+    _confirmResolve: null,
     isLoading: false,
-    isRedirecting: false,  // Флаг редиректа - предотвращает повторные вызовы
+    isRedirecting: false,
     user: null,
     invites: [],
 
-    /**
-     * Инициализация страницы
-     */
     async init() {
-        // Проверить авторизацию
-        const auth = this.getAuthData();
-        if (!auth) {
-            this.redirectToLogin();
+        const authData = localStorage.getItem('cloud-auth');
+        if (!authData) {
+            window.location.href = '/SimpleAIAdminka/login/';
             return;
         }
 
-        // Отобразить информацию о пользователе
-        this.user = {
-            email: auth.email,
-            name: auth.name || auth.email.split('@')[0],
-            picture: auth.picture || ''
-        };
-        this.renderUserInfo();
-
-        // Привязать события
-        this.bindEvents();
-
-        // Загрузить приглашения
-        await this.loadInvites();
-
-        // Запустить автоматическое обновление
-        this.startAutoRefresh();
-    },
-
-    /**
-     * Получение данных авторизации из localStorage
-     */
-    getAuthData() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return null;
-
         try {
             const auth = JSON.parse(authData);
-
-            // Проверить срок токена
             if (Date.now() - auth.timestamp > 3500000) {
                 localStorage.removeItem('cloud-auth');
-                return null;
+                window.location.href = '/SimpleAIAdminka/login/';
+                return;
             }
 
-            return auth;
-        } catch (e) {
-            console.error('WaitingInvite: Failed to parse auth data:', e);
-            return null;
+            this.user = {
+                email: auth.email,
+                name: auth.name || auth.email.split('@')[0],
+                picture: auth.picture || ''
+            };
+        } catch {
+            window.location.href = '/SimpleAIAdminka/login/';
+            return;
+        }
+
+        this._renderUserInfo();
+        this._bindEvents();
+        await this.loadInvites();
+        this._startAutoRefresh();
+    },
+
+    _escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    },
+
+    _bindEvents() {
+        this._clickHandler = (e) => {
+            // Backdrop click — close confirm modal
+            if (e.target.id === 'confirmModal') {
+                this._resolveConfirm(false);
+                return;
+            }
+
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+
+            const action = btn.dataset.action;
+            const inviteId = btn.dataset.inviteId;
+
+            switch (action) {
+                case 'refresh': this.loadInvites(); break;
+                case 'logout': this._logout(); break;
+                case 'accept': if (inviteId) this._acceptInvite(inviteId); break;
+                case 'reject': if (inviteId) this._rejectInvite(inviteId); break;
+                case 'confirm-ok': this._resolveConfirm(true); break;
+                case 'confirm-cancel': this._resolveConfirm(false); break;
+            }
+        };
+        document.addEventListener('click', this._clickHandler);
+
+        this._keydownHandler = (e) => {
+            if (e.key === 'Escape') this._resolveConfirm(false);
+        };
+        document.addEventListener('keydown', this._keydownHandler);
+
+        this._beforeUnloadHandler = () => this.destroy();
+        window.addEventListener('beforeunload', this._beforeUnloadHandler);
+    },
+
+    destroy() {
+        this._stopAutoRefresh();
+        if (this._clickHandler) {
+            document.removeEventListener('click', this._clickHandler);
+            this._clickHandler = null;
+        }
+        if (this._keydownHandler) {
+            document.removeEventListener('keydown', this._keydownHandler);
+            this._keydownHandler = null;
+        }
+        if (this._beforeUnloadHandler) {
+            window.removeEventListener('beforeunload', this._beforeUnloadHandler);
+            this._beforeUnloadHandler = null;
         }
     },
 
-    /**
-     * Получение access token
-     */
-    getAccessToken() {
-        const auth = this.getAuthData();
-        return auth ? auth.access_token : null;
+    _startAutoRefresh() {
+        this._stopAutoRefresh();
+        this._refreshIntervalId = setInterval(() => this.loadInvites(), this.REFRESH_INTERVAL);
     },
 
-    /**
-     * Редирект на страницу логина
-     */
-    redirectToLogin() {
-        window.location.href = '/SimpleAIAdminka/login/';
-    },
-
-    /**
-     * Редирект на главную
-     */
-    redirectToHome() {
-        window.location.href = '/SimpleAIAdminka/';
-    },
-
-    /**
-     * Привязка событий
-     */
-    bindEvents() {
-        // Кнопка обновления
-        const btnRefresh = document.getElementById('btnRefresh');
-        if (btnRefresh) {
-            btnRefresh.addEventListener('click', () => this.loadInvites());
-        }
-
-        // Кнопка выхода
-        const btnLogout = document.getElementById('btnLogout');
-        if (btnLogout) {
-            btnLogout.addEventListener('click', () => this.logout());
+    _stopAutoRefresh() {
+        if (this._refreshIntervalId) {
+            clearInterval(this._refreshIntervalId);
+            this._refreshIntervalId = null;
         }
     },
 
-    /**
-     * Запуск автоматического обновления
-     */
-    startAutoRefresh() {
-        this.stopAutoRefresh();
-        this.refreshIntervalId = setInterval(() => {
-            this.loadInvites();
-        }, this.REFRESH_INTERVAL);
-    },
+    _renderUserInfo() {
+        const avatar = document.getElementById('userAvatar');
+        const name = document.getElementById('userName');
+        const email = document.getElementById('userEmail');
 
-    /**
-     * Остановка автоматического обновления
-     */
-    stopAutoRefresh() {
-        if (this.refreshIntervalId) {
-            clearInterval(this.refreshIntervalId);
-            this.refreshIntervalId = null;
-        }
-    },
+        if (name) name.textContent = this.user.name;
+        if (email) email.textContent = this.user.email;
 
-    /**
-     * Отображение информации о пользователе
-     */
-    renderUserInfo() {
-        const userAvatar = document.getElementById('userAvatar');
-        const userName = document.getElementById('userName');
-        const userEmail = document.getElementById('userEmail');
-
-        if (userName) {
-            userName.textContent = this.user.name;
-        }
-
-        if (userEmail) {
-            userEmail.textContent = this.user.email;
-        }
-
-        if (userAvatar) {
-            if (this.user.picture) {
-                userAvatar.innerHTML = `<img src="${this.escapeHtml(this.user.picture)}" alt="${this.escapeHtml(this.user.name)}">`;
+        if (avatar) {
+            if (this.user.picture && this.user.picture.startsWith('https://lh')) {
+                const img = document.createElement('img');
+                img.src = this.user.picture;
+                img.alt = '';
+                img.onerror = () => { avatar.textContent = this.user.name.charAt(0).toUpperCase(); };
+                avatar.appendChild(img);
             } else {
-                userAvatar.textContent = this.user.name.charAt(0).toUpperCase();
+                avatar.textContent = this.user.name.charAt(0).toUpperCase();
             }
         }
     },
 
-    /**
-     * Загрузка приглашений
-     */
     async loadInvites() {
         if (this.isLoading || this.isRedirecting) return;
 
         this.isLoading = true;
-        this.showLoading(true);
+        this._showLoading(true);
 
         try {
             const result = await CloudStorage.callApi('getInvites');
 
             if (result.success) {
                 this.invites = result.invites || [];
-                this.renderInvites();
+                this._renderInvites();
             } else {
                 throw new Error(result.error || 'Ошибка загрузки приглашений');
             }
         } catch (error) {
-            console.error('WaitingInvite: Failed to load invites:', error);
-
-            // Проверить тип ошибки
             if (error.message.includes('Only guests can view invites')) {
-                // Пользователь уже не guest - редирект на главную
                 this.isRedirecting = true;
-                this.stopAutoRefresh();
+                this._stopAutoRefresh();
+                localStorage.removeItem('roleGuard');
                 Toast.success('Вы уже в команде!');
-                setTimeout(() => this.redirectToHome(), 1500);
+                setTimeout(() => { window.location.href = '/SimpleAIAdminka/'; }, 1500);
                 return;
             }
 
             if (error.message.includes('Access denied') || error.message.includes('Invalid access token')) {
                 this.isRedirecting = true;
-                this.stopAutoRefresh();
+                this._stopAutoRefresh();
                 Toast.error('Сессия истекла. Войдите снова.');
-                setTimeout(() => this.redirectToLogin(), 1500);
+                setTimeout(() => { window.location.href = '/SimpleAIAdminka/login/'; }, 1500);
                 return;
             }
 
             Toast.error('Ошибка: ' + error.message);
-            this.renderNoInvites();
+            this._renderNoInvites();
         } finally {
             this.isLoading = false;
-            this.showLoading(false);
+            this._showLoading(false);
         }
     },
 
-    /**
-     * Отображение состояния загрузки
-     */
-    showLoading(show) {
+    _showLoading(show) {
         const loading = document.getElementById('invitesLoading');
         const noInvites = document.getElementById('noInvites');
         const invitesSection = document.getElementById('invitesSection');
+        const waitingContent = document.getElementById('waitingContent');
         const refreshBtn = document.getElementById('btnRefresh');
 
-        if (loading) {
-            loading.classList.toggle('hidden', !show);
-        }
+        if (loading) loading.classList.toggle('hidden', !show);
 
         if (show) {
+            if (waitingContent) waitingContent.classList.add('hidden');
             if (noInvites) noInvites.classList.add('hidden');
             if (invitesSection) invitesSection.classList.add('hidden');
         }
@@ -223,37 +202,30 @@ const WaitingInvite = {
         }
     },
 
-    /**
-     * Отображение списка приглашений
-     */
-    renderInvites() {
+    _renderInvites() {
         const invitesSection = document.getElementById('invitesSection');
         const invitesList = document.getElementById('invitesList');
         const noInvites = document.getElementById('noInvites');
+        const waitingContent = document.getElementById('waitingContent');
 
         if (!this.invites || this.invites.length === 0) {
-            this.renderNoInvites();
+            this._renderNoInvites();
             return;
         }
 
-        // Скрыть "нет приглашений", показать секцию
+        if (waitingContent) waitingContent.classList.add('hidden');
         if (noInvites) noInvites.classList.add('hidden');
         if (invitesSection) invitesSection.classList.remove('hidden');
-
         if (!invitesList) return;
 
-        // Генерировать HTML карточек
-        invitesList.innerHTML = this.invites.map(invite => this.renderInviteCard(invite)).join('');
+        invitesList.innerHTML = this.invites.map(invite => this._renderInviteCard(invite)).join('');
     },
 
-    /**
-     * Отображение одной карточки приглашения
-     */
-    renderInviteCard(invite) {
+    _renderInviteCard(invite) {
         const expiresDate = new Date(invite.expiresDate);
-        const now = new Date();
-        const daysLeft = Math.ceil((expiresDate - now) / (1000 * 60 * 60 * 24));
+        const daysLeft = Math.ceil((expiresDate - new Date()) / (1000 * 60 * 60 * 24));
         const isExpiringSoon = daysLeft <= 2;
+        const id = this._escapeHtml(invite.inviteId);
 
         const expiresText = daysLeft <= 0
             ? 'Истекает сегодня'
@@ -262,185 +234,153 @@ const WaitingInvite = {
                 : `Истекает через ${daysLeft} дн.`;
 
         return `
-            <div class="invite-card" data-invite-id="${this.escapeHtml(invite.inviteId)}">
+            <div class="invite-card" data-invite-id="${id}">
                 <div class="invite-header">
-                    <div class="invite-team-name">${this.escapeHtml(invite.teamName)}</div>
-                    <div class="invite-role">${this.escapeHtml(invite.assignedRoleName || invite.assignedRole)}</div>
+                    <div class="invite-team-name">${this._escapeHtml(invite.teamName)}</div>
+                    <div class="invite-role">${this._escapeHtml(invite.assignedRoleName || invite.assignedRole)}</div>
                 </div>
                 <div class="invite-body">
                     <div class="invite-info-row">
                         <span class="label">Пригласил:</span>
-                        <span class="value">${this.escapeHtml(invite.inviterName || invite.invitedBy)}</span>
+                        <span class="value">${this._escapeHtml(invite.inviterName || invite.invitedBy)}</span>
                     </div>
                     <div class="invite-info-row">
                         <span class="label">Дата:</span>
-                        <span class="value">${this.formatDate(invite.createdDate)}</span>
+                        <span class="value">${Utils.formatDate(invite.createdDate)}</span>
                     </div>
                     <div class="invite-expires ${isExpiringSoon ? 'expiring-soon' : ''}">
                         ${expiresText}
                     </div>
                 </div>
                 <div class="invite-actions">
-                    <button class="btn-accept" onclick="WaitingInvite.acceptInvite('${this.escapeHtml(invite.inviteId)}')">
+                    <button class="btn-accept" data-action="accept" data-invite-id="${id}">
                         Принять
                     </button>
-                    <button class="btn-reject" onclick="WaitingInvite.rejectInvite('${this.escapeHtml(invite.inviteId)}')">
+                    <button class="btn-reject" data-action="reject" data-invite-id="${id}">
                         Отклонить
                     </button>
                 </div>
-            </div>
-        `;
+            </div>`;
     },
 
-    /**
-     * Отображение состояния "нет приглашений"
-     */
-    renderNoInvites() {
+    _renderNoInvites() {
         const invitesSection = document.getElementById('invitesSection');
         const noInvites = document.getElementById('noInvites');
+        const waitingContent = document.getElementById('waitingContent');
 
+        if (waitingContent) waitingContent.classList.add('hidden');
         if (invitesSection) invitesSection.classList.add('hidden');
         if (noInvites) noInvites.classList.remove('hidden');
     },
 
-    /**
-     * Принятие приглашения
-     */
-    async acceptInvite(inviteId) {
+    _confirm(message, description, btnClass) {
+        return new Promise(resolve => {
+            this._confirmResolve = resolve;
+            const modal = document.getElementById('confirmModal');
+            const msgEl = document.getElementById('confirmMessage');
+            const descEl = document.getElementById('confirmDescription');
+            const okBtn = document.getElementById('confirmAcceptBtn');
+
+            if (msgEl) msgEl.textContent = message;
+            if (descEl) {
+                descEl.textContent = description || '';
+                descEl.classList.toggle('hidden', !description);
+            }
+            if (okBtn) {
+                okBtn.className = `btn-sm ${btnClass || 'btn-primary'}`;
+            }
+            if (modal) modal.classList.add('active');
+        });
+    },
+
+    _resolveConfirm(result) {
+        const modal = document.getElementById('confirmModal');
+        if (!modal || !modal.classList.contains('active')) return;
+        modal.classList.remove('active');
+        if (this._confirmResolve) {
+            this._confirmResolve(result);
+            this._confirmResolve = null;
+        }
+    },
+
+    async _acceptInvite(inviteId) {
         if (this.isLoading) return;
 
         const invite = this.invites.find(i => i.inviteId === inviteId);
         const teamName = invite ? invite.teamName : 'команду';
 
-        if (!confirm(`Принять приглашение в ${teamName}?`)) {
-            return;
-        }
+        const confirmed = await this._confirm(`Принять приглашение в ${teamName}?`);
+        if (!confirmed) return;
 
         this.isLoading = true;
-        this.setInviteButtonsDisabled(inviteId, true);
+        this._setInviteButtonsDisabled(inviteId, true);
 
         try {
             const result = await CloudStorage.callApi('acceptInvite', { inviteId });
 
             if (result.success) {
                 Toast.success('Приглашение принято! Добро пожаловать в команду!');
-
-                // Очистить кеш роли
-                localStorage.removeItem('roleGuard-cache');
-
-                // Редирект на главную
-                setTimeout(() => this.redirectToHome(), 1500);
+                localStorage.removeItem('roleGuard');
+                this.isRedirecting = true;
+                this._stopAutoRefresh();
+                setTimeout(() => { window.location.href = '/SimpleAIAdminka/'; }, 1500);
             } else {
                 throw new Error(result.error || 'Ошибка принятия приглашения');
             }
         } catch (error) {
-            console.error('WaitingInvite: Failed to accept invite:', error);
             Toast.error('Ошибка: ' + error.message);
-            this.setInviteButtonsDisabled(inviteId, false);
+            this._setInviteButtonsDisabled(inviteId, false);
         } finally {
             this.isLoading = false;
         }
     },
 
-    /**
-     * Отклонение приглашения
-     */
-    async rejectInvite(inviteId) {
+    async _rejectInvite(inviteId) {
         if (this.isLoading) return;
 
         const invite = this.invites.find(i => i.inviteId === inviteId);
         const teamName = invite ? invite.teamName : 'эту команду';
 
-        if (!confirm(`Отклонить приглашение от ${teamName}?\n\nВы сможете принять другое приглашение позже.`)) {
-            return;
-        }
+        const confirmed = await this._confirm(
+            `Отклонить приглашение от ${teamName}?`,
+            'Вы сможете принять другое приглашение позже.',
+            'btn-danger'
+        );
+        if (!confirmed) return;
 
         this.isLoading = true;
-        this.setInviteButtonsDisabled(inviteId, true);
+        this._setInviteButtonsDisabled(inviteId, true);
 
         try {
             const result = await CloudStorage.callApi('rejectInvite', { inviteId });
 
             if (result.success) {
                 Toast.success('Приглашение отклонено');
-
-                // Обновить список
+                this.isLoading = false;
                 await this.loadInvites();
             } else {
                 throw new Error(result.error || 'Ошибка отклонения приглашения');
             }
         } catch (error) {
-            console.error('WaitingInvite: Failed to reject invite:', error);
             Toast.error('Ошибка: ' + error.message);
-            this.setInviteButtonsDisabled(inviteId, false);
-        } finally {
+            this._setInviteButtonsDisabled(inviteId, false);
             this.isLoading = false;
         }
     },
 
-    /**
-     * Блокировка кнопок карточки приглашения
-     */
-    setInviteButtonsDisabled(inviteId, disabled) {
+    _setInviteButtonsDisabled(inviteId, disabled) {
         const card = document.querySelector(`[data-invite-id="${inviteId}"]`);
         if (!card) return;
-
-        const buttons = card.querySelectorAll('button');
-        buttons.forEach(btn => {
-            btn.disabled = disabled;
-        });
+        card.querySelectorAll('button').forEach(btn => { btn.disabled = disabled; });
     },
 
-    /**
-     * Выход из аккаунта
-     */
-    logout() {
-        // Остановить автообновление
-        this.stopAutoRefresh();
-
-        // Очистить данные авторизации
+    _logout() {
+        this.destroy();
         localStorage.removeItem('cloud-auth');
-        localStorage.removeItem('roleGuard-cache');
-
+        localStorage.removeItem('roleGuard');
         Toast.info('Выход из аккаунта...');
-        setTimeout(() => this.redirectToLogin(), 500);
-    },
-
-    /**
-     * Форматирование даты
-     */
-    formatDate(dateInput) {
-        if (!dateInput) return '';
-
-        try {
-            const date = new Date(dateInput);
-            return date.toLocaleDateString('ru-RU', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-            });
-        } catch (e) {
-            return String(dateInput);
-        }
-    },
-
-    /**
-     * Экранирование HTML (XSS защита)
-     */
-    escapeHtml(text) {
-        if (text === null || text === undefined) return '';
-        const div = document.createElement('div');
-        div.textContent = String(text);
-        return div.innerHTML;
+        setTimeout(() => { window.location.href = '/SimpleAIAdminka/login/'; }, 500);
     }
 };
 
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
-    WaitingInvite.init();
-});
-
-// Очистка при уходе со страницы
-window.addEventListener('beforeunload', () => {
-    WaitingInvite.stopAutoRefresh();
-});
+document.addEventListener('DOMContentLoaded', () => WaitingInvite.init());

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://cdn.jsdelivr.net ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Отчеты - AIAdminka</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <link rel="stylesheet" href="css/excel-reports.css">
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"
@@ -16,6 +17,12 @@
         <!-- Sidebar Container -->
         <div id="sidebar-container"></div>
 
+        <!-- Loading state (visible until lifecycle-ready) -->
+        <div class="page-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
+
         <!-- Main wrapper -->
         <div class="main-wrapper">
             <!-- Global header -->
@@ -25,19 +32,18 @@
 
             <!-- Content area -->
             <div class="content-area">
+                <!-- Step indicator (вне main-section, чтобы tooltip не обрезался overflow:hidden) -->
+                <div class="steps-indicator" id="stepsIndicator">
+                    <!-- Шаги генерируются динамически -->
+                </div>
+
                 <!-- Main section -->
                 <main class="main-section">
-                    <!-- Step indicator -->
-                    <div class="steps-indicator" id="stepsIndicator">
-                        <!-- Шаги генерируются динамически -->
-                    </div>
-
                     <!-- Main content container (динамический рендеринг) -->
                     <div id="mainContent">
                         <!-- Контент генерируется динамически через UIRenderer -->
                     </div>
                 </main>
-
             </div>
         </div>
     </div>
@@ -100,6 +106,7 @@
     <script src="../shared/js/about-modal.js"></script>
     <script src="../shared/js/toast.js"></script>
     <script src="../shared/js/error-handler.js"></script>
+    <script src="../shared/js/page-lifecycle.js"></script>
 
     <!-- Load templates -->
     <script src="templates/combined-report.js"></script>

@@ -19,17 +19,7 @@ const teamInfo = {
      * Инициализация приложения
      */
     async init() {
-        // Check authentication and role status (waiting_invite/blocked check)
-        if (!await AuthGuard.checkWithRole()) {
-            return; // Will redirect to login or waiting-invite
-        }
-
         try {
-            // Инициализируем CloudStorage
-            if (typeof CloudStorage !== 'undefined') {
-                await CloudStorage.init();
-            }
-
             // Загружаем данные
             TeamState.data = await storage.loadData();
             TeamState.loadTeamName();
@@ -124,7 +114,7 @@ const teamInfo = {
     importData: () => TeamImportExport.importData(),
 
     // TeamInvites
-    switchTab: (tabName) => TeamInvites.switchTab(tabName),
+    switchSubtab: (subtab) => TeamInvites.switchSubtab(subtab),
     switchInviteType: (type) => TeamInvites.switchInviteType(type),
     sendInvite: () => TeamInvites.sendInvite(),
     cancelInvite: (inviteId) => TeamInvites.cancelInvite(inviteId),
@@ -142,51 +132,21 @@ const teamInfo = {
     formatFullNameForTable: (fullName) => TeamUtils.formatFullNameForTable(fullName)
 };
 
-// ========== Инициализация при загрузке страницы ==========
+// ========== Инициализация через PageLifecycle ==========
 
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        // Инициализируем RoleGuard для получения роли пользователя
-        if (typeof RoleGuard !== 'undefined') {
-            await RoleGuard.init();
-        }
-
+PageLifecycle.init({
+    module: 'team-info',
+    async onInit() {
         await teamInfo.init();
-    } catch (error) {
-        console.error('❌ Loading error:', error);
+    },
+    modals: {
+        '#exportModal': () => teamInfo.closeExportDialog(),
+        '#importModal': () => teamInfo.closeImportDialog(),
+        '#cropModal': () => teamInfo.closeCropModal()
     }
 });
 
 // ========== Глобальные event listeners ==========
-
-// Закрытие модальных окон по Escape
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        if (document.getElementById('exportModal').classList.contains('active')) {
-            teamInfo.closeExportDialog();
-        }
-        if (document.getElementById('cropModal').classList.contains('active')) {
-            teamInfo.closeCropModal();
-        }
-        if (document.getElementById('importModal').classList.contains('active')) {
-            teamInfo.closeImportDialog();
-        }
-        if (!document.getElementById('employeeCard').classList.contains('hidden')) {
-            teamInfo.closeCard();
-        }
-        // Закрыть status dropdowns
-        const cardDropdown = document.getElementById('cardStatusDropdown');
-        if (cardDropdown && cardDropdown.classList.contains('visible')) {
-            cardDropdown.classList.remove('visible');
-            cardDropdown.classList.add('hidden');
-        }
-        const formDropdown = document.getElementById('formStatusDropdown');
-        if (formDropdown && formDropdown.classList.contains('visible')) {
-            formDropdown.classList.remove('visible');
-            formDropdown.classList.add('hidden');
-        }
-    }
-});
 
 // Закрытие status dropdowns при клике вне
 document.addEventListener('click', (e) => {
@@ -208,25 +168,6 @@ document.addEventListener('click', (e) => {
             formDropdown.classList.remove('visible');
             formDropdown.classList.add('hidden');
         }
-    }
-});
-
-// Закрытие модальных окон при клике на backdrop
-document.getElementById('exportModal').addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        teamInfo.closeExportDialog();
-    }
-});
-
-document.getElementById('importModal').addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        teamInfo.closeImportDialog();
-    }
-});
-
-document.getElementById('cropModal').addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        teamInfo.closeCropModal();
     }
 });
 
@@ -298,15 +239,3 @@ document.addEventListener('change', (e) => {
     }
 });
 
-// Инициализация компонентов при загрузке страницы
-document.addEventListener('DOMContentLoaded', async function() {
-    ComponentLoader.init('../shared');
-    await ComponentLoader.load('sidebar', '#sidebar-container', {
-        basePath: '..',
-        activeModule: 'team-info'
-    });
-    await ComponentLoader.load('about-modal', '#about-modal-container', {
-        basePath: '..'
-    });
-    SidebarController.init({ basePath: '..' });
-});

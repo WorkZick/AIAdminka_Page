@@ -696,32 +696,13 @@ function toggleLogPanel() {
     }
 }
 
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', async () => {
-    // Check authentication and role status (waiting_invite/blocked check)
-    if (!await AuthGuard.checkWithRole()) {
-        return; // Will redirect to login or waiting-invite
-    }
-
-    // Инициализация компонентов
-    ComponentLoader.init('../shared');
-    await ComponentLoader.load('sidebar', '#sidebar-container', {
-        basePath: '..',
-        activeModule: 'reports'
-    });
-    await ComponentLoader.load('about-modal', '#about-modal-container', {
-        basePath: '..'
-    });
-    SidebarController.init({ basePath: '..' });
-
-    // Инициализация приложения
-    excelApp.init();
-
-    // Обработчик клика по overlay модального окна сброса
-    const resetModal = document.getElementById('resetModal');
-    if (resetModal) {
-        resetModal.addEventListener('click', function(e) {
-            if (e.target === this) excelApp.closeResetModal();
-        });
+// Initialize via PageLifecycle
+PageLifecycle.init({
+    module: 'reports',
+    async onInit() {
+        excelApp.init();
+    },
+    modals: {
+        '#resetModal': () => excelApp.closeResetModal()
     }
 });

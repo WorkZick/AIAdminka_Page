@@ -5,11 +5,9 @@
  */
 
 const loginApp = {
-    // OAuth Config
     CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
     SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
 
-    // Динамический REDIRECT_URI
     get REDIRECT_URI() {
         const host = window.location.hostname;
         if (host === '127.0.0.1' || host === 'localhost') {
@@ -18,36 +16,19 @@ const loginApp = {
         return 'https://workzick.github.io/AIAdminka_Page/login/callback.html';
     },
 
-    // Apps Script URL (делегируем в EnvConfig)
     get SCRIPT_URL() {
         return EnvConfig.getScriptUrl();
     },
 
-    // Mock API режим (для тестирования без backend)
-    USE_MOCK_API: false,
-
-    // State
     currentUser: null,
-    currentRole: null,  // Роль пользователя из checkAccess
+    currentRole: null,
     storageReady: false,
-    pendingRequest: null,
-
-    // ============ MOCK API DATA ============
-
-    mockData: {
-        // Состояния пользователей для тестирования (переключаются через консоль)
-        // 'new' - новый пользователь (форма регистрации)
-        // 'pending' - ожидает одобрения админа
-        // 'approved_no_team' - одобрен, но не в команде (выбор роли)
-        // 'approved' - одобрен и в команде (имеет доступ)
-        // 'rejected' - отклонён админом
-        // 'blocked' - заблокирован
-        userState: 'new'
-    },
+    _clickHandler: null,
+    _submitHandler: null,
 
     // ============ SECURITY ============
 
-    generateState() {
+    _generateState() {
         const array = new Uint8Array(32);
         crypto.getRandomValues(array);
         return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
@@ -56,117 +37,91 @@ const loginApp = {
     // ============ INITIALIZATION ============
 
     init() {
-        // Сначала проверяем существующую авторизацию
-        const hasExistingAuth = this.checkExistingAuth();
+        this._bindEvents();
 
-        // Если существующей авторизации нет, проверяем callback
+        const hasExistingAuth = this._checkExistingAuth();
         if (!hasExistingAuth) {
-            this.checkAuthCallback();
-        }
-
-        // Для отладки: переключение состояний через консоль
-        if (this.USE_MOCK_API) {
-            window.setMockState = (state) => {
-                this.mockData.userState = state;
-                this.retry();
-            };
+            this._checkAuthCallback();
         }
     },
 
-    attachEventListeners() {
-        // Login button
-        const btnLogin = document.getElementById('btnLogin');
-        if (btnLogin) {
-            btnLogin.addEventListener('click', () => this.login());
-        }
+    _bindEvents() {
+        this._clickHandler = (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
 
-        // Logout buttons
-        const btnLogout = document.getElementById('btnLogout');
-        if (btnLogout) {
-            btnLogout.addEventListener('click', () => this.logout());
-        }
+            switch (btn.dataset.action) {
+                case 'login': this._login(); break;
+                case 'logout': this._logout(); break;
+                case 'init-storage': this._initStorage(); break;
+                case 'retry': this._retry(); break;
+                case 'check-status': this._checkStatus(); break;
+                case 'create-team': this._createTeam(); break;
+                case 'wait-invite': this._waitForInvite(); break;
+                case 'show-registration': this._showRegistration(); break;
+            }
+        };
+        document.addEventListener('click', this._clickHandler);
 
-        const btnLogoutBlocked = document.getElementById('btnLogoutBlocked');
-        if (btnLogoutBlocked) {
-            btnLogoutBlocked.addEventListener('click', () => this.logout());
-        }
+        this._submitHandler = (e) => {
+            if (e.target.id === 'registrationForm') {
+                this._submitRegistration(e);
+            }
+        };
+        document.addEventListener('submit', this._submitHandler);
+    },
 
-        // Init storage button
-        const btnInit = document.getElementById('btnInit');
-        if (btnInit) {
-            btnInit.addEventListener('click', () => this.initStorage());
+    destroy() {
+        if (this._clickHandler) {
+            document.removeEventListener('click', this._clickHandler);
+            this._clickHandler = null;
         }
-
-        // Retry button
-        const btnRetry = document.getElementById('btnRetry');
-        if (btnRetry) {
-            btnRetry.addEventListener('click', () => this.retry());
-        }
-
-        // Registration form
-        const registrationForm = document.getElementById('registrationForm');
-        if (registrationForm) {
-            registrationForm.addEventListener('submit', (e) => this.submitRegistration(e));
-        }
-
-        // Check status button
-        const btnCheckStatus = document.getElementById('btnCheckStatus');
-        if (btnCheckStatus) {
-            btnCheckStatus.addEventListener('click', () => this.checkStatus());
-        }
-
-        // Create team button
-        const btnCreateTeam = document.getElementById('btnCreateTeam');
-        if (btnCreateTeam) {
-            btnCreateTeam.addEventListener('click', () => this.createTeam());
-        }
-
-        // Wait for invite button
-        const btnWaitForInvite = document.getElementById('btnWaitForInvite');
-        if (btnWaitForInvite) {
-            btnWaitForInvite.addEventListener('click', () => this.waitForInvite());
-        }
-
-        // Show registration button
-        const btnShowRegistration = document.getElementById('btnShowRegistration');
-        if (btnShowRegistration) {
-            btnShowRegistration.addEventListener('click', () => this.showRegistration());
+        if (this._submitHandler) {
+            document.removeEventListener('submit', this._submitHandler);
+            this._submitHandler = null;
         }
     },
 
     // ============ AUTH CHECK ============
 
-    checkExistingAuth() {
+    _checkExistingAuth() {
         const authData = localStorage.getItem('cloud-auth');
         if (!authData) {
-            this.showLoginForm();
+            this._showLoginForm();
             return false;
         }
 
-        const auth = JSON.parse(authData);
+        try {
+            const auth = JSON.parse(authData);
 
-        // Проверяем срок токена (~58 минут)
-        if (Date.now() - auth.timestamp > 3500000) {
+            if (Date.now() - auth.timestamp > 3500000) {
+                localStorage.removeItem('cloud-auth');
+                this._showLoginForm();
+                return false;
+            }
+
+            this.currentUser = {
+                email: auth.email,
+                name: auth.name,
+                picture: auth.picture,
+                accessToken: auth.accessToken
+            };
+        } catch {
             localStorage.removeItem('cloud-auth');
-            this.showLoginForm();
+            this._showLoginForm();
             return false;
         }
 
-        this.currentUser = {
-            email: auth.email,
-            name: auth.name,
-            picture: auth.picture,
-            accessToken: auth.accessToken
-        };
-
-        this.showLoading('Проверка доступа...');
-        this.checkAccess();
+        this._showLoading('Проверка доступа...');
+        this._checkAccess();
         return true;
     },
 
-    checkAuthCallback() {
+    _checkAuthCallback() {
         const authData = localStorage.getItem('cloud-auth');
-        if (authData) {
+        if (!authData) return;
+
+        try {
             const auth = JSON.parse(authData);
             const isRecent = Date.now() - auth.timestamp < 10000;
 
@@ -177,16 +132,18 @@ const loginApp = {
                     picture: auth.picture,
                     accessToken: auth.accessToken
                 };
-                this.showLoading('Проверка доступа...');
-                this.checkAccess();
+                this._showLoading('Проверка доступа...');
+                this._checkAccess();
             }
+        } catch {
+            localStorage.removeItem('cloud-auth');
         }
     },
 
     // ============ OAUTH ============
 
-    login() {
-        const state = this.generateState();
+    _login() {
+        const state = this._generateState();
         sessionStorage.setItem('oauth_state', state);
 
         const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
@@ -200,7 +157,8 @@ const loginApp = {
         window.location.href = authUrl;
     },
 
-    logout() {
+    _logout() {
+        this.destroy();
         localStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
         localStorage.removeItem('partners-data');
@@ -209,32 +167,21 @@ const loginApp = {
         this.currentUser = null;
         this.currentRole = null;
         this.storageReady = false;
-        this.pendingRequest = null;
-        this.showLoginForm();
+        this._showLoginForm();
     },
 
     // ============ API CALLS ============
 
-    async secureApiCall(action, params = {}) {
-        // Mock API для тестирования
-        if (this.USE_MOCK_API) {
-            return this.mockApiCall(action, params);
-        }
-
-        // Проверяем наличие токена
+    async _secureApiCall(action, params = {}) {
         if (!this.currentUser?.accessToken) {
-            console.error('secureApiCall: No access token available');
             return { error: 'No access token' };
         }
 
         try {
-            // Используем GET запрос с URL параметрами (как CloudStorage)
-            // GAS теряет POST body при редиректе, поэтому GET надёжнее
             const url = new URL(this.SCRIPT_URL);
             url.searchParams.set('action', action);
             url.searchParams.set('accessToken', this.currentUser.accessToken);
 
-            // Добавляем остальные параметры
             for (const [key, value] of Object.entries(params)) {
                 if (value !== undefined && value !== null) {
                     url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
@@ -247,10 +194,8 @@ const loginApp = {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            const data = await response.json();
-            return data;
+            return await response.json();
         } catch (error) {
-            // Проверяем тип ошибки
             if (error.name === 'TypeError' && error.message.includes('fetch')) {
                 throw new Error('Ошибка сети. Проверьте подключение к интернету.');
             }
@@ -258,158 +203,38 @@ const loginApp = {
         }
     },
 
-    // ============ MOCK API ============
-
-    async mockApiCall(action, params = {}) {
-        // Имитация задержки сети
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        switch (action) {
-            case 'checkAccess':
-                return this.mockCheckAccess();
-
-            case 'register':
-                // Регистрация - только Reddy ID
-                this.mockData.userState = 'pending';
-                return {
-                    success: true,
-                    message: 'Запрос отправлен администратору'
-                };
-
-            case 'createTeam':
-                // Создание команды - становимся руководителем
-                this.mockData.userState = 'approved';
-                return {
-                    success: true,
-                    teamId: 'team-' + Date.now(),
-                    message: 'Команда создана'
-                };
-
-            case 'checkStorage':
-                return { exists: true, sheetId: 'mock-sheet', folderId: 'mock-folder' };
-
-            case 'init':
-                return { success: true, sheetId: 'mock-sheet', folderId: 'mock-folder' };
-
-            default:
-                return { error: 'Unknown action: ' + action };
-        }
-    },
-
-    mockCheckAccess() {
-        const state = this.mockData.userState;
-
-        switch (state) {
-            case 'new':
-                return {
-                    allowed: false,
-                    user: null,
-                    status: 'new'
-                };
-
-            case 'pending':
-                return {
-                    allowed: false,
-                    user: null,
-                    status: 'pending'
-                };
-
-            case 'approved_no_team':
-                return {
-                    allowed: false,
-                    user: {
-                        email: this.currentUser?.email || 'test@example.com',
-                        name: this.currentUser?.name || 'Тестовый Пользователь',
-                        reddyId: '123456',
-                        status: 'active',
-                        teamId: null
-                    },
-                    status: 'approved_no_team'
-                };
-
-            case 'approved':
-                return {
-                    allowed: true,
-                    user: {
-                        email: this.currentUser?.email || 'test@example.com',
-                        name: this.currentUser?.name || 'Тестовый Пользователь',
-                        reddyId: '123456',
-                        role: 'leader',
-                        teamId: 'team-001',
-                        status: 'active'
-                    },
-                    status: 'approved'
-                };
-
-            case 'rejected':
-                return {
-                    allowed: false,
-                    user: null,
-                    status: 'rejected'
-                };
-
-            case 'blocked':
-                return {
-                    allowed: false,
-                    user: {
-                        email: this.currentUser?.email || 'test@example.com',
-                        name: this.currentUser?.name || 'Тестовый Пользователь',
-                        status: 'blocked'
-                    },
-                    status: 'blocked'
-                };
-
-            default:
-                return { allowed: false, status: 'new' };
-        }
-    },
-
     // ============ ACCESS CONTROL ============
 
-    async checkAccess() {
+    async _checkAccess() {
         try {
-            const result = await this.secureApiCall('checkAccess');
+            const result = await this._secureApiCall('checkAccess');
 
             if (result.error) {
-                // Если токен недействителен - очищаем auth данные и показываем логин
                 if (result.error.includes('access token') || result.error.includes('Access denied') || result.error.includes('Invalid')) {
                     localStorage.removeItem('cloud-auth');
-                    localStorage.removeItem('roleGuard-cache');
+                    localStorage.removeItem('roleGuard');
                     this.currentUser = null;
-                    this.showLoginForm();
+                    this._showLoginForm();
                     return;
                 }
                 throw new Error(result.error);
             }
 
-            // Адаптер: поддержка старого и нового формата API
-            // Старый формат: { allowed, pendingRequest }
-            // Новый формат: { hasAccess, status, role, teamId }
             let status;
-
-            // Определяем формат ответа
             const isNewFormat = 'hasAccess' in result || ('status' in result && !('allowed' in result));
 
             if (isNewFormat) {
-                // Новый формат API (AppsScript_Test.js)
-                // ВАЖНО: Сначала проверяем специальные статусы, потом hasAccess
                 if (result.status === 'waiting_invite') {
-                    // Пользователь одобрен, но ждёт приглашения в команду
                     status = 'waiting_invite';
                 } else if (result.status === 'blocked') {
                     status = 'blocked';
                 } else if (result.hasAccess === true) {
-                    // Полный доступ - активный пользователь в команде
                     status = 'approved';
                 } else if (!result.email && !result.role) {
-                    // Пользователь не найден в системе
                     status = 'new';
                 } else {
-                    // hasAccess === false, смотрим на status
                     switch (result.status) {
                         case 'active':
-                            // Активный пользователь без доступа (нет команды?)
-                            // Админы могут входить даже без команды
                             if (result.role === 'admin' || result.teamId) {
                                 status = 'approved';
                             } else {
@@ -424,7 +249,6 @@ const loginApp = {
                     }
                 }
             } else {
-                // Старый формат API (production)
                 if (result.allowed === true) {
                     status = 'approved';
                 } else if (result.pendingRequest === true) {
@@ -436,11 +260,8 @@ const loginApp = {
                 }
             }
 
-            // Сохраняем роль для последующих проверок (например, в checkStorage)
             this.currentRole = result.role || null;
 
-            // ВАЖНО: Guest всегда редиректится на waiting-invite, независимо от статуса
-            // (роль guest = пользователь ещё не принял приглашение в команду)
             if (result.role === 'guest') {
                 window.location.href = 'waiting-invite.html';
                 return;
@@ -448,164 +269,135 @@ const loginApp = {
 
             switch (status) {
                 case 'new':
-                    this.showRegistration();
+                    this._showRegistration();
                     break;
-
                 case 'pending':
-                    this.showAccessPending();
+                    this._showAccessPending();
                     break;
-
                 case 'approved_no_team':
-                    this.showChooseRole();
+                    this._showChooseRole();
                     break;
-
                 case 'approved':
-                    this.showLoading('Проверка хранилища...');
-                    this.checkStorage();
+                    this._showLoading('Проверка хранилища...');
+                    this._checkStorage();
                     break;
-
                 case 'rejected':
-                    this.showAccessRejected();
+                    this._showAccessRejected();
                     break;
-
                 case 'blocked':
-                    this.showAccessBlocked();
+                    this._showAccessBlocked();
                     break;
-
                 case 'waiting_invite':
-                    // Редирект на страницу ожидания приглашения
                     window.location.href = 'waiting-invite.html';
                     break;
-
                 default:
-                    console.error('Unknown access status:', status, 'Full response:', result);
-                    this.showError(`Неизвестное состояние доступа: ${status || 'undefined'}`);
+                    this._showError(`Неизвестное состояние доступа: ${status || 'undefined'}`);
             }
 
         } catch (error) {
-            this.showError('Ошибка проверки доступа: ' + error.message);
+            this._showError('Ошибка проверки доступа: ' + error.message);
         }
     },
 
     // ============ REGISTRATION ============
 
-    showRegistration() {
-        // Сброс формы
-        document.getElementById('regReddyId').value = '';
+    _showRegistration() {
+        const input = document.getElementById('regReddyId');
+        if (input) input.value = '';
 
-        this.hideAll();
-        this.showUserInfo();
+        this._hideAll();
+        this._showUserInfo();
         document.getElementById('loginRegistration').classList.remove('hidden');
-        this.updateStatus('Регистрация', '');
+        this._updateStatus('Регистрация', '');
     },
 
-    async submitRegistration(event) {
+    async _submitRegistration(event) {
         event.preventDefault();
 
         const form = document.getElementById('registrationForm');
         const btn = document.getElementById('btnSubmitRegistration');
         const formData = new FormData(form);
-
         const reddyId = formData.get('reddyId').trim();
 
         if (!reddyId) {
-            this.showToast('warning', 'Введите Reddy ID');
-            return false;
+            Toast.warning('Введите Reddy ID');
+            return;
         }
 
         btn.disabled = true;
         btn.textContent = 'Отправка...';
 
         try {
-            const result = await this.secureApiCall('register', {
-                reddyId: reddyId,
+            const result = await this._secureApiCall('register', {
+                reddyId,
                 name: this.currentUser?.name || '',
                 email: this.currentUser?.email || '',
                 picture: this.currentUser?.picture || ''
             });
 
-            if (result.error) {
-                throw new Error(result.error);
-            }
-
-            if (result.success) {
-                this.showAccessPending();
-            }
-
+            if (result.error) throw new Error(result.error);
+            if (result.success) this._showAccessPending();
         } catch (error) {
             btn.disabled = false;
             btn.textContent = 'Отправить запрос';
-            this.showError('Ошибка отправки запроса: ' + error.message);
+            this._showError('Ошибка отправки запроса: ' + error.message);
         }
-
-        return false;
     },
 
     // ============ CHOOSE ROLE ============
 
-    showChooseRole() {
-        this.hideAll();
-        this.showUserInfo();
+    _showChooseRole() {
+        this._hideAll();
+        this._showUserInfo();
         document.getElementById('loginChooseRole').classList.remove('hidden');
-        this.updateStatus('Выберите роль', 'success');
+        this._updateStatus('Выберите роль', 'success');
     },
 
-    async createTeam() {
-        this.showLoading('Создание команды...');
+    async _createTeam() {
+        this._showLoading('Создание команды...');
 
         try {
-            const result = await this.secureApiCall('createTeam');
-
-            if (result.error) {
-                throw new Error(result.error);
-            }
-
-            if (result.success) {
-                this.checkStorage();
-            }
-
+            const result = await this._secureApiCall('createTeam');
+            if (result.error) throw new Error(result.error);
+            if (result.success) this._checkStorage();
         } catch (error) {
-            this.showError('Ошибка создания команды: ' + error.message);
+            this._showError('Ошибка создания команды: ' + error.message);
         }
     },
 
-    waitForInvite() {
-        this.hideAll();
-        this.showUserInfo();
+    _waitForInvite() {
+        this._hideAll();
+        this._showUserInfo();
 
-        // Показываем специальный экран ожидания приглашения
         const pendingEl = document.getElementById('loginAccessPending');
         if (pendingEl) {
             pendingEl.classList.remove('hidden');
-
             const titleEl = pendingEl.querySelector('.access-title');
             if (titleEl) titleEl.textContent = 'Ожидайте приглашение';
-
             const descEl = pendingEl.querySelector('.access-description');
             if (descEl) descEl.innerHTML = 'Ваш аккаунт активен.<br>Руководитель пригласит вас в команду по Reddy ID.';
         }
 
-        this.updateStatus('Ожидание приглашения', 'pending');
+        this._updateStatus('Ожидание приглашения', 'pending');
     },
 
     // ============ STATUS CHECK ============
 
-    async checkStatus() {
-        this.showLoading('Проверка статуса...');
-        await this.checkAccess();
+    async _checkStatus() {
+        this._showLoading('Проверка статуса...');
+        await this._checkAccess();
     },
 
     // ============ STORAGE ============
 
-    async checkStorage() {
+    async _checkStorage() {
         try {
-            const result = await this.secureApiCall('checkStorage');
+            const result = await this._secureApiCall('checkStorage');
 
             if (result.error) {
-                // Если action не существует (test AppsScript), пропускаем проверку
                 if (result.error.includes('Unknown action')) {
                     this.storageReady = true;
-                    this.showSuccess();
+                    this._showSuccess();
                     return;
                 }
                 throw new Error(result.error);
@@ -617,38 +409,30 @@ const loginApp = {
                     sheetId: result.sheetId,
                     folderId: result.folderId
                 }));
-                this.showSuccess();
+                this._showSuccess();
             } else {
-                // Хранилище не существует - проверяем роль
                 const canInitStorage = this.currentRole === 'admin' || this.currentRole === 'leader';
 
                 if (canInitStorage) {
-                    // Admin/Leader могут создать хранилище
-                    this.showInitStorage();
+                    this._showInitStorage();
                 } else {
-                    // Остальные роли - пропускаем инициализацию и пускаем в систему
-                    // Хранилище будет создано когда leader войдёт
-                    this.storageReady = false;  // Отмечаем что хранилище не готово
-                    this.showSuccess();
+                    this.storageReady = false;
+                    this._showSuccess();
                 }
             }
-
         } catch (error) {
-            this.showError('Ошибка проверки хранилища: ' + error.message);
+            this._showError('Ошибка проверки хранилища: ' + error.message);
         }
     },
 
-    async initStorage() {
+    async _initStorage() {
         const btn = document.getElementById('btnInit');
         btn.disabled = true;
         btn.textContent = 'Создание...';
 
         try {
-            const result = await this.secureApiCall('init');
-
-            if (result.error) {
-                throw new Error(result.error);
-            }
+            const result = await this._secureApiCall('init');
+            if (result.error) throw new Error(result.error);
 
             if (result.success) {
                 this.storageReady = true;
@@ -657,85 +441,85 @@ const loginApp = {
                     folderId: result.folderId,
                     imagesFolderId: result.imagesFolderId
                 }));
-                this.showSuccess();
+                this._showSuccess();
             }
-
         } catch (error) {
             btn.disabled = false;
             btn.textContent = 'Создать хранилище';
-            this.showError('Ошибка создания хранилища: ' + error.message);
+            this._showError('Ошибка создания хранилища: ' + error.message);
         }
     },
 
     // ============ UI STATES ============
 
-    showLoginForm() {
-        this.hideAll();
+    _showLoginForm() {
+        this._hideAll();
         document.getElementById('loginContent').classList.remove('hidden');
-        this.updateStatus('Требуется авторизация', '');
+        this._updateStatus('Требуется авторизация', '');
     },
 
-    showLoading(text) {
-        this.hideAll();
+    _showLoading(text) {
+        this._hideAll();
         document.getElementById('loginLoading').classList.remove('hidden');
         document.querySelector('#loginLoading p').textContent = text || 'Загрузка...';
     },
 
-    showAccessPending() {
-        this.hideAll();
-        this.showUserInfo();
+    _showAccessPending() {
+        this._hideAll();
+        this._showUserInfo();
 
-        // Сбросить текст на дефолтный
         const pendingEl = document.getElementById('loginAccessPending');
         if (pendingEl) {
             const titleEl = pendingEl.querySelector('.access-title');
             if (titleEl) titleEl.textContent = 'Запрос отправлен';
-
             const descEl = pendingEl.querySelector('.access-description');
             if (descEl) descEl.innerHTML = 'Ваш запрос отправлен администратору.<br>Ожидайте одобрения.';
-
             pendingEl.classList.remove('hidden');
         }
 
-        this.updateStatus('Ожидание одобрения', 'pending');
+        this._updateStatus('Ожидание одобрения', 'pending');
     },
 
-    showAccessRejected() {
-        this.hideAll();
-        this.showUserInfo();
+    _showAccessRejected() {
+        this._hideAll();
+        this._showUserInfo();
         document.getElementById('loginAccessRejected').classList.remove('hidden');
-        this.updateStatus('Запрос отклонён', 'error');
+        this._updateStatus('Запрос отклонён', 'error');
     },
 
-    showAccessBlocked() {
-        this.hideAll();
-        this.showUserInfo();
+    _showAccessBlocked() {
+        this._hideAll();
+        this._showUserInfo();
         document.getElementById('loginAccessBlocked').classList.remove('hidden');
-        this.updateStatus('Доступ заблокирован', 'error');
+        this._updateStatus('Доступ заблокирован', 'error');
     },
 
-    showInitStorage() {
-        this.hideAll();
-        this.showUserInfo();
+    _showInitStorage() {
+        this._hideAll();
+        this._showUserInfo();
         document.getElementById('loginActions').classList.remove('hidden');
-        this.updateStatus('Хранилище не найдено', '');
+        this._updateStatus('Хранилище не найдено', '');
     },
 
-    showSuccess() {
-        this.hideAll();
-        this.showUserInfo();
+    _showSuccess() {
+        this._hideAll();
+        this._showUserInfo();
         document.getElementById('loginContinue').classList.remove('hidden');
-        this.updateStatus('Авторизация успешна', 'success');
+        this._updateStatus('Авторизация успешна', 'success');
+
+        setTimeout(() => {
+            window.location.href = '../index.html';
+        }, 1500);
     },
 
-    showError(message) {
-        this.hideAll();
+    _showError(message) {
+        this._hideAll();
         document.getElementById('loginError').classList.remove('hidden');
         document.getElementById('errorText').textContent = message;
-        this.updateStatus('Ошибка', 'error');
+        this._updateStatus('Ошибка', 'error');
     },
 
-    showUserInfo() {
+    _showUserInfo() {
         if (!this.currentUser) return;
 
         const userEl = document.getElementById('loginUser');
@@ -745,18 +529,18 @@ const loginApp = {
 
         if (this.currentUser.picture) {
             avatarEl.innerHTML = '';
-            const img = document.createElement('img');
             const pictureUrl = this.currentUser.picture;
             if (pictureUrl && pictureUrl.startsWith('https://lh')) {
+                const img = document.createElement('img');
                 img.src = pictureUrl;
                 img.alt = '';
-                img.onerror = () => { avatarEl.textContent = this.getInitials(this.currentUser.name); };
+                img.onerror = () => { avatarEl.textContent = this._getInitials(this.currentUser.name); };
                 avatarEl.appendChild(img);
             } else {
-                avatarEl.textContent = this.getInitials(this.currentUser.name);
+                avatarEl.textContent = this._getInitials(this.currentUser.name);
             }
         } else {
-            avatarEl.textContent = this.getInitials(this.currentUser.name);
+            avatarEl.textContent = this._getInitials(this.currentUser.name);
         }
 
         nameEl.textContent = this.currentUser.name || 'Пользователь';
@@ -764,54 +548,38 @@ const loginApp = {
         userEl.classList.remove('hidden');
     },
 
-    hideAll() {
-        const elements = [
-            'loginContent',
-            'loginLoading',
-            'loginUser',
-            'loginActions',
-            'loginContinue',
-            'loginError',
-            'loginRegistration',
-            'loginAccessPending',
-            'loginAccessRejected',
-            'loginAccessBlocked',
+    _hideAll() {
+        const ids = [
+            'loginContent', 'loginLoading', 'loginUser', 'loginActions',
+            'loginContinue', 'loginError', 'loginRegistration',
+            'loginAccessPending', 'loginAccessRejected', 'loginAccessBlocked',
             'loginChooseRole'
         ];
 
-        elements.forEach(id => {
+        ids.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
         });
     },
 
-    updateStatus(text, type) {
+    _updateStatus(text, type) {
         const statusEl = document.getElementById('loginStatus');
         statusEl.className = 'login-status' + (type ? ' ' + type : '');
         statusEl.querySelector('.status-text').textContent = text;
     },
 
-    retry() {
+    _retry() {
         if (this.currentUser) {
-            this.showLoading('Повторная проверка...');
-            this.checkAccess();
+            this._showLoading('Повторная проверка...');
+            this._checkAccess();
         } else {
-            this.showLoginForm();
+            this._showLoginForm();
         }
     },
 
     // ============ HELPERS ============
 
-    showToast(type, message) {
-        // Безопасный вызов Toast с fallback на консоль
-        if (typeof Toast !== 'undefined') {
-            Toast[type](message);
-        } else {
-            console.warn(`[${type.toUpperCase()}] ${message}`);
-        }
-    },
-
-    getInitials(name) {
+    _getInitials(name) {
         if (!name) return '?';
         const parts = name.trim().split(' ');
         if (parts.length >= 2) {
@@ -821,8 +589,5 @@ const loginApp = {
     }
 };
 
-// Initialize on load
-document.addEventListener('DOMContentLoaded', function() {
-    loginApp.init();
-    loginApp.attachEventListeners();
-});
+document.addEventListener('DOMContentLoaded', () => loginApp.init());
+window.addEventListener('beforeunload', () => loginApp.destroy());

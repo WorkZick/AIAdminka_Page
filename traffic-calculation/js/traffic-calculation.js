@@ -2895,9 +2895,12 @@ const trafficCalc = {
     }
 };
 
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
-    trafficCalc.init();
+// Initialize via PageLifecycle
+PageLifecycle.init({
+    module: 'traffic',
+    async onInit() {
+        trafficCalc.init();
+    }
 });
 
 // Event delegation для всех data-action="traffic-*" атрибутов
@@ -2985,15 +2988,3 @@ document.addEventListener('change', (e) => {
     }
 });
 
-// Инициализация компонентов
-document.addEventListener('DOMContentLoaded', async function() {
-    ComponentLoader.init('../shared');
-    await ComponentLoader.load('sidebar', '#sidebar-container', {
-        basePath: '..',
-        activeModule: 'traffic'
-    });
-    await ComponentLoader.load('about-modal', '#about-modal-container', {
-        basePath: '..'
-    });
-    SidebarController.init({ basePath: '..' });
-});

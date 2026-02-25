@@ -343,6 +343,12 @@ body {
     text-align: center;
 }
 
+.redirect-hint {
+    font-size: var(--font-size-base);
+    color: var(--gray);
+    margin-bottom: var(--spacing-lg);
+}
+
 /* ===========================================
    Error State
    =========================================== */

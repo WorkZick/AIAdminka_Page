@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com ws://127.0.0.1:5500 ws://localhost:5500">
     <title>Документация - AIAdminka</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <!-- Design System (base styles) -->
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <!-- Module-specific styles -->
@@ -15,6 +16,12 @@
     <div class="app-container">
         <!-- Sidebar Container (loaded via ComponentLoader) -->
         <div id="sidebar-container"></div>
+
+        <!-- Loading state (visible until lifecycle-ready) -->
+        <div class="page-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
 
         <!-- Main wrapper -->
         <div class="main-wrapper">
@@ -478,19 +485,7 @@
                                 <li><strong>Партнеры:</strong> База партнёров</li>
                                 <li><strong>Документация:</strong> Справка и changelog</li>
                                 <li><strong>Настройки:</strong> Профиль и синхронизация</li>
-                                <li><strong>Предложить улучшение:</strong> Обратная связь с администратором</li>
                             </ul>
-
-                            <h3>Обратная связь (тикеты):</h3>
-                            <p>Система для отправки идей, багов и пожеланий администратору.</p>
-                            <ul>
-                                <li><strong>Создание тикета:</strong> Карточка "Предложить улучшение" → заполнить заголовок и описание</li>
-                                <li><strong>Скриншоты:</strong> До 3 изображений к каждому тикету</li>
-                                <li><strong>Просмотр:</strong> Секция "Обратная связь" отображает ваши тикеты</li>
-                                <li><strong>Статусы:</strong> Новый → В работе → Нужна информация → Решено → Закрыт</li>
-                                <li><strong>Комментарии:</strong> Администратор может отвечать и запрашивать информацию</li>
-                            </ul>
-                            <p><em>Примечание:</em> Пользователи видят только свои тикеты. Администратор видит все и может менять статусы.</p>
 
                             <h3>Сайдбар:</h3>
                             <ul>
@@ -1144,6 +1139,7 @@
     <script src="../shared/auth-guard.js"></script>
     <script src="../shared/roles-config.js"></script>
     <script src="../shared/role-guard.js"></script>
+    <script src="../shared/js/page-lifecycle.js"></script>
 
     <!-- Module JS -->
     <script src="js/changelog.js"></script>

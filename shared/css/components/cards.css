@@ -115,18 +115,6 @@
 }
 
 /* Module card variants */
-.module-card-accent {
-    border: 1px solid rgba(253, 190, 47, 0.25);
-}
-
-.module-card-accent .module-icon {
-    background: var(--highlight-yellow);
-}
-
-.module-card-accent:hover {
-    border-color: rgba(253, 190, 47, 0.4);
-}
-
 .module-card-admin {
     border: 1px solid rgba(255, 107, 107, 0.25);
 }
