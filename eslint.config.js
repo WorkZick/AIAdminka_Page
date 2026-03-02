@@ -50,6 +50,7 @@ export default [
                 prompt: 'readonly',
                 // App shared globals
                 ConfirmModal: 'readonly',
+                PromptModal: 'readonly',
                 CloudStorage: 'writable',
                 EnvConfig: 'writable',
                 AuthGuard: 'writable',

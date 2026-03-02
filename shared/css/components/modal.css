@@ -180,6 +180,30 @@
     color: var(--gray);
 }
 
+/* ==================== PROMPT MODAL INPUT ==================== */
+.prompt-modal-input {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+    color: var(--white);
+    font-size: var(--font-size-base);
+    font-family: inherit;
+    outline: none;
+    transition: border-color var(--transition-fast);
+    box-sizing: border-box;
+}
+
+.prompt-modal-input:focus {
+    border-color: var(--yellow);
+}
+
+.prompt-modal-input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+}
+
 /* ==================== SCROLLBAR IN MODAL ==================== */
 .modal-body::-webkit-scrollbar {
     width: 6px;
