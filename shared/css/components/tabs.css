@@ -1,0 +1,41 @@
+/* ============================================================
+   Tabs Component
+   ============================================================ */
+
+.tabs {
+    display: flex;
+    gap: var(--spacing-sm);
+    border-bottom: 1px solid var(--glass-border);
+    margin-bottom: var(--spacing-xl);
+}
+
+.tab {
+    padding: var(--spacing-md) var(--spacing-lg);
+    color: var(--gray-light);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all var(--transition-fast);
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+}
+
+.tab:hover {
+    color: var(--white);
+}
+
+.tab.active {
+    color: var(--yellow);
+    border-bottom-color: var(--yellow);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}

@@ -1,0 +1,73 @@
+/* ============================================================
+   Lifecycle - Плавное появление контента и состояния загрузки
+   ============================================================ */
+
+/* ==================== PAGE LOADING OVERLAY ==================== */
+
+.page-loading {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-lg);
+    background:
+        radial-gradient(circle at 15% 25%, rgba(253, 190, 47, 0.12) 0%, transparent 35%),
+        radial-gradient(circle at 85% 75%, rgba(80, 120, 200, 0.1) 0%, transparent 35%),
+        var(--bg-black);
+    z-index: var(--z-header);
+}
+
+body.lifecycle-ready .page-loading {
+    display: none;
+}
+
+/* ==================== CONTENT VISIBILITY ==================== */
+
+/* Скрываем контент до завершения инициализации */
+body:not(.lifecycle-ready) .main-wrapper {
+    opacity: 0;
+}
+
+/* Плавное появление после lifecycle init */
+body.lifecycle-ready .main-wrapper {
+    opacity: 1;
+    transition: opacity var(--transition-normal);
+}
+
+/* Плавное скрытие скелетонов */
+body.lifecycle-ready .skeleton-placeholder {
+    display: none !important;
+}
+
+/* ==================== BUTTON LOADING STATE ==================== */
+
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    color: transparent !important;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: var(--white);
+    border-radius: 50%;
+    animation: btn-spin 0.6s linear infinite;
+}
+
+.btn-primary.btn-loading::after {
+    border-color: rgba(0, 0, 0, 0.2);
+    border-top-color: var(--black);
+}
+
+@keyframes btn-spin {
+    to { transform: rotate(360deg); }
+}

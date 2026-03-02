@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ожидание приглашения - AIAdminka</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:* ws://localhost:*; frame-ancestors 'self'">
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
+    <link rel="stylesheet" href="../shared/css/design-system.css">
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="css/waiting-invite.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="waiting-card">
+            <!-- Left: User Info Panel -->
+            <div class="waiting-left">
+                <div class="login-logo">
+                    <h1>AIAdminka</h1>
+                </div>
+
+                <div class="login-status pending" id="waitingStatus">
+                    <span class="status-text">Ожидание приглашения</span>
+                </div>
+
+                <div class="login-user" id="userInfo">
+                    <div class="user-avatar" id="userAvatar"></div>
+                    <div class="user-info">
+                        <div class="user-name" id="userName"></div>
+                        <div class="user-email" id="userEmail"></div>
+                        <div class="user-role-badge">
+                            <span class="badge badge-info">Гость</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="waiting-actions">
+                    <button class="refresh-button" id="btnRefresh" data-action="refresh">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6"/>
+                            <path d="M1 20v-6h6"/>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                        <span>Обновить</span>
+                    </button>
+                    <button class="logout-button-full" data-action="logout">
+                        Выйти из аккаунта
+                    </button>
+                </div>
+
+                <div class="login-footer">
+                    <span>AIAdminka <span class="app-version" data-format="short"></span></span>
+                </div>
+            </div>
+
+            <!-- Right: Content Panel -->
+            <div class="waiting-right">
+                <!-- Waiting Content (default state) -->
+                <div class="waiting-content" id="waitingContent">
+                    <div class="waiting-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="8.5" cy="7" r="4"/>
+                            <line x1="20" y1="8" x2="20" y2="14"/>
+                            <line x1="23" y1="11" x2="17" y2="11"/>
+                        </svg>
+                    </div>
+                    <h2 class="waiting-title">Ваш аккаунт одобрен</h2>
+                    <p class="waiting-description">
+                        Администратор одобрил ваш запрос на регистрацию.<br>
+                        Ожидайте приглашения от руководителя команды.
+                    </p>
+                </div>
+
+                <!-- Invites List -->
+                <div class="invites-section hidden" id="invitesSection">
+                    <h3 class="invites-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        <span>Приглашения</span>
+                    </h3>
+                    <div class="invites-list" id="invitesList"></div>
+                </div>
+
+                <!-- No Invites Message -->
+                <div class="no-invites hidden" id="noInvites">
+                    <div class="no-invites-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                    </div>
+                    <p>У вас пока нет приглашений</p>
+                    <span class="no-invites-hint">Руководитель команды пригласит вас в ближайшее время</span>
+                </div>
+
+                <!-- Loading State -->
+                <div class="invites-loading hidden" id="invitesLoading">
+                    <div class="spinner"></div>
+                    <p>Проверка приглашений...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-dialog modal-sm modal-confirm">
+            <div class="modal-body">
+                <p class="modal-message" id="confirmMessage"></p>
+                <p class="modal-description" id="confirmDescription"></p>
+            </div>
+            <div class="modal-footer modal-footer-center">
+                <button class="btn-secondary btn-sm" data-action="confirm-cancel">Отмена</button>
+                <button class="btn-primary btn-sm" id="confirmAcceptBtn" data-action="confirm-ok">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/error-handler.js"></script>
+    <script src="../shared/utils.js"></script>
+    <script src="../shared/version.js"></script>
+    <script src="../shared/env-config.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="js/waiting-invite.js"></script>
+</body>
+</html>

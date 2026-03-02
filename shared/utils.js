@@ -84,7 +84,9 @@ const Utils = {
      * @returns {string} Уникальный ID на базе timestamp
      */
     generateId() {
-        return Date.now().toString();
+        const array = new Uint8Array(12);
+        crypto.getRandomValues(array);
+        return Array.from(array, function(b) { return b.toString(16).padStart(2, '0'); }).join('');
     },
 
     /**
@@ -116,13 +118,13 @@ const Utils = {
     },
 
     /**
-     * Инициализация иконок Lucide
+     * Инициализация иконок (совместимость с Lucide API)
      */
     initLucideIcons() {
-        if (typeof lucide !== 'undefined') {
+        if (typeof LocalIcons !== 'undefined') {
+            LocalIcons.createIcons();
+        } else if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
     }
 };
-
-console.log('✅ Utils loaded');

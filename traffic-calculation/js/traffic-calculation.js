@@ -1,15 +1,49 @@
 // Основной модуль управления трафиком
 const trafficCalc = {
-    currentTab: 'partners',
+    currentTab: 'analytics',
     selectedPartners: [],
     editingPartnerId: null,
     currentReportData: null,
     currentStep: 1,
-    completedSteps: [], // Список завершенных шагов
+    completedSteps: [],
+    dataLoaded: false, // Флаг: данные загружены из облака
     filesUploaded: {
         deposits: false,
         quality: false,
         percent: false
+    },
+    ourPartnerIds: [],
+    currentSelectedPartnerId: null,
+    currentSelectedPartnerId6: null,
+    allPartnersListForStep5: [],
+    allPartnersListForStep6: [],
+    trafficSettings: null,
+    trafficResults: null,
+
+    // Параметры для оценки трафика
+    trafficParams: [
+        { key: 'backCount', name: 'Back', type: 'number' },
+        { key: 'autoDisableCount', name: 'Автоотключение', type: 'number' },
+        { key: 'depositAppealsCount', name: 'Обращений по пополнениям', type: 'number' },
+        { key: 'delayedAppealsCount', name: 'Обращения 15+ мин', type: 'number' },
+        { key: 'depositSuccessPercent', name: '% успешных пополнений', type: 'percent' },
+        { key: 'withdrawalSuccessPercent', name: '% успешных выводов', type: 'percent' },
+        { key: 'depositWorkTimePercent', name: '% Времени работы на пополнения', type: 'percent' },
+        { key: 'withdrawalWorkTimePercent', name: '% Времени работы на вывод', type: 'percent' },
+        { key: 'chatIgnoring', name: 'Игнорирование чатов', type: 'number' },
+        { key: 'webmanagementIgnore', name: 'Игнор Webmanagement', type: 'number' },
+        { key: 'depositQueues', name: 'Очереди на пополнение', type: 'number' },
+        { key: 'withdrawalQueues', name: 'Очереди на вывод', type: 'number' },
+        { key: 'creditsOutsideLimits', name: 'Зачисление вне лимитов', type: 'number' },
+        { key: 'wrongAmountApproval', name: 'Одобрение неверной суммы', type: 'number' },
+        { key: 'otherViolations', name: 'Другие нарушения', type: 'multiplier' }
+    ],
+
+    // SIDEBAR
+    toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('collapsed');
+        localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
     },
 
     // КАЛЬКУЛЯТОР ТРАФИКА
@@ -17,7 +51,7 @@ const trafficCalc = {
     // Открыть калькулятор трафика
     openTrafficCalculator() {
         if (!this.currentReportData || this.currentReportData.length === 0) {
-            alert('Сначала сформируйте отчет');
+            Toast.warning('Нет данных для расчета');
             return;
         }
 
@@ -29,16 +63,24 @@ const trafficCalc = {
         
         // Открываем модальное окно
         document.getElementById('trafficCalculatorModal').classList.add('show');
-        
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Закрыть калькулятор трафика
     closeTrafficCalculator() {
         document.getElementById('trafficCalculatorModal').classList.remove('show');
+        // Скрываем подсказку при закрытии
+        const helpContent = document.getElementById('trafficHelpContent');
+        const helpBtn = document.querySelector('.help-toggle-btn');
+        if (helpContent) helpContent.classList.add('hidden');
+        if (helpBtn) helpBtn.classList.remove('active');
+    },
+
+    // Переключить отображение подсказки
+    toggleHelp() {
+        const helpContent = document.getElementById('trafficHelpContent');
+        if (helpContent) {
+            helpContent.classList.toggle('hidden');
+        }
     },
 
     // Загрузить настройки из localStorage или создать дефолтные
@@ -46,51 +88,64 @@ const trafficCalc = {
         const saved = localStorage.getItem('trafficSettings');
         if (saved) {
             try {
-                return JSON.parse(saved);
+                const settings = JSON.parse(saved);
+                // Миграция: исправляем старые отрицательные значения на положительные
+                Object.keys(settings).forEach(key => {
+                    if (settings[key].pointsPerItem !== undefined && settings[key].pointsPerItem < 0) {
+                        settings[key].pointsPerItem = 5;
+                    }
+                });
+                // Сохраняем мигрированные настройки
+                localStorage.setItem('trafficSettings', JSON.stringify(settings));
+                return settings;
             } catch (e) {
-                console.error('Error loading traffic settings:', e);
+                ErrorHandler.handle(e, {
+                    module: 'traffic-calculation',
+                    action: 'loadTrafficSettings'
+                });
             }
         }
         return this.getDefaultTrafficSettings();
     },
 
     // Получить дефолтные настройки
+    // Логика: чем больше баллов — тем хуже результат, тем меньше трафика
     getDefaultTrafficSettings() {
         const settings = {};
-        
+
         this.trafficParams.forEach(param => {
             if (param.type === 'text') {
                 // Для текстовых полей (например, статус)
                 settings[param.key] = {
-                    good: { value: 'новый', points: 10 },
-                    normal: { value: 'старый', points: 5 },
-                    bad: { value: 'закрыт', points: -5 },
-                    terrible: { value: '', points: -10 }
+                    good: { value: '', points: 1 },
+                    normal: { value: '', points: 2 },
+                    bad: { value: '', points: 3 },
+                    terrible: { value: '', points: 4 }
                 };
             } else if (param.type === 'percent') {
-                // Для процентов (80-100 = хорошо, 60-79 = нормально, и т.д.)
+                // Для процентов
                 settings[param.key] = {
-                    good: { min: 80, max: 100, points: 10 },
-                    normal: { min: 60, max: 79, points: 5 },
-                    bad: { min: 40, max: 59, points: -5 },
-                    terrible: { min: 0, max: 39, points: -10 }
+                    good: { min: 0, max: 0, points: 1 },
+                    normal: { min: 0, max: 0, points: 2 },
+                    bad: { min: 0, max: 0, points: 3 },
+                    terrible: { min: 0, max: 0, points: 4 }
                 };
             } else if (param.type === 'multiplier') {
                 // Для множителя (баллы за каждое нарушение)
                 settings[param.key] = {
-                    pointsPerItem: -20
+                    pointsPerItem: 5
                 };
             } else {
-                // Для числовых полей (чем меньше = лучше)
+                // Для числовых полей
                 settings[param.key] = {
-                    good: { min: 0, max: 0, points: 10 },
-                    normal: { min: 1, max: 2, points: 5 },
-                    bad: { min: 3, max: 5, points: -5 },
-                    terrible: { min: 6, max: 9999, points: -10 }
+                    good: { min: 0, max: 0, points: 1 },
+                    normal: { min: 0, max: 0, points: 2 },
+                    bad: { min: 0, max: 0, points: 3 },
+                    terrible: { min: 0, max: 0, points: 4 }
                 };
             }
         });
-        
+
         return settings;
     },
 
@@ -102,7 +157,7 @@ const trafficCalc = {
     // Экспорт настроек калькулятора в JSON
     exportTrafficSettings() {
         if (!this.trafficSettings) {
-            alert('Настройки не загружены');
+            Toast.error('Настройки не загружены');
             return;
         }
 
@@ -142,7 +197,7 @@ const trafficCalc = {
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 try {
                     const jsonData = JSON.parse(event.target.result);
 
@@ -152,7 +207,7 @@ const trafficCalc = {
                     }
 
                     // Подтверждение перед импортом
-                    if (!confirm('Вы уверены, что хотите заменить текущие настройки на импортированные?')) {
+                    if (!await ConfirmModal.show('Вы уверены, что хотите заменить текущие настройки на импортированные?')) {
                         return;
                     }
 
@@ -163,20 +218,18 @@ const trafficCalc = {
                     // Перерисовываем форму с новыми настройками
                     this.renderTrafficSettings();
 
-                    // Обновляем иконки
-                    if (typeof lucide !== 'undefined') {
-                        lucide.createIcons();
-                    }
-
-                    alert('Настройки успешно импортированы!');
+                    Toast.success('Настройки успешно импортированы!');
                 } catch (error) {
-                    alert(`Ошибка при импорте настроек: ${error.message}`);
-                    console.error('Import error:', error);
+                    ErrorHandler.handle(error, {
+                        module: 'traffic-calculation',
+                        action: 'importTrafficSettings',
+                        userMessage: `Ошибка при импорте настроек: ${error.message}`
+                    });
                 }
             };
 
             reader.onerror = () => {
-                alert('Ошибка при чтении файла');
+                Toast.error('Ошибка при чтении файла');
             };
 
             reader.readAsText(file);
@@ -190,68 +243,79 @@ const trafficCalc = {
         const container = document.getElementById('trafficSettingsForm');
         if (!container) return;
 
-        container.innerHTML = this.trafficParams.map(param => {
+        // Добавляем легенду
+        const legend = `
+            <div class="traffic-legend">
+                <span class="traffic-legend-title">Уровни:</span>
+                <div class="traffic-legend-item"><span class="traffic-legend-dot good"></span>Хороший</div>
+                <div class="traffic-legend-item"><span class="traffic-legend-dot normal"></span>Нормальный</div>
+                <div class="traffic-legend-item"><span class="traffic-legend-dot bad"></span>Плохой</div>
+                <div class="traffic-legend-item"><span class="traffic-legend-dot terrible"></span>Ужасный</div>
+            </div>
+        `;
+
+        container.innerHTML = legend + this.trafficParams.map(param => {
             const settings = this.trafficSettings[param.key];
-            
+
             if (param.type === 'text') {
                 // Для текстовых полей
                 return `
                     <div class="traffic-param-section">
                         <div class="traffic-param-header">
-                            <i data-lucide="type"></i>
+                            <img src="../shared/icons/filter.svg" alt="">
                             ${this.escapeHtml(param.name)}
                         </div>
                         <div class="traffic-param-grid">
                             <div class="traffic-level-card good">
                                 <div class="traffic-level-title">Хор.</div>
                                 <div class="form-group">
-                                    <label>Значение</label>
+                                    <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.good.value)}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'value', this.value)">
+                                           data-param="${param.key}" data-level="good" data-field="value">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.good.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="good" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card normal">
                                 <div class="traffic-level-title">Норм.</div>
                                 <div class="form-group">
-                                    <label>Значение</label>
+                                    <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.normal.value)}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'value', this.value)">
+                                           data-param="${param.key}" data-level="normal" data-field="value">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.normal.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="normal" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card bad">
                                 <div class="traffic-level-title">Плох.</div>
                                 <div class="form-group">
-                                    <label>Значение</label>
+                                    <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.bad.value)}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'value', this.value)">
+                                           data-param="${param.key}" data-level="bad" data-field="value">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.bad.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="bad" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card terrible">
                                 <div class="traffic-level-title">Ужас.</div>
                                 <div class="form-group">
-                                    <label>Значение</label>
+                                    <span>Значение</span>
                                     <input type="text" value="${this.escapeHtml(settings.terrible.value)}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'value', this.value)">
+                                           data-param="${param.key}" data-level="terrible" data-field="value">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.terrible.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="terrible" data-field="points">
                                 </div>
                             </div>
                         </div>
@@ -262,18 +326,18 @@ const trafficCalc = {
                 return `
                     <div class="traffic-param-section">
                         <div class="traffic-param-header">
-                            <i data-lucide="alert-triangle"></i>
+                            <img src="../shared/icons/cross.svg" alt="">
                             ${this.escapeHtml(param.name)}
                         </div>
                         <div class="traffic-multiplier-settings">
                             <div class="traffic-multiplier-card">
                                 <div class="traffic-multiplier-info">
-                                    <span class="multiplier-label">Баллы за каждое нарушение:</span>
-                                    <input type="number" value="${settings.pointsPerItem || -20}"
-                                           onchange="trafficCalc.updateTrafficSettingMultiplier('${param.key}', 'pointsPerItem', parseInt(this.value))">
+                                    <span class="multiplier-label">Штрафные баллы за каждое нарушение:</span>
+                                    <input type="number" value="${settings.pointsPerItem || 5}" min="0"
+                                           data-param="${param.key}" data-field="pointsPerItem" data-multiplier="true">
                                 </div>
                                 <div class="multiplier-example">
-                                    Пример: 5 нарушений = <span id="${param.key}Example">${(settings.pointsPerItem || -20) * 5}</span> баллов
+                                    Пример: 3 нарушения × <span id="${param.key}Multiplier">${settings.pointsPerItem || 5}</span> = <span id="${param.key}Example">+${(settings.pointsPerItem || 5) * 3}</span> штрафных баллов
                                 </div>
                             </div>
                         </div>
@@ -284,80 +348,80 @@ const trafficCalc = {
                 return `
                     <div class="traffic-param-section">
                         <div class="traffic-param-header">
-                            <i data-lucide="hash"></i>
+                            <img src="../shared/icons/filter.svg" alt="">
                             ${this.escapeHtml(param.name)}
                         </div>
                         <div class="traffic-param-grid">
                             <div class="traffic-level-card good">
                                 <div class="traffic-level-title">Хор.</div>
                                 <div class="traffic-range-group">
-                                    <label>От:</label>
+                                    <span>От:</span>
                                     <input type="number" value="${settings.good.min}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'min', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="good" data-field="min">
                                 </div>
                                 <div class="traffic-range-group">
-                                    <label>До:</label>
+                                    <span>До:</span>
                                     <input type="number" value="${settings.good.max}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'max', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="good" data-field="max">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.good.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'good', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="good" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card normal">
                                 <div class="traffic-level-title">Норм.</div>
                                 <div class="traffic-range-group">
-                                    <label>От:</label>
+                                    <span>От:</span>
                                     <input type="number" value="${settings.normal.min}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'min', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="normal" data-field="min">
                                 </div>
                                 <div class="traffic-range-group">
-                                    <label>До:</label>
+                                    <span>До:</span>
                                     <input type="number" value="${settings.normal.max}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'max', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="normal" data-field="max">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.normal.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'normal', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="normal" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card bad">
                                 <div class="traffic-level-title">Плох.</div>
                                 <div class="traffic-range-group">
-                                    <label>От:</label>
+                                    <span>От:</span>
                                     <input type="number" value="${settings.bad.min}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'min', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="bad" data-field="min">
                                 </div>
                                 <div class="traffic-range-group">
-                                    <label>До:</label>
+                                    <span>До:</span>
                                     <input type="number" value="${settings.bad.max}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'max', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="bad" data-field="max">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.bad.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'bad', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="bad" data-field="points">
                                 </div>
                             </div>
                             <div class="traffic-level-card terrible">
                                 <div class="traffic-level-title">Ужас.</div>
                                 <div class="traffic-range-group">
-                                    <label>От:</label>
+                                    <span>От:</span>
                                     <input type="number" value="${settings.terrible.min}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'min', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="terrible" data-field="min">
                                 </div>
                                 <div class="traffic-range-group">
-                                    <label>До:</label>
+                                    <span>До:</span>
                                     <input type="number" value="${settings.terrible.max}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'max', parseFloat(this.value))">
+                                           data-param="${param.key}" data-level="terrible" data-field="max">
                                 </div>
                                 <div class="traffic-points-group">
-                                    <label>Баллы:</label>
+                                    <span>Баллы:</span>
                                     <input type="number" value="${settings.terrible.points}"
-                                           onchange="trafficCalc.updateTrafficSetting('${param.key}', 'terrible', 'points', parseInt(this.value))">
+                                           data-param="${param.key}" data-level="terrible" data-field="points">
                                 </div>
                             </div>
                         </div>
@@ -366,10 +430,35 @@ const trafficCalc = {
             }
         }).join('');
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
+        // Event delegation для всех настроек трафика
+        container.addEventListener('change', (e) => {
+            const input = e.target;
+
+            // Обработка множителей
+            if (input.dataset.multiplier) {
+                this.updateTrafficSettingMultiplier(
+                    input.dataset.param,
+                    input.dataset.field,
+                    parseInt(input.value)
+                );
+            }
+            // Обработка обычных настроек
+            else if (input.dataset.param && input.dataset.level && input.dataset.field) {
+                let value = input.value;
+
+                // Преобразуем значение в зависимости от типа
+                if (input.type === 'number') {
+                    value = input.dataset.field === 'points' ? parseInt(value) : parseFloat(value);
+                }
+
+                this.updateTrafficSetting(
+                    input.dataset.param,
+                    input.dataset.level,
+                    input.dataset.field,
+                    value
+                );
+            }
+        });
     },
 
     // Обновить настройку
@@ -385,17 +474,21 @@ const trafficCalc = {
         this.trafficSettings[paramKey][field] = value;
         this.saveTrafficSettings();
 
-        // Обновляем пример
+        // Обновляем пример (3 нарушения × баллы = штрафные баллы)
+        const multiplierEl = document.getElementById(paramKey + 'Multiplier');
         const exampleEl = document.getElementById(paramKey + 'Example');
+        if (multiplierEl) {
+            multiplierEl.textContent = value;
+        }
         if (exampleEl) {
-            exampleEl.textContent = value * 5;
+            exampleEl.textContent = '+' + (value * 3);
         }
     },
 
     // Рассчитать трафик
     calculateTraffic() {
         if (!this.currentReportData || this.currentReportData.length === 0) {
-            alert('Нет данных для расчета');
+            Toast.warning('Нет данных для расчета');
             return;
         }
 
@@ -418,7 +511,17 @@ const trafficCalc = {
         this.showTrafficResults();
     },
 
-    // Рассчитать процент трафика для каждого партнера (внутри каждого метода отдельно)
+    /**
+     * Рассчитать процент трафика для каждого партнера
+     * Распределение происходит внутри каждого метода отдельно (100% на метод)
+     * Использует обратную пропорцию: чем больше баллов (хуже работа) — тем меньше % трафика
+     *
+     * @description
+     * 1. Группирует партнеров по методу
+     * 2. Для каждого метода рассчитывает обратные баллы (1/(score+1))
+     * 3. Распределяет 100% трафика пропорционально обратным баллам
+     * 4. Округляет вниз и распределяет остаток по партнёрам с лучшими показателями
+     */
     calculateTrafficPercentages() {
         if (!this.trafficResults || this.trafficResults.length === 0) return;
 
@@ -448,12 +551,21 @@ const trafficCalc = {
                 return;
             }
 
+            // Обратная пропорция: используем 1/(score+1) для расчёта
+            // Чем меньше баллов — тем больше inverseScore — тем больше % трафика
+            const inverseData = groupResults.map(result => ({
+                result: result,
+                inverseScore: 1 / (result.scores.total + 1)
+            }));
+
+            const totalInverse = inverseData.reduce((sum, item) => sum + item.inverseScore, 0);
+
             // Рассчитываем процент для каждого и округляем вниз
-            let results = groupResults.map(result => {
-                const exactPercent = (result.scores.total / totalScore) * 100;
+            let results = inverseData.map(item => {
+                const exactPercent = (item.inverseScore / totalInverse) * 100;
                 const floorPercent = Math.floor(exactPercent);
                 return {
-                    result: result,
+                    result: item.result,
                     exactPercent: exactPercent,
                     floorPercent: floorPercent,
                     remainder: exactPercent - floorPercent
@@ -470,12 +582,13 @@ const trafficCalc = {
             let deficit = 100 - currentTotal;
 
             // Распределяем остаток между субагентами с наибольшими остатками
+            // При равных остатках приоритет партнёру с меньшими баллами (лучше работает)
             if (deficit > 0) {
                 results.sort((a, b) => {
                     if (Math.abs(b.remainder - a.remainder) > 0.0001) {
                         return b.remainder - a.remainder;
                     }
-                    return b.result.scores.total - a.result.scores.total;
+                    return a.result.scores.total - b.result.scores.total;
                 });
 
                 for (let i = 0; i < deficit && i < results.length; i++) {
@@ -485,7 +598,20 @@ const trafficCalc = {
         });
     },
 
-    // Оценить одного партнера
+    /**
+     * Оценить качество работы партнера по всем параметрам
+     *
+     * @param {Object} partner - Данные партнера
+     * @param {Object} settings - Настройки оценки (пороги и баллы для каждого параметра)
+     * @returns {Object} Объект с баллами: { good, normal, bad, terrible, total }
+     *
+     * @description
+     * Проходит по всем параметрам (backCount, depositSuccessPercent и т.д.) и:
+     * - Для числовых полей: проверяет попадание в диапазоны (good/normal/bad/terrible)
+     * - Для текстовых полей: сравнивает точное соответствие
+     * - Для множителя: начисляет штрафные баллы за каждое нарушение
+     * Чем больше итоговый балл - тем хуже работает партнер - тем меньше трафика получит
+     */
     evaluatePartner(partner, settings) {
         const scores = {
             good: 0,
@@ -522,16 +648,14 @@ const trafficCalc = {
                     scores.terrible += paramSettings.terrible.points;
                 }
             } else if (param.type === 'multiplier') {
-                // Для множителя - баллы за каждое нарушение
+                // Для множителя - штрафные баллы за каждое нарушение
                 const numValue = parseInt(value) || 0;
-                const pointsPerItem = paramSettings.pointsPerItem || -20;
+                const pointsPerItem = paramSettings.pointsPerItem || 5;
                 const totalPoints = numValue * pointsPerItem;
 
-                // Добавляем в bad если отрицательные, в good если положительные
-                if (totalPoints < 0) {
+                // Нарушения всегда добавляют штрафные баллы (больше баллов = хуже = меньше трафика)
+                if (totalPoints > 0) {
                     scores.bad += totalPoints;
-                } else if (totalPoints > 0) {
-                    scores.good += totalPoints;
                 }
             } else {
                 // Для числовых и процентных полей проверяем диапазон
@@ -595,7 +719,7 @@ const trafficCalc = {
         let html = '';
         const methods = Object.keys(methodGroups).sort();
 
-        methods.forEach((method, methodIndex) => {
+        methods.forEach(method => {
             const groupResults = methodGroups[method];
             const totalPercent = groupResults.reduce((sum, r) => sum + r.trafficPercent, 0);
 
@@ -632,10 +756,6 @@ const trafficCalc = {
         // Открываем модальное окно результатов
         document.getElementById('trafficResultsModal').classList.add('show');
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Закрыть результаты
@@ -646,7 +766,7 @@ const trafficCalc = {
     // Экспорт результатов в Excel
     exportTrafficResults() {
         if (!this.trafficResults || this.trafficResults.length === 0) {
-            alert('Нет данных для экспорта');
+            Toast.warning('Нет данных для экспорта');
             return;
         }
 
@@ -672,89 +792,48 @@ const trafficCalc = {
         const date = new Date().toISOString().split('T')[0];
         XLSX.writeFile(wb, `traffic_results_${date}.xlsx`);
     },
-    ourPartnerIds: [], // Список наших Субагент ID
-    currentSelectedPartnerId: null, // Текущий выбранный партнер для ручных данных
-    allPartnersListForStep5: [], // Список всех партнеров для шага 5
-    trafficSettings: null, // Настройки калькулятора трафика
-    trafficResults: null, // Результаты расчета трафика
-
-    // Параметры для оценки трафика (16 параметров)
-    trafficParams: [
-        { key: 'backCount', name: 'Back', type: 'number' },
-        { key: 'cringeCount', name: 'Cringe', type: 'number' },
-        { key: 'autoDisableCount', name: 'Автоотключение', type: 'number' },
-        { key: 'depositAppealsCount', name: 'Обращений по пополнениям', type: 'number' },
-        { key: 'delayedAppealsCount', name: 'Обращения 15+ мин', type: 'number' },
-        { key: 'depositSuccessPercent', name: '% успешных пополнений', type: 'percent' },
-        { key: 'withdrawalSuccessPercent', name: '% успешных выводов', type: 'percent' },
-        { key: 'depositWorkTimePercent', name: '% Времени работы на пополнения', type: 'percent' },
-        { key: 'withdrawalWorkTimePercent', name: '% Времени работы на вывод', type: 'percent' },
-        { key: 'chatIgnoring', name: 'Игнорирование чатов', type: 'number' },
-        { key: 'webmanagementIgnore', name: 'Игнор Webmanagement', type: 'number' },
-        { key: 'depositQueues', name: 'Очереди на пополнение', type: 'number' },
-        { key: 'withdrawalQueues', name: 'Очереди на вывод', type: 'number' },
-        { key: 'creditsOutsideLimits', name: 'Зачисление вне лимитов', type: 'number' },
-        { key: 'wrongAmountApproval', name: 'Одобрение неверной суммы', type: 'number' },
-        { key: 'otherViolations', name: 'Другие нарушения', type: 'multiplier' }
-    ],
 
     // Инициализация
-    init() {
-        this.loadMethods();
-        this.updatePartnerStatuses();
-        this.renderPartners();
+    async init() {
+        // Check authentication and role status (waiting_invite/blocked check)
+        if (!await AuthGuard.checkWithRole()) {
+            return; // Will redirect to login or waiting-invite
+        }
+
+        // Загружаем партнёров из облака
+        await storage.loadPartners();
+        this.dataLoaded = true;
         this.setupEventListeners();
-        this.updateCounts();
+        this.renderAnalytics();
     },
 
     // Настройка обработчиков событий
     setupEventListeners() {
-        // Форма добавления партнера
-        const partnerForm = document.getElementById('partnerForm');
-        if (partnerForm) {
-            partnerForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.addPartner();
-            });
-        }
-
-        // Форма редактирования
-        const editForm = document.getElementById('editForm');
-        if (editForm) {
-            editForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.saveEdit();
-            });
-        }
+        // Обработчики событий (если понадобятся)
     },
 
     // Переключение вкладок
-    switchTab(tabName) {
+    switchTab(tabName, event) {
         this.currentTab = tabName;
 
         // Обновляем кнопки вкладок
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        event.target.closest('.tab-btn').classList.add('active');
+        if (event) {
+            event.target.closest('.tab-btn').classList.add('active');
+        }
 
         // Показываем нужный контент
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
         });
 
-        if (tabName === 'partners') {
-            document.getElementById('partnersTab').classList.add('active');
-        } else if (tabName === 'analytics') {
+        if (tabName === 'analytics') {
             document.getElementById('analyticsTab').classList.add('active');
             this.renderAnalytics();
         } else if (tabName === 'report') {
             document.getElementById('reportTab').classList.add('active');
-        }
-
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
         }
     },
 
@@ -795,7 +874,7 @@ const trafficCalc = {
         const subagentId = document.getElementById('subagentIdInput').value.trim();
 
         if (!method || !subagent || !subagentId) {
-            alert('Пожалуйста, заполните все поля');
+            Toast.warning('Пожалуйста, заполните все поля');
             return;
         }
 
@@ -814,7 +893,7 @@ const trafficCalc = {
         this.renderPartners();
         this.updateCounts();
 
-        alert('Партнер успешно добавлен!');
+        Toast.success('Партнер успешно добавлен!');
     },
 
     // Отображение партнеров
@@ -849,22 +928,28 @@ const trafficCalc = {
                     <td>${date}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="action-btn" onclick="trafficCalc.editPartner('${partner.id}')" title="Редактировать">
-                                <i data-lucide="edit"></i> Изменить
-                            </button>
-                            <button class="action-btn delete" onclick="trafficCalc.deletePartner('${partner.id}')" title="Удалить">
-                                <i data-lucide="trash-2"></i> Удалить
-                            </button>
+                            <button class="action-btn" data-action="edit" data-partner-id="${partner.id}" title="Редактировать">Изменить</button>
+                            <button class="action-btn delete" data-action="delete" data-partner-id="${partner.id}" title="Удалить">Удалить</button>
                         </div>
                     </td>
                 </tr>
             `;
         }).join('');
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
+        // Event delegation для кнопок действий с партнёрами
+        tbody.addEventListener('click', (e) => {
+            const button = e.target.closest('[data-action]');
+            if (!button) return;
+
+            const action = button.dataset.action;
+            const partnerId = button.dataset.partnerId;
+
+            if (action === 'edit') {
+                this.editPartner(partnerId);
+            } else if (action === 'delete') {
+                this.deletePartner(partnerId);
+            }
+        });
     },
 
     // Фильтрация партнеров
@@ -888,10 +973,6 @@ const trafficCalc = {
         document.getElementById('editStatusSelect').value = partner.status;
 
         document.getElementById('editModal').classList.add('show');
-
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Сохранение изменений
@@ -903,7 +984,7 @@ const trafficCalc = {
         const status = document.getElementById('editStatusSelect').value;
 
         if (!method || !subagent || !subagentId) {
-            alert('Пожалуйста, заполните все поля');
+            Toast.warning('Пожалуйста, заполните все поля');
             return;
         }
 
@@ -918,7 +999,7 @@ const trafficCalc = {
         this.renderPartners();
         this.updateCounts();
 
-        alert('Изменения сохранены!');
+        Toast.success('Изменения сохранены!');
     },
 
     // Закрытие модального окна редактирования
@@ -928,8 +1009,8 @@ const trafficCalc = {
     },
 
     // Удаление партнера
-    deletePartner(id) {
-        if (!confirm('Вы уверены, что хотите удалить этого партнера?')) {
+    async deletePartner(id) {
+        if (!await ConfirmModal.show('Вы уверены, что хотите удалить этого партнера?', { danger: true })) {
             return;
         }
 
@@ -942,10 +1023,6 @@ const trafficCalc = {
     showMethodModal() {
         this.renderMethodsList();
         document.getElementById('methodModal').classList.add('show');
-
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     closeMethodModal() {
@@ -959,22 +1036,24 @@ const trafficCalc = {
         if (!container) return;
 
         if (methods.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #999; font-style: italic;">Методы не добавлены</p>';
+            container.innerHTML = '<p class="empty-state">Методы не добавлены</p>';
             return;
         }
 
         container.innerHTML = methods.map(method => `
             <div class="method-item">
                 <span>${this.escapeHtml(method)}</span>
-                <button onclick="trafficCalc.deleteMethod('${this.escapeHtml(method)}')">
-                    <i data-lucide="trash-2"></i> Удалить
-                </button>
+                <button data-method="${this.escapeHtml(method)}">Удалить</button>
             </div>
         `).join('');
 
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
+        // Event delegation для кнопок удаления методов
+        container.addEventListener('click', (e) => {
+            const button = e.target.closest('[data-method]');
+            if (!button) return;
+
+            this.deleteMethod(button.dataset.method);
+        });
     },
 
     addMethod() {
@@ -982,7 +1061,7 @@ const trafficCalc = {
         const methodName = input.value.trim();
 
         if (!methodName) {
-            alert('Введите название метода');
+            Toast.warning('Введите название метода');
             return;
         }
 
@@ -990,14 +1069,14 @@ const trafficCalc = {
             input.value = '';
             this.loadMethods();
             this.renderMethodsList();
-            alert('Метод добавлен!');
+            Toast.success('Метод добавлен!');
         } else {
-            alert('Такой метод уже существует');
+            Toast.warning('Такой метод уже существует');
         }
     },
 
-    deleteMethod(methodName) {
-        if (!confirm(`Удалить метод "${methodName}"?`)) {
+    async deleteMethod(methodName) {
+        if (!await ConfirmModal.show('Удалить метод "' + methodName + '"?', { danger: true })) {
             return;
         }
 
@@ -1029,14 +1108,14 @@ const trafficCalc = {
     showMethodSelection() {
         this.hideAllPanels();
         const panel = document.getElementById('methodSelectionPanel');
-        panel.style.display = 'block';
+        panel.classList.remove('hidden');
 
-        const methods = storage.getMethods();
+        this.availableMethods = storage.getMethods();
         const container = document.getElementById('methodCheckboxes');
-        
-        container.innerHTML = methods.map(method => `
+
+        container.innerHTML = this.availableMethods.map((method, index) => `
             <label>
-                <input type="checkbox" value="${this.escapeHtml(method)}" class="method-checkbox">
+                <input type="checkbox" value="${index}" class="method-checkbox">
                 ${this.escapeHtml(method)}
             </label>
         `).join('');
@@ -1045,10 +1124,11 @@ const trafficCalc = {
     // Применить выбор по методу
     applyMethodSelection() {
         const checkboxes = document.querySelectorAll('.method-checkbox:checked');
-        const selectedMethods = Array.from(checkboxes).map(cb => cb.value);
+        const selectedIndices = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        const selectedMethods = selectedIndices.map(i => this.availableMethods[i]);
 
         if (selectedMethods.length === 0) {
-            alert('Выберите хотя бы один метод');
+            Toast.warning('Выберите хотя бы один метод');
             return;
         }
 
@@ -1065,7 +1145,7 @@ const trafficCalc = {
     showManualSelection() {
         this.hideAllPanels();
         const panel = document.getElementById('manualSelectionPanel');
-        panel.style.display = 'block';
+        panel.classList.remove('hidden');
 
         const partners = storage.getPartners();
         const container = document.getElementById('partnerCheckboxes');
@@ -1085,7 +1165,7 @@ const trafficCalc = {
         this.selectedPartners = Array.from(checkboxes).map(cb => cb.value);
 
         if (this.selectedPartners.length === 0) {
-            alert('Выберите хотя бы одного партнера');
+            Toast.warning('Выберите хотя бы одного партнера');
             return;
         }
 
@@ -1095,8 +1175,8 @@ const trafficCalc = {
 
     // Скрыть все панели выбора
     hideAllPanels() {
-        document.getElementById('methodSelectionPanel').style.display = 'none';
-        document.getElementById('manualSelectionPanel').style.display = 'none';
+        document.getElementById('methodSelectionPanel').classList.add('hidden');
+        document.getElementById('manualSelectionPanel').classList.add('hidden');
     },
 
     // Обновление предпросмотра выбранных партнеров
@@ -1106,6 +1186,39 @@ const trafficCalc = {
 
         const allPartners = storage.getPartners();
         const selected = allPartners.filter(p => this.selectedPartners.includes(p.id));
+
+        // Элементы UI
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const noPartnersHint = document.getElementById('noPartnersHint');
+        const selectionToolbar = document.getElementById('selectionToolbar');
+        const partnersPreview = document.querySelector('.partners-preview');
+
+        // Пока данные не загружены - показываем спиннер
+        if (!this.dataLoaded) {
+            if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+            if (selectionToolbar) selectionToolbar.classList.add('hidden');
+            if (partnersPreview) partnersPreview.classList.add('hidden');
+            if (noPartnersHint) noPartnersHint.classList.add('hidden');
+            return;
+        }
+
+        // Данные загружены - скрываем спиннер
+        if (loadingSpinner) loadingSpinner.classList.add('hidden');
+
+        if (allPartners.length === 0) {
+            // Нет партнёров вообще - показываем подсказку, скрываем остальное
+            if (noPartnersHint) noPartnersHint.classList.remove('hidden');
+            if (selectionToolbar) selectionToolbar.classList.add('hidden');
+            if (partnersPreview) partnersPreview.classList.add('hidden');
+            const nextBtn = document.getElementById('step1NextBtn');
+            if (nextBtn) nextBtn.disabled = true;
+            return;
+        } else {
+            // Есть партнёры - скрываем подсказку, показываем элементы
+            if (noPartnersHint) noPartnersHint.classList.add('hidden');
+            if (selectionToolbar) selectionToolbar.classList.remove('hidden');
+            if (partnersPreview) partnersPreview.classList.remove('hidden');
+        }
 
         document.getElementById('selectedCount').textContent = selected.length;
 
@@ -1174,16 +1287,121 @@ const trafficCalc = {
             this.checkManualDataCompletionStep6();
         }
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
+        // При переходе на шаг 7 (отчёт) - сгенерировать отчёт
+        if (stepNumber === 7) {
+            this.prepareStep7Report();
         }
+
+        // При переходе на шаг 8 (настройки расчёта) - подготовить данные
+        if (stepNumber === 8) {
+            this.prepareStep8Settings();
+        }
+
+    },
+
+    // Подготовка шага 7 (отчёт)
+    prepareStep7Report() {
+        // Генерируем отчёт на основе данных предыдущих шагов
+        if (this.selectedPartners.length === 0) {
+            Toast.warning('Сначала выберите партнеров');
+            this.goToStep(1);
+            return;
+        }
+
+        // Вызываем генерацию отчёта
+        this.generateReport();
+    },
+
+    // Подготовка шага 8 (настройки расчёта)
+    prepareStep8Settings() {
+        // Формируем данные для расчёта
+        if (this.selectedPartners.length === 0) {
+            Toast.warning('Сначала выберите партнеров');
+            this.goToStep(1);
+            return;
+        }
+
+        const allPartners = storage.getPartners();
+        this.currentReportData = allPartners.filter(p => this.selectedPartners.includes(p.id));
+
+        // Загружаем или создаем настройки
+        this.trafficSettings = this.loadTrafficSettings();
+
+        // Отображаем форму настроек
+        this.renderTrafficSettings();
+    },
+
+    // Рассчитать трафик и показать результаты (для кнопки "Рассчитать" на шаге 8)
+    calculateAndShowResults() {
+        if (!this.currentReportData || this.currentReportData.length === 0) {
+            Toast.warning('Нет данных для расчета');
+            return;
+        }
+
+        // Выполняем расчет для каждого партнера
+        this.trafficResults = this.currentReportData.map(partner => {
+            const scores = this.evaluatePartner(partner, this.trafficSettings);
+            return {
+                method: partner.method,
+                subagent: partner.subagent,
+                subagentId: partner.subagentId,
+                scores: scores
+            };
+        });
+
+        // Рассчитываем процент трафика для каждого партнера
+        this.calculateTrafficPercentages();
+
+        // Переходим на шаг 9 и показываем результаты
+        this.goToStep(9);
+        this.showTrafficResultsInStep();
+    },
+
+    // Показать результаты расчёта на шаге 9
+    showTrafficResultsInStep() {
+        if (!this.trafficResults || this.trafficResults.length === 0) {
+            document.getElementById('resultsNotCalculated').classList.remove('hidden');
+            document.getElementById('resultsCalculated').classList.add('hidden');
+            return;
+        }
+
+        document.getElementById('resultsNotCalculated').classList.add('hidden');
+        document.getElementById('resultsCalculated').classList.remove('hidden');
+
+        // Сортируем результаты по методу и проценту
+        const sortedResults = [...this.trafficResults].sort((a, b) => {
+            if (a.method !== b.method) {
+                return a.method.localeCompare(b.method);
+            }
+            return b.trafficPercent - a.trafficPercent;
+        });
+
+        const tbody = document.getElementById('trafficResultsTableBody');
+        tbody.innerHTML = sortedResults.map(result => `
+            <tr>
+                <td>${this.escapeHtml(result.method)}</td>
+                <td>${this.escapeHtml(result.subagent)}</td>
+                <td>${this.escapeHtml(result.subagentId)}</td>
+                <td class="score-cell score-good">${result.scores.good}</td>
+                <td class="score-cell score-normal">${result.scores.normal}</td>
+                <td class="score-cell score-bad">${result.scores.bad}</td>
+                <td class="score-cell score-terrible">${result.scores.terrible}</td>
+                <td class="score-cell score-total">${result.scores.total}</td>
+                <td class="traffic-percent">${result.trafficPercent}%</td>
+            </tr>
+        `).join('');
+
+        // Отмечаем шаг 9 как завершённый
+        if (!this.completedSteps.includes(9)) {
+            this.completedSteps.push(9);
+        }
+        this.updateStepsIndicator(9);
     },
 
     updateStepsIndicator(currentStep) {
         document.querySelectorAll('.steps-indicator .step').forEach(step => {
             const stepNum = parseInt(step.getAttribute('data-step'));
-            step.classList.remove('active');
+            step.classList.remove('active', 'clickable');
 
             if (stepNum === currentStep) {
                 step.classList.add('active');
@@ -1195,10 +1413,15 @@ const trafficCalc = {
             } else {
                 step.classList.remove('completed');
             }
+
+            // Все шаги кроме текущего - кликабельные (свободная навигация)
+            if (stepNum !== currentStep) {
+                step.classList.add('clickable');
+            }
         });
     },
 
-    // Навигация по кликам на индикаторе шагов
+    // Навигация по кликам на индикаторе шагов (свободная навигация)
     navigateToStep(stepNumber) {
         // Сохраняем данные текущего партнера, если мы на шаге 4 или 6
         if (this.currentStep === 4 && this.currentSelectedPartnerId) {
@@ -1206,6 +1429,11 @@ const trafficCalc = {
         }
         if (this.currentStep === 6 && this.currentSelectedPartnerId6) {
             this.saveCurrentManualDataStep6();
+        }
+
+        // Сохраняем настройки трафика при уходе с шага 8
+        if (this.currentStep === 8 && this.trafficSettings) {
+            this.saveTrafficSettings();
         }
 
         // Переходим на выбранный шаг
@@ -1238,7 +1466,7 @@ const trafficCalc = {
 
             // Обновляем данные партнеров
             allPartners.forEach(partner => {
-                const comments = commentsData[partner.subagentId] || { back: 0, cringe: 0 };
+                const comments = commentsData[String(partner.subagentId)] || { back: 0, cringe: 0 };
                 partner.backCount = comments.back;
                 partner.cringeCount = comments.cringe;
             });
@@ -1259,7 +1487,10 @@ const trafficCalc = {
             event.target.value = '';
 
         } catch (error) {
-            console.error('Error processing files:', error);
+            ErrorHandler.handle(error, {
+                module: 'traffic-calculation',
+                action: 'handleDepositsUpload'
+            });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
         }
@@ -1278,8 +1509,8 @@ const trafficCalc = {
             // Шаг 1: Получаем всех партнеров из системы
             const allPartners = storage.getPartners();
 
-            // Шаг 2: Собираем список наших Субагент ID
-            this.ourPartnerIds = allPartners.map(p => p.subagentId);
+            // Шаг 2: Собираем список наших Субагент ID (приводим к строкам для сравнения)
+            this.ourPartnerIds = allPartners.map(p => String(p.subagentId));
 
             // Шаг 3: Создаем объект для хранения счетчиков автоотключений
             // Формат: { "ID": количество }
@@ -1296,7 +1527,7 @@ const trafficCalc = {
             allPartners.forEach(partner => {
                 // Берем количество автоотключений для данного ID
                 // Если в файле не нашли - ставим 0
-                partner.autoDisableCount = autoDisableCounters[partner.subagentId] || 0;
+                partner.autoDisableCount = autoDisableCounters[String(partner.subagentId)] || 0;
             });
 
             // Шаг 6: Сохраняем обновленные данные
@@ -1317,7 +1548,10 @@ const trafficCalc = {
             event.target.value = '';
 
         } catch (error) {
-            console.error('Error processing files:', error);
+            ErrorHandler.handle(error, {
+                module: 'traffic-calculation',
+                action: 'handlePercentUpload'
+            });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
         }
@@ -1336,8 +1570,8 @@ const trafficCalc = {
             // Шаг 1: Получаем всех партнеров из системы
             const allPartners = storage.getPartners();
 
-            // Шаг 2: Собираем список наших Субагент ID
-            this.ourPartnerIds = allPartners.map(p => p.subagentId);
+            // Шаг 2: Собираем список наших Субагент ID (приводим к строкам для сравнения)
+            this.ourPartnerIds = allPartners.map(p => String(p.subagentId));
 
             // Шаг 3: Создаем объект для хранения данных контроля качества
             // Формат: { "ID": { depositTransactionsCount: 0, withdrawalTransactionsCount: 0, ... } }
@@ -1352,7 +1586,7 @@ const trafficCalc = {
 
             // Шаг 5: Обновляем данные каждого партнера
             allPartners.forEach(partner => {
-                const data = qualityData[partner.subagentId] || {};
+                const data = qualityData[String(partner.subagentId)] || {};
 
                 // Кол-во пополнений
                 partner.depositTransactionsCount = data.depositTransactionsCount || 0;
@@ -1391,7 +1625,10 @@ const trafficCalc = {
             event.target.value = '';
 
         } catch (error) {
-            console.error('Error processing files:', error);
+            ErrorHandler.handle(error, {
+                module: 'traffic-calculation',
+                action: 'handleQualityUpload'
+            });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
         }
@@ -1399,18 +1636,19 @@ const trafficCalc = {
 
     // Завершение аналитики
     completeAnalytics() {
+        // Проверяем обязательные шаги в правильном порядке
         if (!this.filesUploaded.deposits) {
-            alert('Необходимо загрузить обязательный отчет "Пополнения и выводы"');
-            return;
-        }
-
-        if (!this.filesUploaded.percent) {
-            alert('Необходимо загрузить обязательный отчет "Отчет по процентовкам"');
+            Toast.warning('Необходимо загрузить данные на шаге 2 "Пополнения и выводы"');
             return;
         }
 
         if (!this.filesUploaded.quality) {
-            alert('Необходимо загрузить обязательный отчет "Контроль качества работы"');
+            Toast.warning('Необходимо загрузить данные на шаге 3 "Контроль качества"');
+            return;
+        }
+
+        if (!this.filesUploaded.percent) {
+            Toast.warning('Необходимо загрузить данные на шаге 5 "Автоотключения"');
             return;
         }
 
@@ -1429,7 +1667,7 @@ const trafficCalc = {
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelectorAll('.tab-btn')[2].classList.add('active'); // Третья кнопка - "Отчет"
+        document.querySelectorAll('.tab-btn')[1].classList.add('active'); // Вторая кнопка - "Отчет"
 
         // Показываем вкладку отчета
         document.querySelectorAll('.tab-content').forEach(content => {
@@ -1440,20 +1678,16 @@ const trafficCalc = {
         // Автоматически формируем отчет
         this.generateReport();
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Подтверждение сброса аналитики
-    confirmResetAnalytics() {
+    async confirmResetAnalytics() {
         if (this.completedSteps.length > 0 || this.selectedPartners.length > 0) {
-            if (confirm('Вы уверены, что хотите сбросить все данные аналитики? Все выбранные партнеры, загруженные файлы и введенные данные будут очищены.')) {
+            if (await ConfirmModal.show('Сбросить все данные аналитики?', { description: 'Все выбранные партнеры, загруженные файлы и введенные данные будут очищены.', confirmText: 'Сбросить', danger: true })) {
                 this.resetAnalytics();
             }
         } else {
-            alert('Нет данных для сброса');
+            Toast.warning('Нет данных для сброса');
         }
     },
 
@@ -1466,9 +1700,16 @@ const trafficCalc = {
             quality: false,
             percent: false
         };
+
+        // Очищаем временные данные аналитики
+        storage.clearAnalyticsData();
         this.currentSelectedPartnerId = null;
         this.allPartnersListForStep5 = [];
         this.selectedPartners = [];
+
+        // Очищаем данные расчёта трафика
+        this.currentReportData = [];
+        this.trafficResults = [];
 
         // Очищаем статусы
         document.getElementById('depositsStatus').textContent = '';
@@ -1484,7 +1725,19 @@ const trafficCalc = {
 
         // Очищаем шаг 4 (ручные данные)
         document.getElementById('partnerSearchInput').value = '';
-        document.getElementById('manualDataForm').style.display = 'none';
+        document.getElementById('manualDataForm').classList.add('hidden');
+
+        // Очищаем шаг 7 (отчёт)
+        const reportNotGenerated = document.getElementById('reportNotGenerated');
+        const reportGenerated = document.getElementById('reportGenerated');
+        if (reportNotGenerated) reportNotGenerated.classList.remove('hidden');
+        if (reportGenerated) reportGenerated.classList.add('hidden');
+
+        // Очищаем шаг 9 (результаты расчёта)
+        const resultsNotCalculated = document.getElementById('resultsNotCalculated');
+        const resultsCalculated = document.getElementById('resultsCalculated');
+        if (resultsNotCalculated) resultsNotCalculated.classList.remove('hidden');
+        if (resultsCalculated) resultsCalculated.classList.add('hidden');
 
         // Очищаем input файлов
         const depositsInput = document.getElementById('depositsFileInput');
@@ -1499,6 +1752,99 @@ const trafficCalc = {
 
         // Обновляем предпросмотр
         this.updateSelectedPartnersView();
+    },
+
+    // Сброс данных шага 2 (пополнения и выводы)
+    async resetDepositsData() {
+        if (!this.filesUploaded.deposits) {
+            Toast.warning('Нет данных для сброса');
+            return;
+        }
+
+        if (!await ConfirmModal.show('Сбросить данные пополнений и выводов (back/cringe)?', { confirmText: 'Сбросить', danger: true })) {
+            return;
+        }
+
+        const allPartners = storage.getPartners();
+        allPartners.forEach(partner => {
+            partner.backCount = 0;
+            partner.cringeCount = 0;
+        });
+        storage.savePartners(allPartners);
+
+        this.filesUploaded.deposits = false;
+        this.completedSteps = this.completedSteps.filter(s => s !== 2);
+
+        document.getElementById('depositsStatus').textContent = '';
+        document.getElementById('depositsStatus').className = 'upload-status';
+        document.getElementById('depositsFileInput').value = '';
+        document.getElementById('step2NextBtn').disabled = true;
+
+        this.updateStepsIndicator(this.currentStep);
+        Toast.success('Данные пополнений и выводов сброшены');
+    },
+
+    // Сброс данных шага 3 (контроль качества)
+    async resetQualityData() {
+        if (!this.filesUploaded.quality) {
+            Toast.warning('Нет данных для сброса');
+            return;
+        }
+
+        if (!await ConfirmModal.show('Сбросить данные контроля качества?', { confirmText: 'Сбросить', danger: true })) {
+            return;
+        }
+
+        const allPartners = storage.getPartners();
+        allPartners.forEach(partner => {
+            partner.depositTransactionsCount = 0;
+            partner.withdrawalTransactionsCount = 0;
+            partner.depositAppealsCount = 0;
+            partner.delayedAppealsCount = 0;
+            partner.depositSuccessPercent = 0;
+            partner.withdrawalSuccessPercent = 0;
+        });
+        storage.savePartners(allPartners);
+
+        this.filesUploaded.quality = false;
+        this.completedSteps = this.completedSteps.filter(s => s !== 3);
+
+        document.getElementById('qualityStatus').textContent = '';
+        document.getElementById('qualityStatus').className = 'upload-status';
+        document.getElementById('qualityFileInput').value = '';
+        document.getElementById('step3NextBtn').disabled = true;
+
+        this.updateStepsIndicator(this.currentStep);
+        Toast.success('Данные контроля качества сброшены');
+    },
+
+    // Сброс данных шага 5 (автоотключения)
+    async resetPercentData() {
+        if (!this.filesUploaded.percent) {
+            Toast.warning('Нет данных для сброса');
+            return;
+        }
+
+        if (!await ConfirmModal.show('Сбросить данные автоотключений?', { confirmText: 'Сбросить', danger: true })) {
+            return;
+        }
+
+        const allPartners = storage.getPartners();
+        allPartners.forEach(partner => {
+            partner.autoDisableCount = 0;
+        });
+        storage.savePartners(allPartners);
+
+        this.filesUploaded.percent = false;
+        this.completedSteps = this.completedSteps.filter(s => s !== 5);
+
+        document.getElementById('percentStatus').textContent = '';
+        document.getElementById('percentStatus').className = 'upload-status';
+        document.getElementById('percentFileInput').value = '';
+        document.getElementById('step5NextBtn').disabled = true;
+
+        this.updateStepsIndicator(this.currentStep);
+        Toast.success('Данные автоотключений сброшены');
     },
 
     // ШАГ 4: РУЧНЫЕ ДАННЫЕ
@@ -1516,7 +1862,7 @@ const trafficCalc = {
         if (!select) return;
 
         if (this.allPartnersListForStep5.length === 0) {
-            select.innerHTML = '<option value="">Сначала выберите партнеров на шаге 1</option>';
+            select.innerHTML = '<option value="">Выберите на шаге 1</option>';
             return;
         }
 
@@ -1549,7 +1895,7 @@ const trafficCalc = {
     loadPartnerManualData() {
         const select = document.getElementById('partnerSelectList');
         if (!select || !select.value) {
-            document.getElementById('manualDataForm').style.display = 'none';
+            document.getElementById('manualDataForm').classList.add('hidden');
             return;
         }
 
@@ -1568,16 +1914,12 @@ const trafficCalc = {
 
         // Отображаем форму
         document.getElementById('selectedPartnerName').textContent = partner.subagent;
-        document.getElementById('manualDataForm').style.display = 'block';
+        document.getElementById('manualDataForm').classList.remove('hidden');
 
         // Загружаем сохраненные значения только для процентов времени работы
         document.getElementById('depositWorkTimePercent').value = partner.depositWorkTimePercent || 0;
         document.getElementById('withdrawalWorkTimePercent').value = partner.withdrawalWorkTimePercent || 0;
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Увеличение значения
@@ -1658,10 +2000,10 @@ const trafficCalc = {
     },
 
     // Сброс данных по времени работы для текущего партнера (шаг 4)
-    resetWorkTimeData() {
+    async resetWorkTimeData() {
         if (!this.currentSelectedPartnerId) return;
 
-        if (!confirm('Вы уверены, что хотите сбросить данные по времени работы для этого субагента?')) {
+        if (!await ConfirmModal.show('Сбросить данные по времени работы для этого субагента?', { confirmText: 'Сбросить', danger: true })) {
             return;
         }
 
@@ -1674,8 +2016,8 @@ const trafficCalc = {
     },
 
     // Сброс данных по времени работы для всех субагентов (шаг 4)
-    resetAllWorkTimeData() {
-        if (!confirm('Вы уверены, что хотите сбросить данные по времени работы для ВСЕХ выбранных субагентов?')) {
+    async resetAllWorkTimeData() {
+        if (!await ConfirmModal.show('Сбросить данные по времени работы для ВСЕХ субагентов?', { confirmText: 'Сбросить все', danger: true })) {
             return;
         }
 
@@ -1683,7 +2025,7 @@ const trafficCalc = {
         const selectedPartnersData = allPartners.filter(p => this.selectedPartners.includes(p.id));
 
         if (selectedPartnersData.length === 0) {
-            alert('Нет выбранных субагентов для сброса');
+            Toast.warning('Нет выбранных субагентов для сброса');
             return;
         }
 
@@ -1704,7 +2046,7 @@ const trafficCalc = {
         // Проверяем заполнение данных
         this.checkManualDataCompletion();
 
-        alert(`Данные по времени работы сброшены для ${selectedPartnersData.length} субагентов`);
+        Toast.success(`Данные по времени работы сброшены для ${selectedPartnersData.length} субагентов`);
     },
 
     // ========== Шаг 6: Нарушения ==========
@@ -1722,7 +2064,7 @@ const trafficCalc = {
         if (!select) return;
 
         if (this.allPartnersListForStep6.length === 0) {
-            select.innerHTML = '<option value="">Сначала выберите партнеров на шаге 1</option>';
+            select.innerHTML = '<option value="">Выберите на шаге 1</option>';
             return;
         }
 
@@ -1755,7 +2097,7 @@ const trafficCalc = {
     loadPartnerManualDataStep6() {
         const select = document.getElementById('partnerSelectList6');
         if (!select || !select.value) {
-            document.getElementById('manualDataForm6').style.display = 'none';
+            document.getElementById('manualDataForm6').classList.add('hidden');
             return;
         }
 
@@ -1774,7 +2116,7 @@ const trafficCalc = {
 
         // Отображаем форму
         document.getElementById('selectedPartnerName6').textContent = partner.subagent;
-        document.getElementById('manualDataForm6').style.display = 'block';
+        document.getElementById('manualDataForm6').classList.remove('hidden');
 
         // Загружаем сохраненные значения нарушений
         document.getElementById('chatIgnoring').value = partner.chatIgnoring || 0;
@@ -1786,10 +2128,6 @@ const trafficCalc = {
         document.getElementById('otherViolations').value = partner.otherViolations || 0;
         document.getElementById('otherViolationsDescription').value = partner.otherViolationsDescription || '';
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Сохранение данных по нарушениям (шаг 6)
@@ -1832,10 +2170,10 @@ const trafficCalc = {
                    (partner.otherViolations || 0) > 0;
         });
 
-        // Активируем кнопку, если есть данные
+        // Кнопка "Завершить" всегда активна (шаг 6 опционален)
         const nextBtn = document.getElementById('step6NextBtn');
         if (nextBtn) {
-            nextBtn.disabled = !hasFilledData;
+            nextBtn.disabled = false;
         }
 
         // Отмечаем шаг 6 как завершенный, если есть данные
@@ -1850,10 +2188,10 @@ const trafficCalc = {
     },
 
     // Сброс данных по нарушениям для текущего партнера (шаг 6)
-    resetViolationsData() {
+    async resetViolationsData() {
         if (!this.currentSelectedPartnerId6) return;
 
-        if (!confirm('Вы уверены, что хотите сбросить данные по нарушениям для этого субагента?')) {
+        if (!await ConfirmModal.show('Сбросить данные по нарушениям для этого субагента?', { confirmText: 'Сбросить', danger: true })) {
             return;
         }
 
@@ -1872,8 +2210,8 @@ const trafficCalc = {
     },
 
     // Сброс данных по нарушениям для всех субагентов (шаг 6)
-    resetAllViolationsData() {
-        if (!confirm('Вы уверены, что хотите сбросить данные по нарушениям для ВСЕХ выбранных субагентов?')) {
+    async resetAllViolationsData() {
+        if (!await ConfirmModal.show('Сбросить данные по нарушениям для ВСЕХ субагентов?', { confirmText: 'Сбросить все', danger: true })) {
             return;
         }
 
@@ -1881,7 +2219,7 @@ const trafficCalc = {
         const selectedPartnersData = allPartners.filter(p => this.selectedPartners.includes(p.id));
 
         if (selectedPartnersData.length === 0) {
-            alert('Нет выбранных субагентов для сброса');
+            Toast.warning('Нет выбранных субагентов для сброса');
             return;
         }
 
@@ -1914,7 +2252,7 @@ const trafficCalc = {
         // Проверяем заполнение данных
         this.checkManualDataCompletionStep6();
 
-        alert(`Данные по нарушениям сброшены для ${selectedPartnersData.length} субагентов`);
+        Toast.success(`Данные по нарушениям сброшены для ${selectedPartnersData.length} субагентов`);
     },
 
 
@@ -1937,13 +2275,14 @@ const trafficCalc = {
         if (!data || data.length < 2) return; // Нет данных или только заголовки
 
         const headers = data[0];
-        const subagentIdIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('id субагент'));
+        const subagentIdIndex = headers.findIndex(h => {
+            if (!h) return false;
+            const header = h.toString().toLowerCase();
+            return header.includes('субагент') && header.includes('id');
+        });
         const paramsIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('доп. параметры №'));
 
-        if (subagentIdIndex === -1 || paramsIndex === -1) {
-            console.warn('Не найдены необходимые колонки в файле');
-            return;
-        }
+        if (subagentIdIndex === -1 || paramsIndex === -1) return;
 
         // Обрабатываем строки (пропускаем заголовки)
         for (let i = 1; i < data.length; i++) {
@@ -1989,10 +2328,7 @@ const trafficCalc = {
      */
     countAutoDisables(excelData, counters) {
         // Проверка: есть ли данные в файле?
-        if (!excelData || excelData.length < 2) {
-            console.warn('Файл пуст или содержит только заголовки');
-            return;
-        }
+        if (!excelData || excelData.length < 2) return;
 
         // Шаг 1: Находим индексы нужных колонок
         const headerRow = excelData[0]; // Первая строка - заголовки
@@ -2074,19 +2410,16 @@ const trafficCalc = {
      */
     parseQualityControlData(excelData, qualityData) {
         // Проверка: есть ли данные в файле?
-        if (!excelData || excelData.length < 2) {
-            console.warn('Файл пуст или содержит только заголовки');
-            return;
-        }
+        if (!excelData || excelData.length < 2) return;
 
         // Шаг 1: Находим индексы всех нужных колонок по точным названиям
         const headerRow = excelData[0];
         
-        // Ищем колонку "ID cубагента" (с учетом возможных вариантов написания)
+        // Ищем колонку с ID субагента (с учетом возможных вариантов написания)
         const subagentIdIndex = headerRow.findIndex(header => {
             if (!header) return false;
-            const h = header.toString().trim();
-            return h === 'ID cубагента' || h === 'ID субагента' || h === 'id cубагента' || h === 'id субагента';
+            const h = header.toString().trim().toLowerCase();
+            return h === 'субагент id' || h === 'id субагента' || h === 'id cубагента' || h.includes('субагент') && h.includes('id');
         });
         
         // Ищем целевые колонки с данными (точные названия)
@@ -2119,17 +2452,6 @@ const trafficCalc = {
             console.error('Колонка "ID cубагента" не найдена в файле');
             return;
         }
-
-        // Логируем что нашли и что не нашли
-        console.log('Найденные колонки:', {
-            subagentId: subagentIdIndex,
-            depositTransactions: depositTransactionsIndex,
-            withdrawalTransactions: withdrawalTransactionsIndex,
-            depositAppeals: depositAppealsIndex,
-            delayedAppeals: delayedAppealsIndex,
-            depositSuccess: depositSuccessIndex,
-            withdrawalSuccess: withdrawalSuccessIndex
-        });
 
         // Шаг 2: Проходим по всем строкам (кроме заголовков)
         for (let rowIndex = 1; rowIndex < excelData.length; rowIndex++) {
@@ -2182,11 +2504,6 @@ const trafficCalc = {
         }
     },
 
-    // Парсинг данных из отчета "Контроль качества" (старая функция - удалена)
-    parseQualityData(data, autoDisableData) {
-        // Эта функция больше не используется
-    },
-
     // Чтение Excel файла
     readExcelFile(file) {
         return new Promise((resolve, reject) => {
@@ -2210,26 +2527,12 @@ const trafficCalc = {
     // Генерация отчета
     generateReport() {
         if (this.selectedPartners.length === 0) {
-            alert('Сначала выберите партнеров на вкладке "Аналитика"');
+            Toast.warning('Сначала выберите партнеров');
             return;
         }
 
         const allPartners = storage.getPartners();
         const reportData = allPartners.filter(p => this.selectedPartners.includes(p.id));
-
-        // Подсчет статистики
-        const stats = {
-            total: reportData.length,
-            new: reportData.filter(p => p.status === 'новый').length,
-            old: reportData.filter(p => p.status === 'старый').length,
-            closed: reportData.filter(p => p.status === 'закрыт').length
-        };
-
-        // Обновляем статистику
-        document.getElementById('reportTotalCount').textContent = stats.total;
-        document.getElementById('reportNewCount').textContent = stats.new;
-        document.getElementById('reportOldCount').textContent = stats.old;
-        document.getElementById('reportClosedCount').textContent = stats.closed;
 
         // Отображаем детальную таблицу
         const tbody = document.getElementById('reportTableBody');
@@ -2262,7 +2565,9 @@ const trafficCalc = {
                     <td>${partner.withdrawalQueues || 0}</td>
                     <td>${partner.creditsOutsideLimits || 0}</td>
                     <td>${partner.wrongAmountApproval || 0}</td>
-                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>${partner.otherViolations || 0}${partner.otherViolationsDescription ? ' <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;opacity:0.6;"></i>' : ''}</td>
+                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>
+                        <span>${partner.otherViolations || 0}</span>${partner.otherViolationsDescription ? ' <span class="violation-info-icon"><img src="../shared/icons/filter.svg" alt="info" class="tooltip-icon"></span>' : ''}
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -2271,19 +2576,15 @@ const trafficCalc = {
         this.currentReportData = reportData;
 
         // Показываем отчет, скрываем плейсхолдер
-        document.getElementById('reportNotGenerated').style.display = 'none';
-        document.getElementById('reportGenerated').style.display = 'block';
+        document.getElementById('reportNotGenerated').classList.add('hidden');
+        document.getElementById('reportGenerated').classList.remove('hidden');
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Экспорт детального отчета в Excel
     exportReportToExcel() {
         if (!this.currentReportData || this.currentReportData.length === 0) {
-            alert('Нет данных для экспорта. Сначала сформируйте отчет.');
+            Toast.warning('Нет данных для экспорта');
             return;
         }
 
@@ -2354,61 +2655,6 @@ const trafficCalc = {
         XLSX.writeFile(wb, `detailed_report_${date}.xlsx`);
     },
 
-    // Показать детальный отчет
-    showDetailedReport() {
-        if (!this.currentReportData || this.currentReportData.length === 0) {
-            alert('Сначала сформируйте отчет');
-            return;
-        }
-
-        const tbody = document.getElementById('detailedReportTableBody');
-        tbody.innerHTML = this.currentReportData.map(partner => {
-            const date = new Date(partner.dateAdded).toLocaleDateString('ru-RU');
-            const statusClass = partner.status === 'новый' ? 'new' : partner.status === 'старый' ? 'old' : 'closed';
-            const statusText = partner.status === 'новый' ? 'Новый' : partner.status === 'старый' ? 'Старый' : 'Закрыт';
-
-            return `
-                <tr>
-                    <td>${this.escapeHtml(partner.method)}</td>
-                    <td>${this.escapeHtml(partner.subagent)}</td>
-                    <td>${this.escapeHtml(partner.subagentId)}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    <td>${date}</td>
-                    <td>${partner.backCount || 0}</td>
-                    <td>${partner.cringeCount || 0}</td>
-                    <td>${partner.autoDisableCount || 0}</td>
-                    <td>${partner.depositTransactionsCount || 0}</td>
-                    <td>${partner.withdrawalTransactionsCount || 0}</td>
-                    <td>${partner.depositAppealsCount || 0}</td>
-                    <td>${partner.delayedAppealsCount || 0}</td>
-                    <td>${partner.depositSuccessPercent || 0}%</td>
-                    <td>${partner.withdrawalSuccessPercent || 0}%</td>
-                    <td>${partner.depositWorkTimePercent || 0}%</td>
-                    <td>${partner.withdrawalWorkTimePercent || 0}%</td>
-                    <td>${partner.chatIgnoring || 0}</td>
-                    <td>${partner.webmanagementIgnore || 0}</td>
-                    <td>${partner.depositQueues || 0}</td>
-                    <td>${partner.withdrawalQueues || 0}</td>
-                    <td>${partner.creditsOutsideLimits || 0}</td>
-                    <td>${partner.wrongAmountApproval || 0}</td>
-                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${this.escapeHtml(partner.otherViolationsDescription)}"` : ''}>${partner.otherViolations || 0}${partner.otherViolationsDescription ? ' <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;opacity:0.6;"></i>' : ''}</td>
-                </tr>
-            `;
-        }).join('');
-
-        document.getElementById('detailedReportModal').classList.add('show');
-
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
-    },
-
-    // Закрыть детальный отчет
-    closeDetailedReport() {
-        document.getElementById('detailedReportModal').classList.remove('show');
-    },
-
     // Экранирование HTML
     escapeHtml(text) {
         const div = document.createElement('div');
@@ -2421,7 +2667,7 @@ const trafficCalc = {
         const partners = storage.getPartners();
 
         if (partners.length === 0) {
-            alert('Список партнеров пуст. Нечего экспортировать.');
+            Toast.warning('Список партнеров пуст. Нечего экспортировать.');
             return;
         }
 
@@ -2483,7 +2729,8 @@ const trafficCalc = {
 
         // Сброс состояния
         fileInput.value = '';
-        preview.style.display = 'none';
+        preview.classList.add('hidden');
+        preview.classList.remove('preview-error');
         preview.innerHTML = '';
         importBtn.disabled = true;
 
@@ -2491,7 +2738,7 @@ const trafficCalc = {
         fileInput.onchange = (e) => {
             const file = e.target.files[0];
             if (!file) {
-                preview.style.display = 'none';
+                preview.classList.add('hidden');
                 importBtn.disabled = true;
                 return;
             }
@@ -2507,7 +2754,7 @@ const trafficCalc = {
                     }
 
                     // Показываем превью
-                    preview.style.display = 'block';
+                    preview.classList.remove('hidden', 'preview-error');
                     preview.innerHTML = `
                         <strong>Файл готов к импорту:</strong><br>
                         Партнеров в файле: ${jsonData.partners.length}<br>
@@ -2516,18 +2763,16 @@ const trafficCalc = {
 
                     importBtn.disabled = false;
                 } catch (error) {
-                    preview.style.display = 'block';
-                    preview.style.background = '#f8d7da';
-                    preview.style.color = '#721c24';
+                    preview.classList.remove('hidden');
+                    preview.classList.add('preview-error');
                     preview.innerHTML = `<strong>Ошибка:</strong> ${error.message}`;
                     importBtn.disabled = true;
                 }
             };
 
             reader.onerror = () => {
-                preview.style.display = 'block';
-                preview.style.background = '#f8d7da';
-                preview.style.color = '#721c24';
+                preview.classList.remove('hidden');
+                preview.classList.add('preview-error');
                 preview.innerHTML = '<strong>Ошибка:</strong> Не удалось прочитать файл';
                 importBtn.disabled = true;
             };
@@ -2537,10 +2782,6 @@ const trafficCalc = {
 
         modal.classList.add('show');
 
-        // Обновляем иконки
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
     },
 
     // Закрыть модальное окно импорта
@@ -2554,12 +2795,12 @@ const trafficCalc = {
         const file = fileInput.files[0];
 
         if (!file) {
-            alert('Выберите файл для импорта');
+            Toast.warning('Выберите файл для импорта');
             return;
         }
 
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             try {
                 const jsonData = JSON.parse(event.target.result);
 
@@ -2570,13 +2811,11 @@ const trafficCalc = {
 
                 // Подтверждение перед импортом
                 const currentPartners = storage.getPartners();
-                let confirmMessage = `Вы уверены, что хотите импортировать ${jsonData.partners.length} партнер(ов)?`;
+                var desc = currentPartners.length > 0
+                    ? 'Текущие ' + currentPartners.length + ' партнер(ов) будут заменены!'
+                    : '';
 
-                if (currentPartners.length > 0) {
-                    confirmMessage += `\n\nВнимание: Текущие ${currentPartners.length} партнер(ов) будут заменены!`;
-                }
-
-                if (!confirm(confirmMessage)) {
+                if (!await ConfirmModal.show('Импортировать ' + jsonData.partners.length + ' партнер(ов)?', { description: desc, confirmText: 'Импортировать', danger: currentPartners.length > 0 })) {
                     return;
                 }
 
@@ -2600,7 +2839,7 @@ const trafficCalc = {
                 const processedPartners = jsonData.partners.map(partner => {
                     // Убеждаемся что есть обязательные поля
                     if (!partner.id) {
-                        partner.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                        partner.id = Date.now().toString() + Math.random().toString(36).slice(2, 11);
                     }
                     if (!partner.dateAdded) {
                         partner.dateAdded = new Date().toISOString();
@@ -2636,22 +2875,114 @@ const trafficCalc = {
                 this.loadMethods();
                 this.closeImportModal();
 
-                alert(`Успешно импортировано ${processedPartners.length} партнер(ов)!`);
+                Toast.success(`Успешно импортировано ${processedPartners.length} партнер(ов)!`);
             } catch (error) {
-                alert(`Ошибка при импорте: ${error.message}`);
-                console.error('Import error:', error);
+                ErrorHandler.handle(error, {
+                    module: 'traffic-calculation',
+                    action: 'importPartners',
+                    userMessage: `Ошибка при импорте: ${error.message}`
+                });
             }
         };
 
         reader.onerror = () => {
-            alert('Ошибка при чтении файла');
+            Toast.error('Ошибка при чтении файла');
         };
 
         reader.readAsText(file);
     }
 };
 
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
-    trafficCalc.init();
+// Initialize via PageLifecycle
+PageLifecycle.init({
+    module: 'traffic',
+    async onInit() {
+        trafficCalc.init();
+    }
 });
+
+// Event delegation для всех data-action="traffic-*" атрибутов
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action^="traffic-"]');
+    if (!target) return;
+
+    const action = target.dataset.action.replace('traffic-', '');
+
+    // Специальная обработка для fileZoneClick
+    if (action === 'fileZoneClick') {
+        const fileInputId = target.dataset.fileInputId;
+        if (fileInputId) {
+            document.getElementById(fileInputId).click();
+        }
+        return;
+    }
+
+    // Специальная обработка для navigateToStep
+    if (action === 'navigateToStep') {
+        const step = parseInt(target.dataset.step, 10);
+        if (!isNaN(step)) {
+            trafficCalc.navigateToStep(step);
+        }
+        return;
+    }
+
+    // Специальная обработка для goToStep
+    if (action === 'goToStep') {
+        const step = parseInt(target.dataset.step, 10);
+        if (!isNaN(step)) {
+            trafficCalc.goToStep(step);
+        }
+        return;
+    }
+
+    // Специальная обработка для increment/decrement
+    if (action === 'incrementManualValue' || action === 'decrementManualValue') {
+        const fieldId = target.dataset.field;
+        if (fieldId) {
+            trafficCalc[action](fieldId);
+        }
+        return;
+    }
+
+    // Стандартный вызов метода
+    if (typeof trafficCalc[action] === 'function') {
+        trafficCalc[action]();
+    }
+});
+
+// Event delegation для input событий
+document.addEventListener('input', (e) => {
+    const target = e.target.closest('[data-action^="traffic-"]');
+    if (!target) return;
+
+    const action = target.dataset.action.replace('traffic-', '');
+
+    if (typeof trafficCalc[action] === 'function') {
+        trafficCalc[action]();
+    }
+});
+
+// Event delegation для change событий
+document.addEventListener('change', (e) => {
+    // Обработка file inputs
+    if (e.target.type === 'file') {
+        if (e.target.id === 'depositsFileInput') {
+            trafficCalc.handleDepositsUpload(e);
+        } else if (e.target.id === 'qualityFileInput') {
+            trafficCalc.handleQualityUpload(e);
+        } else if (e.target.id === 'percentFileInput') {
+            trafficCalc.handlePercentUpload(e);
+        }
+        return;
+    }
+
+    const target = e.target.closest('[data-action^="traffic-"]');
+    if (!target) return;
+
+    const action = target.dataset.action.replace('traffic-', '');
+
+    if (typeof trafficCalc[action] === 'function') {
+        trafficCalc[action]();
+    }
+});
+

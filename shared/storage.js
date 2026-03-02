@@ -12,7 +12,7 @@ const StorageManager = {
             return true;
         } catch (e) {
             console.error('localStorage недоступен:', e);
-            alert('Локальное хранилище недоступно. Функциональность может быть ограничена.');
+            Toast.error('Локальное хранилище недоступно. Функциональность может быть ограничена.');
             return false;
         }
     },
@@ -47,7 +47,7 @@ const StorageManager = {
         } catch (e) {
             console.error(`Storage set error for key "${key}":`, e);
             if (e.name === 'QuotaExceededError') {
-                alert('Хранилище переполнено. Экспортируйте данные и очистите кэш.');
+                Toast.warning('Хранилище переполнено. Экспортируйте данные и очистите кэш.');
             }
             return false;
         }
@@ -120,5 +120,3 @@ const StorageManager = {
         return this.set(key, filtered);
     }
 };
-
-console.log('✅ StorageManager загружен');

@@ -1,0 +1,215 @@
+/* ============================================================
+   AIAdminka Design System - Modal
+   ============================================================ */
+
+/* ==================== MODAL WRAPPER ==================== */
+/* Container для динамической загрузки через ComponentLoader */
+#about-modal-container {
+    display: contents;
+}
+
+/* ==================== MODAL OVERLAY ==================== */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal);
+    padding: 20px;
+}
+
+.modal.active {
+    display: flex;
+}
+
+/* ==================== MODAL DIALOG ==================== */
+.modal-dialog {
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(var(--glass-blur-strong));
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-2xl);
+    width: 100%;
+    max-width: 400px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+}
+
+/* Size variants */
+.modal-dialog.modal-sm {
+    max-width: 320px;
+}
+
+.modal-dialog.modal-lg {
+    max-width: 560px;
+}
+
+.modal-dialog.modal-xl {
+    max-width: 800px;
+}
+
+.modal-dialog.modal-full {
+    max-width: 95%;
+    max-height: 95vh;
+}
+
+/* ==================== MODAL HEADER ==================== */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--glass-border);
+    flex-shrink: 0;
+}
+
+.modal-title {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--white);
+    margin: 0;
+}
+
+.modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-close img {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(1);
+}
+
+/* ==================== MODAL BODY ==================== */
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.modal-body p {
+    font-size: var(--font-size-base);
+    color: var(--white);
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.modal-body p:last-child {
+    margin-bottom: 0;
+}
+
+.modal-body a {
+    color: var(--yellow);
+    word-break: break-all;
+}
+
+/* ==================== MODAL FOOTER ==================== */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--glass-border);
+    flex-shrink: 0;
+}
+
+.modal-footer-left {
+    justify-content: flex-start;
+}
+
+.modal-footer-center {
+    justify-content: center;
+}
+
+.modal-footer-between {
+    justify-content: space-between;
+}
+
+/* ==================== CONFIRM MODAL ==================== */
+.modal-confirm .modal-body {
+    text-align: center;
+    padding: 32px 24px;
+}
+
+.modal-confirm .modal-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 16px;
+}
+
+.modal-confirm .modal-icon.warning {
+    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg);
+}
+
+.modal-confirm .modal-icon.danger {
+    filter: brightness(0) saturate(100%) invert(60%) sepia(50%) saturate(700%) hue-rotate(320deg);
+}
+
+.modal-confirm .modal-message {
+    font-size: var(--font-size-md);
+    color: var(--white);
+    margin-bottom: 8px;
+}
+
+.modal-confirm .modal-description {
+    font-size: var(--font-size-base);
+    color: var(--gray);
+}
+
+/* ==================== SCROLLBAR IN MODAL ==================== */
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 600px) {
+    .modal {
+        padding: 10px;
+    }
+
+    .modal-dialog {
+        max-width: none;
+    }
+
+    .modal-dialog.modal-lg,
+    .modal-dialog.modal-xl {
+        max-width: none;
+    }
+}

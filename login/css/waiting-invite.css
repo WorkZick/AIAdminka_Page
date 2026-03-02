@@ -1,0 +1,454 @@
+/* ============================================================
+   Waiting Invite Page - Horizontal Layout (no scroll)
+   Base styles from login.css
+   ============================================================ */
+
+/* ===========================================
+   Override: full viewport, no scroll
+   =========================================== */
+
+body {
+    height: 100vh;
+    overflow: hidden;
+}
+
+.login-container {
+    height: 100vh;
+    min-height: auto;
+}
+
+/* ===========================================
+   Two-column Card
+   =========================================== */
+
+.waiting-card {
+    display: flex;
+    background: rgba(30, 30, 30, 0.6);
+    backdrop-filter: blur(var(--glass-blur-strong));
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong));
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 780px;
+    max-height: 90vh;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+/* ===========================================
+   Left Panel: User Info + Actions
+   =========================================== */
+
+.waiting-left {
+    display: flex;
+    flex-direction: column;
+    width: 280px;
+    min-width: 280px;
+    padding: 32px 28px;
+    border-right: 1px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.waiting-left .login-logo {
+    margin-bottom: var(--spacing-xl);
+}
+
+.waiting-left .login-logo h1 {
+    font-size: 22px;
+}
+
+.waiting-left .login-status {
+    margin-bottom: var(--spacing-lg);
+    padding: 10px var(--spacing-lg);
+}
+
+.waiting-left .login-user {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+    margin-bottom: auto;
+}
+
+.waiting-left .user-avatar {
+    margin: 0 auto;
+}
+
+.waiting-left .user-info {
+    text-align: center;
+}
+
+.waiting-left .user-name,
+.waiting-left .user-email {
+    text-align: center;
+}
+
+/* ===========================================
+   User Role Badge
+   =========================================== */
+
+.user-role-badge {
+    margin-top: 6px;
+}
+
+.user-role-badge .badge {
+    font-size: var(--font-size-xs);
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+}
+
+.badge-info {
+    background: rgba(116, 192, 252, 0.15);
+    color: var(--status-blue);
+    border: 1px solid rgba(116, 192, 252, 0.3);
+}
+
+/* ===========================================
+   Actions (bottom of left panel)
+   =========================================== */
+
+.waiting-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+}
+
+.refresh-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    padding: 10px var(--spacing-lg);
+    background: var(--glass-bg-light);
+    border: 1px solid var(--glass-border);
+    color: var(--gray-light);
+    border-radius: var(--radius-lg);
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.refresh-button:hover {
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border-hover);
+    color: var(--yellow);
+}
+
+.refresh-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.refresh-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+.refresh-button.loading svg {
+    animation: spin 1s linear infinite;
+}
+
+.waiting-left .login-footer {
+    margin-top: var(--spacing-lg);
+}
+
+/* ===========================================
+   Right Panel: Content
+   =========================================== */
+
+.waiting-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    overflow-y: auto;
+}
+
+/* ===========================================
+   Waiting Content (default)
+   =========================================== */
+
+.waiting-content {
+    text-align: center;
+    padding: var(--spacing-lg);
+}
+
+.waiting-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto var(--spacing-lg);
+    background: rgba(253, 190, 47, 0.1);
+    border: 1px solid rgba(253, 190, 47, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.waiting-icon svg {
+    width: 28px;
+    height: 28px;
+    color: var(--yellow);
+}
+
+.waiting-title {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: var(--spacing-md);
+}
+
+.waiting-description {
+    font-size: var(--font-size-md);
+    color: var(--gray-light);
+    line-height: 1.6;
+}
+
+/* ===========================================
+   Invites Section
+   =========================================== */
+
+.invites-section {
+    width: 100%;
+}
+
+.invites-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: var(--spacing-lg);
+}
+
+.invites-title svg {
+    width: 18px;
+    height: 18px;
+    color: var(--yellow);
+}
+
+/* ===========================================
+   Invite Cards
+   =========================================== */
+
+.invites-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.invite-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-lg);
+    transition: all var(--transition-fast);
+}
+
+.invite-card:hover {
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border-hover);
+}
+
+.invite-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-sm);
+}
+
+.invite-team-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--white);
+}
+
+.invite-role {
+    font-size: var(--font-size-sm);
+    padding: 3px 10px;
+    background: rgba(253, 190, 47, 0.15);
+    color: var(--yellow);
+    border-radius: var(--radius-md);
+}
+
+.invite-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm) var(--spacing-xl);
+    margin-bottom: var(--spacing-md);
+}
+
+.invite-info-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-base);
+}
+
+.invite-info-row .label {
+    color: var(--gray);
+}
+
+.invite-info-row .value {
+    color: var(--gray-light);
+}
+
+.invite-expires {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+    padding: 4px var(--spacing-md);
+    background: var(--glass-bg-light);
+    border-radius: var(--radius-md);
+}
+
+.invite-expires.expiring-soon {
+    background: rgba(255, 146, 43, 0.1);
+    color: var(--status-orange);
+}
+
+.invite-actions {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.invite-actions button {
+    flex: 1;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-accept {
+    background: linear-gradient(135deg, var(--yellow), var(--yellow-hover));
+    border: none;
+    color: var(--black);
+}
+
+.btn-accept:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(253, 190, 47, 0.3);
+}
+
+.btn-accept:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-reject {
+    background: transparent;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    color: var(--status-red);
+}
+
+.btn-reject:hover {
+    background: rgba(255, 107, 107, 0.1);
+    border-color: rgba(255, 107, 107, 0.5);
+}
+
+.btn-reject:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ===========================================
+   No Invites State
+   =========================================== */
+
+.no-invites {
+    text-align: center;
+    padding: var(--spacing-2xl) var(--spacing-lg);
+}
+
+.no-invites-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto var(--spacing-lg);
+    background: var(--glass-bg-light);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.no-invites-icon svg {
+    width: 24px;
+    height: 24px;
+    color: var(--gray);
+}
+
+.no-invites p {
+    font-size: var(--font-size-md);
+    color: var(--gray-light);
+    margin-bottom: var(--spacing-sm);
+}
+
+.no-invites-hint {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+    display: block;
+}
+
+/* ===========================================
+   Loading State
+   =========================================== */
+
+.invites-loading {
+    text-align: center;
+    padding: var(--spacing-2xl);
+}
+
+.invites-loading p {
+    font-size: var(--font-size-md);
+    color: var(--gray-light);
+    margin-top: var(--spacing-md);
+}
+
+/* ===========================================
+   Responsive: collapse to single column
+   =========================================== */
+
+@media (max-width: 640px) {
+    .waiting-card {
+        flex-direction: column;
+        max-height: none;
+        border-radius: var(--radius-lg);
+    }
+
+    .waiting-left {
+        width: 100%;
+        min-width: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+        padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-lg);
+    }
+
+    .waiting-left .login-user {
+        margin-bottom: 0;
+    }
+
+    .waiting-right {
+        padding: var(--spacing-2xl);
+    }
+
+    .login-container {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    body {
+        height: auto;
+        overflow: auto;
+    }
+}

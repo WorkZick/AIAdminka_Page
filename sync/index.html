@@ -3,306 +3,335 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Синхронизация - AIAdminka</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
+    <title>Настройки - AIAdminka</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
+    <!-- Design System (base styles) -->
+    <link rel="stylesheet" href="../shared/css/design-system.css">
+    <!-- Module-specific styles -->
     <link rel="stylesheet" href="css/sync.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <button class="back-button" onclick="syncApp.toggleSidebar()">
-                <img src="icons/arrow.svg" width="30" height="30" alt="Toggle">
-            </button>
+        <!-- Sidebar Container (loaded via ComponentLoader) -->
+        <div id="sidebar-container"></div>
 
-            <div class="sidebar-menu">
-                <div class="menu-item" onclick="window.location.href='../index.html'">
-                    <span>Главная страница</span>
-                    <img src="icons/main_page.svg" width="20" height="20" alt="Главная">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../excel-reports/index.html'">
-                    <span>Excel отчеты</span>
-                    <img src="icons/excel_reports.svg" width="20" height="20" alt="Excel">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../team-info/index.html'">
-                    <span>Team Info</span>
-                    <img src="icons/team_info.svg" width="20" height="20" alt="Team Info">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../traffic-calculation/index.html'">
-                    <span>Расчет трафика</span>
-                    <img src="icons/Traffic calculation.svg" width="20" height="20" alt="Трафик">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../documentation/index.html'">
-                    <span>Документация</span>
-                    <img src="icons/documents.svg" width="20" height="20" alt="Документация">
-                </div>
-
-                <div class="menu-item" onclick="window.location.href='../partners/index.html'">
-                    <span>Партнеры</span>
-                    <img src="icons/partners.svg" width="20" height="20" alt="Партнеры">
-                </div>
-
-                <div class="menu-item active">
-                    <span>Синхронизация</span>
-                    <img src="icons/sync.svg" width="20" height="20" alt="Синхронизация">
-                </div>
-            </div>
-
-            <div class="menu-separator"></div>
-
-            <div class="version-info">
-                О разработке<br>
-                Version 1.0.0
-            </div>
-        </aside>
-
-        <script>
-            (function() {
-                const collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
-                if (collapsed) {
-                    document.getElementById('sidebar').classList.add('collapsed');
-                }
-            })();
-        </script>
+        <!-- Loading state (visible until lifecycle-ready) -->
+        <div class="page-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
 
         <!-- Main wrapper -->
         <div class="main-wrapper">
             <!-- Global header -->
             <header class="global-header">
-                <div class="header-title">Облачная синхронизация</div>
+                <div class="header-title">Настройки</div>
                 <div class="header-status" id="connectionStatus">
                     <span class="status-dot"></span>
-                    <span class="status-text">Не настроено</span>
+                    <span class="status-text">Подключено</span>
                 </div>
             </header>
 
             <!-- Content area -->
             <div class="content-area">
-                <!-- Left panel - Config -->
-                <aside class="left-panel">
-                    <div class="config-panel">
-                        <div class="panel-header">
-                            <span>Подключение</span>
-                        </div>
-                        <div class="panel-content">
-                            <div class="config-field">
-                                <label>URL Google Apps Script:</label>
-                                <input type="text" id="configScriptUrl" placeholder="https://script.google.com/macros/s/..." oninput="syncApp.saveConfig()">
-                            </div>
-                            <button class="btn-login" id="btnLogin" onclick="syncApp.login()">
-                                Войти через Google
-                            </button>
-                            <button class="btn-request-access" id="btnRequestAccess" onclick="syncApp.requestAccess()" style="display:none;">
-                                Запросить доступ
-                            </button>
-                            <button class="btn-check-access" id="btnCheckAccess" onclick="syncApp.checkAccessStatus()" style="display:none;">
-                                Проверить доступ
-                            </button>
-                            <button class="btn-logout" id="btnLogout" onclick="syncApp.logout()" style="display:none;">
-                                Выйти
-                            </button>
-                            <div class="config-info" id="configInfo">
-                                <div class="info-row">
-                                    <span class="info-label">Статус:</span>
-                                    <span class="info-value" id="statusValue">-</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">Ваш email:</span>
-                                    <span class="info-value" id="userEmail">-</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">Имя:</span>
-                                    <span class="info-value" id="userName">-</span>
+                <!-- Loading state -->
+                <div class="loading-state" id="settingsLoadingState">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Загрузка профиля...</div>
+                </div>
+
+                <div class="settings-layout hidden" id="settingsLayout">
+
+                    <!-- Left Column: Profile -->
+                    <div class="settings-column settings-column-main">
+
+                        <!-- Profile Card -->
+                        <div class="settings-card">
+                            <div class="profile-header">
+                                <div class="profile-avatar" id="userAvatar"></div>
+                                <div class="profile-info">
+                                    <div class="profile-name" id="userName">-</div>
+                                    <div class="profile-email" id="userEmail">-</div>
+                                    <div class="profile-role">
+                                        <span class="role-badge" id="userRole">-</span>
+                                        <span class="team-name-editable" id="teamNameDisplay" data-leader-only data-action="edit-team-name">
+                                            <span id="teamNameText">Команда</span>
+                                            <img src="../shared/icons/pen.svg" width="12" height="12" alt="Редактировать">
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Profile Form -->
+                        <div class="settings-card">
+                            <div class="card-title">Профиль</div>
+                            <form class="profile-form" id="profileForm">
+                                <!-- Основная информация -->
+                                <div class="form-section">
+                                    <div class="form-section-title">Основная информация</div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>ФИО</label>
+                                            <input type="text" id="profileName" name="name" placeholder="Иванов Иван Иванович">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Роль</label>
+                                            <select id="profilePosition" name="position" disabled></select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Идентификация -->
+                                <div class="form-section">
+                                    <div class="form-section-title">Идентификация</div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Reddy ID</label>
+                                            <input type="text" id="profileReddyId" name="reddyId" readonly disabled>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Логин CRM</label>
+                                            <input type="text" id="profileCrmLogin" name="crmLogin" placeholder="ivanov.i">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Контакты -->
+                                <div class="form-section">
+                                    <div class="form-section-title">Контакты</div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Рабочий Telegram</label>
+                                            <div class="input-with-prefix">
+                                                <span>@</span>
+                                                <input type="text" id="profileCorpTelegram" name="corpTelegram" placeholder="work_username">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Личный Telegram</label>
+                                            <div class="input-with-prefix">
+                                                <span>@</span>
+                                                <input type="text" id="profilePersonalTelegram" name="personalTelegram" placeholder="username">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Рабочая почта</label>
+                                            <input type="email" id="profileCorpEmail" name="corpEmail" placeholder="work@company.com" readonly disabled>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Личная почта</label>
+                                            <input type="email" id="profilePersonalEmail" name="personalEmail" placeholder="personal@mail.com">
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Рабочий телефон</label>
+                                            <input type="tel" id="profileCorpPhone" name="corpPhone" placeholder="+7 999 123-45-67">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Личный телефон</label>
+                                            <input type="tel" id="profilePersonalPhone" name="personalPhone" placeholder="+7 999 123-45-67">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Информация о работе -->
+                                <div class="form-section">
+                                    <div class="form-section-title">Информация о работе</div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>День рождения</label>
+                                            <input type="date" id="profileBirthday" name="birthday">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Начало работы</label>
+                                            <input type="date" id="profileStartDate" name="startDate">
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Офис</label>
+                                            <input type="text" id="profileOffice" name="office" placeholder="Москва">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Компания</label>
+                                            <input type="text" id="profileCompany" name="company" placeholder='ООО "Компания"'>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Дополнительно -->
+                                <div class="form-section">
+                                    <div class="form-section-title">Дополнительно</div>
+                                    <div class="form-group">
+                                        <label>Примечание</label>
+                                        <textarea id="profileComment" name="comment" placeholder="Любая дополнительная информация..." rows="2"></textarea>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-ghost" id="btnSaveProfile">
+                                    Сохранить изменения
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
-                    <div class="help-panel">
-                        <div class="panel-header">
-                            <span>Как настроить?</span>
+                    <!-- Right Column: Team & System -->
+                    <div class="settings-column settings-column-side">
+
+                        <!-- Team Info (for non-leaders) -->
+                        <div class="settings-card hidden" id="teamInfoSection">
+                            <div class="card-title">Команда</div>
+                            <div class="info-row">
+                                <span class="info-label">Руководитель</span>
+                                <span class="info-value" id="teamLeader">-</span>
+                            </div>
+                            <p class="card-hint" id="roleDescription"></p>
                         </div>
-                        <div class="panel-content">
-                            <ol class="help-list">
-                                <li>Создайте Google Таблицу</li>
-                                <li>Расширения → Apps Script</li>
-                                <li>Вставьте код из документации</li>
-                                <li>Разверните как веб-приложение</li>
-                                <li>Скопируйте URL сюда</li>
-                            </ol>
+
+                        <!-- System Info -->
+                        <div class="settings-card">
+                            <div class="card-title">Система</div>
+
+                            <div class="system-row">
+                                <div class="system-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+                                    </svg>
+                                </div>
+                                <div class="system-info">
+                                    <span class="system-label">Облачное хранилище</span>
+                                    <span class="system-value" id="storageStatus">Подключено</span>
+                                </div>
+                            </div>
+
+                            <div class="system-row">
+                                <div class="system-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <polyline points="12,6 12,12 16,14"/>
+                                    </svg>
+                                </div>
+                                <div class="system-info">
+                                    <span class="system-label">Сессия до</span>
+                                    <span class="system-value" id="sessionExpiry">-</span>
+                                </div>
+                            </div>
+
+                            <div class="system-row">
+                                <div class="system-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3,6 5,6 6,18 18,18 19,6"/>
+                                        <line x1="8" y1="10" x2="8" y2="14"/>
+                                        <line x1="12" y1="10" x2="12" y2="14"/>
+                                        <line x1="16" y1="10" x2="16" y2="14"/>
+                                    </svg>
+                                </div>
+                                <div class="system-info">
+                                    <span class="system-label">Локальный кэш</span>
+                                    <span class="system-value" id="localCacheSize">-</span>
+                                </div>
+                                <button class="btn btn-ghost btn-sm" data-action="clear-cache">Очистить</button>
+                            </div>
                         </div>
+
+                        <!-- Danger Zone -->
+                        <div class="settings-card card-danger">
+                            <div class="card-title">Опасная зона</div>
+                            <p class="card-hint">Выход из системы удалит локальные данные авторизации.</p>
+                            <button class="btn btn-danger" data-action="logout">Выйти из аккаунта</button>
+                        </div>
+
                     </div>
-                </aside>
-
-                <!-- Main section -->
-                <main class="main-section">
-                    <!-- Actions panel -->
-                    <div class="actions-panel">
-                        <button class="action-btn export-btn" onclick="syncApp.showExportModal()" id="btnExport" disabled>
-                            <img src="icons/export.svg" width="32" height="32" alt="Экспорт">
-                            <div class="action-text">
-                                <span class="action-title">Экспорт в облако</span>
-                                <span class="action-desc">Сохранить данные в Google Sheets</span>
-                            </div>
-                        </button>
-
-                        <button class="action-btn import-btn" onclick="syncApp.showImportModal()" id="btnImport" disabled>
-                            <img src="icons/import.svg" width="32" height="32" alt="Импорт">
-                            <div class="action-text">
-                                <span class="action-title">Импорт из облака</span>
-                                <span class="action-desc">Загрузить данные от коллеги</span>
-                            </div>
-                        </button>
-
-                        <button class="action-btn settings-btn" onclick="syncApp.showAccessModal()" id="btnAccess" disabled>
-                            <img src="icons/settings.svg" width="32" height="32" alt="Настройки">
-                            <div class="action-text">
-                                <span class="action-title">Настройки доступа</span>
-                                <span class="action-desc">Кому видны мои обновления</span>
-                            </div>
-                        </button>
-                    </div>
-
-                    <!-- Data panel -->
-                    <div class="data-panel">
-                        <div class="panel-header">
-                            <span>Данные для синхронизации</span>
-                            <button class="btn-reset" onclick="syncApp.resetData()">Сбросить</button>
-                        </div>
-                        <div class="panel-content">
-                            <div class="data-field">
-                                <label>Название проекта:</label>
-                                <input type="text" id="dataProjectName" value="AIAdminka" oninput="syncApp.saveData()">
-                            </div>
-                            <div class="data-field">
-                                <label>Версия:</label>
-                                <input type="text" id="dataVersion" value="2.3.0" oninput="syncApp.saveData()">
-                            </div>
-                            <div class="data-field">
-                                <label>Автор:</label>
-                                <input type="text" id="dataAuthor" oninput="syncApp.saveData()">
-                            </div>
-                            <div class="data-field">
-                                <label>Заметка:</label>
-                                <textarea id="dataNote" rows="3" oninput="syncApp.saveData()">Тестовые данные для проверки синхронизации.</textarea>
-                            </div>
-                        </div>
-                    </div>
-                </main>
-
-                <!-- Right panel - Log -->
-                <aside class="right-panel">
-                    <div class="log-panel">
-                        <div class="panel-header">
-                            <span>Журнал операций</span>
-                            <button class="btn-clear" onclick="syncApp.clearLog()">Очистить</button>
-                        </div>
-                        <div class="panel-content">
-                            <div class="log-list" id="logList">
-                                <div class="log-empty">Нет записей</div>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Export Modal -->
-    <div class="modal" id="exportModal">
-        <div class="modal-dialog">
+    <!-- About Modal Container (loaded via ComponentLoader) -->
+    <div id="about-modal-container"></div>
+
+    <!-- Confirm Logout Modal (module-specific) -->
+    <div class="modal" id="logoutModal">
+        <div class="modal-dialog modal-sm">
             <div class="modal-header">
-                <h2 class="modal-title">Экспорт в облако</h2>
-                <button class="modal-close" onclick="syncApp.closeModal('exportModal')">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                <h2 class="modal-title">Выход из аккаунта</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="logoutModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
                 </button>
             </div>
             <div class="modal-body">
-                <p class="modal-info">Ваши данные будут сохранены в облако. Коллеги с разрешением смогут их импортировать.</p>
-                <div class="data-preview">
-                    <div class="preview-header">Данные для экспорта:</div>
-                    <pre id="exportPreview"></pre>
+                <p>Вы уверены, что хотите выйти?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="close-modal" data-modal="logoutModal">Отмена</button>
+                <button class="btn btn-danger" data-action="confirm-logout">Выйти</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Team Name Modal -->
+    <div class="modal" id="teamNameModal">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Название команды</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="teamNameModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Введите название</label>
+                    <input type="text" class="form-input" id="teamNameModalInput" placeholder="Название команды">
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" onclick="syncApp.closeModal('exportModal')">Отмена</button>
-                <button class="btn-primary" onclick="syncApp.doExport()" id="btnDoExport">Экспортировать</button>
+                <button class="btn btn-secondary" data-action="close-modal" data-modal="teamNameModal">Отмена</button>
+                <button class="btn btn-primary" data-action="save-team-name">Сохранить</button>
             </div>
         </div>
     </div>
 
-    <!-- Import Modal -->
-    <div class="modal" id="importModal">
-        <div class="modal-dialog modal-lg">
+    <!-- Clear Cache Confirmation Modal -->
+    <div class="modal" id="clearCacheModal">
+        <div class="modal-dialog modal-sm">
             <div class="modal-header">
-                <h2 class="modal-title">Импорт из облака</h2>
-                <button class="modal-close" onclick="syncApp.closeModal('importModal')">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
+                <h2 class="modal-title">Очистить кэш</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="clearCacheModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
                 </button>
             </div>
             <div class="modal-body">
-                <p class="modal-info">Выберите коллегу, от которого хотите импортировать данные:</p>
-                <div class="users-list" id="importUsersList">
-                    <div class="loading">Загрузка...</div>
-                </div>
+                <p>Очистить кэш данных? Данные будут загружены заново из облака при следующем посещении.</p>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" onclick="syncApp.closeModal('importModal')">Отмена</button>
-                <button class="btn-primary" onclick="syncApp.doImport()" id="btnDoImport" disabled>Импортировать</button>
+                <button class="btn btn-secondary" data-action="close-modal" data-modal="clearCacheModal">Отмена</button>
+                <button class="btn btn-danger" data-action="confirm-clear-cache">Очистить</button>
             </div>
         </div>
     </div>
 
-    <!-- Access Settings Modal -->
-    <div class="modal" id="accessModal">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-header">
-                <h2 class="modal-title">Настройки доступа</h2>
-                <button class="modal-close" onclick="syncApp.closeModal('accessModal')">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-            <div class="modal-body">
-                <p class="modal-info">Выберите, кому будут видны ваши данные при импорте:</p>
-                <div class="users-list" id="accessUsersList">
-                    <div class="loading">Загрузка...</div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="syncApp.closeModal('accessModal')">Отмена</button>
-                <button class="btn-primary" onclick="syncApp.saveAccess()" id="btnSaveAccess">Сохранить</button>
-            </div>
-        </div>
-    </div>
+    <!-- Shared JS -->
+    <script src="../shared/js/component-loader.js"></script>
+    <script src="../shared/js/sidebar-controller.js"></script>
+    <script src="../shared/js/about-modal.js"></script>
+    <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/error-handler.js"></script>
+    <script src="../shared/version.js"></script>
+    <script src="../shared/storage.js"></script>
+    <script src="../shared/env-config.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/auth-guard.js"></script>
+    <script src="../shared/roles-config.js"></script>
+    <script src="../shared/role-guard.js"></script>
+    <script src="../shared/js/page-lifecycle.js"></script>
 
-    <!-- Result Modal (для ввода результата из вкладки) -->
-    <div class="modal" id="resultModal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h2 class="modal-title">Вставьте результат</h2>
-                <button class="modal-close" onclick="syncApp.closeModal('resultModal')">
-                    <img src="icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-            <div class="modal-body">
-                <p class="modal-info">
-                    1. В открывшейся вкладке Google покажет JSON-результат<br>
-                    2. Скопируйте весь текст (Ctrl+A, Ctrl+C)<br>
-                    3. Вставьте сюда (Ctrl+V)
-                </p>
-                <input type="hidden" id="resultAction" value="">
-                <textarea id="resultInput" class="result-textarea" rows="6" placeholder='{"success":true,...}'></textarea>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="syncApp.closeModal('resultModal')">Отмена</button>
-                <button class="btn-primary" onclick="syncApp.applyResult()">Применить</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="js/sync.js"></script>
+    <!-- Module JS -->
+    <script src="js/settings.js"></script>
 </body>
 </html>
