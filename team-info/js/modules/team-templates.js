@@ -218,14 +218,14 @@ const TeamTemplates = {
         const statusBadge = document.getElementById('formStatusBadge');
 
         fullNameInput.value = 'Ф.И.О.';
-        positionInput.value = 'Должность';
+        positionInput.value = '';
 
         fullNameInput.classList.add('disabled');
         positionInput.classList.add('disabled');
         statusBadge.classList.add('disabled');
 
         fullNameInput.readOnly = true;
-        positionInput.readOnly = true;
+        positionInput.disabled = true;
 
         // Отключить загрузку аватара
         const formAvatar = document.querySelector('.form-avatar');
@@ -426,7 +426,7 @@ const TeamTemplates = {
         statusBadge.classList.remove('disabled');
 
         fullNameInput.readOnly = false;
-        positionInput.readOnly = false;
+        positionInput.disabled = false;
 
         // Закрыть форму и обновить список шаблонов
         TeamForms.closeForm();

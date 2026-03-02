@@ -3,81 +3,77 @@
 const PartnerOnboarding = (() => {
     'use strict';
 
-    const STORAGE_KEY = 'onboarding-v2-requests';
-    const ID_COUNTER_KEY = 'onboarding-v2-id-counter';
-
     let _confirmCallback = null;
     const _debouncedSearch = Utils.debounce(() => OnboardingList.applyFilters(), 150);
     const _debouncedAutosave = Utils.debounce(() => _autosaveDraft(), 500);
 
     // ── Init ──
 
-    function init() {
+    async function init() {
         OnboardingList.init();
         _loadUserData();
         _setupDevRoleSwitcher();
-        _loadRequests();
+        await _loadRequests();
         OnboardingList.setupDefaultFilters();
         OnboardingList.applyFilters();
+        _updateToolbarForRole();
+        await OnboardingSource.init();
     }
 
     function _loadUserData() {
         const systemRole = (typeof RoleGuard !== 'undefined' && RoleGuard.getCurrentRole)
-            ? RoleGuard.getCurrentRole() : 'executor';
+            ? RoleGuard.getCurrentRole() : 'sales';
         const email = (typeof RoleGuard !== 'undefined' && RoleGuard.user)
             ? RoleGuard.user.email || '' : '';
 
-        // Map system roles to module roles
-        const roleMap = { sales: 'executor', partners_mgr: 'executor', assistant: 'reviewer', antifraud: 'reviewer' };
-        const moduleRole = roleMap[systemRole] || systemRole; // admin/leader stay as-is
-
-        OnboardingState.set('userRole', moduleRole);
+        OnboardingState.set('systemRole', systemRole);
+        OnboardingState.set('userRole', OnboardingRoles.getGlobalModuleRole(systemRole));
         OnboardingState.set('userEmail', email);
     }
 
-    // ── Storage (localStorage) ──
+    // ── Data (API) ──
 
-    function _loadRequests() {
+    async function _loadRequests() {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            const parsed = raw ? JSON.parse(raw) : null;
-            const requests = Array.isArray(parsed) ? parsed : [];
+            const result = await CloudStorage.callApi('getOnboardingRequests');
+            const requests = result.requests || [];
             OnboardingState.set('requests', requests);
-            _syncIdCounter(requests);
-        } catch {
+            OnboardingState.set('history', result.history || {});
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'loadRequests' });
             OnboardingState.set('requests', []);
         }
-    }
-
-    function _saveRequests() {
-        const requests = OnboardingState.get('requests') || [];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
-    }
-
-    function _syncIdCounter(requests) {
-        const maxId = Math.max(0, ...requests.map(r => parseInt(r.id.replace('ONB', ''), 10) || 0));
-        const current = parseInt(localStorage.getItem(ID_COUNTER_KEY) || '0', 10);
-        if (current < maxId) localStorage.setItem(ID_COUNTER_KEY, String(maxId));
-    }
-
-    function _nextId() {
-        let counter = parseInt(localStorage.getItem(ID_COUNTER_KEY) || '0', 10);
-        counter++;
-        localStorage.setItem(ID_COUNTER_KEY, String(counter));
-        return 'ONB' + String(counter).padStart(6, '0');
     }
 
     function _getRequest(id) {
         return (OnboardingState.get('requests') || []).find(r => r.id === id);
     }
 
-    function _updateRequest(id, updates) {
+    function _updateRequestLocal(id, updates) {
         const requests = OnboardingState.get('requests') || [];
         const idx = requests.findIndex(r => r.id === id);
         if (idx === -1) return;
         Object.assign(requests[idx], updates);
         OnboardingState.set('requests', requests);
-        _saveRequests();
+        OnboardingList.applyFilters();
+    }
+
+    function _applyApiResult(result) {
+        if (!result || !result.request) return;
+        const requests = OnboardingState.get('requests') || [];
+        const idx = requests.findIndex(r => r.id === result.request.id);
+        if (idx !== -1) {
+            requests[idx] = result.request;
+        } else {
+            requests.push(result.request);
+        }
+        OnboardingState.set('requests', requests);
+        if (result.history) {
+            const allHistory = OnboardingState.get('history') || {};
+            allHistory[result.request.id] = result.history;
+            OnboardingState.set('history', allHistory);
+        }
+        OnboardingState.set('currentRequest', result.request);
         OnboardingList.applyFilters();
     }
 
@@ -115,7 +111,7 @@ const PartnerOnboarding = (() => {
 
         let html = '';
         if (request.status !== 'completed' && request.status !== 'cancelled') {
-            if (isAdminLike || OnboardingConfig.isReviewer(request.currentStep, myRole)) {
+            if (isAdminLike && view === 'form') {
                 html += `<button class="btn btn-ghost" data-action="onb-showReassign">Передать</button>`;
                 html += `<button class="btn btn-ghost" data-action="onb-showRollback">Откатить</button>`;
             }
@@ -129,9 +125,49 @@ const PartnerOnboarding = (() => {
         container.innerHTML = html;
     }
 
+    // ── Toolbar Role Visibility ──
+
+    function _updateToolbarForRole() {
+        const myRole = OnboardingState.get('userRole');
+        const systemRole = OnboardingState.get('systemRole');
+        const hideSettings = myRole === 'executor';
+        const isReviewer = myRole === 'reviewer';
+        const isLeaderOrAdmin = systemRole === 'admin' || systemRole === 'leader';
+        const btnNew = document.getElementById('btnNewRequest');
+        const btnSettings = document.getElementById('btnSettings');
+        const btnRoleConfig = document.getElementById('btnRoleConfig');
+
+        if (btnNew) btnNew.classList.toggle('hidden', isReviewer);
+        if (btnSettings) btnSettings.classList.toggle('hidden', hideSettings);
+        if (btnRoleConfig) btnRoleConfig.classList.toggle('hidden', !isLeaderOrAdmin);
+        OnboardingSource.updateSyncBarVisibility();
+
+        // Empty state: hide "Новая заявка" button + adjust text for reviewer
+        const emptyState = document.getElementById('listEmpty');
+        if (emptyState) {
+            const emptyBtn = emptyState.querySelector('.btn-new-request');
+            const emptyText = emptyState.querySelector('.empty-state-text');
+            if (emptyBtn) emptyBtn.classList.toggle('hidden', isReviewer);
+            if (emptyText) emptyText.textContent = isReviewer
+                ? 'Заявки на проверку пока не поступали'
+                : 'Создайте первую заявку на заведение партнёра';
+        }
+    }
+
     // ── Event Delegation ──
 
     function _handleClick(e) {
+        // Close status dropdown when clicking outside
+        const statusDropdown = document.getElementById('statusDropdown');
+        if (statusDropdown && !statusDropdown.classList.contains('hidden') && !e.target.closest('.status-submit-btn')) {
+            statusDropdown.classList.add('hidden');
+        }
+        // Close settings dropdown when clicking outside
+        const settingsDropdown = document.getElementById('settingsDropdown');
+        if (settingsDropdown && !settingsDropdown.classList.contains('hidden') && !e.target.closest('.settings-dropdown-wrap')) {
+            settingsDropdown.classList.add('hidden');
+        }
+
         const target = e.target.closest('[data-action]');
         if (!target) return;
 
@@ -150,11 +186,15 @@ const PartnerOnboarding = (() => {
 
             // Form actions
             case 'onb-submit': _submitStep(); break;
+            case 'onb-toggleStatusDropdown': _toggleStatusDropdown(); break;
+            case 'onb-selectLeadStatus': _selectLeadStatus(value); break;
+            case 'onb-setDateNow': _setDateNow(value); break;
 
             // Review actions
             case 'onb-approve': _approveStep(); break;
             case 'onb-reject': _rejectStep(); break;
             case 'onb-withdraw': _withdrawStep(); break;
+            case 'onb-reviewAdvance': _advanceAfterApprove(); break;
 
             // Admin actions (bottom bar)
             case 'onb-cancelRequest': _showConfirm('Отменить заявку?', 'Заявка будет отменена.', _confirmCancelRequest); break;
@@ -181,12 +221,51 @@ const PartnerOnboarding = (() => {
             // Form field actions
             case 'onb-removeFile': OnboardingForm.removeFile(value); break;
             case 'onb-addListItem': OnboardingForm.addListItem(value); break;
+            case 'onb-addListSuggestion': {
+                const sepIdx = value.indexOf(':');
+                OnboardingForm.addListSuggestion(value.slice(0, sepIdx), value.slice(sepIdx + 1));
+                break;
+            }
             case 'onb-removeListItem': {
                 const [fid, idx] = value.split(':');
                 OnboardingForm.removeListItem(fid, parseInt(idx, 10));
                 break;
             }
+            case 'onb-toggleChecklistComment': {
+                const [cFid, cIdx] = value.split(':');
+                OnboardingForm.toggleChecklistComment(cFid, parseInt(cIdx, 10));
+                break;
+            }
             case 'onb-openPhoto': _openPhotoLightbox(target); break;
+
+            // Selection (admin/leader)
+            case 'onb-toggleSelect': OnboardingList.updateSelection(); break;
+            case 'onb-selectAll': OnboardingList.toggleSelectAll(target.checked); break;
+            case 'onb-deleteSelected': _deleteSelectedRequests(); break;
+
+            // Settings dropdown
+            case 'onb-toggleSettings': _toggleSettingsDropdown(); break;
+
+            // Source settings
+            case 'onb-openSourceSettings': _closeSettingsDropdown(); OnboardingSource.openSettings(); break;
+            case 'onb-closeSourceSettings': _closeModal('sourceSettingsModal'); break;
+            case 'onb-addSource': OnboardingSource.showEditForm(null); break;
+            case 'onb-editSource': OnboardingSource.showEditForm(value); break;
+            case 'onb-backToSourceList': OnboardingSource.showList(); break;
+            case 'onb-saveSource': OnboardingSource.saveSource(); break;
+            case 'onb-deleteSource': _showConfirm('Удалить источник?', 'Источник будет удалён. Импортированные лиды останутся.', () => OnboardingSource.deleteSource(OnboardingSource._getEditingId())); break;
+            case 'onb-syncNow': OnboardingSource.syncNow(); break;
+
+            // Conditions settings
+            case 'onb-openConditionsSettings': _closeSettingsDropdown(); OnboardingSource.openConditionsSettings(); break;
+            case 'onb-closeConditions': _closeModal('conditionsModal'); break;
+            case 'onb-saveConditions': OnboardingSource.saveConditionsUrl(); break;
+
+            // Role config settings
+            case 'onb-openRoleConfig': _closeSettingsDropdown(); OnboardingRoles.openSettings(); break;
+            case 'onb-closeRoleConfig': _closeModal('roleConfigModal'); break;
+            case 'onb-saveRoleConfig': OnboardingRoles.saveConfig(); _closeModal('roleConfigModal'); break;
+            case 'onb-resetRoleConfig': OnboardingRoles.resetToDefaults(); break;
 
             // DEV
             case 'onb-devRole': _switchDevRole(value, target); break;
@@ -224,6 +303,72 @@ const PartnerOnboarding = (() => {
             }
             return;
         }
+        // Conditions cascade: condition_country → clear method_type, method_name, conditions
+        if (target.name === 'condition_country' && OnboardingSource.hasConditions()) {
+            const request = OnboardingState.get('currentRequest');
+            const stepNumber = OnboardingState.get('currentStep');
+            if (request && stepNumber === 2) {
+                const currentData = OnboardingForm.collectFormData(2);
+                if (!request.stageData) request.stageData = {};
+                request.stageData[2] = { ...request.stageData[2], ...currentData };
+                request.stageData[2].condition_country = target.value;
+                request.stageData[2].method_type = '';
+                request.stageData[2].method_name = '';
+                request.stageData[2].deal_1 = '';
+                request.stageData[2].deal_2 = '';
+                request.stageData[2].deal_3 = '';
+                request.stageData[2].prepayment_method = '';
+                request.stageData[2].prepayment_amount = '';
+                _debouncedAutosave();
+                OnboardingForm.render(request, 2);
+            }
+            return;
+        }
+        // Conditions cascade: method_type → clear method_name + conditions
+        if (target.name === 'method_type' && OnboardingSource.hasConditions()) {
+            const request = OnboardingState.get('currentRequest');
+            const stepNumber = OnboardingState.get('currentStep');
+            if (request && stepNumber === 2) {
+                const currentData = OnboardingForm.collectFormData(2);
+                if (!request.stageData) request.stageData = {};
+                request.stageData[2] = { ...request.stageData[2], ...currentData };
+                request.stageData[2].method_type = target.value;
+                request.stageData[2].method_name = '';
+                request.stageData[2].deal_1 = '';
+                request.stageData[2].deal_2 = '';
+                request.stageData[2].deal_3 = '';
+                request.stageData[2].prepayment_method = '';
+                request.stageData[2].prepayment_amount = '';
+                _debouncedAutosave();
+                OnboardingForm.render(request, 2);
+            }
+            return;
+        }
+        // Conditions cascade: method_name → apply condition values
+        if (target.name === 'method_name' && OnboardingSource.hasConditions()) {
+            const request = OnboardingState.get('currentRequest');
+            const stepNumber = OnboardingState.get('currentStep');
+            if (request && stepNumber === 2) {
+                const currentData = OnboardingForm.collectFormData(2);
+                if (!request.stageData) request.stageData = {};
+                request.stageData[2] = { ...request.stageData[2], ...currentData };
+                request.stageData[2].method_name = target.value;
+                const selCountry = request.stageData[2].condition_country || '';
+                const condition = OnboardingSource.getCondition(
+                    selCountry, request.stageData[2].method_type, target.value
+                );
+                if (condition) {
+                    request.stageData[2].deal_1 = condition.deal_1 || '';
+                    request.stageData[2].deal_2 = condition.deal_2 || '';
+                    request.stageData[2].deal_3 = condition.deal_3 || '';
+                    request.stageData[2].prepayment_method = condition.prepayment_method || '';
+                    request.stageData[2].prepayment_amount = condition.prepayment_amount || '';
+                }
+                _debouncedAutosave();
+                OnboardingForm.render(request, 2);
+            }
+            return;
+        }
         // Autosave draft on select/checkbox changes
         if (OnboardingState.get('view') === 'form' && target.closest('#formFields')) {
             _debouncedAutosave();
@@ -240,71 +385,122 @@ const PartnerOnboarding = (() => {
 
     // ── Request CRUD ──
 
-    function _createRequest() {
-        const myEmail = OnboardingState.get('userEmail');
-        const myRole = OnboardingState.get('userRole');
-
-        const request = {
-            id: _nextId(),
-            leadSource: '',
-            currentStep: 1,
-            status: 'in_progress',
-            createdBy: myEmail,
-            createdDate: new Date().toISOString(),
-            assigneeEmail: myEmail,
-            assigneeName: '',
-            lastComment: '',
-            stageData: {},
-            history: [{ step: 0, action: 'create', actor: myEmail, timestamp: new Date().toISOString(), comment: '' }]
-        };
-
-        const requests = OnboardingState.get('requests') || [];
-        requests.push(request);
-        OnboardingState.set('requests', requests);
-        _saveRequests();
-
-        OnboardingState.set('currentRequest', request);
-        OnboardingState.set('currentStep', 1);
-        OnboardingForm.render(request, 1);
-        _showView('form');
+    async function _createRequest() {
+        try {
+            const result = await CloudStorage.postApi('createOnboardingRequest', {
+                data: { leadSource: '', stageData: { 1: { lead_status: 'new' } } }
+            });
+            if (!result.success) { Toast.error(result.error || 'Ошибка создания'); return; }
+            _applyApiResult(result);
+            OnboardingState.set('currentStep', 1);
+            OnboardingForm.render(result.request, 1);
+            _showView('form');
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'createRequest' });
+        }
     }
 
-    function _openRequest(id) {
-        const request = _getRequest(id);
+    async function createRequestFromImport(leadData) {
+        const sourceName = leadData.lead_source_name || leadData.lead_source || '';
+        try {
+            const result = await CloudStorage.postApi('createOnboardingRequest', {
+                data: {
+                    isImport: true,
+                    leadSource: sourceName,
+                    stageData: {
+                        1: {
+                            lead_status: 'new',
+                            contact_name: leadData.contact_name || '',
+                            phone: leadData.phone || '',
+                            email: leadData.email || '',
+                            tg_username: leadData.tg_username || '',
+                            lead_source: sourceName,
+                            geo_country: leadData.geo_country || '',
+                            lead_date: leadData.lead_date || ''
+                        }
+                    }
+                }
+            });
+            if (!result.success) return;
+            _applyApiResult(result);
+        } catch { /* silent for import */ }
+    }
+
+    async function _openRequest(id) {
+        let request = _getRequest(id);
         if (!request) return;
 
-        OnboardingState.set('currentRequest', request);
-        OnboardingState.set('currentStep', request.currentStep);
-
         const myRole = OnboardingState.get('userRole');
-        const myEmail = OnboardingState.get('userEmail');
+        const sysRole = OnboardingState.get('systemRole');
         const step = OnboardingConfig.getStep(request.currentStep);
+
+        // Executor takes "new" request → assign via API
+        if (request.status === 'new' && step && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
+            try {
+                const result = await CloudStorage.postApi('submitStep', {
+                    requestId: request.id, step: 0, data: { _assign: true }
+                });
+                if (result.success) _applyApiResult(result);
+            } catch (e) {
+                ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'assignRequest' });
+            }
+        }
+
+        const fresh = _getRequest(id);
+        if (!fresh) return;
+
+        OnboardingState.set('currentRequest', fresh);
+        OnboardingState.set('currentStep', fresh.currentStep);
+
         const isAdminLike = myRole === 'admin' || myRole === 'leader';
-        const effectiveExecutor = OnboardingConfig.getStepEffectiveExecutor(request.currentStep, request.stageData);
+        const effectiveExecutor = OnboardingConfig.getStepEffectiveExecutor(fresh.currentStep, fresh.stageData);
+
+        // Executor: executorFinal step → show success view
+        if (OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor' && OnboardingConfig.isExecutorCompleted(fresh)) {
+            const finalStep = OnboardingConfig.STEPS.find(s => s.executorFinal);
+            const finalStepNum = finalStep ? finalStep.number : fresh.currentStep;
+            OnboardingState.set('currentStep', finalStepNum);
+            OnboardingReview.render(fresh, finalStepNum, true);
+            _showView('review');
+            return;
+        }
 
         // Decide view
+        // confirmAfterApprove: executor sees review (readonly + "Далее")
+        const stageData = (fresh.stageData && fresh.stageData[fresh.currentStep]) || {};
+        if (fresh.status === 'in_progress' && step.confirmAfterApprove && stageData._approved && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
+            OnboardingReview.render(fresh, fresh.currentStep);
+            _showView('review');
         // Dynamic handoff on_review: executor sees review (readonly + withdraw)
-        if (request.status === 'on_review' && step.dynamicExecutor && step.executor === myRole) {
-            OnboardingReview.render(request, request.currentStep);
+        } else if (fresh.status === 'on_review' && step.dynamicExecutor && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
+            OnboardingReview.render(fresh, fresh.currentStep);
             _showView('review');
         // Dynamic handoff on_review: reviewer (or admin) fills form
-        } else if (request.status === 'on_review' && step.dynamicExecutor && (effectiveExecutor === myRole || isAdminLike)) {
-            OnboardingForm.render(request, request.currentStep);
+        } else if (fresh.status === 'on_review' && step.dynamicExecutor && (effectiveExecutor === myRole || isAdminLike)) {
+            OnboardingForm.render(fresh, fresh.currentStep);
             _showView('form');
         // Standard in_progress: executor fills form
-        } else if (request.status === 'in_progress' && step.executor === myRole) {
-            OnboardingForm.render(request, request.currentStep);
+        } else if (fresh.status === 'in_progress' && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
+            OnboardingForm.render(fresh, fresh.currentStep);
+            _showView('form');
+        // Reviewer-executor step (e.g. antifraud): reviewer fills form
+        } else if (fresh.status === 'on_review' && OnboardingRoles.isExecutorForStep(sysRole, step.number) && !step.reviewer) {
+            OnboardingForm.render(fresh, fresh.currentStep);
             _showView('form');
         // Standard on_review: reviewer sees review
-        } else if (request.status === 'on_review' && (step.reviewer === myRole || isAdminLike)) {
-            OnboardingReview.render(request, request.currentStep);
+        } else if (fresh.status === 'on_review' && (OnboardingRoles.isReviewerForStep(sysRole, step.number) || isAdminLike)) {
+            OnboardingReview.render(fresh, fresh.currentStep);
             _showView('review');
+        // Admin fallback for on_review reviewer-executor steps
+        } else if (isAdminLike && fresh.status === 'on_review' && !step.reviewer) {
+            OnboardingForm.render(fresh, fresh.currentStep);
+            _showView('form');
         // Admin fallback for in_progress
-        } else if (isAdminLike && request.status === 'in_progress') {
-            OnboardingForm.render(request, request.currentStep);
+        } else if (isAdminLike && fresh.status === 'in_progress') {
+            OnboardingForm.render(fresh, fresh.currentStep);
             _showView('form');
         } else {
-            OnboardingReview.render(request, request.currentStep);
+            OnboardingReview.render(fresh, fresh.currentStep);
             _showView('review');
         }
     }
@@ -312,6 +508,19 @@ const PartnerOnboarding = (() => {
     function _goToStep(stepNumber) {
         const request = OnboardingState.get('currentRequest');
         if (!request) return;
+
+        const myRole = OnboardingState.get('userRole');
+        const sysRole = OnboardingState.get('systemRole');
+
+        // Executor clicks executorFinal step → show success view
+        if (OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor' && OnboardingConfig.isExecutorFinalStep(stepNumber)) {
+            if (OnboardingConfig.isExecutorCompleted(request)) {
+                OnboardingState.set('currentStep', stepNumber);
+                OnboardingReview.render(request, stepNumber, true);
+                _showView('review');
+            }
+            return;
+        }
 
         OnboardingState.set('currentStep', stepNumber);
         const view = OnboardingState.get('view');
@@ -338,249 +547,320 @@ const PartnerOnboarding = (() => {
         if (!request.stageData) request.stageData = {};
         request.stageData[stepNumber] = { ...request.stageData[stepNumber], ...data };
 
-        const updates = { stageData: request.stageData };
         if (stepNumber === 1 && data.lead_source) {
             request.leadSource = data.lead_source;
-            updates.leadSource = data.lead_source;
         }
 
-        _updateRequest(request.id, updates);
+        // Local update for responsive UI
+        _updateRequestLocal(request.id, { stageData: request.stageData, leadSource: request.leadSource });
+
+        // Fire-and-forget API save
+        CloudStorage.postApi('saveDraft', {
+            requestId: request.id, step: stepNumber, data: data
+        }).catch(() => { /* silent — draft save не критичен */ });
     }
 
-    function _submitStep() {
+    async function _submitStep() {
         const request = OnboardingState.get('currentRequest');
         const stepNumber = OnboardingState.get('currentStep');
         if (!request) return;
 
         const step = OnboardingConfig.getStep(stepNumber);
-        const myRole = OnboardingState.get('userRole');
+        const sysRole = OnboardingState.get('systemRole');
 
-        // Executor confirms handoff-completed data → skip validation, advance
-        if (step && step.dynamicExecutor && (request.stageData[stepNumber] || {})._handoff_complete) {
-            if (stepNumber !== request.currentStep) return;
-            _addHistory(request, stepNumber, 'approve');
-            const nextStep = stepNumber + 1;
-            if (nextStep > OnboardingConfig.STEPS.length) {
-                _addHistory(request, stepNumber, 'complete');
-                _updateRequest(request.id, { stageData: request.stageData, currentStep: stepNumber, status: 'completed', lastComment: '' });
-                Toast.success('Заявка завершена!');
-                _showView('list');
-            } else {
-                _updateRequest(request.id, { stageData: request.stageData, currentStep: nextStep, status: 'in_progress', lastComment: '' });
-                const nextStepConf = OnboardingConfig.getStep(nextStep);
-                if (nextStepConf.executor === myRole) {
-                    const updated = _getRequest(request.id);
-                    OnboardingState.set('currentRequest', updated);
-                    OnboardingState.set('currentStep', nextStep);
-                    OnboardingForm.render(updated, nextStep);
-                } else {
-                    Toast.success('Шаг выполнен');
-                    _showView('list');
-                }
-            }
-            return;
-        }
-
-        // Validate
-        const { valid, errors } = OnboardingForm.validate(stepNumber);
-        if (!valid) {
-            Toast.error(errors[0]);
-            return;
+        // Validate (except handoff-complete confirm phase)
+        const isHandoffComplete = step && step.dynamicExecutor && (request.stageData[stepNumber] || {})._handoff_complete;
+        if (!isHandoffComplete) {
+            const { valid, errors } = OnboardingForm.validate(stepNumber);
+            if (!valid) { Toast.error(errors[0]); return; }
         }
 
         // Block submit on past steps (autosave handles saving)
-        if (stepNumber !== request.currentStep) {
+        if (stepNumber !== request.currentStep && !isHandoffComplete) {
             _autosaveDraft();
             return;
         }
 
-        // Save data
         const data = OnboardingForm.collectFormData(stepNumber);
-        if (!request.stageData) request.stageData = {};
-        request.stageData[stepNumber] = { ...request.stageData[stepNumber], ...data };
 
-        // Sync leadSource from step 1
-        if (stepNumber === 1 && data.lead_source) {
-            request.leadSource = data.lead_source;
-        }
-
-        // Dynamic executor: executor chose "reviewer" → hand off to reviewer
-        if (step.dynamicExecutor) {
-            const creator = data[step.dynamicExecutor.field];
-            const isAdminLike = myRole === 'admin' || myRole === 'leader';
-            if (creator === step.dynamicExecutor.reviewerValue && myRole !== 'reviewer' && !isAdminLike) {
-                _addHistory(request, stepNumber, 'submit', 'Запрос на создание аккаунта');
-                _updateRequest(request.id, {
-                    stageData: request.stageData,
-                    leadSource: request.leadSource,
-                    status: 'on_review'
-                });
-                Toast.success('Запрос на создание аккаунта отправлен');
-                _showView('list');
-                return;
-            }
-            // Reviewer completed → send data back to executor
-            if (creator === step.dynamicExecutor.reviewerValue && myRole === 'reviewer') {
-                request.stageData[stepNumber]._handoff_complete = true;
-                _addHistory(request, stepNumber, 'submit', 'Данные аккаунта отправлены');
-                _updateRequest(request.id, {
-                    stageData: request.stageData,
-                    leadSource: request.leadSource,
-                    status: 'in_progress'
-                });
-                Toast.success('Данные отправлены экзекьютору');
-                _showView('list');
-                return;
-            }
-        }
-
-        // Antifraud: if failed → cancel
-        if (data.antifraud_result === 'failed') {
-            _addHistory(request, stepNumber, 'cancel', data.antifraud_comment || 'Не прошёл антифрод');
-            _updateRequest(request.id, {
-                stageData: request.stageData,
-                status: 'cancelled',
-                lastComment: data.antifraud_comment || 'Не прошёл антифрод проверку'
+        try {
+            const result = await CloudStorage.postApi('submitStep', {
+                requestId: request.id, step: stepNumber, data: data
             });
-            Toast.warning('Заявка отменена: не прошла антифрод');
-            _showView('list');
+            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+
+            _applyApiResult(result);
+            const updated = result.request;
+
+            // Determine toast message based on result
+            if (updated.status === 'completed') {
+                Toast.success('Заявка завершена!');
+            } else if (updated.status === 'cancelled') {
+                Toast.warning('Заявка отменена: не прошла антифрод');
+            } else if (updated.status === 'on_review') {
+                Toast.success('Отправлено на проверку');
+            } else {
+                Toast.success('Шаг выполнен');
+            }
+
+            // If next step executor is same user → continue editing
+            if (updated.status === 'in_progress' && OnboardingRoles.isExecutorForStep(sysRole, updated.currentStep)) {
+                OnboardingState.set('currentStep', updated.currentStep);
+                OnboardingForm.render(updated, updated.currentStep);
+            } else {
+                _openRequest(request.id);
+            }
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'submitStep' });
+        }
+    }
+
+    async function _approveStep() {
+        const request = OnboardingState.get('currentRequest');
+        const stepNumber = OnboardingState.get('currentStep');
+        if (!request || request.status !== 'on_review') return;
+
+        const comment = (document.getElementById('reviewComment') || {}).value || '';
+
+        try {
+            const result = await CloudStorage.postApi('approveStep', {
+                requestId: request.id, step: stepNumber, comment: comment.trim()
+            });
+            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+
+            _applyApiResult(result);
+            Toast.success(result.request.status === 'completed' ? 'Заявка завершена!' : 'Шаг одобрен');
+            _openRequest(request.id);
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'approveStep' });
+        }
+    }
+
+    async function _rejectStep() {
+        const request = OnboardingState.get('currentRequest');
+        const stepNumber = OnboardingState.get('currentStep');
+        if (!request || request.status !== 'on_review') return;
+
+        let comment = '';
+        let checklistData = null;
+
+        // Checklist-based review
+        if (OnboardingReview.hasReviewChecklist()) {
+            const reviewData = OnboardingReview.collectReviewChecklist();
+            if (!reviewData) return;
+
+            const step = OnboardingConfig.getStep(stepNumber);
+            const field = step && step.fields.find(f => f.id === reviewData.fieldId);
+            const items = field ? field.items || [] : [];
+            const unchecked = items.map((_, idx) => idx).filter(idx => !reviewData.data[idx]);
+
+            if (unchecked.length === 0) { Toast.error('Снимите отметку с пунктов, где обнаружены ошибки'); return; }
+
+            const comments = reviewData.data.comments || {};
+            if (!unchecked.some(idx => comments[idx])) { Toast.error('Добавьте комментарий к пунктам с ошибками'); return; }
+
+            comment = unchecked.map(idx => {
+                const label = items[idx].label;
+                const c = comments[idx] || '';
+                return c ? `${label}: ${c}` : label;
+            }).join('; ');
+
+            checklistData = { fieldId: reviewData.fieldId, data: reviewData.data };
+        } else {
+            comment = (document.getElementById('reviewComment') || {}).value || '';
+            comment = comment.trim();
+            if (!comment) { Toast.error('Добавьте комментарий для возврата'); return; }
+        }
+
+        try {
+            const result = await CloudStorage.postApi('rejectStep', {
+                requestId: request.id, step: stepNumber, comment, checklistData
+            });
+            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+
+            _applyApiResult(result);
+            Toast.info('Заявка возвращена на доработку');
+            _openRequest(request.id);
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'rejectStep' });
+        }
+    }
+
+    async function _withdrawStep() {
+        const request = OnboardingState.get('currentRequest');
+        if (!request) return;
+
+        try {
+            const result = await CloudStorage.postApi('withdrawOnboarding', {
+                requestId: request.id, step: request.currentStep
+            });
+            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+
+            _applyApiResult(result);
+            Toast.info('Заявка отозвана с проверки');
+            _openRequest(request.id);
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'withdrawStep' });
+        }
+    }
+
+    async function _advanceAfterApprove() {
+        const request = OnboardingState.get('currentRequest');
+        const stepNumber = OnboardingState.get('currentStep');
+        if (!request) return;
+
+        const step = OnboardingConfig.getStep(stepNumber);
+        if (!step || !step.confirmAfterApprove || !(request.stageData[stepNumber] || {})._approved) return;
+
+        const sysRole = OnboardingState.get('systemRole');
+
+        try {
+            const result = await CloudStorage.postApi('submitStep', {
+                requestId: request.id, step: stepNumber, data: { _advance: true }
+            });
+            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+
+            _applyApiResult(result);
+            const updated = result.request;
+
+            if (updated.status === 'completed') {
+                Toast.success('Заявка завершена!');
+                _openRequest(request.id);
+            } else if (OnboardingRoles.isExecutorForStep(sysRole, updated.currentStep)) {
+                OnboardingState.set('currentStep', updated.currentStep);
+                OnboardingForm.render(updated, updated.currentStep);
+                _showView('form');
+            } else {
+                Toast.success('Шаг выполнен');
+                _openRequest(request.id);
+            }
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'advanceAfterApprove' });
+        }
+    }
+
+    function _toggleStatusDropdown() {
+        const dropdown = document.getElementById('statusDropdown');
+        if (dropdown) dropdown.classList.toggle('hidden');
+    }
+
+    function _toggleSettingsDropdown() {
+        const dropdown = document.getElementById('settingsDropdown');
+        if (dropdown) dropdown.classList.toggle('hidden');
+    }
+
+    function _closeSettingsDropdown() {
+        const dropdown = document.getElementById('settingsDropdown');
+        if (dropdown) dropdown.classList.add('hidden');
+    }
+
+    function _selectLeadStatus(value) {
+        const request = OnboardingState.get('currentRequest');
+        const stepNumber = OnboardingState.get('currentStep');
+        if (!request) return;
+
+        // Close dropdown
+        const dropdown = document.getElementById('statusDropdown');
+        if (dropdown) dropdown.classList.add('hidden');
+
+        if (!request.stageData) request.stageData = {};
+        if (!request.stageData[stepNumber]) request.stageData[stepNumber] = {};
+
+        const prevStatus = request.stageData[stepNumber].lead_status;
+
+        // For "refused" — show reject_reason, update button, don't validate yet
+        if (value === 'refused' && prevStatus !== 'refused') {
+            request.stageData[stepNumber].lead_status = value;
+            const labelEl = document.querySelector('.status-submit-label');
+            if (labelEl) labelEl.textContent = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_STATUSES, value);
+            document.querySelectorAll('.status-submit-option').forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.value === value);
+            });
+            document.querySelectorAll('#formFields [data-visible-when-field="lead_status"]').forEach(el => {
+                el.classList.toggle('hidden', value !== el.dataset.visibleWhenValue);
+            });
+            const textarea = document.getElementById('field_reject_reason');
+            if (textarea) setTimeout(() => textarea.focus(), 100);
             return;
         }
 
-        if (step.reviewer) {
-            // Has reviewer → send to review
-            _addHistory(request, stepNumber, 'submit');
-            _updateRequest(request.id, {
-                stageData: request.stageData,
-                leadSource: request.leadSource,
-                status: 'on_review',
-                lastComment: ''
-            });
-            Toast.success('Отправлено на проверку');
-            _showView('list');
-        } else {
-            // No reviewer → advance to next step
-            _addHistory(request, stepNumber, 'approve');
-            const nextStep = stepNumber + 1;
+        // Validate before applying status
+        request.stageData[stepNumber].lead_status = value;
+        const { valid, errors } = OnboardingForm.validate(stepNumber);
+        if (!valid) {
+            // Revert status
+            request.stageData[stepNumber].lead_status = prevStatus;
+            Toast.error(errors[0]);
+            return;
+        }
 
-            if (nextStep > OnboardingConfig.STEPS.length) {
-                // Completed
-                _addHistory(request, stepNumber, 'complete');
-                _updateRequest(request.id, {
-                    stageData: request.stageData,
-                    leadSource: request.leadSource,
-                    currentStep: stepNumber,
-                    status: 'completed',
-                    lastComment: ''
-                });
-                Toast.success('Заявка завершена!');
-                _showView('list');
-            } else {
-                _updateRequest(request.id, {
-                    stageData: request.stageData,
-                    leadSource: request.leadSource,
-                    currentStep: nextStep,
-                    status: 'in_progress',
-                    lastComment: ''
-                });
+        // Validation passed — update UI and submit
+        const labelEl = document.querySelector('.status-submit-label');
+        if (labelEl) labelEl.textContent = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_STATUSES, value);
+        document.querySelectorAll('.status-submit-option').forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.value === value);
+        });
+        document.querySelectorAll('#formFields [data-visible-when-field="lead_status"]').forEach(el => {
+            el.classList.toggle('hidden', value !== el.dataset.visibleWhenValue);
+        });
 
-                // Check if next step executor is different
-                const nextStepConf = OnboardingConfig.getStep(nextStep);
-                if (nextStepConf.executor === myRole) {
-                    // Continue editing
-                    const updated = _getRequest(request.id);
-                    OnboardingState.set('currentRequest', updated);
-                    OnboardingState.set('currentStep', nextStep);
-                    OnboardingForm.render(updated, nextStep);
-                } else {
-                    Toast.success('Шаг выполнен, передано ' + nextStepConf.executor + '\'у');
-                    _showView('list');
+        _submitStep();
+    }
+
+    function _deleteSelectedRequests() {
+        const ids = OnboardingList.getSelectedIds();
+        if (ids.length === 0) return;
+
+        _showConfirm(
+            'Удалить заявки?',
+            `Будет удалено заявок: ${ids.length}. Это действие нельзя отменить.`,
+            async () => {
+                try {
+                    const result = await CloudStorage.postApi('deleteOnboardings', { ids });
+                    if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+
+                    const requests = OnboardingState.get('requests') || [];
+                    const remaining = requests.filter(r => !ids.includes(r.id));
+                    OnboardingState.set('requests', remaining);
+                    OnboardingList.applyFilters();
+                    Toast.success(`Удалено заявок: ${ids.length}`);
+                } catch (e) {
+                    ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'deleteRequests' });
                 }
             }
-        }
+        );
     }
 
-    function _approveStep() {
-        const request = OnboardingState.get('currentRequest');
-        const stepNumber = OnboardingState.get('currentStep');
-        if (!request || request.status !== 'on_review') return;
-
-        const comment = document.getElementById('reviewComment').value.trim();
-        _addHistory(request, stepNumber, 'approve', comment);
-
-        const nextStep = stepNumber + 1;
-        if (nextStep > OnboardingConfig.STEPS.length) {
-            _updateRequest(request.id, { status: 'completed', currentStep: stepNumber, lastComment: '' });
-            Toast.success('Заявка завершена!');
-        } else {
-            _updateRequest(request.id, { status: 'in_progress', currentStep: nextStep, lastComment: '' });
-            Toast.success('Шаг одобрен');
-        }
-        _showView('list');
-    }
-
-    function _rejectStep() {
-        const request = OnboardingState.get('currentRequest');
-        const stepNumber = OnboardingState.get('currentStep');
-        if (!request || request.status !== 'on_review') return;
-
-        const comment = document.getElementById('reviewComment').value.trim();
-        if (!comment) {
-            Toast.error('Добавьте комментарий для возврата');
-            return;
-        }
-
-        _addHistory(request, stepNumber, 'reject', comment);
-        _updateRequest(request.id, { status: 'in_progress', lastComment: comment });
-        Toast.info('Заявка возвращена на доработку');
-        _showView('list');
-    }
-
-    function _withdrawStep() {
+    async function _confirmCancelRequest() {
         const request = OnboardingState.get('currentRequest');
         if (!request) return;
 
-        const step = OnboardingConfig.getStep(request.currentStep);
-        const effectiveExecutor = OnboardingConfig.getStepEffectiveExecutor(request.currentStep, request.stageData);
+        try {
+            const result = await CloudStorage.postApi('cancelOnboarding', { requestId: request.id });
+            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
-        // Dynamic handoff withdraw: reset account_creator choice, status back to in_progress
-        if (step && step.dynamicExecutor && effectiveExecutor !== step.executor && request.status === 'on_review') {
-            _addHistory(request, request.currentStep, 'withdraw');
-            if (request.stageData && request.stageData[request.currentStep]) {
-                delete request.stageData[request.currentStep][step.dynamicExecutor.field];
-            }
-            _updateRequest(request.id, { stageData: request.stageData, status: 'in_progress' });
-            Toast.info('Запрос на создание отозван');
-            _showView('list');
-            return;
+            _applyApiResult(result);
+            Toast.warning('Заявка отменена');
+            _openRequest(request.id);
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'cancelRequest' });
         }
-
-        // Standard withdraw from on_review
-        if (request.status !== 'on_review') return;
-        _addHistory(request, request.currentStep, 'withdraw');
-        _updateRequest(request.id, { status: 'in_progress' });
-        Toast.info('Заявка отозвана с проверки');
-        _showView('list');
     }
 
-    function _confirmCancelRequest() {
-        const request = OnboardingState.get('currentRequest');
-        if (!request) return;
-
-        _addHistory(request, request.currentStep, 'cancel');
-        _updateRequest(request.id, { status: 'cancelled' });
-        Toast.warning('Заявка отменена');
-        _showView('list');
-    }
-
-    function _confirmReactivateRequest() {
+    async function _confirmReactivateRequest() {
         const request = OnboardingState.get('currentRequest');
         if (!request || request.status !== 'cancelled') return;
 
-        _addHistory(request, request.currentStep, 'reactivate');
-        _updateRequest(request.id, { status: 'in_progress', lastComment: '' });
-        Toast.success('Заявка восстановлена');
-        _showView('list');
+        try {
+            const result = await CloudStorage.postApi('reactivateOnboarding', { requestId: request.id });
+            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+
+            _applyApiResult(result);
+            Toast.success('Заявка восстановлена');
+            _openRequest(request.id);
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'reactivateRequest' });
+        }
     }
 
     // ── History Modal ──
@@ -588,20 +868,34 @@ const PartnerOnboarding = (() => {
     function _showHistoryModal() {
         const request = OnboardingState.get('currentRequest');
         if (!request) return;
-        OnboardingSteps.renderHistoryModal(request);
+        // Attach history from cached API data
+        const allHistory = OnboardingState.get('history') || {};
+        const reqWithHistory = { ...request, history: allHistory[request.id] || request.history || [] };
+        OnboardingSteps.renderHistoryModal(reqWithHistory);
         _openModal('historyModal');
     }
 
     // ── Reassign ──
 
-    function _showReassignModal() {
-        // TODO: populate from real team data via CloudStorage
+    async function _showReassignModal() {
         const targetSelect = document.getElementById('reassignTarget');
         if (targetSelect) {
-            targetSelect.innerHTML = '<option value="">Выберите менеджера</option>';
+            targetSelect.innerHTML = '<option value="">Загрузка...</option>';
+            try {
+                const result = await CloudStorage.callApi('getEmployees');
+                const employees = result.employees || [];
+                targetSelect.innerHTML = '<option value="">Выберите менеджера</option>';
+                employees.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.email;
+                    opt.textContent = emp.name || emp.email;
+                    targetSelect.appendChild(opt);
+                });
+            } catch {
+                targetSelect.innerHTML = '<option value="">Выберите менеджера</option>';
+            }
         }
 
-        // Populate reasons
         const select = document.getElementById('reassignReason');
         if (select && select.options.length <= 1) {
             OnboardingConfig.REASSIGN_REASONS.forEach(r => {
@@ -614,7 +908,7 @@ const PartnerOnboarding = (() => {
         _openModal('reassignModal');
     }
 
-    function _confirmReassign() {
+    async function _confirmReassign() {
         const request = OnboardingState.get('currentRequest');
         if (!request) return;
 
@@ -627,11 +921,19 @@ const PartnerOnboarding = (() => {
         if (!target) { Toast.error('Выберите менеджера'); return; }
         if (!reason) { Toast.error('Выберите причину'); return; }
 
-        _addHistory(request, request.currentStep, 'reassign', comment);
-        _updateRequest(request.id, { assigneeEmail: target, assigneeName: targetName });
-        _closeModal('reassignModal');
-        Toast.success('Заявка передана');
-        _showView('list');
+        try {
+            const result = await CloudStorage.postApi('reassignOnboarding', {
+                requestId: request.id, targetEmail: target, targetName, reason, comment
+            });
+            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+
+            _applyApiResult(result);
+            _closeModal('reassignModal');
+            Toast.success('Заявка передана');
+            _openRequest(request.id);
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'reassign' });
+        }
     }
 
     // ── Rollback ──
@@ -652,7 +954,7 @@ const PartnerOnboarding = (() => {
         _openModal('rollbackModal');
     }
 
-    function _confirmRollback() {
+    async function _confirmRollback() {
         const request = OnboardingState.get('currentRequest');
         if (!request) return;
 
@@ -661,40 +963,36 @@ const PartnerOnboarding = (() => {
 
         if (!targetStep) { Toast.error('Выберите шаг'); return; }
 
-        _addHistory(request, request.currentStep, 'rollback', comment);
-        _updateRequest(request.id, { currentStep: targetStep, status: 'in_progress', lastComment: comment || '' });
-        _closeModal('rollbackModal');
-        Toast.info('Откат выполнен');
-        _showView('list');
+        try {
+            const result = await CloudStorage.postApi('rollbackOnboarding', {
+                requestId: request.id, targetStep, comment
+            });
+            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+
+            _applyApiResult(result);
+            _closeModal('rollbackModal');
+            Toast.info('Откат выполнен');
+            _openRequest(request.id);
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'rollback' });
+        }
     }
 
     // ── Helpers ──
 
-    function _addHistory(request, step, action, comment) {
-        if (!request.history) request.history = [];
-        request.history.push({
-            step,
-            action,
-            actor: OnboardingState.get('userEmail'),
-            timestamp: new Date().toISOString(),
-            comment: comment || ''
-        });
-    }
-
     function _mainFilter() {
         const select = document.getElementById('mainFilter');
         const value = select.value;
-
-        if (value.startsWith('status:')) {
-            // Status filter: show all ownership, filter by status
-            OnboardingState.set('filters.ownership', 'all');
-            OnboardingState.set('filters.status', value.replace('status:', ''));
-        } else {
-            // Ownership filter: clear status filter
-            OnboardingState.set('filters.ownership', value);
-            OnboardingState.set('filters.status', '');
-        }
+        OnboardingState.set('filters.status', value.startsWith('status:') ? value.replace('status:', '') : '');
         OnboardingList.applyFilters();
+    }
+
+    function _setDateNow(fieldId) {
+        const input = document.getElementById(`field_${fieldId}`);
+        if (!input) return;
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        input.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
     }
 
     function _openPhotoLightbox(target) {
@@ -736,19 +1034,21 @@ const PartnerOnboarding = (() => {
 
     function _setupDevRoleSwitcher() {
         const isLocal = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+        const systemRole = OnboardingState.get('systemRole');
+        const isAdminLike = systemRole === 'admin' || systemRole === 'leader';
         const switcher = document.getElementById('roleSwitcher');
-        if (isLocal && switcher) {
+        if (isLocal && isAdminLike && switcher) {
             switcher.classList.remove('hidden');
-            OnboardingState.set('userRole', 'reviewer');
-            OnboardingState.set('userEmail', 'dev@test.com');
         }
     }
 
-    function _switchDevRole(role, target) {
-        OnboardingState.set('userRole', role);
+    function _switchDevRole(devRole, target) {
+        OnboardingState.set('systemRole', devRole);
+        OnboardingState.set('userRole', OnboardingRoles.getGlobalModuleRole(devRole));
         document.querySelectorAll('#roleSwitcher .dev-role-btn').forEach(b =>
-            b.classList.toggle('active', b.dataset.value === role)
+            b.classList.toggle('active', b.dataset.value === devRole)
         );
+        _updateToolbarForRole();
         OnboardingList.setupDefaultFilters();
         OnboardingList.applyFilters();
 
@@ -782,6 +1082,8 @@ const PartnerOnboarding = (() => {
     // ── Destroy ──
 
     function _destroy() {
+        OnboardingSource.destroy();
+        OnboardingRoles.destroy();
         document.removeEventListener('click', _handleClick);
         document.removeEventListener('input', _handleInput);
         document.removeEventListener('change', _handleChange);
@@ -802,7 +1104,7 @@ const PartnerOnboarding = (() => {
             document.addEventListener('change', _handleChange);
             document.addEventListener('keydown', _handleKeydown);
             document.addEventListener('keypress', _handleKeypress);
-            init();
+            await init();
         },
         onDestroy() {
             _destroy();
@@ -811,9 +1113,12 @@ const PartnerOnboarding = (() => {
             '#reassignModal': () => _closeModal('reassignModal'),
             '#rollbackModal': () => _closeModal('rollbackModal'),
             '#confirmModal': () => _closeModal('confirmModal'),
-            '#historyModal': () => _closeModal('historyModal')
+            '#historyModal': () => _closeModal('historyModal'),
+            '#sourceSettingsModal': () => _closeModal('sourceSettingsModal'),
+            '#conditionsModal': () => _closeModal('conditionsModal'),
+            '#roleConfigModal': () => _closeModal('roleConfigModal')
         }
     });
 
-    return { init };
+    return { init, createRequestFromImport };
 })();

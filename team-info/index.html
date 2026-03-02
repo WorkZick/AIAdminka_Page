@@ -84,7 +84,7 @@
                                             <img src="../shared/icons/filter.svg" width="12" height="12" alt="Сортировка">
                                         </div>
                                     </th>
-                                    <th class="col-position">Должность</th>
+                                    <th class="col-position">Роль</th>
                                     <th class="col-crm">Логин CRM</th>
                                     <th class="col-id">Reddy ID</th>
                                     <th class="col-birthday">День рождения</th>
@@ -146,7 +146,7 @@
                             </div>
                             <div class="card-info-section">
                                 <div class="card-name" id="cardFullName">Сотрудник</div>
-                                <div class="card-position" id="cardPosition">Должность</div>
+                                <div class="card-position" id="cardPosition">Роль</div>
                                 <div class="card-status-badge" id="cardStatusBadge" data-action="team-toggleStatusDropdown">
                                     <span class="status-badge green" id="cardStatusText">Работает</span>
                                     <img class="status-dropdown-icon" src="../shared/icons/arrow.svg" width="12" height="12" alt="Выбрать">
@@ -195,7 +195,9 @@
                             </div>
                             <div class="form-info-section">
                                 <input type="text" class="form-name-input" id="formFullName" placeholder="Ф.И.О.">
-                                <input type="text" class="form-position-input" id="formPosition" placeholder="Должность">
+                                <select class="form-position-input" id="formPosition">
+                                    <option value="">Выберите роль</option>
+                                </select>
                                 <div class="form-status-badge" id="formStatusBadge" data-action="team-toggleFormStatusDropdown">
                                     <span class="status-badge green" id="formStatusText">Работает</span>
                                     <img class="status-dropdown-icon" src="../shared/icons/arrow.svg" width="12" height="12" alt="Выбрать">

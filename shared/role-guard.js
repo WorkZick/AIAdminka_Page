@@ -6,8 +6,8 @@
  * 2. Leader - права от Admin, назначает права сотрудникам (только из своих)
  * 3. Employee - права от Leader (не больше чем у Leader)
  *
- * Роли: admin, leader, assistant, sales, partners_mgr, payments, antifraud, tech
- * Модули: partners, team-info, traffic, reports, settings, documentation, team-management, admin-panel
+ * Роли: admin, leader, assistant, sales, partners_mgr, payments, antifraud, tech, guest
+ * Модули: partners, partner-onboarding, team-info, traffic, reports, settings, documentation, team-management, admin-panel
  */
 const RoleGuard = {
     // Данные пользователя
@@ -48,6 +48,7 @@ const RoleGuard = {
                 team: null,
                 permissions: {
                     partners: { canView: true, canEdit: true, canDelete: true },
+                    'partner-onboarding': { canView: true, canEdit: true, canDelete: true },
                     'team-info': { canView: true, canEdit: true, canDelete: true },
                     traffic: { canView: true, canEdit: true, canDelete: true },
                     reports: { canView: true, canEdit: true, canDelete: true },
@@ -79,6 +80,7 @@ const RoleGuard = {
                 },
                 permissions: {
                     partners: { canView: true, canEdit: true, canDelete: true },
+                    'partner-onboarding': { canView: true, canEdit: true, canDelete: true },
                     'team-info': { canView: true, canEdit: true, canDelete: true },
                     traffic: { canView: true, canEdit: true, canDelete: true },
                     reports: { canView: true, canEdit: true, canDelete: true },
@@ -110,6 +112,7 @@ const RoleGuard = {
                 },
                 permissions: {
                     partners: { canView: true, canEdit: true, canDelete: false },
+                    'partner-onboarding': { canView: true, canEdit: true, canDelete: false },
                     'team-info': { canView: true, canEdit: false, canDelete: false },
                     traffic: { canView: true, canEdit: false, canDelete: false },
                     reports: { canView: true, canEdit: false, canDelete: false },
@@ -213,6 +216,24 @@ const RoleGuard = {
             }
             // Показать UI даже при ошибке (с guest-правами)
             document.body.classList.add('role-ready');
+        }
+
+        // Ревалидация при возврате на вкладку (обнаружение смены роли другим пользователем)
+        if (!this._visibilityHandler) {
+            this._visibilityHandler = () => {
+                if (document.visibilityState === 'visible' && this.initialized) {
+                    try {
+                        const raw = localStorage.getItem(this.CACHE_KEY);
+                        if (raw) {
+                            const age = Date.now() - JSON.parse(raw).timestamp;
+                            if (age > 10000) {
+                                this.revalidateInBackground();
+                            }
+                        }
+                    } catch (e) { /* ignore */ }
+                }
+            };
+            document.addEventListener('visibilitychange', this._visibilityHandler);
         }
 
         return this;
@@ -763,6 +784,7 @@ const RoleGuard = {
         if (this.user.role === 'admin' || this.user.isAdmin === true) {
             return {
                 partners: { canView: true, canEdit: true, canDelete: true },
+                'partner-onboarding': { canView: true, canEdit: true, canDelete: true },
                 'team-info': { canView: true, canEdit: true, canDelete: true },
                 traffic: { canView: true, canEdit: true, canDelete: true },
                 reports: { canView: true, canEdit: true, canDelete: true },

@@ -11,17 +11,22 @@ const OnboardingSteps = (() => {
         const request = OnboardingState.get('currentRequest');
         const progressStep = request ? request.currentStep : viewingStep;
 
-        const steps = OnboardingConfig.STEPS;
+        const myRole = OnboardingState.get('userRole');
+        const sysRole = OnboardingState.get('systemRole');
+        const executorDone = OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor' && request && OnboardingConfig.isExecutorCompleted(request);
+        const steps = OnboardingConfig.getVisibleSteps();
         container.innerHTML = steps.map(step => {
             const num = step.number;
             let cls = 'v-step';
-            if (num < progressStep) cls += ' completed';
+            if (executorDone) cls += ' completed';
+            else if (num < progressStep) cls += ' completed';
             else if (num === progressStep) cls += ' active';
             if (num === viewingStep) cls += ' viewing';
 
+            const label = OnboardingConfig.getStepDisplayName(num, myRole);
             return `<div class="${cls}" data-action="onb-goToStep" data-value="${num}">
                 <span class="v-step-dot"></span>
-                <span class="v-step-label">${num}. ${Utils.escapeHtml(OnboardingConfig.getStepLabel(num))}</span>
+                <span class="v-step-label">${num}. ${Utils.escapeHtml(label)}</span>
             </div>`;
         }).join('');
     }
@@ -30,14 +35,19 @@ const OnboardingSteps = (() => {
         const container = document.getElementById(containerId);
         if (!container) return;
 
+        const myRole = OnboardingState.get('userRole');
+        const sysRole = OnboardingState.get('systemRole');
+        const executorDone = OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor' && OnboardingConfig.isExecutorCompleted(request);
         const statusConf = OnboardingConfig.STATUSES[request.status] || {};
+        const statusLabel = executorDone ? 'Партнёр заведён' : (statusConf.label || request.status);
+        const statusClass = executorDone ? 'status--completed' : (statusConf.cssClass || '');
         const assigneeName = request.assigneeName || request.assigneeEmail || '';
         const createdDate = request.createdDate ? _formatDateTime(request.createdDate) : '';
 
         container.innerHTML = `
             <div class="sidebar-info-row">
                 <span class="sidebar-info-label">Статус</span>
-                <span class="status-badge ${Utils.escapeHtml(statusConf.cssClass || '')}">${Utils.escapeHtml(statusConf.label || request.status)}</span>
+                <span class="status-badge ${Utils.escapeHtml(statusClass)}">${Utils.escapeHtml(statusLabel)}</span>
             </div>
             <div class="sidebar-info-row">
                 <span class="sidebar-info-label">Менеджер</span>

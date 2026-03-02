@@ -3,7 +3,7 @@
 const OnboardingList = (() => {
     'use strict';
 
-    const TOTAL_STEPS = 8;
+    const TOTAL_STEPS = OnboardingConfig.STEPS.length;
 
     function init() {
         OnboardingState.subscribe('filteredRequests', render);
@@ -22,12 +22,16 @@ const OnboardingList = (() => {
 
         if (requests.length === 0) {
             container.innerHTML = '';
+            container.classList.add('hidden');
             emptyState.classList.remove('hidden');
+            _hideSelectionToolbar();
             return;
         }
 
         emptyState.classList.add('hidden');
+        container.classList.remove('hidden');
         container.innerHTML = requests.map(_renderRow).join('');
+        _updateSelectionToolbar();
     }
 
     function _renderRow(request) {
@@ -35,25 +39,31 @@ const OnboardingList = (() => {
         const sourceLabel = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_SOURCES, request.leadSource) || 'Новая заявка';
         const contactName = (request.stageData && request.stageData[1] || {}).contact_name || '';
         const myRole = OnboardingState.get('userRole');
+        const sysRole = OnboardingState.get('systemRole');
         const myEmail = OnboardingState.get('userEmail');
-        const isMyTurn = _isMyTurn(request, myRole, myEmail);
+        const isMyTurn = _isMyTurn(request, myRole, sysRole, myEmail);
         const dateTime = _formatDateTime(request.createdDate);
         const assigneeName = _shortenName(request.assigneeName || request.assigneeEmail);
         const title = contactName ? `${sourceLabel} — ${contactName}` : sourceLabel;
         const isTerminal = request.status === 'completed' || request.status === 'cancelled';
+        const isAdminLike = myRole === 'admin' || myRole === 'leader';
+        const executorDone = OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor' && OnboardingConfig.isExecutorCompleted(request);
 
         // Progress bar segments
         const segments = [];
         for (let i = 1; i <= TOTAL_STEPS; i++) {
             let cls = 'progress-segment';
-            if (i < request.currentStep) cls += ' done';
+            if (executorDone) { cls += ' done'; }
+            else if (i < request.currentStep) cls += ' done';
             else if (i === request.currentStep) cls += ' active';
             segments.push(`<div class="${cls}"></div>`);
         }
 
         // Turn indicator
         let turnHtml;
-        if (isMyTurn) {
+        if (executorDone) {
+            turnHtml = '<span class="row-turn turn-none">\u2014</span>';
+        } else if (isMyTurn) {
             turnHtml = '<span class="row-turn turn-action">Требует действия</span>';
         } else if (isTerminal) {
             turnHtml = '<span class="row-turn turn-none">\u2014</span>';
@@ -61,10 +71,16 @@ const OnboardingList = (() => {
             turnHtml = '<span class="row-turn turn-waiting">Ожидание</span>';
         }
 
-        return `<div class="request-row ${isMyTurn ? 'my-turn' : ''}" data-action="onb-openRequest" data-value="${Utils.escapeHtml(request.id)}">
+        // Checkbox for admin/leader
+        const checkboxHtml = isAdminLike
+            ? `<input type="checkbox" class="row-checkbox" data-action="onb-toggleSelect" data-value="${Utils.escapeHtml(request.id)}" onclick="event.stopPropagation()">`
+            : '';
+
+        return `<div class="request-row ${isMyTurn ? 'my-turn' : ''} ${isAdminLike ? 'has-checkbox' : ''}" data-action="onb-openRequest" data-value="${Utils.escapeHtml(request.id)}">
+            ${checkboxHtml}
             <div class="row-progress">
                 <div class="progress-bar">${segments.join('')}</div>
-                <span class="row-step-num">${request.currentStep}/${TOTAL_STEPS}</span>
+                <span class="row-step-num">${executorDone ? TOTAL_STEPS : request.currentStep}/${TOTAL_STEPS}</span>
             </div>
             <div class="row-main">
                 <span class="row-title">${Utils.escapeHtml(title)}</span>
@@ -75,7 +91,9 @@ const OnboardingList = (() => {
                 <span class="row-meta-date">${Utils.escapeHtml(dateTime)}</span>
             </div>
             <div class="row-status">
-                <span class="status-badge ${Utils.escapeHtml(statusConf.cssClass || '')}">${Utils.escapeHtml(statusConf.label || request.status)}</span>
+                ${executorDone
+                    ? '<span class="status-badge status--completed">Партнёр заведён</span>'
+                    : `<span class="status-badge ${Utils.escapeHtml(statusConf.cssClass || '')}">${Utils.escapeHtml(statusConf.label || request.status)}</span>`}
             </div>
             ${turnHtml}
         </div>`;
@@ -83,36 +101,10 @@ const OnboardingList = (() => {
 
     function applyFilters() {
         const requests = OnboardingState.get('requests') || [];
-        const ownership = OnboardingState.get('filters.ownership');
         const status = OnboardingState.get('filters.status');
         const search = (OnboardingState.get('filters.search') || '').toLowerCase();
-        const myRole = OnboardingState.get('userRole');
-        const myEmail = OnboardingState.get('userEmail');
 
         let filtered = requests;
-
-        // Ownership filter
-        if (ownership === 'my') {
-            filtered = filtered.filter(r =>
-                r.assigneeEmail === myEmail || r.createdBy === myEmail
-            );
-        } else if (ownership === 'review') {
-            filtered = filtered.filter(r => {
-                if (r.status === 'completed' || r.status === 'cancelled') return false;
-                const step = OnboardingConfig.getStep(r.currentStep);
-                if (!step) return false;
-                if (r.status === 'on_review') {
-                    // Standard review
-                    if (step.reviewer === myRole) return true;
-                    // Dynamic executor handoff (e.g. account creation assigned to reviewer)
-                    if (step.dynamicExecutor) {
-                        const eff = OnboardingConfig.getStepEffectiveExecutor(r.currentStep, r.stageData);
-                        if (eff === myRole && step.executor !== myRole) return true;
-                    }
-                }
-                return false;
-            });
-        }
 
         // Status filter
         if (status) {
@@ -137,35 +129,33 @@ const OnboardingList = (() => {
     }
 
     function setupDefaultFilters() {
-        const role = OnboardingState.get('userRole');
-        let ownership = 'all';
-        if (role === 'executor') ownership = 'my';
-        else if (role === 'reviewer') ownership = 'review';
-
-        OnboardingState.set('filters.ownership', ownership);
+        OnboardingState.set('filters.ownership', 'all');
         const select = document.getElementById('mainFilter');
-        if (select) select.value = ownership;
+        if (select) select.value = 'all';
     }
 
-    function _isMyTurn(request, myRole, myEmail) {
+    function _isMyTurn(request, myRole, sysRole, myEmail) {
         if (request.status === 'completed' || request.status === 'cancelled') return false;
+        if (request.status === 'new') return OnboardingRoles.isExecutorForStep(sysRole, 1);
         const step = OnboardingConfig.getStep(request.currentStep);
         if (!step) return false;
 
         if (request.status === 'on_review') {
             // Standard review
-            if (step.reviewer === myRole) return true;
+            if (OnboardingRoles.isReviewerForStep(sysRole, request.currentStep)) return true;
+            // Reviewer-executor step (e.g. antifraud): executor fills form
+            if (OnboardingRoles.isExecutorForStep(sysRole, request.currentStep) && !step.reviewer) return true;
             // Dynamic handoff: effective executor's turn
             if (step.dynamicExecutor) {
                 const eff = OnboardingConfig.getStepEffectiveExecutor(request.currentStep, request.stageData);
-                return eff === myRole;
+                if (eff === 'reviewer') return OnboardingRoles.isReviewerForStep(sysRole, request.currentStep);
+                return OnboardingRoles.isExecutorForStep(sysRole, request.currentStep);
             }
             return false;
         }
         // in_progress: check effective executor
-        const effectiveExecutor = OnboardingConfig.getStepEffectiveExecutor(request.currentStep, request.stageData);
-        if (step.executor === myRole) {
-            if (myRole === 'executor') {
+        if (OnboardingRoles.isExecutorForStep(sysRole, request.currentStep)) {
+            if (OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor') {
                 return request.assigneeEmail === myEmail || request.createdBy === myEmail;
             }
             return true;
@@ -198,5 +188,50 @@ const OnboardingList = (() => {
         if (list) list.classList.toggle('hidden', isLoading);
     }
 
-    return { init, render, applyFilters, setupDefaultFilters };
+    // ── Selection Toolbar ──
+
+    function _updateSelectionToolbar() {
+        const myRole = OnboardingState.get('userRole');
+        if (myRole !== 'admin' && myRole !== 'leader') {
+            _hideSelectionToolbar();
+            return;
+        }
+        const checked = document.querySelectorAll('#requestsList .row-checkbox:checked');
+        const toolbar = document.getElementById('selectionToolbar');
+        const countEl = document.getElementById('selectedCount');
+        if (!toolbar) return;
+
+        if (checked.length > 0) {
+            toolbar.classList.remove('hidden');
+            if (countEl) countEl.textContent = checked.length;
+        } else {
+            toolbar.classList.add('hidden');
+        }
+
+        // Sync selectAll checkbox
+        const allCheckboxes = document.querySelectorAll('#requestsList .row-checkbox');
+        const selectAll = document.getElementById('selectAll');
+        if (selectAll) {
+            selectAll.checked = allCheckboxes.length > 0 && checked.length === allCheckboxes.length;
+        }
+    }
+
+    function _hideSelectionToolbar() {
+        const toolbar = document.getElementById('selectionToolbar');
+        if (toolbar) toolbar.classList.add('hidden');
+        const selectAll = document.getElementById('selectAll');
+        if (selectAll) selectAll.checked = false;
+    }
+
+    function getSelectedIds() {
+        const checked = document.querySelectorAll('#requestsList .row-checkbox:checked');
+        return Array.from(checked).map(cb => cb.dataset.value);
+    }
+
+    function toggleSelectAll(checked) {
+        document.querySelectorAll('#requestsList .row-checkbox').forEach(cb => { cb.checked = checked; });
+        _updateSelectionToolbar();
+    }
+
+    return { init, render, applyFilters, setupDefaultFilters, getSelectedIds, toggleSelectAll, updateSelection: _updateSelectionToolbar };
 })();

@@ -118,7 +118,7 @@ const TeamForms = {
         }
 
         if (!position) {
-            Toast.warning('Введите должность');
+            Toast.warning('Выберите роль');
             return;
         }
 
@@ -344,8 +344,9 @@ const TeamForms = {
         formFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field) {
-                field.removeEventListener('input', this.onFormChange.bind(this));
-                field.addEventListener('input', this.onFormChange.bind(this));
+                const event = field.tagName === 'SELECT' ? 'change' : 'input';
+                field.removeEventListener(event, this.onFormChange.bind(this));
+                field.addEventListener(event, this.onFormChange.bind(this));
             }
         });
     },
@@ -369,16 +370,10 @@ const TeamForms = {
         };
 
         const fullNameField = document.getElementById('formFullName');
-        const positionField = document.getElementById('formPosition');
 
         if (fullNameField) {
             fullNameField.addEventListener('input', () => autoResize(fullNameField));
             autoResize(fullNameField);
-        }
-
-        if (positionField) {
-            positionField.addEventListener('input', () => autoResize(positionField));
-            autoResize(positionField);
         }
     },
 
@@ -438,11 +433,31 @@ const TeamForms = {
     // ========== Приватные методы ==========
 
     /**
+     * Заполнение выпадающего списка ролей
+     * @private
+     */
+    _populateRoleDropdown() {
+        const select = document.getElementById('formPosition');
+        if (!select || typeof RolesConfig === 'undefined') return;
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Выберите роль</option>';
+        RolesConfig.ALL_ROLES.forEach(role => {
+            if (role === 'guest') return;
+            const option = document.createElement('option');
+            option.value = role;
+            option.textContent = RolesConfig.getName(role);
+            select.appendChild(option);
+        });
+        if (currentValue) select.value = currentValue;
+    },
+
+    /**
      * Очистка полей формы
      * @private
      */
     _clearFormFields() {
         document.getElementById('formFullName').value = '';
+        this._populateRoleDropdown();
         document.getElementById('formPosition').value = '';
         document.getElementById('formReddyId').value = '';
         document.getElementById('formCorpTelegram').value = '';
@@ -465,6 +480,7 @@ const TeamForms = {
      */
     _fillFormFields(employee) {
         document.getElementById('formFullName').value = employee.fullName || '';
+        this._populateRoleDropdown();
         document.getElementById('formPosition').value = employee.position || '';
 
         // Установка status badge
@@ -678,6 +694,8 @@ const TeamForms = {
         const employee = TeamState.data.find(e => e.id === TeamState.currentEmployeeId);
         if (!employee) return;
 
+        const oldPosition = employee.position;
+
         // Копируем данные
         Object.assign(employee, employeeData);
         employee.id = TeamState.currentEmployeeId;
@@ -699,6 +717,9 @@ const TeamForms = {
 
                 // Синхронизация с профилем (если это карточка текущего пользователя)
                 this.syncToProfile(employee);
+
+                // Синхронизация системной роли если роль изменилась
+                await this._syncSystemRole(employee, oldPosition, employeeData.position);
 
                 Toast.success('Сотрудник обновлен!');
             } else {
@@ -734,6 +755,9 @@ const TeamForms = {
                 TeamRenderer.updateStats();
                 TeamNavigation.openCard(employeeData.id);
 
+                // Синхронизация системной роли при создании
+                await this._syncSystemRole(employeeData, null, employeeData.position);
+
                 Toast.success('Сотрудник добавлен!');
             } else {
                 Toast.error('Ошибка сохранения: ' + (result.error || 'Неизвестная ошибка'));
@@ -741,6 +765,29 @@ const TeamForms = {
         } catch (error) {
             console.error('[TeamForms] Error adding employee:', error);
             Toast.error('Ошибка сохранения');
+        }
+    },
+
+    /**
+     * Синхронизация системной роли пользователя через updateUser
+     * @private
+     */
+    async _syncSystemRole(employee, oldRole, newRole) {
+        if (!newRole || oldRole === newRole) return;
+
+        const email = employee.email || employee.corpEmail;
+        if (!email) return;
+
+        try {
+            const result = await CloudStorage.callApi('updateUser', {
+                targetEmail: email,
+                role: newRole
+            });
+            if (result.error) {
+                Toast.warning('Системная роль не обновлена: ' + result.error);
+            }
+        } catch (e) {
+            Toast.warning('Роль в карточке обновлена, но системная роль не синхронизирована');
         }
     }
 };

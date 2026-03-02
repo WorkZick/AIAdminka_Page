@@ -1000,6 +1000,17 @@
     border-color: var(--glass-border);
 }
 
+/* Системные роли (admin, leader, guest) — read-only */
+.system-role-row {
+    opacity: 0.55;
+}
+.system-role-row .permission-cb.disabled {
+    opacity: 0.5;
+}
+.system-role-row .permission-cb.disabled.checked {
+    opacity: 1;
+}
+
 .permissions-legend {
     display: flex;
     gap: 24px;

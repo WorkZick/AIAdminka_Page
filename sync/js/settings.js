@@ -123,7 +123,7 @@ const settingsApp = {
                     const employees = await CloudStorage.getEmployees();
                     if (Array.isArray(employees)) {
                         teamInfoEmployee = employees.find(emp =>
-                            emp.email === currentEmail || emp.id === currentEmail
+                            emp.email === currentEmail || emp.corpEmail === currentEmail || emp.id === currentEmail
                         );
                     }
                 } catch (e) {
@@ -599,7 +599,7 @@ const settingsApp = {
 
             // Получаем текущих сотрудников чтобы найти существующего
             const employees = await CloudStorage.getEmployees();
-            const existing = employees.find(emp => emp.email === userEmail);
+            const existing = employees.find(emp => emp.email === userEmail || emp.corpEmail === userEmail);
 
             if (existing) {
                 // Обновляем существующего - сохраняем его id

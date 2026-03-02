@@ -42,9 +42,10 @@ const adminApp = {
     // Названия ролей — из RolesConfig (shared/roles-config.js)
 
     // Модули
-    modules: ['partners', 'team-info', 'traffic', 'reports', 'settings', 'documentation', 'team-management'],
+    modules: ['partners', 'partner-onboarding', 'team-info', 'traffic', 'reports', 'settings', 'documentation', 'team-management'],
     moduleNames: {
         'partners': 'Партнёры',
+        'partner-onboarding': 'Заведение',
         'team-info': 'Сотрудники',
         'traffic': 'Трафик',
         'reports': 'Отчёты',
@@ -59,10 +60,40 @@ const adminApp = {
         'user_rejected': 'Отклонение',
         'user_blocked': 'Блокировка',
         'user_unblocked': 'Разблокировка',
+        'user_updated': 'Обновление пользователя',
+        'user_deleted': 'Удаление пользователя',
         'role_changed': 'Смена роли',
         'team_created': 'Создание команды',
+        'team_updated': 'Обновление команды',
+        'team_deleted': 'Удаление команды',
         'team_settings_changed': 'Настройки команды',
-        'permissions_changed': 'Изменение прав'
+        'permissions_changed': 'Изменение прав',
+        'invite_sent': 'Приглашение отправлено',
+        'invite_accepted': 'Приглашение принято',
+        'invite_rejected': 'Приглашение отклонено',
+        'storage_init': 'Инициализация хранилища',
+        'partner_created': 'Создание партнёра',
+        'partner_updated': 'Обновление партнёра',
+        'partner_deleted': 'Удаление партнёра',
+        'employee_created': 'Создание сотрудника',
+        'employee_updated': 'Обновление сотрудника',
+        'employee_deleted': 'Удаление сотрудника',
+        'image_uploaded': 'Загрузка изображения',
+        'image_deleted': 'Удаление изображения',
+        'onboarding_created': 'Создание заявки',
+        'onboarding_imported': 'Импорт заявки',
+        'onboarding_step_submitted': 'Шаг отправлен',
+        'onboarding_step_approved': 'Шаг одобрен',
+        'onboarding_step_rejected': 'Шаг отклонён',
+        'onboarding_completed': 'Онбординг завершён',
+        'onboarding_cancelled': 'Онбординг отменён',
+        'onboarding_reactivated': 'Онбординг восстановлен',
+        'onboarding_reassigned': 'Онбординг передан',
+        'onboarding_rolled_back': 'Онбординг откачен',
+        'onboarding_withdrawn': 'Онбординг отозван',
+        'onboarding_deleted': 'Удаление заявок',
+        'onboarding_file_uploaded': 'Файл онбординга загружен',
+        'onboarding_settings_updated': 'Настройки онбординга'
     },
 
     // ============ INITIALIZATION ============
@@ -70,6 +101,7 @@ const adminApp = {
     async init() {
         const loadingState = document.getElementById('adminLoadingState');
         this.loadUserData();
+        this.populateAuditFilter();
         try {
             await this.loadAllData();
         } finally {
@@ -1472,12 +1504,13 @@ const adminApp = {
             ? RoleGuard.getAssignablePermissions()
             : null;
 
-        // Роли для настройки — динамически из ASSIGNABLE_ROLES
-        const editableRoles = RolesConfig.ASSIGNABLE_ROLES;
-
-        editableRoles.forEach(role => {
+        // Все роли (как в табе "Управление ролями")
+        RolesConfig.ALL_ROLES.forEach(role => {
             const row = document.createElement('tr');
             const roleName = RolesConfig.getName(role);
+            const isSystem = RolesConfig.isSystemRole(role);
+
+            if (isSystem) row.classList.add('system-role-row');
 
             let cells = `
                 <td>
@@ -1490,29 +1523,42 @@ const adminApp = {
             this.modules.forEach(module => {
                 const perm = this.permissions[role]?.[module] || { view: false, edit: false, delete: false };
 
-                // Проверка: можно ли назначать это право
-                const canAssignView = !assignable || assignable[module]?.canView;
-                const canAssignEdit = !assignable || assignable[module]?.canEdit;
-                const canAssignDelete = !assignable || assignable[module]?.canDelete;
+                if (isSystem) {
+                    // Системные роли — только отображение, без редактирования
+                    cells += `
+                        <td>
+                            <div class="permission-checkboxes">
+                                <div class="permission-cb view${perm.view ? ' checked' : ''} disabled" title="Просмотр (системная роль)">V</div>
+                                <div class="permission-cb edit${perm.edit ? ' checked' : ''} disabled" title="Редактирование (системная роль)">E</div>
+                                <div class="permission-cb delete${perm.delete ? ' checked' : ''} disabled" title="Удаление (системная роль)">D</div>
+                            </div>
+                        </td>
+                    `;
+                } else {
+                    // Назначаемые роли — можно редактировать
+                    const canAssignView = !assignable || assignable[module]?.canView;
+                    const canAssignEdit = !assignable || assignable[module]?.canEdit;
+                    const canAssignDelete = !assignable || assignable[module]?.canDelete;
 
-                cells += `
-                    <td>
-                        <div class="permission-checkboxes">
-                            <div class="permission-cb view${perm.view ? ' checked' : ''}${!canAssignView ? ' disabled' : ''}"
-                                 data-role="${role}" data-module="${module}" data-type="view"
-                                 ${canAssignView ? 'data-action="toggle-permission"' : ''}
-                                 title="Просмотр${!canAssignView ? ' (недоступно)' : ''}">V</div>
-                            <div class="permission-cb edit${perm.edit ? ' checked' : ''}${!canAssignEdit ? ' disabled' : ''}"
-                                 data-role="${role}" data-module="${module}" data-type="edit"
-                                 ${canAssignEdit ? 'data-action="toggle-permission"' : ''}
-                                 title="Редактирование${!canAssignEdit ? ' (недоступно)' : ''}">E</div>
-                            <div class="permission-cb delete${perm.delete ? ' checked' : ''}${!canAssignDelete ? ' disabled' : ''}"
-                                 data-role="${role}" data-module="${module}" data-type="delete"
-                                 ${canAssignDelete ? 'data-action="toggle-permission"' : ''}
-                                 title="Удаление${!canAssignDelete ? ' (недоступно)' : ''}">D</div>
-                        </div>
-                    </td>
-                `;
+                    cells += `
+                        <td>
+                            <div class="permission-checkboxes">
+                                <div class="permission-cb view${perm.view ? ' checked' : ''}${!canAssignView ? ' disabled' : ''}"
+                                     data-role="${role}" data-module="${module}" data-type="view"
+                                     ${canAssignView ? 'data-action="toggle-permission"' : ''}
+                                     title="Просмотр${!canAssignView ? ' (недоступно)' : ''}">V</div>
+                                <div class="permission-cb edit${perm.edit ? ' checked' : ''}${!canAssignEdit ? ' disabled' : ''}"
+                                     data-role="${role}" data-module="${module}" data-type="edit"
+                                     ${canAssignEdit ? 'data-action="toggle-permission"' : ''}
+                                     title="Редактирование${!canAssignEdit ? ' (недоступно)' : ''}">E</div>
+                                <div class="permission-cb delete${perm.delete ? ' checked' : ''}${!canAssignDelete ? ' disabled' : ''}"
+                                     data-role="${role}" data-module="${module}" data-type="delete"
+                                     ${canAssignDelete ? 'data-action="toggle-permission"' : ''}
+                                     title="Удаление${!canAssignDelete ? ' (недоступно)' : ''}">D</div>
+                            </div>
+                        </td>
+                    `;
+                }
             });
 
             row.innerHTML = cells;
@@ -1575,6 +1621,35 @@ const adminApp = {
     },
 
     // ============ Audit Log ============
+
+    populateAuditFilter() {
+        const select = document.getElementById('filterAction');
+        if (!select) return;
+
+        const groups = {
+            'Пользователи': ['user_approved', 'user_rejected', 'user_blocked', 'user_unblocked', 'user_updated', 'user_deleted', 'role_changed'],
+            'Команды': ['team_created', 'team_updated', 'team_deleted', 'team_settings_changed'],
+            'Права': ['permissions_changed'],
+            'Приглашения': ['invite_sent', 'invite_accepted', 'invite_rejected'],
+            'Партнёры': ['partner_created', 'partner_updated', 'partner_deleted'],
+            'Сотрудники': ['employee_created', 'employee_updated', 'employee_deleted'],
+            'Онбординг': ['onboarding_created', 'onboarding_imported', 'onboarding_step_submitted', 'onboarding_step_approved', 'onboarding_step_rejected', 'onboarding_completed', 'onboarding_cancelled', 'onboarding_reactivated', 'onboarding_reassigned', 'onboarding_rolled_back', 'onboarding_withdrawn', 'onboarding_deleted', 'onboarding_file_uploaded', 'onboarding_settings_updated'],
+            'Прочее': ['storage_init', 'image_uploaded', 'image_deleted']
+        };
+
+        for (const [label, actions] of Object.entries(groups)) {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = label;
+            for (const action of actions) {
+                if (!this.actionNames[action]) continue;
+                const option = document.createElement('option');
+                option.value = action;
+                option.textContent = this.actionNames[action];
+                optgroup.appendChild(option);
+            }
+            if (optgroup.children.length > 0) select.appendChild(optgroup);
+        }
+    },
 
     renderAuditLog() {
         const list = document.getElementById('auditList');

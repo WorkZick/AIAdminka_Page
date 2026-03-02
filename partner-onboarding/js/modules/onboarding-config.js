@@ -4,6 +4,7 @@ const OnboardingConfig = (() => {
     'use strict';
 
     const STATUSES = {
+        new: { label: 'Новая', cssClass: 'status--new' },
         in_progress: { label: 'В работе', cssClass: 'status--in-progress' },
         on_review: { label: 'На проверке', cssClass: 'status--on-review' },
         completed: { label: 'Завершено', cssClass: 'status--completed' },
@@ -23,7 +24,6 @@ const OnboardingConfig = (() => {
     const LEAD_STATUSES = [
         { value: 'new', label: 'Новый' },
         { value: 'in_conversation', label: 'В переписке' },
-        { value: 'ignored', label: 'Игнор' },
         { value: 'refused', label: 'Отказ' }
     ];
 
@@ -72,7 +72,9 @@ const OnboardingConfig = (() => {
         withdraw: { label: 'Отозвано' },
         complete: { label: 'Завершено' },
         cancel: { label: 'Отменено' },
-        reactivate: { label: 'Восстановлено' }
+        reactivate: { label: 'Восстановлено' },
+        import: { label: 'Импорт' },
+        assign: { label: 'Взято в работу' }
     };
 
     const ACCOUNT_CREATORS = [
@@ -93,15 +95,16 @@ const OnboardingConfig = (() => {
             executor: 'executor',
             reviewer: null,
             fields: [
-                { id: 'lead_source', type: 'select', label: 'Источник лида', required: true, options: LEAD_SOURCES },
-                { id: 'lead_status', type: 'select', label: 'Статус', required: true, options: LEAD_STATUSES },
-                { id: 'lead_date', type: 'date', label: 'Дата обращения', required: true },
-                { id: 'geo_country', type: 'select', label: 'Страна поиска партнера', required: true, options: GEO_COUNTRIES },
+                { id: 'lead_source', type: 'select', label: 'Источник лида', required: true, options: LEAD_SOURCES, readonlyForImport: true },
+                { id: 'lead_status', type: 'select', label: 'Статус', required: true, options: LEAD_STATUSES, asSubmitButton: true },
+                { id: 'lead_date', type: 'date', label: 'Дата обращения', required: true, readonlyForImport: true },
+                { id: 'geo_country', type: 'select', label: 'Страна поиска партнера', required: true, readonlyForImport: true },
                 { id: 'contact_name', type: 'text', label: 'ФИО', placeholder: 'Имя контактного лица' },
                 { id: 'tg_username', type: 'text', label: 'Юзернейм ТГ', placeholder: '@username', oneOf: 'contact_required' },
                 { id: 'phone', type: 'text', label: 'Номер телефона', placeholder: '+7 999 123 45 67', oneOf: 'contact_required' },
                 { id: 'email', type: 'email', label: 'Почта', placeholder: 'email@example.com' },
-                { id: 'reject_reason', type: 'textarea', label: 'Причина отказа', placeholder: 'Укажите причину отказа...' }
+                { id: 'contact_channels', type: 'list', label: 'Где написали лиду', placeholder: 'Добавить канал...', suggestions: ['WhatsApp', 'Telegram', 'e-mail'] },
+                { id: 'reject_reason', type: 'textarea', label: 'Причина отказа', placeholder: 'Укажите причину отказа...', visibleWhen: { field: 'lead_status', value: 'refused' } }
             ]
         },
         {
@@ -111,16 +114,17 @@ const OnboardingConfig = (() => {
             executor: 'executor',
             reviewer: 'reviewer',
             fields: [
-                { id: 'method_type', type: 'select', label: 'Тип метода', required: true, options: METHOD_TYPES },
-                { id: 'method_name', type: 'select', label: 'Название метода', required: true, options: METHOD_NAMES },
+                { id: 'condition_country', type: 'select', label: 'Страна', required: true },
+                { id: 'method_type', type: 'select', label: 'Тип метода', required: true },
+                { id: 'method_name', type: 'select', label: 'Название метода', required: true },
                 { id: 'deal_1', type: 'text', label: 'Пополнения' },
                 { id: 'deal_2', type: 'text', label: 'Выводы' },
                 { id: 'deal_3', type: 'text', label: 'Компенсация' },
-                { id: 'prepayment_amount', type: 'text', label: 'Сумма предоплаты' },
                 { id: 'prepayment_method', type: 'select', label: 'Способ предоплаты', required: true, options: PREPAYMENT_METHODS },
+                { id: 'prepayment_amount', type: 'text', label: 'Сумма предоплаты' },
                 { id: 'country', type: 'text', label: 'Страна из документа', required: true },
                 { id: 'city', type: 'text', label: 'Город', required: true },
-                { id: 'birth_date', type: 'date', label: 'Дата рождения', required: true },
+                { id: 'birth_date', type: 'date', label: 'Дата рождения', required: true, noNowButton: true },
                 { id: 'phone', type: 'text', label: 'Номер телефона', required: true },
                 { id: 'email', type: 'email', label: 'Электронная почта', required: true },
                 { id: 'document_number', type: 'text', label: 'Номер документа', required: true },
@@ -134,7 +138,7 @@ const OnboardingConfig = (() => {
             name: 'Создание аккаунта',
             shortName: 'Аккаунт',
             executor: 'executor',
-            reviewer: null,
+            reviewer: 'reviewer',
             dynamicExecutor: {
                 field: 'account_creator',
                 executorValue: 'executor',
@@ -182,28 +186,36 @@ const OnboardingConfig = (() => {
             shortName: 'Депозит',
             executor: 'executor',
             reviewer: 'reviewer',
+            confirmAfterApprove: true,
             fields: [
+                { id: 'deposit_amount', type: 'text', label: 'Сумма пополнения', readonly: true, autofill: { step: 2, field: 'prepayment_amount' } },
                 {
                     id: 'deposit_checklist', type: 'checklist', label: 'Подтверждение', required: true,
                     items: [
                         { label: 'Партнёр пополнил счёт' }
                     ]
-                },
-                { id: 'deposit_amount', type: 'text', label: 'Сумма пополнения', placeholder: '0' },
-                { id: 'deposit_comment', type: 'textarea', label: 'Комментарий', placeholder: 'Детали...' }
+                }
             ]
         },
         {
             number: 7,
             name: 'Корп. мессенджер',
             shortName: 'Мессенджер',
-            executor: 'reviewer',
-            reviewer: null,
+            executor: 'executor',
+            reviewer: 'reviewer',
+            confirmAfterApprove: true,
+            dynamicExecutor: {
+                field: 'messenger_creator',
+                executorValue: 'executor',
+                reviewerValue: 'reviewer',
+                defaultValue: 'reviewer'
+            },
             fields: [
-                { id: 'messenger_login', type: 'text', label: 'Логин', required: true, placeholder: 'Логин аккаунта' },
-                { id: 'messenger_password', type: 'text', label: 'Пароль', required: true, placeholder: 'Пароль аккаунта' },
+                { id: 'messenger_login', type: 'text', label: 'Логин', required: true, placeholder: 'Логин аккаунта', showWhen: { phase: 'fill' } },
+                { id: 'messenger_password', type: 'text', label: 'Пароль', required: true, placeholder: 'Пароль аккаунта', showWhen: { phase: 'fill' } },
                 {
                     id: 'messenger_checklist', type: 'checklist', label: 'Подтверждение',
+                    showWhen: { phase: 'confirm' },
                     items: [
                         { label: 'Партнёр вошёл в мессенджер' }
                     ]
@@ -216,6 +228,9 @@ const OnboardingConfig = (() => {
             shortName: 'Карточка',
             executor: 'reviewer',
             reviewer: null,
+            executorFinal: true,
+            executorName: 'Партнёр заведён',
+            executorShortName: 'Заведён',
             fields: [
                 { id: 'subagent', type: 'text', label: 'Имя субагента', required: true, autofill: { step: 1, field: 'contact_name' } },
                 { id: 'subagent_id', type: 'text', label: 'Номер субагента', required: true },
@@ -285,6 +300,45 @@ const OnboardingConfig = (() => {
         return opt ? opt.label : value;
     }
 
+    function getVisibleSteps() {
+        return STEPS;
+    }
+
+    function getVisibleStepCount() {
+        return STEPS.length;
+    }
+
+    function isStepVisibleForRole() {
+        return true;
+    }
+
+    function getStepDisplayName(stepNumber, role) {
+        const step = getStep(stepNumber);
+        if (!step) return 'Шаг ' + stepNumber;
+        if (step.executorFinal && role === 'executor') return step.executorName || step.name;
+        return step.name;
+    }
+
+    function getStepDisplayShortName(stepNumber, role) {
+        const step = getStep(stepNumber);
+        if (!step) return '';
+        if (step.executorFinal && role === 'executor') return step.executorShortName || step.shortName;
+        return step.shortName;
+    }
+
+    function isExecutorFinalStep(stepNumber) {
+        const step = getStep(stepNumber);
+        return step && !!step.executorFinal;
+    }
+
+    function isExecutorCompleted(request) {
+        if (!request) return false;
+        if (request.status === 'cancelled') return false;
+        const finalStep = STEPS.find(s => s.executorFinal);
+        if (!finalStep) return request.status === 'completed';
+        return request.currentStep >= finalStep.number || request.status === 'completed';
+    }
+
     return {
         STEPS,
         STATUSES,
@@ -309,6 +363,13 @@ const OnboardingConfig = (() => {
         getStatusLabel,
         getStatusClass,
         getHistoryActionLabel,
-        getOptionLabel
+        getOptionLabel,
+        getVisibleSteps,
+        getVisibleStepCount,
+        isStepVisibleForRole,
+        getStepDisplayName,
+        getStepDisplayShortName,
+        isExecutorFinalStep,
+        isExecutorCompleted
     };
 })();
