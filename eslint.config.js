@@ -90,7 +90,27 @@ export default [
                 TeamRenderer: 'writable',
                 TeamState: 'writable',
                 TeamTemplates: 'writable',
-                TeamUtils: 'writable'
+                TeamUtils: 'writable',
+                // traffic-calculation
+                TrafficState: 'writable',
+                TrafficParsers: 'writable',
+                TrafficNavigation: 'writable',
+                TrafficUpload: 'writable',
+                TrafficManualData: 'writable',
+                TrafficCalculator: 'writable',
+                TrafficRenderer: 'writable',
+                TrafficImportExport: 'writable',
+                // partners
+                PartnersState: 'writable',
+                PartnersUtils: 'writable',
+                PartnersMethods: 'writable',
+                PartnersColumns: 'writable',
+                PartnersRenderer: 'writable',
+                PartnersNavigation: 'writable',
+                PartnersForms: 'writable',
+                PartnersAvatars: 'writable',
+                PartnersTemplates: 'writable',
+                PartnersImportExport: 'writable'
             }
         },
         rules: {
