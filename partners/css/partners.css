@@ -93,7 +93,7 @@
 
 .search-input:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -193,11 +193,11 @@
 
 .column-item.dragging {
     opacity: 0.5;
-    background: rgba(253, 190, 47, 0.1);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .column-item.drag-over {
-    border-top: 2px solid var(--yellow);
+    border-top: 2px solid var(--accent);
 }
 
 .column-item-drag {
@@ -238,8 +238,8 @@
 }
 
 .column-item.active .column-item-checkbox {
-    background: var(--yellow);
-    border-color: var(--yellow);
+    background: var(--accent);
+    border-color: var(--accent);
 }
 
 .column-item-checkbox svg {
@@ -377,7 +377,7 @@
 }
 
 .sort-header:hover {
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .sort-header img {
@@ -388,7 +388,7 @@
 }
 
 .sort-header:hover img {
-    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg);
+    filter: brightness(0) invert(1);
     opacity: 1;
 }
 
@@ -403,7 +403,7 @@
 }
 
 .partners-table tbody tr.selected {
-    background: var(--highlight-yellow);
+    background: var(--accent-bg);
 }
 
 .partners-table td {
@@ -477,7 +477,7 @@
 }
 
 .status-badge.yellow {
-    background: rgba(253, 190, 47, 0.2);
+    background: rgba(255, 255, 255, 0.15);
     color: var(--status-yellow);
 }
 
@@ -580,7 +580,7 @@
 .hint-stat-count {
     font-size: 32px;
     font-weight: 700;
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .hint-stat-count.hint-stat-small {
@@ -823,9 +823,7 @@
     border-top: 1px solid var(--glass-border);
 }
 
-.card-footer .btn {
-    flex: 1;
-}
+/* .card-footer .btn { flex: 1 } → moved to DS buttons.css */
 
 /* ============ PARTNER FORM ============ */
 .partner-form {
@@ -904,8 +902,8 @@
 }
 
 .form-avatar:hover {
-    border-color: var(--yellow);
-    background: rgba(253, 190, 47, 0.05);
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .form-avatar-placeholder {
@@ -954,7 +952,7 @@
 .form-name-input:focus,
 .form-position-input:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
 }
 
 .form-name-input::placeholder,
@@ -1042,7 +1040,7 @@
 .form-field textarea:focus,
 .form-field select:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -1076,7 +1074,7 @@
 
 .form-method-settings-btn:hover {
     background: rgba(255, 255, 255, 0.1);
-    border-color: var(--yellow);
+    border-color: var(--accent);
 }
 
 .form-method-settings-btn img {
@@ -1122,7 +1120,7 @@
 .form-group-inline input:focus,
 .form-group-inline textarea:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -1173,7 +1171,7 @@
 
 .template-field-input:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
     background: #2e2e2e;
 }
 
@@ -1200,7 +1198,7 @@
 
 .template-field-type:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
 }
 
 .template-field-type option {
@@ -1241,22 +1239,7 @@
     opacity: 1;
 }
 
-/* Add template field button */
-.btn-add-template-field {
-    width: 100%;
-    margin-top: var(--spacing-lg);
-    padding: var(--spacing-md);
-    justify-content: center;
-    border-style: dashed;
-    border-color: var(--glass-border);
-    color: var(--gray-light);
-}
-
-.btn-add-template-field:hover {
-    border-color: var(--yellow);
-    color: var(--yellow);
-    background: rgba(253, 190, 47, 0.05);
-}
+/* btn-add-template-field removed → DS .btn--ghost.btn--dashed.btn-sm.btn-block */
 
 /* ============ DISABLED FORM ELEMENTS ============ */
 .form-avatar.disabled {
@@ -1298,9 +1281,7 @@ select.disabled {
     border-top: 1px solid var(--glass-border);
 }
 
-.form-footer .btn {
-    flex: 1;
-}
+/* .form-footer .btn { flex: 1 } → moved to DS buttons.css */
 
 .form-footer #formSaveBtn {
     width: 100%;
@@ -1334,11 +1315,11 @@ select.disabled {
     min-width: 24px;
     height: 24px;
     padding: 0 8px;
-    background: rgba(253, 190, 47, 0.15);
+    background: rgba(255, 255, 255, 0.12);
     border-radius: 12px;
     font-size: var(--font-size-sm);
     font-weight: 700;
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .modal-methods .modal-body {
@@ -1366,7 +1347,7 @@ select.disabled {
 
 .method-add-input:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
     background: #222;
 }
 
@@ -1380,8 +1361,8 @@ select.disabled {
     justify-content: center;
     width: 40px;
     height: 40px;
-    background: var(--yellow);
-    border: none;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.20);
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -1389,12 +1370,14 @@ select.disabled {
 }
 
 .method-add-btn:hover {
-    background: var(--yellow-hover);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
     transform: scale(1.05);
 }
 
 .method-add-btn img {
-    filter: brightness(0);
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
 }
 
 /* Methods list */
@@ -1483,8 +1466,8 @@ select.disabled {
 
 /* Edit mode */
 .method-item.editing {
-    background: rgba(253, 190, 47, 0.05);
-    border-color: var(--yellow);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--accent);
 }
 
 .method-item-input {
@@ -1500,7 +1483,7 @@ select.disabled {
 }
 
 .method-item-input:focus {
-    border-color: var(--yellow);
+    border-color: var(--accent);
 }
 
 .method-edit-actions {
@@ -1530,16 +1513,18 @@ select.disabled {
 }
 
 .method-edit-btn.save {
-    background: var(--yellow);
+    background: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.20);
 }
 
 .method-edit-btn.save img {
-    filter: brightness(0);
-    opacity: 1;
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
 }
 
 .method-edit-btn.save:hover {
-    background: var(--yellow-hover);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
 }
 
 .method-edit-btn.cancel:hover {
@@ -1607,7 +1592,7 @@ select.disabled {
 
 .form-input:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -1636,7 +1621,7 @@ select.disabled {
 
 .import-progress-bar {
     height: 100%;
-    background: var(--yellow);
+    background: var(--accent);
     border-radius: 4px;
     transition: width 0.3s ease;
     width: 0%;
@@ -1691,9 +1676,9 @@ select.disabled {
 }
 
 .import-type-btn.active {
-    background: rgba(253, 190, 47, 0.15);
-    border-color: var(--yellow);
-    color: var(--yellow);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 .file-input-wrapper {
@@ -1722,8 +1707,8 @@ select.disabled {
 }
 
 .file-input-label:hover {
-    border-color: var(--yellow);
-    background: rgba(253, 190, 47, 0.05);
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .file-input-label.has-file {
@@ -1792,10 +1777,10 @@ select.disabled {
 .export-count {
     text-align: center;
     padding: var(--spacing-md);
-    background: rgba(253, 190, 47, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-md);
     font-size: var(--font-size-base);
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 /* Excel import steps */
@@ -1812,7 +1797,7 @@ select.disabled {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--yellow);
+    background: var(--accent);
     color: var(--black);
     border-radius: 50%;
     font-size: var(--font-size-sm);
@@ -1825,24 +1810,9 @@ select.disabled {
     color: var(--white);
 }
 
-.btn-back-step {
-    padding: 6px var(--spacing-md);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    color: var(--gray-light);
-    font-family: var(--font-family);
-    font-size: var(--font-size-sm);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.btn-back-step:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
+/* btn-back-step removed → DS .btn.btn--ghost.btn-sm */
 
 .btn-next-step {
-    width: 100%;
     margin-top: var(--spacing-lg);
 }
 
@@ -1868,10 +1838,10 @@ select.disabled {
 
 .excel-download-template-btn {
     padding: 6px var(--spacing-md);
-    background: rgba(253, 190, 47, 0.15);
+    background: rgba(255, 255, 255, 0.12);
     border: none;
     border-radius: var(--radius-md);
-    color: var(--yellow);
+    color: var(--accent);
     font-family: var(--font-family);
     font-size: var(--font-size-sm);
     font-weight: 600;
@@ -1907,8 +1877,8 @@ select.disabled {
 }
 
 .excel-hint-column.required {
-    background: rgba(253, 190, 47, 0.15);
-    color: var(--yellow);
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--accent);
 }
 
 .excel-hint-column.optional {
@@ -1937,10 +1907,10 @@ select.disabled {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(253, 190, 47, 0.15);
+    background: rgba(255, 255, 255, 0.12);
     border: none;
     border-radius: var(--radius-md);
-    color: var(--yellow);
+    color: var(--accent);
     font-size: var(--font-size-xl);
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -1951,7 +1921,7 @@ select.disabled {
 }
 
 #importPreview {
-    background: rgba(253, 190, 47, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(253, 190, 47, 0.25);
     padding: var(--spacing-md);
     border-radius: var(--radius-md);

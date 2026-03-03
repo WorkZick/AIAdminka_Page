@@ -28,15 +28,15 @@
     border: none;
     padding: 10px 20px;
     cursor: pointer;
-    font-family: 'TT Firs Neue', sans-serif;
-    font-size: 13px;
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
     font-weight: 400;
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
     color: var(--gray);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
 }
 
 .tab-btn:hover {
@@ -45,7 +45,7 @@
 }
 
 .tab-btn.active {
-    background: var(--yellow);
+    background: var(--accent);
     color: var(--black);
     font-weight: 700;
 }
@@ -59,7 +59,7 @@
 
 .tab-btn.active img {
     opacity: 1;
-    filter: none;
+    filter: brightness(0) invert(0);
 }
 
 /* Tab content */
@@ -181,7 +181,7 @@
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -265,7 +265,7 @@
 
 .status-badge.yellow,
 .status-badge.old {
-    background: rgba(253, 190, 47, 0.2);
+    background: rgba(255, 255, 255, 0.15);
     color: var(--status-yellow);
 }
 
@@ -387,13 +387,13 @@
 }
 
 .toolbar-btn:hover {
-    background: var(--yellow);
-    color: var(--black);
-    border-color: var(--yellow);
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--white);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .toolbar-btn:hover img {
-    filter: none;
+    filter: brightness(0) invert(1);
 }
 
 .toolbar-btn img {
@@ -508,16 +508,16 @@
 }
 
 .checkbox-grid label:hover {
-    background: var(--yellow);
-    border-color: var(--yellow);
-    color: var(--black);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: var(--white);
 }
 
 .checkbox-grid input[type="checkbox"] {
     width: 14px;
     height: 14px;
     cursor: pointer;
-    accent-color: var(--yellow);
+    accent-color: var(--accent);
 }
 
 .panel-actions {
@@ -557,7 +557,7 @@
     min-width: 24px;
     height: 24px;
     padding: 0 8px;
-    background: var(--yellow);
+    background: var(--accent);
     color: var(--black);
     font-size: 11px;
     font-weight: 700;
@@ -623,16 +623,19 @@
 
 /* Next button */
 .nav-btn-next {
-    background: var(--yellow);
-    color: var(--black);
+    background: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.20);
+    color: var(--white);
 }
 
 .nav-btn-next:hover:not(:disabled) {
-    background: var(--yellow-hover);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
 }
 
 .nav-btn-next img {
-    filter: none;
+    filter: brightness(0) invert(1);
     transform: rotate(180deg);
 }
 
@@ -663,13 +666,13 @@
 }
 
 .upload-zone:hover {
-    border-color: var(--yellow);
-    background: rgba(253, 190, 47, 0.05);
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .upload-zone.dragover {
-    border-color: var(--yellow);
-    background: rgba(253, 190, 47, 0.1);
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.08);
     transform: scale(1.01);
 }
 
@@ -698,24 +701,28 @@
     align-items: center;
     gap: 6px;
     padding: 10px 16px;
-    background: var(--yellow);
-    color: var(--black);
-    border: none;
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--white);
+    border: 1px solid rgba(255, 255, 255, 0.20);
     border-radius: 8px;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     margin-top: 16px;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .upload-zone-btn:hover {
-    background: var(--yellow-hover);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
 }
 
 .upload-zone-btn img {
     width: 14px;
     height: 14px;
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
 }
 
 /* Upload status */
@@ -757,8 +764,8 @@
     align-items: center;
     gap: 10px;
     padding: 12px 16px;
-    background: rgba(253, 190, 47, 0.1);
-    border-left: 3px solid var(--yellow);
+    background: rgba(255, 255, 255, 0.08);
+    border-left: 3px solid var(--accent);
     border-radius: 0 8px 8px 0;
     margin-bottom: 16px;
     font-size: 12px;
@@ -769,7 +776,7 @@
     width: 16px;
     height: 16px;
     opacity: 0.8;
-    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(101%) contrast(98%);
+    filter: brightness(0) invert(1);
 }
 
 /* No partners hint */
@@ -812,25 +819,30 @@
     align-items: center;
     gap: 6px;
     padding: 10px 18px;
-    background: var(--yellow);
-    color: var(--black);
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--white);
     text-decoration: none;
     font-size: 13px;
     font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.20);
     border-radius: 8px;
     transition: all 0.2s;
 }
 
 .no-partners-hint-link:hover {
-    background: var(--yellow-hover);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
 }
 
 .no-partners-hint-link img {
     width: 16px;
     height: 16px;
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
 }
 
-/* Loading spinner */
+/* Loading spinner (uses DS .spinner + .loading-text) */
 .loading-spinner {
     display: flex;
     flex-direction: column;
@@ -838,25 +850,7 @@
     justify-content: center;
     padding: 60px 20px;
     text-align: center;
-}
-
-.loading-spinner .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--glass-border);
-    border-top-color: var(--yellow);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-bottom: 16px;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.loading-spinner .loading-text {
-    font-size: 14px;
-    color: var(--gray);
+    gap: var(--spacing-lg);
 }
 
 /* Worktime layout - Glassmorphism */
@@ -912,7 +906,7 @@
 
 .worktime-selector input[type="text"]:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -937,7 +931,7 @@
 
 .worktime-selector select:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
 }
 
 .worktime-selector select option {
@@ -955,8 +949,8 @@
 
 .worktime-selector select option:checked,
 .worktime-selector select option:focus {
-    background: linear-gradient(90deg, rgba(253, 190, 47, 0.25) 0%, rgba(253, 190, 47, 0.1) 100%);
-    color: var(--yellow);
+    background: linear-gradient(90deg, rgba(253, 190, 47, 0.25) 0%, rgba(255, 255, 255, 0.08) 100%);
+    color: var(--accent);
     font-weight: 500;
 }
 
@@ -996,7 +990,7 @@
 
 .worktime-form-title span {
     font-weight: 400;
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .worktime-grid {
@@ -1056,7 +1050,7 @@
 
 .worktime-input-group input:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -1119,7 +1113,7 @@
 
 .violations-selector input[type="text"]:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
 }
 
 .violations-selector input[type="text"]::placeholder {
@@ -1143,7 +1137,7 @@
 
 .violations-selector select:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
 }
 
 .violations-selector select option {
@@ -1161,8 +1155,8 @@
 
 .violations-selector select option:checked,
 .violations-selector select option:focus {
-    background: linear-gradient(90deg, rgba(253, 190, 47, 0.25) 0%, rgba(253, 190, 47, 0.1) 100%);
-    color: var(--yellow);
+    background: linear-gradient(90deg, rgba(253, 190, 47, 0.25) 0%, rgba(255, 255, 255, 0.08) 100%);
+    color: var(--accent);
     font-weight: 500;
 }
 
@@ -1203,7 +1197,7 @@
 
 .violations-form-title span {
     font-weight: 400;
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .violations-grid {
@@ -1253,7 +1247,7 @@
 
 .violation-item .number-input-group input:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
 }
 
 .violation-item .number-input-group img {
@@ -1293,7 +1287,7 @@
 
 .number-input-group input[type="number"]:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
 }
 
 .number-input-group .percent-label {
@@ -1361,7 +1355,7 @@
 
 .violations-description-large:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
     background: rgba(255, 255, 255, 0.05);
 }
 
@@ -1542,8 +1536,8 @@
 .modal-xlarge .modal-description {
     margin-bottom: 12px;
     padding: 10px 14px;
-    background: rgba(253, 190, 47, 0.1);
-    border-left: 3px solid var(--yellow);
+    background: rgba(255, 255, 255, 0.08);
+    border-left: 3px solid var(--accent);
     border-radius: 0 8px 8px 0;
     color: var(--white);
     font-size: 12px;
@@ -1678,7 +1672,7 @@
 
 .traffic-range-group input[type="number"]:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
 }
 
 .traffic-points-group {
@@ -1702,12 +1696,12 @@
     width: 40px;
     padding: 6px 4px;
     font-size: 12px;
-    border: 1px solid var(--yellow);
+    border: 1px solid var(--accent);
     border-radius: 4px;
     font-weight: 600;
     text-align: center;
-    background: rgba(253, 190, 47, 0.15);
-    color: var(--yellow);
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--accent);
     -moz-appearance: textfield;
 }
 
@@ -1749,7 +1743,7 @@
 
 .traffic-level-card .form-group input[type="text"]:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
 }
 
 /* Traffic multiplier settings */
@@ -1759,7 +1753,7 @@
 
 .traffic-multiplier-card {
     background: rgba(25, 25, 25, 0.8);
-    border-left: 3px solid var(--yellow);
+    border-left: 3px solid var(--accent);
     border-radius: 8px;
     padding: 12px 16px;
     display: flex;
@@ -1782,14 +1776,14 @@
 .traffic-multiplier-info input {
     width: 56px;
     padding: 6px 8px;
-    border: 1px solid var(--yellow);
+    border: 1px solid var(--accent);
     border-radius: 4px;
     font-size: 12px;
     font-weight: 600;
     text-align: center;
     font-family: 'TT Firs Neue', sans-serif;
-    background: rgba(253, 190, 47, 0.15);
-    color: var(--yellow);
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--accent);
     -moz-appearance: textfield;
 }
 
@@ -1822,7 +1816,7 @@
 }
 
 .traffic-results-table th.score-bad {
-    background-color: rgba(253, 190, 47, 0.2);
+    background-color: rgba(255, 255, 255, 0.15);
     color: var(--status-yellow);
 }
 
@@ -1838,8 +1832,8 @@
 }
 
 .traffic-results-table th.traffic-percent-header {
-    background-color: rgba(253, 190, 47, 0.3);
-    color: var(--yellow);
+    background-color: rgba(255, 255, 255, 0.20);
+    color: var(--accent);
     font-weight: 700;
 }
 
@@ -1856,8 +1850,8 @@
 }
 
 .traffic-results-table .traffic-percent {
-    background-color: rgba(253, 190, 47, 0.1);
-    color: var(--yellow);
+    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--accent);
     font-weight: 700;
     text-align: center;
 }
@@ -1868,7 +1862,7 @@
 }
 
 .method-header-row td {
-    color: var(--yellow) !important;
+    color: var(--accent) !important;
     font-size: 12px;
     font-weight: 600;
     padding: 12px 10px !important;
@@ -1893,7 +1887,7 @@
 }
 
 .violations-cell[data-tooltip]:hover {
-    background-color: rgba(253, 190, 47, 0.15);
+    background-color: rgba(255, 255, 255, 0.12);
 }
 
 .violations-cell[data-tooltip]::after {
@@ -1925,48 +1919,7 @@
     visibility: visible;
 }
 
-/* Reset button */
-.btn-reset {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background: rgba(255, 107, 107, 0.15);
-    border: 1px solid rgba(255, 107, 107, 0.3);
-    border-radius: 8px;
-    font-family: 'TT Firs Neue', sans-serif;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--status-red);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-reset:hover {
-    background: var(--status-red);
-    border-color: var(--status-red);
-    color: var(--white);
-}
-
-.btn-reset img {
-    width: 12px;
-    height: 12px;
-    filter: brightness(0) saturate(100%) invert(68%) sepia(74%) saturate(4133%) hue-rotate(326deg) brightness(104%) contrast(104%);
-}
-
-.btn-reset:hover img {
-    filter: brightness(0) invert(1);
-}
-
-.btn-reset-small {
-    padding: 6px 10px;
-    font-size: 11px;
-}
-
-.btn-reset-small img {
-    width: 10px;
-    height: 10px;
-}
+/* btn-reset removed — replaced with DS .btn.btn-danger.btn-sm */
 
 /* Help toggle and content */
 .modal-description-row {
@@ -2006,9 +1959,9 @@
 }
 
 .help-toggle-btn.active {
-    background: rgba(253, 190, 47, 0.15);
-    border-color: var(--yellow);
-    color: var(--yellow);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 .help-toggle-btn img {
@@ -2036,7 +1989,7 @@
     margin: 0 0 12px 0;
     font-size: 14px;
     font-weight: 700;
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .traffic-help-content p {

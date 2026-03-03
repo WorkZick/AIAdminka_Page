@@ -49,7 +49,7 @@ const TeamTemplates = {
     /**
      * Показать диалог удаления шаблона
      */
-    showDeleteTemplateDialog() {
+    async showDeleteTemplateDialog() {
         const templates = JSON.parse(localStorage.getItem('teamInfoTemplates') || '{}');
         const templateList = Object.values(templates);
 
@@ -63,9 +63,8 @@ const TeamTemplates = {
         templateList.forEach((template, index) => {
             optionsText += `${index + 1}. ${template.name}\n`;
         });
-        optionsText += '\nВведите номер шаблона:';
 
-        const input = prompt(optionsText);
+        const input = await PromptModal.show(optionsText, { placeholder: 'Номер шаблона', confirmText: 'Выбрать' });
 
         if (!input) {
             this.restoreTemplateSelection();
@@ -82,7 +81,7 @@ const TeamTemplates = {
 
         const templateToDelete = templateList[index];
 
-        if (confirm(`Удалить шаблон "${templateToDelete.name}"?`)) {
+        if (await ConfirmModal.show('Удалить шаблон "' + templateToDelete.name + '"?', { danger: true })) {
             // Если удаляем текущий шаблон, очищаем currentTemplateId
             if (TeamState.currentTemplateId === templateToDelete.id) {
                 TeamState.currentTemplateId = undefined;
@@ -99,7 +98,7 @@ const TeamTemplates = {
     /**
      * Показать диалог переименования шаблона
      */
-    showRenameTemplateDialog() {
+    async showRenameTemplateDialog() {
         const templates = JSON.parse(localStorage.getItem('teamInfoTemplates') || '{}');
         const templateList = Object.values(templates);
 
@@ -114,9 +113,8 @@ const TeamTemplates = {
             const isDefault = template.isDefault ? ' (основной)' : '';
             optionsText += `${index + 1}. ${template.name}${isDefault}\n`;
         });
-        optionsText += '\nВведите номер шаблона:';
 
-        const input = prompt(optionsText);
+        const input = await PromptModal.show(optionsText, { placeholder: 'Номер шаблона', confirmText: 'Выбрать' });
 
         if (!input) {
             this.restoreTemplateSelection();
@@ -133,14 +131,14 @@ const TeamTemplates = {
 
         const templateToRename = templateList[index];
 
-        const newName = prompt(`Введите новое название для шаблона "${templateToRename.name}":`, templateToRename.name);
+        const newName = await PromptModal.show(`Введите новое название для шаблона "${templateToRename.name}":`, { defaultValue: templateToRename.name });
 
         if (!newName || !newName.trim()) {
             this.restoreTemplateSelection();
             return;
         }
 
-        const makeDefault = confirm('Установить этот шаблон как основной?\n(Основной шаблон будет автоматически выбран при добавлении сотрудника)');
+        const makeDefault = await ConfirmModal.show('Установить этот шаблон как основной?', { description: 'Основной шаблон будет автоматически выбран при добавлении сотрудника', confirmText: 'Да' });
 
         // Удалить флаг default у всех шаблонов
         if (makeDefault) {
@@ -160,7 +158,7 @@ const TeamTemplates = {
     /**
      * Показать диалог редактирования шаблона
      */
-    showEditTemplateDialog() {
+    async showEditTemplateDialog() {
         const templates = JSON.parse(localStorage.getItem('teamInfoTemplates') || '{}');
         const templateList = Object.values(templates);
 
@@ -175,9 +173,8 @@ const TeamTemplates = {
             const isDefault = template.isDefault ? ' (основной)' : '';
             optionsText += `${index + 1}. ${template.name}${isDefault}\n`;
         });
-        optionsText += '\nВведите номер шаблона:';
 
-        const input = prompt(optionsText);
+        const input = await PromptModal.show(optionsText, { placeholder: 'Номер шаблона', confirmText: 'Выбрать' });
 
         if (!input) {
             this.restoreTemplateSelection();
@@ -356,7 +353,7 @@ const TeamTemplates = {
     /**
      * Сохранить шаблон
      */
-    saveTemplate() {
+    async saveTemplate() {
         // Валидация: все поля должны иметь labels
         const invalidFields = TeamState.templateFields.filter(f => !f.label.trim());
         if (invalidFields.length > 0) {
@@ -375,7 +372,7 @@ const TeamTemplates = {
         if (TeamState.editingTemplateId) {
             // Редактирование существующего шаблона
             const template = templates[TeamState.editingTemplateId];
-            const templateName = prompt('Введите название шаблона:', template.name);
+            const templateName = await PromptModal.show('Введите название шаблона:', { defaultValue: template.name });
             if (!templateName || !templateName.trim()) {
                 TeamState.editingTemplateId = null;
                 return;
@@ -389,7 +386,7 @@ const TeamTemplates = {
             }));
         } else {
             // Создание нового шаблона
-            const templateName = prompt('Введите название шаблона:');
+            const templateName = await PromptModal.show('Введите название шаблона:');
             if (!templateName || !templateName.trim()) return;
 
             const templateId = 'template_' + Date.now();

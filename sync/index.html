@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'sha256-hnlVisWd/fn32NbDovWmI6UTBdStgc7fO3K6SKtc9SU='; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Настройки - AIAdminka</title>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <!-- Design System (base styles) -->
@@ -72,13 +73,13 @@
                                 <div class="form-section">
                                     <div class="form-section-title">Основная информация</div>
                                     <div class="form-row">
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>ФИО</label>
-                                            <input type="text" id="profileName" name="name" placeholder="Иванов Иван Иванович">
+                                            <input type="text" class="form-input" id="profileName" name="name" placeholder="Иванов Иван Иванович">
                                         </div>
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Роль</label>
-                                            <select id="profilePosition" name="position" disabled></select>
+                                            <select class="form-select" id="profilePosition" name="position" disabled></select>
                                         </div>
                                     </div>
                                 </div>
@@ -87,13 +88,13 @@
                                 <div class="form-section">
                                     <div class="form-section-title">Идентификация</div>
                                     <div class="form-row">
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Reddy ID</label>
-                                            <input type="text" id="profileReddyId" name="reddyId" readonly disabled>
+                                            <input type="text" class="form-input" id="profileReddyId" name="reddyId" readonly disabled>
                                         </div>
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Логин CRM</label>
-                                            <input type="text" id="profileCrmLogin" name="crmLogin" placeholder="ivanov.i">
+                                            <input type="text" class="form-input" id="profileCrmLogin" name="crmLogin" placeholder="ivanov.i">
                                         </div>
                                     </div>
                                 </div>
@@ -102,14 +103,14 @@
                                 <div class="form-section">
                                     <div class="form-section-title">Контакты</div>
                                     <div class="form-row">
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Рабочий Telegram</label>
                                             <div class="input-with-prefix">
                                                 <span>@</span>
                                                 <input type="text" id="profileCorpTelegram" name="corpTelegram" placeholder="work_username">
                                             </div>
                                         </div>
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Личный Telegram</label>
                                             <div class="input-with-prefix">
                                                 <span>@</span>
@@ -118,23 +119,23 @@
                                         </div>
                                     </div>
                                     <div class="form-row">
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Рабочая почта</label>
-                                            <input type="email" id="profileCorpEmail" name="corpEmail" placeholder="work@company.com" readonly disabled>
+                                            <input type="email" class="form-input" id="profileCorpEmail" name="corpEmail" placeholder="work@company.com" readonly disabled>
                                         </div>
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Личная почта</label>
-                                            <input type="email" id="profilePersonalEmail" name="personalEmail" placeholder="personal@mail.com">
+                                            <input type="email" class="form-input" id="profilePersonalEmail" name="personalEmail" placeholder="personal@mail.com">
                                         </div>
                                     </div>
                                     <div class="form-row">
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Рабочий телефон</label>
-                                            <input type="tel" id="profileCorpPhone" name="corpPhone" placeholder="+7 999 123-45-67">
+                                            <input type="tel" class="form-input" id="profileCorpPhone" name="corpPhone" placeholder="+7 999 123-45-67">
                                         </div>
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Личный телефон</label>
-                                            <input type="tel" id="profilePersonalPhone" name="personalPhone" placeholder="+7 999 123-45-67">
+                                            <input type="tel" class="form-input" id="profilePersonalPhone" name="personalPhone" placeholder="+7 999 123-45-67">
                                         </div>
                                     </div>
                                 </div>
@@ -143,23 +144,23 @@
                                 <div class="form-section">
                                     <div class="form-section-title">Информация о работе</div>
                                     <div class="form-row">
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>День рождения</label>
-                                            <input type="date" id="profileBirthday" name="birthday">
+                                            <input type="date" class="form-input" id="profileBirthday" name="birthday">
                                         </div>
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Начало работы</label>
-                                            <input type="date" id="profileStartDate" name="startDate">
+                                            <input type="date" class="form-input" id="profileStartDate" name="startDate">
                                         </div>
                                     </div>
                                     <div class="form-row">
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Офис</label>
-                                            <input type="text" id="profileOffice" name="office" placeholder="Москва">
+                                            <input type="text" class="form-input" id="profileOffice" name="office" placeholder="Москва">
                                         </div>
-                                        <div class="form-group">
+                                        <div class="form-group form-group--compact">
                                             <label>Компания</label>
-                                            <input type="text" id="profileCompany" name="company" placeholder='ООО "Компания"'>
+                                            <input type="text" class="form-input" id="profileCompany" name="company" placeholder='ООО "Компания"'>
                                         </div>
                                     </div>
                                 </div>
@@ -167,13 +168,13 @@
                                 <!-- Дополнительно -->
                                 <div class="form-section">
                                     <div class="form-section-title">Дополнительно</div>
-                                    <div class="form-group">
+                                    <div class="form-group form-group--compact">
                                         <label>Примечание</label>
-                                        <textarea id="profileComment" name="comment" placeholder="Любая дополнительная информация..." rows="2"></textarea>
+                                        <textarea class="form-textarea" id="profileComment" name="comment" placeholder="Любая дополнительная информация..." rows="2"></textarea>
                                     </div>
                                 </div>
 
-                                <button type="submit" class="btn btn-ghost" id="btnSaveProfile">
+                                <button type="submit" class="btn btn-primary" id="btnSaveProfile">
                                     Сохранить изменения
                                 </button>
                             </form>
@@ -235,7 +236,7 @@
                                     <span class="system-label">Локальный кэш</span>
                                     <span class="system-value" id="localCacheSize">-</span>
                                 </div>
-                                <button class="btn btn-ghost btn-sm" data-action="clear-cache">Очистить</button>
+                                <button class="btn btn-primary btn-sm" data-action="clear-cache">Очистить</button>
                             </div>
                         </div>
 
@@ -284,7 +285,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
+                <div class="form-group form-group--compact">
                     <label>Введите название</label>
                     <input type="text" class="form-input" id="teamNameModalInput" placeholder="Название команды">
                 </div>

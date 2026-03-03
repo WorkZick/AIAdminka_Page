@@ -49,8 +49,8 @@
 .sync-spinner {
     width: 12px;
     height: 12px;
-    border: 2px solid rgba(253, 190, 47, 0.3);
-    border-top-color: #fdbe2f;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--white);
     border-radius: 50%;
     animation: syncSpin 1s linear infinite;
 }
@@ -94,5 +94,5 @@
 }
 
 #sync-indicator.sync-cancelled .sync-text {
-    color: #fdbe2f;
+    color: var(--white);
 }

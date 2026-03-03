@@ -193,6 +193,7 @@ const OnboardingRoles = (() => {
         _config = newConfig;
         try {
             await CloudStorage.postApi('saveOnboardingRoleConfig', { config: newConfig });
+            CloudStorage.clearCache('onboardingSettings');
             Toast.success('Роли сохранены');
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'saveRoleConfig' });

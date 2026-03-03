@@ -384,10 +384,14 @@ const AuthGuard = {
                         return false;
                     }
 
-                    // Guest - всегда редирект на экран ожидания приглашения
-                    // (роль guest = пользователь ещё не принял приглашение в команду)
+                    // Guest без команды: если approved_no_team — на выбор роли (login),
+                    // иначе — на экран ожидания приглашения
                     if (role === 'guest') {
-                        window.location.href = this.getBasePath() + '/login/waiting-invite.html';
+                        if (status === 'approved_no_team') {
+                            this.redirectToLogin();
+                        } else {
+                            window.location.href = this.getBasePath() + '/login/waiting-invite.html';
+                        }
                         return false;
                     }
                 }
@@ -513,11 +517,12 @@ const AuthGuard = {
         const initials = this.getInitials(user.name);
 
         const esc = this._escapeHtml.bind(this);
+        const safeAvatar = user.picture && user.picture.startsWith('https://') ? user.picture : null;
         container.innerHTML = `
             <div class="auth-user-info">
                 <div class="auth-user-avatar">
-                    ${user.picture
-                        ? `<img src="${esc(user.picture)}" alt="">`
+                    ${safeAvatar
+                        ? `<img src="${esc(safeAvatar)}" alt="">`
                         : initials
                     }
                 </div>

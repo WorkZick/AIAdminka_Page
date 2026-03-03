@@ -40,7 +40,7 @@ body {
 
 /* ==================== LINKS ==================== */
 a {
-    color: var(--yellow);
+    color: var(--accent);
     text-decoration: none;
     transition: opacity var(--transition-fast);
 }
@@ -57,7 +57,7 @@ a:hover {
 
 /* ==================== FOCUS STYLES ==================== */
 :focus-visible {
-    outline: 2px solid var(--yellow);
+    outline: 2px solid var(--accent-muted);
     outline-offset: 2px;
 }
 

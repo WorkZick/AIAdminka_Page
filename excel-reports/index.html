@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://cdn.jsdelivr.net ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'sha256-hnlVisWd/fn32NbDovWmI6UTBdStgc7fO3K6SKtc9SU='; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://cdn.jsdelivr.net ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Отчеты - AIAdminka</title>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <link rel="stylesheet" href="css/excel-reports.css">
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"
+            integrity="sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz"
             crossorigin="anonymous"
             referrerpolicy="no-referrer"></script>
 </head>
@@ -93,8 +95,8 @@
                 <p>Вы уверены, что хотите начать заново?</p>
                 <p><strong>Все загруженные данные будут удалены.</strong></p>
                 <div class="modal-footer">
-                    <button class="btn btn-ghost" id="resetModalCancel">Отмена</button>
-                    <button class="btn btn-ghost" id="resetModalConfirm">Сбросить</button>
+                    <button class="btn btn-primary" id="resetModalCancel">Отмена</button>
+                    <button class="btn btn-primary" id="resetModalConfirm">Сбросить</button>
                 </div>
             </div>
         </div>

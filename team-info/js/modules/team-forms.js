@@ -124,12 +124,19 @@ const TeamForms = {
 
         const employeeData = this._collectFormData(fullName, position, status);
 
-        if (TeamState.currentEmployeeId) {
-            // Редактирование существующего
-            await this._updateEmployee(employeeData);
-        } else {
-            // Добавление нового
-            await this._addEmployee(employeeData);
+        const saveBtn = document.getElementById('formSaveBtn');
+        if (saveBtn) { saveBtn.classList.add('btn-loading'); saveBtn.disabled = true; }
+
+        try {
+            if (TeamState.currentEmployeeId) {
+                // Редактирование существующего
+                await this._updateEmployee(employeeData);
+            } else {
+                // Добавление нового
+                await this._addEmployee(employeeData);
+            }
+        } finally {
+            if (saveBtn) { saveBtn.classList.remove('btn-loading'); saveBtn.disabled = false; }
         }
     },
 
@@ -140,17 +147,24 @@ const TeamForms = {
         if (!TeamState.currentEmployeeId) return;
 
         const employee = TeamState.data.find(e => e.id === TeamState.currentEmployeeId);
-        if (employee && confirm(`Удалить "${employee.fullName}"?`)) {
-            const result = await storage.deleteEmployee(TeamState.currentEmployeeId);
+        if (employee && await ConfirmModal.show('Удалить "' + employee.fullName + '"?', { danger: true })) {
+            const btn = document.getElementById('formDeleteBtn');
+            if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
 
-            if (result.success) {
-                TeamState.data = TeamState.data.filter(e => e.id !== TeamState.currentEmployeeId);
-                this.closeForm();
-                TeamRenderer.render();
-                TeamRenderer.updateStats();
-                Toast.success('Сотрудник удален!');
-            } else {
-                Toast.error('Ошибка удаления: ' + (result.error || 'Неизвестная ошибка'));
+            try {
+                const result = await storage.deleteEmployee(TeamState.currentEmployeeId);
+
+                if (result.success) {
+                    TeamState.data = TeamState.data.filter(e => e.id !== TeamState.currentEmployeeId);
+                    this.closeForm();
+                    TeamRenderer.render();
+                    TeamRenderer.updateStats();
+                    Toast.success('Сотрудник удален!');
+                } else {
+                    Toast.error('Ошибка удаления: ' + (result.error || 'Неизвестная ошибка'));
+                }
+            } finally {
+                if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
             }
         }
     },
@@ -162,17 +176,24 @@ const TeamForms = {
         if (!TeamState.currentEmployeeId) return;
 
         const employee = TeamState.data.find(e => e.id === TeamState.currentEmployeeId);
-        if (employee && confirm(`Удалить "${employee.fullName}"?`)) {
-            const result = await storage.deleteEmployee(TeamState.currentEmployeeId);
+        if (employee && await ConfirmModal.show('Удалить "' + employee.fullName + '"?', { danger: true })) {
+            const btn = document.querySelector('[data-action="team-deleteFromCard"]');
+            if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
 
-            if (result.success) {
-                TeamState.data = TeamState.data.filter(e => e.id !== TeamState.currentEmployeeId);
-                TeamNavigation.closeCard();
-                TeamRenderer.render();
-                TeamRenderer.updateStats();
-                Toast.success('Сотрудник удален!');
-            } else {
-                Toast.error('Ошибка удаления: ' + (result.error || 'Неизвестная ошибка'));
+            try {
+                const result = await storage.deleteEmployee(TeamState.currentEmployeeId);
+
+                if (result.success) {
+                    TeamState.data = TeamState.data.filter(e => e.id !== TeamState.currentEmployeeId);
+                    TeamNavigation.closeCard();
+                    TeamRenderer.render();
+                    TeamRenderer.updateStats();
+                    Toast.success('Сотрудник удален!');
+                } else {
+                    Toast.error('Ошибка удаления: ' + (result.error || 'Неизвестная ошибка'));
+                }
+            } finally {
+                if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
             }
         }
     },
@@ -207,8 +228,18 @@ const TeamForms = {
         const employee = TeamState.data.find(e => e.id === TeamState.currentEmployeeId);
         if (!employee) return;
 
+        const oldStatus = employee.status;
         employee.status = newStatus;
         employee.updatedAt = new Date().toISOString();
+
+        // Скрыть dropdown и показать новый статус сразу (optimistic)
+        const dropdown = document.getElementById('cardStatusDropdown');
+        dropdown.classList.remove('visible');
+        dropdown.classList.add('hidden');
+
+        const statusText = document.getElementById('cardStatusText');
+        const statusBadge = statusText?.closest('.status-badge-wrapper') || statusText?.parentElement;
+        if (statusBadge) statusBadge.style.opacity = '0.5';
 
         try {
             const result = await storage.saveEmployee(employee);
@@ -216,14 +247,8 @@ const TeamForms = {
             if (result.success || result.id) {
                 // Обновить badge
                 const statusClass = TeamUtils.getStatusClass(newStatus);
-                const statusText = document.getElementById('cardStatusText');
                 statusText.textContent = newStatus;
                 statusText.className = `status-badge ${statusClass}`;
-
-                // Скрыть dropdown
-                const dropdown = document.getElementById('cardStatusDropdown');
-                dropdown.classList.remove('visible');
-                dropdown.classList.add('hidden');
 
                 TeamRenderer.render();
                 TeamRenderer.updateStats();
@@ -231,11 +256,15 @@ const TeamForms = {
                 // Синхронизация с профилем
                 this.syncToProfile(employee);
             } else {
+                employee.status = oldStatus;
                 Toast.error('Ошибка сохранения статуса');
             }
         } catch (error) {
+            employee.status = oldStatus;
             console.error('[TeamForms] Error changing status:', error);
             Toast.error('Ошибка сохранения статуса');
+        } finally {
+            if (statusBadge) statusBadge.style.opacity = '';
         }
     },
 

@@ -359,7 +359,7 @@ const OnboardingForm = (() => {
                             <input type="text" class="form-input list-add-input" id="listInput_${field.id}"
                                 placeholder="${Utils.escapeHtml(field.placeholder || 'Добавить...')}"
                                 data-action="onb-listInputKeypress" data-value="${field.id}">
-                            <button type="button" class="btn btn-ghost btn-sm" data-action="onb-addListItem" data-value="${field.id}">+</button>
+                            <button type="button" class="btn btn-primary btn-sm" data-action="onb-addListItem" data-value="${field.id}">+</button>
                         </div>
                         ${suggestionsHtml}
                     </div>
@@ -427,7 +427,7 @@ const OnboardingForm = (() => {
             const dropdownOptions = (submitField.options || []).filter(o => o.value !== defaultValue);
 
             statusWrap.innerHTML = `<div class="status-submit-btn">
-                <button class="btn btn-ghost status-submit-main" data-action="onb-toggleStatusDropdown">
+                <button class="btn btn-primary status-submit-main" data-action="onb-toggleStatusDropdown">
                     <span class="status-submit-label">${Utils.escapeHtml(buttonLabel)}</span>
                 </button>
                 <div class="status-submit-dropdown hidden" id="statusDropdown">

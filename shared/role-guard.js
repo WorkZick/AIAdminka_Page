@@ -18,7 +18,7 @@ const RoleGuard = {
     // Настройки кеширования
     CACHE_KEY: 'roleGuard',
     CACHE_TTL: 300000, // 5 минут
-    STALE_MAX_AGE: 1800000, // 30 минут — максимальный возраст stale-кеша
+    STALE_MAX_AGE: 600000, // 10 минут — максимальный возраст stale-кеша
 
     // Mock режим для тестирования без backend
     USE_MOCK_API: false,
@@ -474,6 +474,8 @@ const RoleGuard = {
         if (!this.user) return false;
         // v2.2.0: Проверяем role='admin' ИЛИ isAdmin=true
         if (this.user.role === 'admin' || this.user.isAdmin === true) return true;
+        // Руководитель всегда может управлять командой
+        if (this.user.role === 'leader' && module === 'team-management') return true;
         return this.permissions?.[module]?.canEdit === true;
     },
 
@@ -884,14 +886,14 @@ const RoleGuard = {
     }
 };
 
-// Очистка кеша при загрузке: удаляем только если старше STALE_MAX_AGE (30 мин)
-// Stale кеш (5-30 мин) сохраняется для мгновенного отображения UI
+// Очистка кеша при загрузке: удаляем только если старше STALE_MAX_AGE (10 мин)
+// Stale кеш (5-10 мин) сохраняется для мгновенного отображения UI
 (function() {
     try {
         const data = localStorage.getItem('roleGuard');
         if (data) {
             const parsed = JSON.parse(data);
-            if (Date.now() - parsed.timestamp > 1800000) {
+            if (Date.now() - parsed.timestamp > 600000) {
                 localStorage.removeItem('roleGuard');
             }
         }

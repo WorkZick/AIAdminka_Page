@@ -84,7 +84,9 @@ const Utils = {
      * @returns {string} Уникальный ID на базе timestamp
      */
     generateId() {
-        return Date.now().toString();
+        const array = new Uint8Array(12);
+        crypto.getRandomValues(array);
+        return Array.from(array, function(b) { return b.toString(16).padStart(2, '0'); }).join('');
     },
 
     /**

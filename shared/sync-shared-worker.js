@@ -5,7 +5,8 @@
  * БЕЗОПАСНОСТЬ: Все запросы отправляются через POST с accessToken
  */
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyeWmZs028zVkzKTrqNTbzTasKK0Z63eCfV1I4RUV6BJWMH8r62kScLh7U5B45bHRRILA/exec';
+// URL передаётся из main thread через SET_URL (зависит от окружения prod/test)
+let SCRIPT_URL = null;
 
 // Уникальный ID этого воркера
 const WORKER_ID = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
@@ -40,6 +41,13 @@ self.onconnect = function(e) {
 
 function handleMessage(data, senderPort) {
     switch (data.type) {
+        case 'SET_URL':
+            // URL бэкенда из EnvConfig (main thread)
+            if (data.url && data.url.startsWith('https://script.google.com/')) {
+                SCRIPT_URL = data.url;
+            }
+            break;
+
         case 'SET_TOKEN':
             // Используем токен вместо email для безопасности
             accessToken = data.accessToken;
@@ -118,7 +126,7 @@ function getKey(op) {
 }
 
 async function processQueue() {
-    if (isSyncing || !accessToken) {
+    if (isSyncing || !accessToken || !SCRIPT_URL) {
         return;
     }
 

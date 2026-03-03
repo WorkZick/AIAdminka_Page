@@ -24,9 +24,9 @@ body {
     justify-content: center;
     padding: var(--spacing-xl);
     background:
-        radial-gradient(circle at 30% 20%, rgba(253, 190, 47, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.12) 0%, transparent 40%),
         radial-gradient(circle at 70% 80%, rgba(80, 120, 200, 0.12) 0%, transparent 40%),
-        radial-gradient(circle at 50% 50%, rgba(253, 190, 47, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.04) 0%, transparent 50%),
         var(--bg-black);
 }
 
@@ -61,7 +61,7 @@ body {
     width: 72px;
     height: 72px;
     margin-bottom: var(--spacing-lg);
-    filter: drop-shadow(0 4px 12px rgba(253, 190, 47, 0.3));
+    filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.20));
 }
 
 .login-logo h1 {
@@ -108,12 +108,12 @@ body {
 }
 
 .login-status.pending {
-    background: rgba(253, 190, 47, 0.1);
-    border-color: rgba(253, 190, 47, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
 .login-status.pending .status-text {
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 /* ===========================================
@@ -178,18 +178,8 @@ body {
     padding: var(--spacing-2xl);
 }
 
-.spinner {
-    width: 44px;
-    height: 44px;
-    border: 3px solid var(--glass-border);
-    border-top-color: var(--yellow);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.login-loading .spinner {
     margin: 0 auto var(--spacing-lg);
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
 }
 
 .login-loading p {
@@ -219,15 +209,15 @@ body {
     min-height: 48px;
     flex-shrink: 0;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--yellow), var(--yellow-hover));
+    background: var(--accent-bg);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: var(--font-size-xl);
     font-weight: 700;
-    color: var(--black);
+    color: var(--white);
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(253, 190, 47, 0.3);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.20);
 }
 
 .user-avatar img {
@@ -301,16 +291,16 @@ body {
     display: block;
     width: 100%;
     padding: var(--spacing-lg) var(--spacing-2xl);
-    background: linear-gradient(135deg, var(--yellow), var(--yellow-hover));
-    color: var(--black);
-    border: none;
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--white);
+    border: 1px solid rgba(255, 255, 255, 0.20);
     border-radius: var(--radius-xl);
     font-family: var(--font-family);
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-fast);
-    box-shadow: 0 4px 16px rgba(253, 190, 47, 0.3);
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.08);
     text-decoration: none;
     text-align: center;
 }
@@ -319,8 +309,10 @@ body {
 .request-button:hover,
 .submit-button:hover,
 .continue-button:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
     transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(253, 190, 47, 0.4);
+    box-shadow: 0 6px 24px rgba(255, 255, 255, 0.12);
 }
 
 .init-button:disabled,
@@ -455,7 +447,7 @@ body {
 .registration-form .form-group input:focus,
 .registration-form .form-group select:focus {
     outline: none;
-    border-color: rgba(253, 190, 47, 0.4);
+    border-color: rgba(255, 255, 255, 0.25);
     background: var(--glass-bg-light);
 }
 
@@ -485,7 +477,7 @@ body {
 }
 
 .input-prefix:focus-within {
-    border-color: rgba(253, 190, 47, 0.4);
+    border-color: rgba(255, 255, 255, 0.25);
     background: var(--glass-bg-light);
 }
 
@@ -537,12 +529,12 @@ body {
 }
 
 .access-icon.pending {
-    background: rgba(253, 190, 47, 0.1);
-    border-color: rgba(253, 190, 47, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
 }
 
 .access-icon.pending svg {
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .access-icon.success {
@@ -617,7 +609,7 @@ body {
 .retry-button:hover {
     background: var(--glass-bg-hover);
     border-color: var(--glass-border-hover);
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .logout-button-full:hover {
@@ -663,7 +655,7 @@ body {
 }
 
 .role-option:first-child:hover {
-    border-color: rgba(253, 190, 47, 0.4);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .role-option.secondary:hover {
@@ -683,7 +675,7 @@ body {
 .role-icon svg {
     width: 24px;
     height: 24px;
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .role-option.secondary .role-icon svg {

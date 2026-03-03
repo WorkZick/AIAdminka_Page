@@ -123,7 +123,7 @@
 }
 
 .modal-body a {
-    color: var(--yellow);
+    color: var(--accent);
     word-break: break-all;
 }
 
@@ -162,7 +162,7 @@
 }
 
 .modal-confirm .modal-icon.warning {
-    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg);
+    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
 }
 
 .modal-confirm .modal-icon.danger {
@@ -178,6 +178,30 @@
 .modal-confirm .modal-description {
     font-size: var(--font-size-base);
     color: var(--gray);
+}
+
+/* ==================== PROMPT MODAL INPUT ==================== */
+.prompt-modal-input {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+    color: var(--white);
+    font-size: var(--font-size-base);
+    font-family: inherit;
+    outline: none;
+    transition: border-color var(--transition-fast);
+    box-sizing: border-box;
+}
+
+.prompt-modal-input:focus {
+    border-color: var(--accent-muted);
+}
+
+.prompt-modal-input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
 }
 
 /* ==================== SCROLLBAR IN MODAL ==================== */

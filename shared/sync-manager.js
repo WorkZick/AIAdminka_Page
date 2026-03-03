@@ -127,6 +127,11 @@ const SyncManager = {
             this.port.start();
             this.isConnected = true;
 
+            // Устанавливаем URL бэкенда (из EnvConfig, динамически для prod/test)
+            if (typeof EnvConfig !== 'undefined') {
+                this.port.postMessage({ type: 'SET_URL', url: EnvConfig.getScriptUrl() });
+            }
+
             // Устанавливаем access token для воркера
             const accessToken = this.getAccessToken();
             if (accessToken) {
@@ -182,7 +187,9 @@ const SyncManager = {
             if (auth) {
                 return JSON.parse(auth).email;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn('SyncManager: ошибка чтения auth data:', e);
+        }
         return null;
     },
 
@@ -192,7 +199,9 @@ const SyncManager = {
             if (auth) {
                 return JSON.parse(auth).accessToken;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn('SyncManager: ошибка чтения access token:', e);
+        }
         return null;
     },
 

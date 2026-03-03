@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com ws://127.0.0.1:5500 ws://localhost:5500">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'sha256-hnlVisWd/fn32NbDovWmI6UTBdStgc7fO3K6SKtc9SU=' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com ws://127.0.0.1:5500 ws://localhost:5500">
     <title>Документация - AIAdminka</title>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <!-- Design System (base styles) -->
@@ -29,7 +30,7 @@
             <header class="global-header">
                 <div class="header-title">Документация</div>
                 <div class="header-actions">
-                    <a href="#design-system" class="btn-design-system">
+                    <a href="#design-system" class="btn btn-secondary">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="3" width="7" height="7"/>
                             <rect x="14" y="3" width="7" height="7"/>
@@ -38,7 +39,7 @@
                         </svg>
                         Дизайн-система
                     </a>
-                    <button class="btn-changelog" data-action="show-changelog">История обновлений</button>
+                    <button class="btn btn-primary" data-action="show-changelog">История обновлений</button>
                 </div>
             </header>
 
@@ -833,34 +834,34 @@
                                         <span class="ds-state-label">Базовое</span>
                                         <span class="ds-btn ds-btn-primary">Основная</span>
                                         <span class="ds-btn ds-btn-secondary">Вторичная</span>
-                                        <span class="ds-btn ds-btn-ghost">Контурная</span>
+                                        <span class="ds-btn ds-btn-primary">Контурная</span>
                                     </div>
                                     <!-- Наведение (статичный пример) -->
                                     <div class="ds-buttons-row">
                                         <span class="ds-state-label">Наведение</span>
                                         <span class="ds-btn ds-btn-primary ds-btn-primary-hover-demo">Основная</span>
                                         <span class="ds-btn ds-btn-secondary ds-btn-secondary-hover-demo">Вторичная</span>
-                                        <span class="ds-btn ds-btn-ghost ds-btn-ghost-hover-demo">Контурная</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-primary-hover-demo">Контурная</span>
                                     </div>
                                     <!-- Нажатие (статичный пример) -->
                                     <div class="ds-buttons-row">
                                         <span class="ds-state-label">Нажатие</span>
                                         <span class="ds-btn ds-btn-primary ds-btn-primary-active-demo">Основная</span>
                                         <span class="ds-btn ds-btn-secondary ds-btn-secondary-active-demo">Вторичная</span>
-                                        <span class="ds-btn ds-btn-ghost ds-btn-ghost-active-demo">Контурная</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-primary-active-demo">Контурная</span>
                                     </div>
                                     <!-- Неактивно -->
                                     <div class="ds-buttons-row">
                                         <span class="ds-state-label">Неактивно</span>
                                         <span class="ds-btn ds-btn-primary ds-btn-disabled">Основная</span>
                                         <span class="ds-btn ds-btn-secondary ds-btn-disabled">Вторичная</span>
-                                        <span class="ds-btn ds-btn-ghost ds-btn-disabled">Контурная</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-disabled">Контурная</span>
                                     </div>
                                     <!-- Загрузка -->
                                     <div class="ds-buttons-row">
                                         <span class="ds-state-label">Загрузка</span>
                                         <span class="ds-btn ds-btn-primary ds-btn-loading">
-                                            <span class="spinner spinner-dark"></span>
+                                            <span class="spinner spinner--dark"></span>
                                         </span>
                                         <span class="ds-btn ds-btn-secondary ds-btn-loading">
                                             <span class="spinner"></span>
@@ -868,7 +869,7 @@
                                     </div>
                                 </div>
                                 <div class="ds-code-hint">
-                                    <code>.btn-primary</code> | <code>.btn-secondary</code> | <code>.btn-ghost</code> | <code>.btn-loading</code> | <code>disabled</code>
+                                    <code>.btn-primary</code> | <code>.btn-secondary</code> | <code>.btn-primary</code> | <code>.btn-loading</code> | <code>disabled</code>
                                 </div>
                             </div>
 
@@ -877,7 +878,7 @@
                             <div class="ds-block">
                                 <div class="ds-component-row">
                                     <div class="ds-spinner-item">
-                                        <span class="spinner spinner-sm"></span>
+                                        <span class="spinner spinner--sm"></span>
                                         <span class="ds-spinner-label">Маленький</span>
                                     </div>
                                     <div class="ds-spinner-item">
@@ -885,16 +886,16 @@
                                         <span class="ds-spinner-label">Стандартный</span>
                                     </div>
                                     <div class="ds-spinner-item">
-                                        <span class="spinner spinner-lg"></span>
+                                        <span class="spinner spinner--lg"></span>
                                         <span class="ds-spinner-label">Большой</span>
                                     </div>
                                     <div class="ds-spinner-item ds-spinner-block">
-                                        <span class="spinner spinner-lg"></span>
+                                        <span class="spinner spinner--lg"></span>
                                         <span>Загрузка данных...</span>
                                     </div>
                                 </div>
                                 <div class="ds-code-hint">
-                                    <code>.spinner</code> | <code>.spinner-sm</code> | <code>.spinner-lg</code>
+                                    <code>.spinner</code> | <code>.spinner--sm</code> | <code>.spinner--lg</code> | <code>.spinner--dark</code>
                                 </div>
                             </div>
 
@@ -1051,7 +1052,7 @@
                             <h3>CSS Переменные</h3>
                             <div class="ds-block">
                                 <div class="ds-variables">
-                                    <code>--yellow: #fdbe2f</code>
+                                    <code>--accent: #fdbe2f</code>
                                     <code>--glass-bg: rgba(255,255,255,0.02)</code>
                                     <code>--glass-border: rgba(255,255,255,0.08)</code>
                                     <code>--glass-blur: 16px</code>

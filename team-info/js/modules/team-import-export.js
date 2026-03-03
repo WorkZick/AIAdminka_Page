@@ -99,7 +99,7 @@ const TeamImportExport = {
         const file = document.getElementById('importFileInput').files[0];
         if (!file) return;
 
-        if (confirm('Заменить всех сотрудников?')) {
+        if (await ConfirmModal.show('Заменить всех сотрудников?', { description: 'Текущие данные будут перезаписаны', danger: true })) {
             try {
                 TeamState.data = await storage.importFromFile(file);
                 await storage.saveData(TeamState.data);

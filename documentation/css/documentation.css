@@ -68,10 +68,10 @@
 }
 
 .toc-link.active {
-    background: linear-gradient(90deg, rgba(253, 190, 47, 0.2) 0%, transparent 100%);
-    border-left: 3px solid var(--yellow);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
+    border-left: 3px solid var(--accent);
     font-weight: 700;
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 /* ============================================================
@@ -99,7 +99,7 @@
 
 /* Doc Header */
 .doc-header {
-    border-bottom: 2px solid var(--yellow);
+    border-bottom: 2px solid var(--accent);
     padding-bottom: 20px;
     margin-bottom: 30px;
 }
@@ -183,12 +183,12 @@
 }
 
 .doc-section strong {
-    color: var(--yellow);
+    color: var(--accent);
     font-weight: 700;
 }
 
 .doc-section a {
-    color: var(--yellow);
+    color: var(--accent);
     text-decoration: none;
     transition: opacity 0.2s;
 }
@@ -237,15 +237,15 @@
    Troubleshooting & Warning Boxes
    ============================================================ */
 .troubleshooting-item {
-    background: rgba(253, 190, 47, 0.08);
-    border-left: 4px solid var(--yellow);
+    background: rgba(255, 255, 255, 0.06);
+    border-left: 4px solid var(--accent);
     padding: 16px;
     margin: 16px 0;
     border-radius: 0 10px 10px 0;
 }
 
 .troubleshooting-item h4 {
-    color: var(--yellow);
+    color: var(--accent);
     font-size: 13px;
     font-weight: 700;
     margin: 0 0 12px 0;
@@ -293,7 +293,7 @@ code {
     border-radius: 4px;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 12px;
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 pre {
@@ -323,64 +323,8 @@ pre code {
     gap: 12px;
 }
 
-/* ============================================================
-   Design System Button (Header)
-   ============================================================ */
-.btn-design-system {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid var(--glass-border);
-    color: var(--white);
-    font-family: 'TT Firs Neue', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.btn-design-system:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(253, 190, 47, 0.3);
-    color: var(--yellow);
-}
-
-.btn-design-system svg {
-    stroke: currentColor;
-}
-
-/* ============================================================
-   Changelog Button (Header)
-   ============================================================ */
-.btn-changelog {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    background: var(--yellow);
-    border: none;
-    color: var(--black);
-    font-family: 'TT Firs Neue', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.btn-changelog:hover {
-    background: var(--yellow-hover);
-}
-
-.btn-changelog img {
-    width: 14px;
-    height: 14px;
-    filter: brightness(0);
-}
+/* btn-design-system → DS .btn.btn-secondary
+   btn-changelog → DS .btn.btn-primary */
 
 /* ============================================================
    Changelog Modal
@@ -632,7 +576,7 @@ pre code {
 
 .changelog-search input:focus {
     outline: none;
-    border-color: var(--yellow);
+    border-color: var(--accent);
     background: rgba(255, 255, 255, 0.08);
 }
 
@@ -663,8 +607,8 @@ pre code {
 }
 
 .version-list-item.active {
-    background: linear-gradient(90deg, rgba(253, 190, 47, 0.2) 0%, transparent 100%);
-    border-left: 3px solid var(--yellow);
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
+    border-left: 3px solid var(--accent);
 }
 
 .version-list-item.latest {
@@ -672,7 +616,7 @@ pre code {
 }
 
 .version-list-item.latest.active {
-    border-left: 3px solid var(--yellow);
+    border-left: 3px solid var(--accent);
 }
 
 .version-list-header {
@@ -776,9 +720,9 @@ pre code {
         font-size: 20px;
     }
 
-    .btn-changelog {
+    .header-actions .btn {
         padding: 8px 14px;
-        font-size: 12px;
+        font-size: var(--font-size-sm);
     }
 
     .changelog-dialog-split {
@@ -875,8 +819,8 @@ pre code {
 }
 
 .ds-code-hint code {
-    background: rgba(253, 190, 47, 0.1);
-    color: var(--yellow);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--accent);
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 11px;
@@ -996,21 +940,22 @@ pre code {
 
 /* Primary button - default */
 .ds-btn-primary {
-    background: #fdbe2f;
-    color: #0a0a0a;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    color: var(--white);
 }
 
 /* Primary button - hover */
 .ds-btn-primary:hover {
-    background: #e5a829;
-    box-shadow: 0 6px 20px rgba(253, 190, 47, 0.5);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
 }
 
 /* Primary button - active */
 .ds-btn-primary:active {
-    background: #c99a24;
+    background: rgba(255, 255, 255, 0.20);
     transform: scale(0.96);
-    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* Secondary button - default */
@@ -1033,24 +978,24 @@ pre code {
 }
 
 /* Ghost button - default */
-.ds-btn-ghost {
+.ds-btn-primary {
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: #f2f2f2;
 }
 
 /* Ghost button - hover */
-.ds-btn-ghost:hover {
-    background: rgba(253, 190, 47, 0.12);
-    border-color: #fdbe2f;
-    color: #fdbe2f;
+.ds-btn-primary:hover {
+    background: rgba(255, 255, 255, 0.10);
+    border-color: var(--white);
+    color: var(--white);
 }
 
 /* Ghost button - active */
-.ds-btn-ghost:active {
-    background: rgba(253, 190, 47, 0.2);
-    border-color: #fdbe2f;
-    color: #fdbe2f;
+.ds-btn-primary:active {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--white);
+    color: var(--white);
     transform: scale(0.96);
 }
 
@@ -1113,8 +1058,8 @@ pre code {
 }
 
 .ds-block .role-badge.role-leader {
-    background: rgba(253, 190, 47, 0.15);
-    color: var(--yellow);
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--accent);
 }
 
 .ds-block .role-badge.role-assistant {
@@ -1157,7 +1102,7 @@ pre code {
 .ds-block .form-input:focus,
 .ds-block .form-select:focus {
     outline: none;
-    border-color: rgba(253, 190, 47, 0.4);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .ds-block .form-select {
@@ -1298,10 +1243,10 @@ pre code {
     justify-content: center;
     width: 50px;
     height: 36px;
-    background: rgba(253, 190, 47, 0.15);
-    border: 1px solid var(--yellow);
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--accent);
     font-size: 10px;
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 /* Variables Demo */
@@ -1359,39 +1304,12 @@ pre code {
 }
 
 
-/* Spinner */
-.spinner {
-    display: inline-block;
+/* Inline spinner inside buttons (smaller than DS default) */
+.ds-btn .spinner {
     width: 16px;
     height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-top-color: var(--yellow);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-/* Spinner dark (for light backgrounds like yellow buttons) */
-.spinner-dark,
-.ds-btn-primary .spinner,
-.btn-primary .spinner {
-    border-color: rgba(0, 0, 0, 0.2) !important;
-    border-top-color: #0a0a0a !important;
-}
-
-.spinner-sm {
-    width: 12px;
-    height: 12px;
-    border-width: 1.5px;
-}
-
-.spinner-lg {
-    width: 24px;
-    height: 24px;
-    border-width: 3px;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
+    border-width: 2px;
+    display: inline-block;
 }
 
 .ds-spinner-item {
@@ -1496,8 +1414,8 @@ pre code {
 
 .ds-icons-btn:hover {
     background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(253, 190, 47, 0.3);
-    color: var(--yellow);
+    border-color: rgba(255, 255, 255, 0.20);
+    color: var(--accent);
 }
 
 .icons-modal {
@@ -1589,8 +1507,8 @@ pre code {
 }
 
 .icon-item:hover {
-    background: rgba(253, 190, 47, 0.1);
-    border-color: rgba(253, 190, 47, 0.3);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.20);
 }
 
 .icon-item img {
@@ -1602,7 +1520,7 @@ pre code {
 
 .icon-item:hover img {
     opacity: 1;
-    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg);
+    filter: brightness(0) invert(1);
 }
 
 .icon-item span {
@@ -1613,7 +1531,7 @@ pre code {
 }
 
 .icon-item:hover span {
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 /* Icons Categories in Design System */

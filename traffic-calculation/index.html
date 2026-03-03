@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'sha256-hnlVisWd/fn32NbDovWmI6UTBdStgc7fO3K6SKtc9SU='; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Расчет трафика - AIAdminka</title>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <link rel="stylesheet" href="../shared/css/design-system.css">
@@ -87,7 +88,7 @@
                             <div class="section-header">
                                 <div class="section-title">Выбор партнеров для анализа</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" data-action="traffic-confirmResetAnalytics" title="Сбросить все данные аналитики">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-confirmResetAnalytics" title="Сбросить все данные аналитики">
                                         Сбросить всё
                                     </button>
                                 </div>
@@ -204,7 +205,7 @@
                             <div class="section-header">
                                 <div class="section-title">Пополнения и выводы</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" data-action="traffic-resetDepositsData" title="Сбросить данные пополнений и выводов">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetDepositsData" title="Сбросить данные пополнений и выводов">
                                         Сбросить
                                     </button>
                                 </div>
@@ -237,7 +238,7 @@
                             <div class="section-header">
                                 <div class="section-title">Контроль качества</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" data-action="traffic-resetQualityData" title="Сбросить данные контроля качества">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetQualityData" title="Сбросить данные контроля качества">
                                         Сбросить
                                     </button>
                                 </div>
@@ -274,7 +275,7 @@
                             <div class="section-header">
                                 <div class="section-title">% Времени работы</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" data-action="traffic-resetAllWorkTimeData" title="Сбросить все данные по времени работы">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetAllWorkTimeData" title="Сбросить все данные по времени работы">
                                         Сбросить
                                     </button>
                                 </div>
@@ -305,7 +306,7 @@
                                         <div id="manualDataForm" class="hidden">
                                             <div class="worktime-form-header">
                                                 <h3 class="worktime-form-title">% Времени: <span id="selectedPartnerName"></span></h3>
-                                                <button class="btn-reset btn-reset-small" data-action="traffic-resetWorkTimeData" title="Сбросить">
+                                                <button class="btn btn-danger btn-sm" data-action="traffic-resetWorkTimeData" title="Сбросить">
                                                     Сбросить
                                                 </button>
                                             </div>
@@ -348,7 +349,7 @@
                             <div class="section-header">
                                 <div class="section-title">Автоотключения</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" data-action="traffic-resetPercentData" title="Сбросить данные автоотключений">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetPercentData" title="Сбросить данные автоотключений">
                                         Сбросить
                                     </button>
                                 </div>
@@ -385,7 +386,7 @@
                             <div class="section-header">
                                 <div class="section-title">Нарушения</div>
                                 <div class="section-actions">
-                                    <button class="btn-reset" data-action="traffic-resetAllViolationsData" title="Сбросить все данные по нарушениям">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetAllViolationsData" title="Сбросить все данные по нарушениям">
                                         Сбросить
                                     </button>
                                 </div>
@@ -416,7 +417,7 @@
                                         <div id="manualDataForm6" class="hidden">
                                             <div class="violations-form-header">
                                                 <h3 class="violations-form-title">Нарушения: <span id="selectedPartnerName6"></span></h3>
-                                                <button class="btn-reset btn-reset-small" data-action="traffic-resetViolationsData" title="Сбросить">
+                                                <button class="btn btn-danger btn-sm" data-action="traffic-resetViolationsData" title="Сбросить">
                                                     Сбросить
                                                 </button>
                                             </div>
@@ -533,7 +534,7 @@
                         <div class="section-header">
                             <div class="section-title">Детальный отчёт</div>
                             <div class="section-actions">
-                                <button class="btn btn-ghost btn-sm" data-action="traffic-exportReportToExcel">Экспорт в Excel</button>
+                                <button class="btn btn-primary btn-sm" data-action="traffic-exportReportToExcel">Экспорт в Excel</button>
                             </div>
                         </div>
 
@@ -593,9 +594,9 @@
                         <div class="section-header">
                             <div class="section-title">Настройки расчёта % трафика</div>
                             <div class="section-actions">
-                                <button class="btn btn-ghost btn-sm" data-action="traffic-toggleHelp">Справка</button>
-                                <button class="btn btn-ghost btn-sm" data-action="traffic-exportTrafficSettings">Экспорт</button>
-                                <button class="btn btn-ghost btn-sm" data-action="traffic-importTrafficSettings">Импорт</button>
+                                <button class="btn btn-primary btn-sm" data-action="traffic-toggleHelp">Справка</button>
+                                <button class="btn btn-primary btn-sm" data-action="traffic-exportTrafficSettings">Экспорт</button>
+                                <button class="btn btn-primary btn-sm" data-action="traffic-importTrafficSettings">Импорт</button>
                             </div>
                         </div>
                         <div class="section-body flex-1-overflow">
@@ -632,7 +633,7 @@
                         <div class="section-header">
                             <div class="section-title">Результаты расчёта % трафика</div>
                             <div class="section-actions">
-                                <button class="btn btn-ghost btn-sm" data-action="traffic-exportTrafficResults">Экспорт в Excel</button>
+                                <button class="btn btn-primary btn-sm" data-action="traffic-exportTrafficResults">Экспорт в Excel</button>
                             </div>
                         </div>
                         <div class="section-body flex-1-column">
@@ -690,9 +691,18 @@
     <script src="../shared/js/sidebar-controller.js"></script>
     <script src="../shared/js/about-modal.js"></script>
     <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/confirm-modal.js"></script>
     <script src="../shared/js/error-handler.js"></script>
     <script src="../shared/js/page-lifecycle.js"></script>
     <script src="js/storage.js"></script>
+    <script src="js/modules/traffic-state.js"></script>
+    <script src="js/modules/traffic-parsers.js"></script>
+    <script src="js/modules/traffic-navigation.js"></script>
+    <script src="js/modules/traffic-upload.js"></script>
+    <script src="js/modules/traffic-manual-data.js"></script>
+    <script src="js/modules/traffic-calculator.js"></script>
+    <script src="js/modules/traffic-renderer.js"></script>
+    <script src="js/modules/traffic-import-export.js"></script>
     <script src="js/traffic-calculation.js"></script>
 </body>
 </html>

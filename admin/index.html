@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- CSP: 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' только для Live Server (dev) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'sha256-hnlVisWd/fn32NbDovWmI6UTBdStgc7fO3K6SKtc9SU='; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Администрирование - AIAdminka</title>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <link rel="stylesheet" href="../shared/css/design-system.css">
@@ -111,14 +112,14 @@
                                 </svg>
                                 <input type="text" id="searchUsers" placeholder="Поиск..." data-action="filter-users">
                             </div>
-                            <select id="filterTeam" data-action="filter-users">
+                            <select id="filterTeam" class="form-select form-select--compact" data-action="filter-users">
                                 <option value="">Все команды</option>
                             </select>
-                            <select id="filterRole" data-action="filter-users">
+                            <select id="filterRole" class="form-select form-select--compact" data-action="filter-users">
                                 <option value="">Все роли</option>
                                 <!-- Заполняется динамически из RolesConfig -->
                             </select>
-                            <select id="filterStatus" data-action="filter-users">
+                            <select id="filterStatus" class="form-select form-select--compact" data-action="filter-users">
                                 <option value="">Все статусы</option>
                                 <option value="active">Активные</option>
                                 <option value="blocked">Заблокированные</option>
@@ -129,7 +130,7 @@
                     </div>
 
                     <div class="users-table-wrapper">
-                        <table class="users-table" id="usersTable">
+                        <table class="table table--headers-uppercase table--header-bg users-table" id="usersTable">
                             <thead>
                                 <tr>
                                     <th>Пользователь</th>
@@ -185,7 +186,7 @@
                     <div class="sub-tab-content active" id="subtab-roles">
                         <div class="section-header">
                             <div class="section-actions">
-                                <button class="btn-ghost" data-action="reset-role-names" id="btnResetRoleNames">Сбросить</button>
+                                <button class="btn-primary" data-action="reset-role-names" id="btnResetRoleNames">Сбросить</button>
                                 <button class="btn-primary" data-action="save-role-names" id="btnSaveRoleNames">Сохранить</button>
                             </div>
                         </div>
@@ -203,7 +204,7 @@
                                 <tbody id="rolesTableBody"></tbody>
                             </table>
                             <div id="addRoleRow"></div>
-                            <button class="btn-ghost roles-add-btn" data-action="toggle-add-role" id="btnAddRole">+ Добавить роль</button>
+                            <button class="btn-primary roles-add-btn" data-action="toggle-add-role" id="btnAddRole">+ Добавить роль</button>
                         </div>
                     </div>
 
@@ -258,7 +259,7 @@
                                 </svg>
                                 <input type="text" id="searchAudit" placeholder="Поиск..." data-action="filter-audit">
                             </div>
-                            <select id="filterAction" data-action="filter-audit">
+                            <select id="filterAction" class="form-select form-select--compact" data-action="filter-audit">
                                 <option value="">Все действия</option>
                             </select>
                         </div>
@@ -292,17 +293,17 @@
             </div>
             <div class="modal-body">
                 <form id="createTeamForm">
-                    <div class="form-group">
+                    <div class="form-group form-group--compact">
                         <label>Название команды</label>
-                        <input type="text" id="newTeamName" placeholder="Например: Команда продаж" required>
+                        <input type="text" class="form-input" id="newTeamName" placeholder="Например: Команда продаж" required>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group form-group--compact">
                         <label>Руководитель (email)</label>
-                        <input type="email" id="newTeamLeader" placeholder="leader@example.com" required>
+                        <input type="email" class="form-input" id="newTeamLeader" placeholder="leader@example.com" required>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group form-group--compact">
                         <label>Описание</label>
-                        <textarea id="newTeamDescription" placeholder="Краткое описание команды..." rows="3"></textarea>
+                        <textarea class="form-textarea" id="newTeamDescription" placeholder="Краткое описание команды..." rows="3"></textarea>
                     </div>
                 </form>
             </div>
@@ -331,21 +332,21 @@
                     </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group form-group--compact">
                     <label>Команда</label>
                     <select id="modalUserTeam" class="form-select">
                         <option value="">Без команды</option>
                     </select>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group form-group--compact">
                     <label>Роль</label>
                     <select id="modalUserRole" class="form-select">
                         <!-- Заполняется динамически из RolesConfig -->
                     </select>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group form-group--compact">
                     <label>Статус</label>
                     <div class="status-toggle">
                         <button type="button" class="status-btn active" data-action="set-modal-status" data-status="active">
@@ -400,15 +401,15 @@
             </div>
             <div class="modal-body">
                 <form id="editTeamForm">
-                    <div class="form-group">
+                    <div class="form-group form-group--compact">
                         <label>Название команды</label>
-                        <input type="text" id="editTeamName" required>
+                        <input type="text" class="form-input" id="editTeamName" required>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group form-group--compact">
                         <label>Описание</label>
-                        <textarea id="editTeamDescription" rows="3"></textarea>
+                        <textarea class="form-textarea" id="editTeamDescription" rows="3"></textarea>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group form-group--compact">
                         <label>Статус</label>
                         <div class="status-toggle">
                             <button type="button" class="status-btn active" data-action="set-team-status" data-status="true">
@@ -484,8 +485,8 @@
             <div class="modal-body">
                 <p>Роль <strong id="deleteRoleName"></strong> будет удалена.</p>
                 <div id="deleteRoleUsers" class="delete-role-users"></div>
-                <div class="form-group" id="reassignGroup">
-                    <label class="form-label">Переназначить пользователей в роль:</label>
+                <div class="form-group form-group--compact" id="reassignGroup">
+                    <label>Переназначить пользователей в роль:</label>
                     <select class="form-select" id="reassignRoleSelect"></select>
                 </div>
             </div>

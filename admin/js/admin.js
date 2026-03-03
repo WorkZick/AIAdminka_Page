@@ -203,7 +203,7 @@ const adminApp = {
                     break;
                 case 'approve-request':
                     const approveId = target.dataset.requestId;
-                    if (approveId) this.approveRequest(approveId);
+                    if (approveId) this.approveRequest(approveId, target);
                     break;
                 case 'reject-request':
                     const rejectId = target.dataset.requestId;
@@ -603,6 +603,9 @@ const adminApp = {
             return false;
         }
 
+        const btn = document.querySelector('[data-action="submit-create-team"]');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+
         try {
             const result = await this.apiCall('createTeam', { name, leaderEmail, description });
 
@@ -616,6 +619,8 @@ const adminApp = {
 
         } catch (error) {
             Toast.error('Ошибка: ' + error.message);
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
 
         return false;
@@ -654,6 +659,9 @@ const adminApp = {
             return false;
         }
 
+        const btn = document.querySelector('[data-action="submit-edit-team"]');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+
         try {
             const result = await this.apiCall('updateTeam', {
                 teamId: this.editingTeam.id,
@@ -672,6 +680,8 @@ const adminApp = {
 
         } catch (error) {
             Toast.error('Ошибка: ' + error.message);
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
 
         return false;
@@ -942,6 +952,9 @@ const adminApp = {
         const status = isBlocked ? 'blocked' :
                       (teamId ? 'active' : (role === 'guest' ? 'waiting_invite' : 'approved_no_team'));
 
+        const btn = document.querySelector('[data-action="save-user"]');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+
         try {
             const result = await this.apiCall('updateUser', {
                 targetEmail: this.editingUser.email,
@@ -960,6 +973,8 @@ const adminApp = {
 
         } catch (error) {
             Toast.error('Ошибка: ' + error.message);
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
     },
 
@@ -1060,7 +1075,9 @@ const adminApp = {
         return card;
     },
 
-    async approveRequest(requestId) {
+    async approveRequest(requestId, triggerBtn) {
+        if (triggerBtn) { triggerBtn.classList.add('btn-loading'); triggerBtn.disabled = true; }
+
         try {
             const result = await this.apiCall('approveRequest', { requestId });
 
@@ -1073,6 +1090,8 @@ const adminApp = {
 
         } catch (error) {
             Toast.error('Ошибка: ' + error.message);
+        } finally {
+            if (triggerBtn) { triggerBtn.classList.remove('btn-loading'); triggerBtn.disabled = false; }
         }
     },
 
@@ -1086,7 +1105,9 @@ const adminApp = {
         if (!requestId) return;
 
         this._pendingRejectId = null;
-        this.closeModal('confirmRejectModal');
+
+        const btn = document.querySelector('[data-action="confirm-reject"]');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
 
         try {
             const result = await this.apiCall('rejectRequest', { requestId });
@@ -1095,11 +1116,14 @@ const adminApp = {
                 throw new Error(result.error);
             }
 
+            this.closeModal('confirmRejectModal');
             Toast.success('Запрос отклонён');
             await this.loadAllData();
 
         } catch (error) {
             Toast.error('Ошибка: ' + error.message);
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
     },
 
@@ -1252,7 +1276,7 @@ const adminApp = {
         addBtn.addEventListener('click', () => this.addRole());
 
         const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'btn-ghost btn-sm';
+        cancelBtn.className = 'btn-primary btn-sm';
         cancelBtn.textContent = 'Отмена';
         cancelBtn.addEventListener('click', () => this.toggleAddRole());
 
@@ -1369,7 +1393,8 @@ const adminApp = {
         const reassignTo = reassignSelect.value;
         const reassignGroupVisible = document.getElementById('reassignGroup').style.display !== 'none';
 
-        this.closeModal('deleteRoleModal');
+        const btn = document.getElementById('btnConfirmDeleteRole');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
 
         if (reassignGroupVisible && reassignTo) {
             // Есть пользователи — удаляем через API с переназначением
@@ -1387,9 +1412,13 @@ const adminApp = {
             } catch (error) {
                 Toast.error('Ошибка: ' + error.message);
                 this._pendingDeleteRole = null;
+                if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
                 return;
             }
         }
+
+        this.closeModal('deleteRoleModal');
+        if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
 
         // Удалить из RolesConfig (в памяти)
         RolesConfig._customRoles = RolesConfig._customRoles.filter(r => r.key !== roleKey);

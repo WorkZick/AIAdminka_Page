@@ -79,8 +79,21 @@ const EnvConfig = {
      */
     isTestEnv() {
         return this.getCurrentEnv() === 'test';
+    },
+
+    /**
+     * Проверить, является ли текущее окружение production
+     */
+    isProduction() {
+        return this.getCurrentEnv() === 'prod' && !this.isLocalhost();
     }
 };
+
+// В production подавляем console.log и console.warn (оставляем console.error)
+if (EnvConfig.isProduction()) {
+    console.log = function() {};
+    console.warn = function() {};
+}
 
 // Экспорт для модулей
 if (typeof module !== 'undefined' && module.exports) {

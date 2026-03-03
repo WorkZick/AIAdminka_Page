@@ -35,10 +35,9 @@ const PartnerOnboarding = (() => {
 
     async function _loadRequests() {
         try {
-            const result = await CloudStorage.callApi('getOnboardingRequests');
-            const requests = result.requests || [];
-            OnboardingState.set('requests', requests);
-            OnboardingState.set('history', result.history || {});
+            const data = await CloudStorage.getOnboardingRequests();
+            OnboardingState.set('requests', data.requests || []);
+            OnboardingState.set('history', data.history || {});
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'loadRequests' });
             OnboardingState.set('requests', []);
@@ -60,6 +59,7 @@ const PartnerOnboarding = (() => {
 
     function _applyApiResult(result) {
         if (!result || !result.request) return;
+        CloudStorage.clearCache('onboardingRequests');
         const requests = OnboardingState.get('requests') || [];
         const idx = requests.findIndex(r => r.id === result.request.id);
         if (idx !== -1) {
@@ -112,15 +112,15 @@ const PartnerOnboarding = (() => {
         let html = '';
         if (request.status !== 'completed' && request.status !== 'cancelled') {
             if (isAdminLike && view === 'form') {
-                html += `<button class="btn btn-ghost" data-action="onb-showReassign">Передать</button>`;
-                html += `<button class="btn btn-ghost" data-action="onb-showRollback">Откатить</button>`;
+                html += `<button class="btn btn-primary" data-action="onb-showReassign">Передать</button>`;
+                html += `<button class="btn btn-primary" data-action="onb-showRollback">Откатить</button>`;
             }
             if (isAdminLike) {
-                html += `<button class="btn btn-ghost btn-danger-text" data-action="onb-cancelRequest">Отменить</button>`;
+                html += `<button class="btn btn-danger btn-sm" data-action="onb-cancelRequest">Отменить</button>`;
             }
         }
         if (request.status === 'cancelled' && isAdminLike) {
-            html += `<button class="btn btn-ghost" data-action="onb-reactivateRequest">Восстановить</button>`;
+            html += `<button class="btn btn-primary" data-action="onb-reactivateRequest">Восстановить</button>`;
         }
         container.innerHTML = html;
     }
@@ -819,6 +819,7 @@ const PartnerOnboarding = (() => {
                     const result = await CloudStorage.postApi('deleteOnboardings', { ids });
                     if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
+                    CloudStorage.clearCache('onboardingRequests');
                     const requests = OnboardingState.get('requests') || [];
                     const remaining = requests.filter(r => !ids.includes(r.id));
                     OnboardingState.set('requests', remaining);
@@ -882,8 +883,7 @@ const PartnerOnboarding = (() => {
         if (targetSelect) {
             targetSelect.innerHTML = '<option value="">Загрузка...</option>';
             try {
-                const result = await CloudStorage.callApi('getEmployees');
-                const employees = result.employees || [];
+                const employees = await CloudStorage.getEmployees();
                 targetSelect.innerHTML = '<option value="">Выберите менеджера</option>';
                 employees.forEach(emp => {
                     const opt = document.createElement('option');

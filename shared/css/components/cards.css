@@ -78,7 +78,7 @@
 }
 
 .module-card:hover .module-icon {
-    background: var(--highlight-yellow);
+    background: var(--accent-bg);
 }
 
 .module-icon img {
@@ -92,7 +92,7 @@
 
 .module-card:hover .module-icon img {
     opacity: 1;
-    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(101%) contrast(98%);
+    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
 }
 
 .module-title {
@@ -104,7 +104,7 @@
 }
 
 .module-card:hover .module-title {
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .module-desc {
@@ -194,7 +194,7 @@
 }
 
 .stat-card.stat-yellow .stat-card-value {
-    color: var(--yellow);
+    color: var(--status-yellow);
 }
 
 /* ==================== INFO CARD ==================== */

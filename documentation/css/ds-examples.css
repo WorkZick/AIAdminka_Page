@@ -55,15 +55,17 @@
 
 .ds-glass-demo-accent {
     background: rgba(40, 40, 40, 0.4);
-    border: 1px solid rgba(253, 190, 47, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.20);
 }
 
 /* ============================================================
    Button States (Состояния кнопок)
    ============================================================ */
 .ds-btn-primary-hover-demo {
-    background: #e5a829;
-    box-shadow: 0 6px 20px rgba(253, 190, 47, 0.5);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
+    color: var(--white);
 }
 
 .ds-btn-secondary-hover-demo {
@@ -71,16 +73,9 @@
     box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
 }
 
-.ds-btn-ghost-hover-demo {
-    background: rgba(253, 190, 47, 0.12);
-    border-color: #fdbe2f;
-    color: #fdbe2f;
-}
-
 .ds-btn-primary-active-demo {
-    background: #c99a24;
+    background: rgba(255, 255, 255, 0.20);
     transform: scale(0.96);
-    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);
 }
 
 .ds-btn-secondary-active-demo {
@@ -89,10 +84,10 @@
     box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);
 }
 
-.ds-btn-ghost-active-demo {
-    background: rgba(253, 190, 47, 0.2);
-    border-color: #fdbe2f;
-    color: #fdbe2f;
+.ds-btn-primary-active-demo {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--white);
+    color: var(--white);
     transform: scale(0.96);
 }
 

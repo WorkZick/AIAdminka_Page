@@ -114,14 +114,14 @@
 
 /* Active state */
 .menu-item.active {
-    background: linear-gradient(90deg, rgba(253, 190, 47, 0.15) 0%, transparent 100%);
-    border-left: 3px solid var(--yellow);
-    color: var(--yellow);
+    background: linear-gradient(90deg, rgba(253, 190, 47, 0.10) 0%, transparent 100%);
+    border-left: 3px solid var(--accent);
+    color: var(--white);
     font-weight: 700;
 }
 
 .menu-item.active img {
-    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(101%) contrast(98%);
+    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
     opacity: 1;
 }
 
@@ -248,13 +248,13 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: var(--yellow);
+    background: var(--accent-bg);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 14px;
     font-weight: 600;
-    color: var(--bg-black);
+    color: var(--white);
     overflow: hidden;
 }
 
@@ -373,7 +373,7 @@
 .token-prompt-icon {
     width: 32px;
     height: 32px;
-    background: rgba(253, 190, 47, 0.15);
+    background: var(--accent-bg);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -384,7 +384,7 @@
 .token-prompt-icon svg {
     width: 16px;
     height: 16px;
-    fill: #fdbe2f;
+    fill: var(--accent);
 }
 
 .token-prompt-text {
@@ -404,7 +404,7 @@
 }
 
 .token-prompt-time {
-    color: #fdbe2f;
+    color: var(--accent);
     font-weight: 600;
 }
 
@@ -430,14 +430,14 @@
 }
 
 .token-prompt-btn-primary {
-    background: rgba(253, 190, 47, 0.15);
-    color: #fdbe2f;
-    border: 1px solid rgba(253, 190, 47, 0.3);
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--white);
+    border: 1px solid rgba(255, 255, 255, 0.20);
 }
 
 .token-prompt-btn-primary:hover {
-    background: rgba(253, 190, 47, 0.25);
-    border-color: rgba(253, 190, 47, 0.5);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
 }
 
 .token-prompt-btn-secondary {

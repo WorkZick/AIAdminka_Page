@@ -34,7 +34,7 @@ const TeamNavigation = {
      * Открытие карточки сотрудника
      * @param {number} id - ID сотрудника
      */
-    openCard(id) {
+    async openCard(id) {
         // Проверка: если кликнули на уже открытую карточку - закрываем её
         const employeeCard = document.getElementById('employeeCard');
         if (TeamState.currentEmployeeId === id && employeeCard.classList.contains('visible-flex')) {
@@ -49,7 +49,7 @@ const TeamNavigation = {
                 ? 'У вас есть несохраненные изменения. Закрыть форму без сохранения?'
                 : 'Вы не завершили добавление сотрудника. Закрыть форму без сохранения?';
 
-            if (!confirm(confirmMsg)) {
+            if (!await ConfirmModal.show(confirmMsg)) {
                 return;
             }
 

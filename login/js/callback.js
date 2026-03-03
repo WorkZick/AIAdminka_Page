@@ -83,15 +83,12 @@
             message.className = 'message success';
             sub.textContent = 'Перенаправление...';
 
+            // Всегда перенаправляем на login/index.html для проверки доступа.
+            // auth-redirect остаётся в sessionStorage — login.js использует его
+            // после успешной верификации (предотвращает redirect-loop для
+            // удалённых/новых пользователей, которых приложение не знает).
             setTimeout(function() {
-                // Проверяем, есть ли сохранённый URL для редиректа
-                const redirectUrl = sessionStorage.getItem('auth-redirect');
-                if (redirectUrl) {
-                    sessionStorage.removeItem('auth-redirect');
-                    window.location.href = redirectUrl;
-                } else {
-                    window.location.href = 'index.html';
-                }
+                window.location.href = 'index.html';
             }, 500);
         })
         .catch(function(e) {

@@ -213,6 +213,7 @@ const loginApp = {
                 if (result.error.includes('access token') || result.error.includes('Access denied') || result.error.includes('Invalid')) {
                     localStorage.removeItem('cloud-auth');
                     localStorage.removeItem('roleGuard');
+                    sessionStorage.removeItem('auth-redirect');
                     this.currentUser = null;
                     this._showLoginForm();
                     return;
@@ -228,6 +229,8 @@ const loginApp = {
                     status = 'waiting_invite';
                 } else if (result.status === 'blocked') {
                     status = 'blocked';
+                } else if (result.status === 'approved_no_team') {
+                    status = 'approved_no_team';
                 } else if (result.hasAccess === true) {
                     status = 'approved';
                 } else if (!result.email && !result.role) {
@@ -262,7 +265,7 @@ const loginApp = {
 
             this.currentRole = result.role || null;
 
-            if (result.role === 'guest') {
+            if (result.role === 'guest' && status !== 'approved_no_team') {
                 window.location.href = 'waiting-invite.html';
                 return;
             }
@@ -302,6 +305,7 @@ const loginApp = {
     // ============ REGISTRATION ============
 
     _showRegistration() {
+        sessionStorage.removeItem('auth-redirect');
         const input = document.getElementById('regReddyId');
         if (input) input.value = '';
 
@@ -347,6 +351,7 @@ const loginApp = {
     // ============ CHOOSE ROLE ============
 
     _showChooseRole() {
+        sessionStorage.removeItem('auth-redirect');
         this._hideAll();
         this._showUserInfo();
         document.getElementById('loginChooseRole').classList.remove('hidden');
@@ -465,6 +470,7 @@ const loginApp = {
     },
 
     _showAccessPending() {
+        sessionStorage.removeItem('auth-redirect');
         this._hideAll();
         this._showUserInfo();
 
@@ -481,6 +487,7 @@ const loginApp = {
     },
 
     _showAccessRejected() {
+        sessionStorage.removeItem('auth-redirect');
         this._hideAll();
         this._showUserInfo();
         document.getElementById('loginAccessRejected').classList.remove('hidden');
@@ -488,6 +495,7 @@ const loginApp = {
     },
 
     _showAccessBlocked() {
+        sessionStorage.removeItem('auth-redirect');
         this._hideAll();
         this._showUserInfo();
         document.getElementById('loginAccessBlocked').classList.remove('hidden');
@@ -508,6 +516,16 @@ const loginApp = {
         this._updateStatus('Авторизация успешна', 'success');
 
         setTimeout(() => {
+            // Проверяем, есть ли сохранённый URL для возврата
+            const redirectUrl = sessionStorage.getItem('auth-redirect');
+            if (redirectUrl) {
+                sessionStorage.removeItem('auth-redirect');
+                // Валидация: только относительные URL (защита от open redirect)
+                if (redirectUrl.startsWith('/') && !redirectUrl.startsWith('//')) {
+                    window.location.href = redirectUrl;
+                    return;
+                }
+            }
             window.location.href = '../index.html';
         }, 1500);
     },
