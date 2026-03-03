@@ -1034,7 +1034,7 @@ const adminApp = {
 
     createRequestCard(request) {
         const card = document.createElement('div');
-        card.className = 'request-card';
+        card.className = 'request-card' + (request.isLeaderRequest ? ' request-card--leader' : '');
         card.id = 'request-' + request.id;
 
         const initials = this.getInitials(request.name);
@@ -1046,11 +1046,22 @@ const adminApp = {
             minute: '2-digit'
         });
 
+        const leaderBadge = request.isLeaderRequest
+            ? '<span class="request-leader-badge">Руководитель</span>'
+            : '';
+
+        const teamInfo = request.isLeaderRequest && request.teamName
+            ? `<div class="request-team-info">
+                <div class="request-team-name">Команда: <strong>${this.escapeHtml(request.teamName)}</strong></div>
+                ${request.teamDescription ? '<div class="request-team-desc">' + this.escapeHtml(request.teamDescription) + '</div>' : ''}
+               </div>`
+            : '';
+
         card.innerHTML = `
             <div class="request-header">
                 <div class="request-avatar">${initials}</div>
                 <div class="request-info">
-                    <div class="request-name">${this.escapeHtml(request.name)}</div>
+                    <div class="request-name">${this.escapeHtml(request.name)}${leaderBadge}</div>
                     <div class="request-email">${this.escapeHtml(request.email)}</div>
                 </div>
             </div>
@@ -1064,6 +1075,7 @@ const adminApp = {
                     </svg>
                     Reddy ID: <strong>${this.escapeHtml(request.reddyId)}</strong>
                 </div>
+                ${teamInfo}
                 <div class="request-date">${date}</div>
             </div>
             <div class="request-actions">
@@ -1085,7 +1097,16 @@ const adminApp = {
                 throw new Error(result.error);
             }
 
-            Toast.success('Пользователь одобрен');
+            if (result.isLeaderApproval) {
+                Toast.success('Руководитель одобрен, команда создана');
+            } else {
+                Toast.success('Пользователь одобрен');
+            }
+
+            if (result.warning) {
+                Toast.warning(result.warning);
+            }
+
             await this.loadAllData();
 
         } catch (error) {

@@ -310,9 +310,9 @@ const settingsApp = {
         document.getElementById('profileCorpPhone').value = p.corpPhone || '';
         document.getElementById('profilePersonalPhone').value = p.personalPhone || '';
 
-        // Информация о работе
-        document.getElementById('profileBirthday').value = p.birthday || '';
-        document.getElementById('profileStartDate').value = p.startDate || '';
+        // Информация о работе (input[type=date] требует формат yyyy-MM-dd)
+        document.getElementById('profileBirthday').value = (p.birthday || '').substring(0, 10);
+        document.getElementById('profileStartDate').value = (p.startDate || '').substring(0, 10);
         document.getElementById('profileOffice').value = p.office || '';
         document.getElementById('profileCompany').value = p.company || '';
 

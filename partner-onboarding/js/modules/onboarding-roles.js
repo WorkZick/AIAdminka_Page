@@ -5,14 +5,14 @@ const OnboardingRoles = (() => {
 
     // Default: matches current hardcoded roleMap behavior
     const DEFAULTS = {
-        1: { executors: ['sales', 'partners_mgr'], reviewer: null },
-        2: { executors: ['sales', 'partners_mgr'], reviewer: 'assistant' },
-        3: { executors: ['sales', 'partners_mgr'], reviewer: 'assistant' },
-        4: { executors: ['sales', 'partners_mgr'], reviewer: 'assistant' },
-        5: { executors: ['antifraud'],             reviewer: null },
-        6: { executors: ['sales', 'partners_mgr'], reviewer: 'assistant' },
-        7: { executors: ['sales', 'partners_mgr'], reviewer: 'assistant' },
-        8: { executors: ['assistant'],             reviewer: null }
+        1: { executors: ['sales'], reviewer: null },
+        2: { executors: ['sales'], reviewer: 'assistant' },
+        3: { executors: ['sales'], reviewer: 'assistant' },
+        4: { executors: ['sales'], reviewer: 'assistant' },
+        5: { executors: ['assistant'], reviewer: null },
+        6: { executors: ['sales'], reviewer: 'assistant' },
+        7: { executors: ['sales'], reviewer: 'assistant' },
+        8: { executors: ['assistant'], reviewer: null }
     };
 
     let _config = null;
@@ -191,12 +191,16 @@ const OnboardingRoles = (() => {
         }
 
         _config = newConfig;
+        const btn = document.querySelector('[data-action="onb-saveRoleConfig"]');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
         try {
             await CloudStorage.postApi('saveOnboardingRoleConfig', { config: newConfig });
             CloudStorage.clearCache('onboardingSettings');
             Toast.success('Роли сохранены');
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'saveRoleConfig' });
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
     }
 

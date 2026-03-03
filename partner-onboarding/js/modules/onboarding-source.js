@@ -35,6 +35,12 @@ const OnboardingSource = (() => {
     // ── Init / Destroy ──
 
     async function init() {
+        // Show loading in sync bar while fetching settings
+        const bar = document.getElementById('sourceSyncBar');
+        if (bar) {
+            bar.classList.remove('hidden');
+            _updateSyncBar('syncing', 'Загрузка настроек...');
+        }
         try {
             const result = await CloudStorage.getOnboardingSettings();
             _settingsCache = result.sources || { sources: [] };
@@ -283,24 +289,34 @@ const OnboardingSource = (() => {
 
     function updateSyncBarVisibility() {
         const settings = _getSettings();
+        const condData = _getConditionsData();
         const bar = document.getElementById('sourceSyncBar');
         if (!bar) return;
 
         const myRole = OnboardingState.get('userRole');
-        if (settings.sources.length === 0 || myRole === 'executor') {
+        const hasSources = settings.sources.length > 0;
+        const hasConds = condData.conditions && condData.conditions.length > 0;
+
+        if ((!hasSources && !hasConds) || myRole === 'executor') {
             bar.classList.add('hidden');
             return;
         }
 
         bar.classList.remove('hidden');
 
-        const count = settings.sources.length;
-        const lastTimes = settings.sources.filter(s => s.lastSyncTime).map(s => new Date(s.lastSyncTime).getTime());
-        const lastSync = lastTimes.length > 0 ? _formatDateTime(new Date(Math.max(...lastTimes)).toISOString()) : null;
-
-        let text = `Источников: ${count}`;
-        if (lastSync) text += ` · Последняя синхр.: ${lastSync}`;
-        _updateSyncBar('idle', text);
+        const parts = [];
+        if (hasSources) {
+            const count = settings.sources.length;
+            const lastTimes = settings.sources.filter(s => s.lastSyncTime).map(s => new Date(s.lastSyncTime).getTime());
+            const lastSync = lastTimes.length > 0 ? _formatDateTime(new Date(Math.max(...lastTimes)).toISOString()) : null;
+            let srcText = `Источников: ${count}`;
+            if (lastSync) srcText += ` (синхр.: ${lastSync})`;
+            parts.push(srcText);
+        }
+        if (hasConds) {
+            parts.push(`Условий: ${condData.conditions.length}`);
+        }
+        _updateSyncBar('idle', parts.join(' · '));
     }
 
     function _updateSyncBar(status, message) {
@@ -601,7 +617,7 @@ const OnboardingSource = (() => {
     async function _saveConditionsToApi(data) {
         _conditionsCache = data;
         try {
-            await CloudStorage.postApi('saveOnboardingConditions', { conditions: data });
+            await CloudStorage.postApi('saveOnboardingConditions', { data: data });
             CloudStorage.clearCache('onboardingSettings');
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'saveConditions' });
@@ -652,6 +668,7 @@ const OnboardingSource = (() => {
             // Clear conditions
             _saveConditionsToApi({ sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' });
             _renderConditionsStatus({ conditions: [] });
+            updateSyncBarVisibility();
             Toast.success('Условия очищены');
             return;
         }
@@ -684,6 +701,7 @@ const OnboardingSource = (() => {
 
             await _saveConditionsToApi(data);
             _renderConditionsStatus(data);
+            updateSyncBarVisibility();
             Toast.success(`Загружено ${conditions.length} ${_pluralConditions(conditions.length)}`);
 
         } catch (err) {

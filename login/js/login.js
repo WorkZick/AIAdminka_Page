@@ -69,6 +69,23 @@ const loginApp = {
             }
         };
         document.addEventListener('submit', this._submitHandler);
+
+        // Leader toggle handler
+        const leaderCheckbox = document.getElementById('regIsLeader');
+        if (leaderCheckbox) {
+            this._leaderToggleHandler = () => {
+                const details = document.getElementById('leaderDetails');
+                const teamNameInput = document.getElementById('regTeamName');
+                if (leaderCheckbox.checked) {
+                    details.classList.remove('hidden');
+                    teamNameInput.required = true;
+                } else {
+                    details.classList.add('hidden');
+                    teamNameInput.required = false;
+                }
+            };
+            leaderCheckbox.addEventListener('change', this._leaderToggleHandler);
+        }
     },
 
     destroy() {
@@ -79,6 +96,11 @@ const loginApp = {
         if (this._submitHandler) {
             document.removeEventListener('submit', this._submitHandler);
             this._submitHandler = null;
+        }
+        if (this._leaderToggleHandler) {
+            const cb = document.getElementById('regIsLeader');
+            if (cb) cb.removeEventListener('change', this._leaderToggleHandler);
+            this._leaderToggleHandler = null;
         }
     },
 
@@ -309,6 +331,16 @@ const loginApp = {
         const input = document.getElementById('regReddyId');
         if (input) input.value = '';
 
+        // Reset leader toggle and fields
+        const leaderCb = document.getElementById('regIsLeader');
+        if (leaderCb) leaderCb.checked = false;
+        const leaderDetails = document.getElementById('leaderDetails');
+        if (leaderDetails) leaderDetails.classList.add('hidden');
+        const teamName = document.getElementById('regTeamName');
+        if (teamName) { teamName.value = ''; teamName.required = false; }
+        const teamDesc = document.getElementById('regTeamDesc');
+        if (teamDesc) teamDesc.value = '';
+
         this._hideAll();
         this._showUserInfo();
         document.getElementById('loginRegistration').classList.remove('hidden');
@@ -328,16 +360,33 @@ const loginApp = {
             return;
         }
 
+        const isLeader = document.getElementById('regIsLeader')?.checked || false;
+        const teamName = (formData.get('teamName') || '').trim();
+        const teamDescription = (formData.get('teamDescription') || '').trim();
+
+        if (isLeader && (!teamName || teamName.length < 2)) {
+            Toast.warning('Укажите название команды (минимум 2 символа)');
+            return;
+        }
+
         btn.disabled = true;
         btn.textContent = 'Отправка...';
 
         try {
-            const result = await this._secureApiCall('register', {
+            const params = {
                 reddyId,
                 name: this.currentUser?.name || '',
                 email: this.currentUser?.email || '',
                 picture: this.currentUser?.picture || ''
-            });
+            };
+
+            if (isLeader) {
+                params.isLeaderRequest = 'true';
+                params.teamName = teamName;
+                params.teamDescription = teamDescription;
+            }
+
+            const result = await this._secureApiCall('register', params);
 
             if (result.error) throw new Error(result.error);
             if (result.success) this._showAccessPending();

@@ -497,7 +497,7 @@ const OnboardingForm = (() => {
         reader.readAsDataURL(file);
     }
 
-    function collectFormData(stepNumber) {
+    function collectFormData(stepNumber, { excludeFiles = false } = {}) {
         const step = OnboardingConfig.getStep(stepNumber);
         if (!step) return {};
 
@@ -506,7 +506,7 @@ const OnboardingForm = (() => {
             const id = `field_${field.id}`;
             switch (field.type) {
                 case 'file':
-                    if (_fileDataUrls[field.id]) {
+                    if (!excludeFiles && _fileDataUrls[field.id]) {
                         data[field.id] = _fileDataUrls[field.id];
                     }
                     break;
@@ -694,6 +694,22 @@ const OnboardingForm = (() => {
         }
     }
 
+    /** Return pending file uploads (base64 data URLs not yet uploaded to server) */
+    function getPendingFiles() {
+        const files = {};
+        for (const [fieldId, dataUrl] of Object.entries(_fileDataUrls)) {
+            if (dataUrl && dataUrl.startsWith('data:')) {
+                files[fieldId] = dataUrl;
+            }
+        }
+        return files;
+    }
+
+    /** Replace local base64 with server URL after upload */
+    function setFileUrl(fieldId, url) {
+        _fileDataUrls[fieldId] = url;
+    }
+
     return {
         render,
         collectFormData,
@@ -702,6 +718,8 @@ const OnboardingForm = (() => {
         addListItem,
         addListSuggestion,
         removeListItem,
-        toggleChecklistComment
+        toggleChecklistComment,
+        getPendingFiles,
+        setFileUrl
     };
 })();

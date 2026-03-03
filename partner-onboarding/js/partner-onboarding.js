@@ -4,8 +4,36 @@ const PartnerOnboarding = (() => {
     'use strict';
 
     let _confirmCallback = null;
+    let _actionInProgress = false;
+    let _statusWatchTimer = null;
+    let _statusWatchRequestId = null;
+    let _statusWatchExpected = null;
     const _debouncedSearch = Utils.debounce(() => OnboardingList.applyFilters(), 150);
     const _debouncedAutosave = Utils.debounce(() => _autosaveDraft(), 500);
+
+    // ── Loading helpers ──
+
+    function _setBtnLoading(selector, loading) {
+        const btn = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        if (!btn) return;
+        if (loading) {
+            btn.dataset.wasDisabled = btn.disabled;
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+        } else {
+            btn.classList.remove('btn-loading');
+            btn.disabled = btn.dataset.wasDisabled === 'true';
+            delete btn.dataset.wasDisabled;
+        }
+    }
+
+    function _setActionLock(lock) {
+        _actionInProgress = lock;
+    }
+
+    function _isActionLocked() {
+        return _actionInProgress;
+    }
 
     // ── Init ──
 
@@ -34,6 +62,10 @@ const PartnerOnboarding = (() => {
     // ── Data (API) ──
 
     async function _loadRequests() {
+        const loadingEl = document.getElementById('listLoading');
+        const listEl = document.getElementById('requestsList');
+        if (loadingEl) loadingEl.classList.remove('hidden');
+        if (listEl) listEl.classList.add('hidden');
         try {
             const data = await CloudStorage.getOnboardingRequests();
             OnboardingState.set('requests', data.requests || []);
@@ -41,6 +73,9 @@ const PartnerOnboarding = (() => {
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'loadRequests' });
             OnboardingState.set('requests', []);
+        } finally {
+            if (loadingEl) loadingEl.classList.add('hidden');
+            if (listEl) listEl.classList.remove('hidden');
         }
     }
 
@@ -91,12 +126,20 @@ const PartnerOnboarding = (() => {
         if (view === 'list') {
             headerTitle.textContent = 'Заведение партнёра';
             headerRequestId.classList.add('hidden');
+            _stopStatusWatch();
         } else {
             const request = OnboardingState.get('currentRequest');
             if (request) {
                 headerRequestId.textContent = request.id;
                 headerRequestId.classList.remove('hidden');
                 _renderAdminActions(request);
+                // Start status watch when request is on_review (reviewer or form view)
+                // Detects if executor withdraws while reviewer is working
+                if (request.status === 'on_review') {
+                    _startStatusWatch(request.id, 'on_review');
+                } else {
+                    _stopStatusWatch();
+                }
             }
         }
     }
@@ -386,6 +429,9 @@ const PartnerOnboarding = (() => {
     // ── Request CRUD ──
 
     async function _createRequest() {
+        if (_isActionLocked()) return;
+        _setActionLock(true);
+        _setBtnLoading('#btnNewRequest', true);
         try {
             const result = await CloudStorage.postApi('createOnboardingRequest', {
                 data: { leadSource: '', stageData: { 1: { lead_status: 'new' } } }
@@ -397,6 +443,9 @@ const PartnerOnboarding = (() => {
             _showView('form');
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'createRequest' });
+        } finally {
+            _setBtnLoading('#btnNewRequest', false);
+            _setActionLock(false);
         }
     }
 
@@ -436,6 +485,9 @@ const PartnerOnboarding = (() => {
 
         // Executor takes "new" request → assign via API
         if (request.status === 'new' && step && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
+            // Show loading on the clicked row
+            const row = document.querySelector(`.request-row[data-id="${id}"]`);
+            if (row) row.classList.add('row-loading');
             try {
                 const result = await CloudStorage.postApi('submitStep', {
                     requestId: request.id, step: 0, data: { _assign: true }
@@ -443,6 +495,8 @@ const PartnerOnboarding = (() => {
                 if (result.success) _applyApiResult(result);
             } catch (e) {
                 ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'assignRequest' });
+            } finally {
+                if (row) row.classList.remove('row-loading');
             }
         }
 
@@ -543,7 +597,7 @@ const PartnerOnboarding = (() => {
         const stepNumber = OnboardingState.get('currentStep');
         if (!request || OnboardingState.get('view') !== 'form') return;
 
-        const data = OnboardingForm.collectFormData(stepNumber);
+        const data = OnboardingForm.collectFormData(stepNumber, { excludeFiles: true });
         if (!request.stageData) request.stageData = {};
         request.stageData[stepNumber] = { ...request.stageData[stepNumber], ...data };
 
@@ -554,16 +608,59 @@ const PartnerOnboarding = (() => {
         // Local update for responsive UI
         _updateRequestLocal(request.id, { stageData: request.stageData, leadSource: request.leadSource });
 
-        // Fire-and-forget API save
+        // Don't autosave to server when reviewer is filling data on dynamicExecutor step (on_review).
+        // Data will be saved explicitly when reviewer clicks "Отправить экзекьютору".
+        // This prevents executor from seeing partial/in-progress reviewer edits.
+        if (request.status === 'on_review') return;
+
+        // Fire-and-forget API save (without files — they are uploaded on submit)
         CloudStorage.postApi('saveDraft', {
             requestId: request.id, step: stepNumber, data: data
         }).catch(() => { /* silent — draft save не критичен */ });
     }
 
+    // ── Status Watch (sync: detect if executor withdraws while reviewer edits) ──
+
+    function _startStatusWatch(requestId, expectedStatus) {
+        _stopStatusWatch();
+        _statusWatchRequestId = requestId;
+        _statusWatchExpected = expectedStatus;
+        _statusWatchTimer = setInterval(() => _pollStatus(), 10000); // every 10s
+    }
+
+    function _stopStatusWatch() {
+        if (_statusWatchTimer) {
+            clearInterval(_statusWatchTimer);
+            _statusWatchTimer = null;
+        }
+        _statusWatchRequestId = null;
+        _statusWatchExpected = null;
+    }
+
+    async function _pollStatus() {
+        if (!_statusWatchRequestId || !_statusWatchExpected) return;
+        try {
+            const result = await CloudStorage.postApi('getOnboardingStatus', {
+                requestId: _statusWatchRequestId
+            });
+            if (!result.success) return;
+            if (result.status !== _statusWatchExpected) {
+                _stopStatusWatch();
+                Toast.warning('Статус заявки изменился. Обновляю...');
+                // Reload all requests to get fresh data, then re-open
+                const listResult = await CloudStorage.postApi('getOnboardingRequests', {});
+                if (listResult.requests) {
+                    OnboardingState.set('requests', listResult.requests);
+                }
+                _openRequest(_statusWatchRequestId);
+            }
+        } catch (_) { /* silent — polling error is not critical */ }
+    }
+
     async function _submitStep() {
         const request = OnboardingState.get('currentRequest');
         const stepNumber = OnboardingState.get('currentStep');
-        if (!request) return;
+        if (!request || _isActionLocked()) return;
 
         const step = OnboardingConfig.getStep(stepNumber);
         const sysRole = OnboardingState.get('systemRole');
@@ -581,9 +678,61 @@ const PartnerOnboarding = (() => {
             return;
         }
 
-        const data = OnboardingForm.collectFormData(stepNumber);
+        const data = OnboardingForm.collectFormData(stepNumber, { excludeFiles: true });
 
+        _setActionLock(true);
+        _setBtnLoading('#btnFormSubmit', true);
+        // Also lock status-submit button if present
+        _setBtnLoading('.status-submit-main', true);
         try {
+            // Upload pending files (base64) separately to avoid CORS/payload-size issues
+            const pendingFiles = OnboardingForm.getPendingFiles();
+            for (const [fieldId, dataUrl] of Object.entries(pendingFiles)) {
+                const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+                if (!match) continue;
+                const mimeType = match[1];
+                const base64 = match[2];
+                const uploadResult = await CloudStorage.postApi('uploadOnboardingFile', {
+                    requestId: request.id, fieldName: fieldId, base64, mimeType
+                });
+                if (uploadResult.success && uploadResult.url) {
+                    data[fieldId] = uploadResult.url;
+                    OnboardingForm.setFileUrl(fieldId, uploadResult.url);
+                } else {
+                    Toast.error(uploadResult.error || 'Ошибка загрузки файла ' + fieldId);
+                    return;
+                }
+            }
+
+            // Reviewer filling data on dynamicExecutor step → save draft + approve (handoff)
+            if (request.status === 'on_review' && step && step.dynamicExecutor) {
+                // Pre-submit freshness check: verify request is still on_review
+                const freshStatus = await CloudStorage.postApi('getOnboardingStatus', {
+                    requestId: request.id
+                });
+                if (freshStatus.success && freshStatus.status !== 'on_review') {
+                    _stopStatusWatch();
+                    Toast.warning('Заявка была отозвана экзекьютором. Обновляю...');
+                    const listResult = await CloudStorage.postApi('getOnboardingRequests', {});
+                    if (listResult.requests) OnboardingState.set('requests', listResult.requests);
+                    _openRequest(request.id);
+                    return;
+                }
+
+                await CloudStorage.postApi('saveDraft', {
+                    requestId: request.id, step: stepNumber, data: data
+                });
+                const approveResult = await CloudStorage.postApi('approveStep', {
+                    requestId: request.id, step: stepNumber, comment: ''
+                });
+                if (!approveResult.success) { Toast.error(approveResult.error || 'Ошибка'); return; }
+                _stopStatusWatch();
+                _applyApiResult(approveResult);
+                Toast.success('Данные сохранены, передано экзекьютору');
+                _openRequest(request.id);
+                return;
+            }
+
             const result = await CloudStorage.postApi('submitStep', {
                 requestId: request.id, step: stepNumber, data: data
             });
@@ -612,16 +761,22 @@ const PartnerOnboarding = (() => {
             }
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'submitStep' });
+        } finally {
+            _setBtnLoading('#btnFormSubmit', false);
+            _setBtnLoading('.status-submit-main', false);
+            _setActionLock(false);
         }
     }
 
     async function _approveStep() {
         const request = OnboardingState.get('currentRequest');
         const stepNumber = OnboardingState.get('currentStep');
-        if (!request || request.status !== 'on_review') return;
+        if (!request || request.status !== 'on_review' || _isActionLocked()) return;
 
         const comment = (document.getElementById('reviewComment') || {}).value || '';
 
+        _setActionLock(true);
+        _setBtnLoading('#btnApprove', true);
         try {
             const result = await CloudStorage.postApi('approveStep', {
                 requestId: request.id, step: stepNumber, comment: comment.trim()
@@ -633,13 +788,16 @@ const PartnerOnboarding = (() => {
             _openRequest(request.id);
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'approveStep' });
+        } finally {
+            _setBtnLoading('#btnApprove', false);
+            _setActionLock(false);
         }
     }
 
     async function _rejectStep() {
         const request = OnboardingState.get('currentRequest');
         const stepNumber = OnboardingState.get('currentStep');
-        if (!request || request.status !== 'on_review') return;
+        if (!request || request.status !== 'on_review' || _isActionLocked()) return;
 
         let comment = '';
         let checklistData = null;
@@ -672,6 +830,8 @@ const PartnerOnboarding = (() => {
             if (!comment) { Toast.error('Добавьте комментарий для возврата'); return; }
         }
 
+        _setActionLock(true);
+        _setBtnLoading('#btnReject', true);
         try {
             const result = await CloudStorage.postApi('rejectStep', {
                 requestId: request.id, step: stepNumber, comment, checklistData
@@ -679,17 +839,23 @@ const PartnerOnboarding = (() => {
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
             _applyApiResult(result);
+            if (!result.request) _updateRequestLocal(request.id, { status: 'in_progress', lastComment: comment });
             Toast.info('Заявка возвращена на доработку');
             _openRequest(request.id);
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'rejectStep' });
+        } finally {
+            _setBtnLoading('#btnReject', false);
+            _setActionLock(false);
         }
     }
 
     async function _withdrawStep() {
         const request = OnboardingState.get('currentRequest');
-        if (!request) return;
+        if (!request || _isActionLocked()) return;
 
+        _setActionLock(true);
+        _setBtnLoading('#btnWithdraw', true);
         try {
             const result = await CloudStorage.postApi('withdrawOnboarding', {
                 requestId: request.id, step: request.currentStep
@@ -697,23 +863,29 @@ const PartnerOnboarding = (() => {
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
             _applyApiResult(result);
+            if (!result.request) _updateRequestLocal(request.id, { status: 'in_progress' });
             Toast.info('Заявка отозвана с проверки');
             _openRequest(request.id);
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'withdrawStep' });
+        } finally {
+            _setBtnLoading('#btnWithdraw', false);
+            _setActionLock(false);
         }
     }
 
     async function _advanceAfterApprove() {
         const request = OnboardingState.get('currentRequest');
         const stepNumber = OnboardingState.get('currentStep');
-        if (!request) return;
+        if (!request || _isActionLocked()) return;
 
         const step = OnboardingConfig.getStep(stepNumber);
         if (!step || !step.confirmAfterApprove || !(request.stageData[stepNumber] || {})._approved) return;
 
         const sysRole = OnboardingState.get('systemRole');
 
+        _setActionLock(true);
+        _setBtnLoading('#btnReviewAdvance', true);
         try {
             const result = await CloudStorage.postApi('submitStep', {
                 requestId: request.id, step: stepNumber, data: { _advance: true }
@@ -736,6 +908,9 @@ const PartnerOnboarding = (() => {
             }
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'advanceAfterApprove' });
+        } finally {
+            _setBtnLoading('#btnReviewAdvance', false);
+            _setActionLock(false);
         }
     }
 
@@ -815,6 +990,8 @@ const PartnerOnboarding = (() => {
             'Удалить заявки?',
             `Будет удалено заявок: ${ids.length}. Это действие нельзя отменить.`,
             async () => {
+                _setActionLock(true);
+                _setBtnLoading('#confirmOk', true);
                 try {
                     const result = await CloudStorage.postApi('deleteOnboardings', { ids });
                     if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
@@ -827,6 +1004,9 @@ const PartnerOnboarding = (() => {
                     Toast.success(`Удалено заявок: ${ids.length}`);
                 } catch (e) {
                     ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'deleteRequests' });
+                } finally {
+                    _setBtnLoading('#confirmOk', false);
+                    _setActionLock(false);
                 }
             }
         );
@@ -836,15 +1016,21 @@ const PartnerOnboarding = (() => {
         const request = OnboardingState.get('currentRequest');
         if (!request) return;
 
+        _setActionLock(true);
+        _setBtnLoading('#confirmOk', true);
         try {
             const result = await CloudStorage.postApi('cancelOnboarding', { requestId: request.id });
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
             _applyApiResult(result);
+            if (!result.request) _updateRequestLocal(request.id, { status: 'cancelled' });
             Toast.warning('Заявка отменена');
             _openRequest(request.id);
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'cancelRequest' });
+        } finally {
+            _setBtnLoading('#confirmOk', false);
+            _setActionLock(false);
         }
     }
 
@@ -852,15 +1038,21 @@ const PartnerOnboarding = (() => {
         const request = OnboardingState.get('currentRequest');
         if (!request || request.status !== 'cancelled') return;
 
+        _setActionLock(true);
+        _setBtnLoading('#confirmOk', true);
         try {
             const result = await CloudStorage.postApi('reactivateOnboarding', { requestId: request.id });
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
             _applyApiResult(result);
+            if (!result.request) _updateRequestLocal(request.id, { status: 'in_progress' });
             Toast.success('Заявка восстановлена');
             _openRequest(request.id);
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'reactivateRequest' });
+        } finally {
+            _setBtnLoading('#confirmOk', false);
+            _setActionLock(false);
         }
     }
 
@@ -910,7 +1102,7 @@ const PartnerOnboarding = (() => {
 
     async function _confirmReassign() {
         const request = OnboardingState.get('currentRequest');
-        if (!request) return;
+        if (!request || _isActionLocked()) return;
 
         const targetSelect = document.getElementById('reassignTarget');
         const target = targetSelect.value;
@@ -921,6 +1113,9 @@ const PartnerOnboarding = (() => {
         if (!target) { Toast.error('Выберите менеджера'); return; }
         if (!reason) { Toast.error('Выберите причину'); return; }
 
+        _setActionLock(true);
+        const btn = document.querySelector('[data-action="onb-confirmReassign"]');
+        _setBtnLoading(btn, true);
         try {
             const result = await CloudStorage.postApi('reassignOnboarding', {
                 requestId: request.id, targetEmail: target, targetName, reason, comment
@@ -928,11 +1123,15 @@ const PartnerOnboarding = (() => {
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
             _applyApiResult(result);
+            if (!result.request) _updateRequestLocal(request.id, { assigneeEmail: target, assigneeName: targetName });
             _closeModal('reassignModal');
             Toast.success('Заявка передана');
             _openRequest(request.id);
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'reassign' });
+        } finally {
+            _setBtnLoading(btn, false);
+            _setActionLock(false);
         }
     }
 
@@ -956,13 +1155,16 @@ const PartnerOnboarding = (() => {
 
     async function _confirmRollback() {
         const request = OnboardingState.get('currentRequest');
-        if (!request) return;
+        if (!request || _isActionLocked()) return;
 
         const targetStep = parseInt(document.getElementById('rollbackTarget').value, 10);
         const comment = document.getElementById('rollbackComment').value.trim();
 
         if (!targetStep) { Toast.error('Выберите шаг'); return; }
 
+        _setActionLock(true);
+        const btn = document.querySelector('[data-action="onb-confirmRollback"]');
+        _setBtnLoading(btn, true);
         try {
             const result = await CloudStorage.postApi('rollbackOnboarding', {
                 requestId: request.id, targetStep, comment
@@ -970,11 +1172,15 @@ const PartnerOnboarding = (() => {
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
             _applyApiResult(result);
+            if (!result.request) _updateRequestLocal(request.id, { status: 'in_progress', currentStep: targetStep, lastComment: comment });
             _closeModal('rollbackModal');
             Toast.info('Откат выполнен');
             _openRequest(request.id);
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'rollback' });
+        } finally {
+            _setBtnLoading(btn, false);
+            _setActionLock(false);
         }
     }
 
@@ -995,16 +1201,39 @@ const PartnerOnboarding = (() => {
         input.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
     }
 
+    function _getFullResUrl(src) {
+        // Already lh3 CDN — original resolution, use as-is
+        if (src.includes('lh3.googleusercontent.com/d/')) return src;
+        // Old thumbnail URL (sz=w400) → extract fileId → lh3 CDN original
+        const thumbMatch = src.match(/drive\.google\.com\/thumbnail\?id=([^&]+)/);
+        if (thumbMatch) return 'https://lh3.googleusercontent.com/d/' + thumbMatch[1];
+        // data: URL or unknown — use as-is
+        return src;
+    }
+
     function _openPhotoLightbox(target) {
         const img = target.tagName === 'IMG' ? target : target.querySelector('img');
         if (!img || !img.src) return;
         if (!img.src.startsWith('data:') && !img.src.startsWith('http')) return;
 
+        const fullSrc = _getFullResUrl(img.src);
+
         const overlay = document.createElement('div');
         overlay.className = 'photo-lightbox';
+
         const photo = document.createElement('img');
-        photo.src = img.src;
+        photo.src = fullSrc;
         photo.alt = '';
+
+        // Fallback: if lh3 fails, try high-res thumbnail
+        photo.onerror = function() {
+            const thumbMatch = fullSrc.match(/lh3\.googleusercontent\.com\/d\/(.+)/);
+            if (thumbMatch && !this._fallback) {
+                this._fallback = true;
+                this.src = 'https://drive.google.com/thumbnail?id=' + thumbMatch[1] + '&sz=w2000';
+            }
+        };
+
         overlay.appendChild(photo);
         overlay.addEventListener('click', () => overlay.remove());
         document.body.appendChild(overlay);

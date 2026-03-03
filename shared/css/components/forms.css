@@ -26,10 +26,10 @@
 /* ==================== TEXT INPUT ==================== */
 .form-input {
     width: 100%;
-    padding: 12px 14px;
+    padding: var(--spacing-sm) var(--spacing-md);
     font-size: var(--font-size-base);
     font-family: var(--font-family);
-    background: var(--gray-dark);
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     color: var(--white);
@@ -43,8 +43,8 @@
 
 .form-input:focus {
     outline: none;
-    border-color: var(--accent-muted);
-    background: var(--input-focus-bg);
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .form-input:disabled {
@@ -55,10 +55,10 @@
 /* ==================== TEXTAREA ==================== */
 .form-textarea {
     width: 100%;
-    padding: 12px 14px;
+    padding: var(--spacing-sm) var(--spacing-md);
     font-size: var(--font-size-base);
     font-family: var(--font-family);
-    background: var(--gray-dark);
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     color: var(--white);
@@ -74,17 +74,17 @@
 
 .form-textarea:focus {
     outline: none;
-    border-color: var(--accent-muted);
-    background: var(--input-focus-bg);
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 /* ==================== SELECT ==================== */
 .form-select {
     width: 100%;
-    padding: 12px 14px;
+    padding: var(--spacing-sm) var(--spacing-md);
     font-size: var(--font-size-base);
     font-family: var(--font-family);
-    background: var(--gray-dark);
+    background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     color: var(--white);
@@ -100,12 +100,12 @@
 
 .form-select:focus {
     outline: none;
-    border-color: var(--accent-muted);
-    background-color: var(--input-focus-bg);
+    border-color: var(--accent);
+    background-color: rgba(255, 255, 255, 0.08);
 }
 
 .form-select option {
-    background: var(--gray-darker);
+    background: var(--gray-dark);
     color: var(--white);
     padding: 8px;
 }

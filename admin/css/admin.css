@@ -632,6 +632,48 @@
     gap: 10px;
 }
 
+/* Leader Request Card */
+.request-card--leader {
+    border-color: rgba(77, 171, 247, 0.25);
+}
+
+.request-card--leader:hover {
+    border-color: rgba(77, 171, 247, 0.4);
+}
+
+.request-leader-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(77, 171, 247, 0.12);
+    border: 1px solid rgba(77, 171, 247, 0.25);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.request-team-info {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(77, 171, 247, 0.06);
+    border: 1px solid rgba(77, 171, 247, 0.12);
+    border-radius: 6px;
+}
+
+.request-team-name {
+    font-size: 12px;
+    color: var(--gray-light);
+    margin-bottom: 4px;
+}
+
+.request-team-desc {
+    font-size: 11px;
+    color: var(--gray);
+    line-height: 1.4;
+}
+
 /* btn-approve/btn-reject removed — dead code, not used in HTML/JS */
 
 /* =========================================
