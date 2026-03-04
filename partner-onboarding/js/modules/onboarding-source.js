@@ -42,7 +42,8 @@ const OnboardingSource = (() => {
             _updateSyncBar('syncing', 'Загрузка настроек...');
         }
         try {
-            const result = await CloudStorage.getOnboardingSettings();
+            // Условия — общие на команду, грузим без кеша для актуальности
+            const result = await CloudStorage.getOnboardingSettings(false);
             _settingsCache = result.sources || { sources: [] };
             if (!_settingsCache.sources) _settingsCache.sources = [];
             _conditionsCache = result.conditions || { sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' };
@@ -686,11 +687,6 @@ const OnboardingSource = (() => {
             const table = await _fetchSheet(sheetId);
             const conditions = _parseConditionsTable(table);
 
-            if (conditions.length === 0) {
-                Toast.error('Не найдены условия в таблице. Проверьте заголовки колонок');
-                return;
-            }
-
             const data = {
                 sheetUrl: url,
                 sheetId: sheetId,
@@ -702,10 +698,59 @@ const OnboardingSource = (() => {
             await _saveConditionsToApi(data);
             _renderConditionsStatus(data);
             updateSyncBarVisibility();
-            Toast.success(`Загружено ${conditions.length} ${_pluralConditions(conditions.length)}`);
+
+            if (conditions.length === 0) {
+                Toast.warning('Таблица сохранена, но условия пока пусты. Убедитесь что есть колонки: Тип метода, Название метода, и хотя бы одна заполненная строка');
+            } else {
+                Toast.success(`Загружено ${conditions.length} ${_pluralConditions(conditions.length)}`);
+            }
 
         } catch (err) {
             Toast.error(err.message || 'Ошибка загрузки');
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
+        }
+    }
+
+    let _lastConditionsSync = 0;
+    const MIN_RESYNC_INTERVAL = 10000;
+
+    async function resyncConditions() {
+        const data = _getConditionsData();
+        if (!data.sheetId) return;
+
+        const now = Date.now();
+        if (now - _lastConditionsSync < MIN_RESYNC_INTERVAL) {
+            Toast.warning('Подождите перед повторной синхронизацией');
+            return;
+        }
+        _lastConditionsSync = now;
+
+        const btn = document.querySelector('[data-action="onb-resyncConditions"]');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+
+        try {
+            const table = await _fetchSheet(data.sheetId);
+            const conditions = _parseConditionsTable(table);
+
+            const updated = {
+                sheetUrl: data.sheetUrl,
+                sheetId: data.sheetId,
+                conditions: conditions,
+                lastSyncTime: new Date().toISOString(),
+                lastSyncStatus: 'success'
+            };
+
+            await _saveConditionsToApi(updated);
+            _renderConditionsStatus(updated);
+            updateSyncBarVisibility();
+            if (conditions.length === 0) {
+                Toast.warning('Условия пока пусты. Убедитесь что есть колонки: Тип метода, Название метода, и хотя бы одна заполненная строка');
+            } else {
+                Toast.success(`Обновлено: ${conditions.length} ${_pluralConditions(conditions.length)}`);
+            }
+        } catch (err) {
+            Toast.error(err.message || 'Ошибка обновления');
         } finally {
             if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
@@ -805,7 +850,7 @@ const OnboardingSource = (() => {
         init, destroy,
         openSettings, showList, showEditForm, saveSource, deleteSource,
         syncNow, updateSyncBarVisibility, _getEditingId,
-        openConditionsSettings, saveConditionsUrl,
+        openConditionsSettings, saveConditionsUrl, resyncConditions,
         hasConditions, getConditions, getCountries, getMethodTypes, getMethodNames, getCondition
     };
 })();

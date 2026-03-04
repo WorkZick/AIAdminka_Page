@@ -303,6 +303,7 @@ const PartnerOnboarding = (() => {
             case 'onb-openConditionsSettings': _closeSettingsDropdown(); OnboardingSource.openConditionsSettings(); break;
             case 'onb-closeConditions': _closeModal('conditionsModal'); break;
             case 'onb-saveConditions': OnboardingSource.saveConditionsUrl(); break;
+            case 'onb-resyncConditions': OnboardingSource.resyncConditions(); break;
 
             // Role config settings
             case 'onb-openRoleConfig': _closeSettingsDropdown(); OnboardingRoles.openSettings(); break;

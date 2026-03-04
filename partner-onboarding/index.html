@@ -311,27 +311,29 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label class="form-label">URL Google Таблицы с условиями</label>
+                    <label class="form-label">URL Google Таблицы с условиями (общая на команду)</label>
                     <input type="text" class="form-input" id="conditionsUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
-                    <div class="form-hint">Доступ: «Все у кого есть ссылка»</div>
+                    <div class="form-hint">Доступ: «Все у кого есть ссылка». Одна таблица на всю команду — все участники увидят одинаковые условия.</div>
                 </div>
                 <div class="conditions-status hidden" id="conditionsStatus"></div>
                 <div class="source-columns-hint">
                     <div class="source-columns-hint-title">Структура таблицы</div>
-                    <div class="source-columns-hint-text">Первая строка — заголовки колонок:</div>
+                    <div class="source-columns-hint-text">Первая строка — заголовки колонок. Обязательные отмечены *:</div>
                     <div class="source-columns-grid">
                         <span class="source-col">Страна</span>
-                        <span class="source-col">Тип метода</span>
-                        <span class="source-col">Название метода</span>
+                        <span class="source-col" style="font-weight:600">Тип метода *</span>
+                        <span class="source-col" style="font-weight:600">Название метода *</span>
                         <span class="source-col">Пополнения</span>
                         <span class="source-col">Выводы</span>
                         <span class="source-col">Компенсация</span>
                         <span class="source-col">Способ предоплаты</span>
                         <span class="source-col">Сумма предоплаты</span>
                     </div>
+                    <div class="source-columns-hint-text" style="margin-top:6px; opacity:0.6">Можно сохранить таблицу без данных — условия подтянутся при добавлении строк и повторной синхронизации.</div>
                 </div>
             </div>
             <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="onb-resyncConditions" title="Обновить условия из таблицы">Обновить</button>
                 <button class="btn btn-primary" data-action="onb-closeConditions">Закрыть</button>
                 <button class="btn btn-primary" data-action="onb-saveConditions">Сохранить</button>
             </div>

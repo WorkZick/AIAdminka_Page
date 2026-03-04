@@ -746,8 +746,9 @@ const adminApp = {
         const teamSelect = document.getElementById('modalUserTeam');
         teamSelect.innerHTML = '<option value="">Без команды</option>';
 
-        // Leader видит только свою команду
-        const isLeader = typeof RoleGuard !== 'undefined' && RoleGuard.hasRole('leader');
+        // Leader видит только свою команду (но admin-leader видит все)
+        const isAdminUser = typeof RoleGuard !== 'undefined' && RoleGuard.isAdmin();
+        const isLeader = !isAdminUser && typeof RoleGuard !== 'undefined' && RoleGuard.hasRole('leader');
         const myTeamId = RoleGuard?.user?.teamId;
 
         this.teams.forEach(team => {
