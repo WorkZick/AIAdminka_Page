@@ -24,23 +24,6 @@ const adminApp = {
     auditPage: 1,
     auditPerPage: 15,
 
-    // Mock API режим
-    USE_MOCK_API: false,
-
-    // ============ MOCK DATA ============
-    // Mock данные вынесены в admin-mock-data.js для удобства поддержки
-    // Для использования: подключите <script src="js/admin-mock-data.js"></script> в index.html
-
-    mockData: window.ADMIN_MOCK_DATA || {
-        teams: [],
-        users: [],
-        requests: [],
-        permissions: {},
-        auditLog: []
-    },
-
-    // Названия ролей — из RolesConfig (shared/roles-config.js)
-
     // Модули
     modules: ['partners', 'partner-onboarding', 'team-info', 'traffic', 'reports', 'settings', 'documentation', 'team-management'],
     moduleNames: {
@@ -251,19 +234,19 @@ const adminApp = {
     loadUserData() {
         const authData = localStorage.getItem('cloud-auth');
         if (authData) {
-            const auth = JSON.parse(authData);
+            let auth;
+            try {
+                auth = JSON.parse(authData);
+            } catch (e) {
+                console.error('Invalid cloud-auth data:', e);
+                return;
+            }
             this.currentUser = {
                 email: auth.email,
                 name: auth.name,
                 picture: auth.picture
             };
 
-            // Обновить mock данные
-            if (this.USE_MOCK_API) {
-                this.mockData.users[0].email = auth.email;
-                this.mockData.users[0].name = auth.name || this.mockData.users[0].name;
-                this.mockData.users[0].picture = auth.picture || '';
-            }
         }
     },
 
@@ -300,132 +283,13 @@ const adminApp = {
     // ============ API ============
 
     async apiCall(action, params = {}) {
-        if (this.USE_MOCK_API) {
-            return this.mockApiCall(action, params);
-        }
-
-        // Реальный API через CloudStorage (автоматически добавляет токен)
+        // API через CloudStorage (автоматически добавляет токен)
         try {
             return await CloudStorage.callApi(action, params);
         } catch (error) {
             console.error('API call error:', error);
             return { error: error.message || 'Ошибка сети' };
         }
-    },
-
-    async mockApiCall(action, params = {}) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        switch (action) {
-            case 'getAdminData':
-                return {
-                    success: true,
-                    teams: [...this.mockData.teams],
-                    users: [...this.mockData.users],
-                    requests: [...this.mockData.requests],
-                    permissions: JSON.parse(JSON.stringify(this.mockData.permissions)),
-                    auditLog: [...this.mockData.auditLog]
-                };
-
-            case 'createTeam':
-                const newTeamId = 'team-' + Date.now();
-                const newTeam = {
-                    id: newTeamId,
-                    name: params.name,
-                    leaderEmail: params.leaderEmail,
-                    leaderName: params.leaderName || 'Новый руководитель',
-                    leaderReddyId: '',
-                    description: params.description || '',
-                    membersCount: 1,
-                    isActive: true,
-                    createdAt: new Date().toISOString()
-                };
-                this.mockData.teams.push(newTeam);
-                this.addAuditLog('team_created', params.leaderEmail, newTeamId, '', params.name);
-                return { success: true, teamId: newTeamId };
-
-            case 'updateTeam':
-                const teamIdx = this.mockData.teams.findIndex(t => t.id === params.teamId);
-                if (teamIdx === -1) return { error: 'Команда не найдена' };
-                Object.assign(this.mockData.teams[teamIdx], params);
-                return { success: true };
-
-            case 'updateUser':
-                const userIdx = this.mockData.users.findIndex(u => u.email === params.targetEmail);
-                if (userIdx === -1) return { error: 'Пользователь не найден' };
-                const oldRole = this.mockData.users[userIdx].role;
-                const oldStatus = this.mockData.users[userIdx].status;
-                Object.assign(this.mockData.users[userIdx], {
-                    teamId: params.teamId,
-                    role: params.role,
-                    status: params.status
-                });
-
-                if (params.role && params.role !== oldRole) {
-                    this.addAuditLog('role_changed', params.targetEmail, params.teamId || '', oldRole, params.role);
-                }
-                if (params.status && params.status !== oldStatus) {
-                    const action = params.status === 'blocked' ? 'user_blocked' : 'user_unblocked';
-                    this.addAuditLog(action, params.targetEmail, params.teamId || '', oldStatus, params.status);
-                }
-                return { success: true };
-
-            case 'approveRequest':
-                const reqIdx = this.mockData.requests.findIndex(r => r.id === params.requestId);
-                if (reqIdx === -1) return { error: 'Запрос не найден' };
-                const request = this.mockData.requests[reqIdx];
-
-                // Создаём пользователя
-                this.mockData.users.push({
-                    email: request.email,
-                    name: request.name,
-                    reddyId: request.reddyId,
-                    picture: request.picture,
-                    phone: '',
-                    telegram: '',
-                    position: '',
-                    role: 'sales',
-                    teamId: '',
-                    status: 'approved_no_team',
-                    createdAt: new Date().toISOString()
-                });
-
-                // Удаляем запрос
-                this.mockData.requests.splice(reqIdx, 1);
-                this.addAuditLog('user_approved', request.email, '', '', 'approved_no_team');
-                return { success: true };
-
-            case 'rejectRequest':
-                const rejIdx = this.mockData.requests.findIndex(r => r.id === params.requestId);
-                if (rejIdx === -1) return { error: 'Запрос не найден' };
-                const rejRequest = this.mockData.requests[rejIdx];
-                this.mockData.requests.splice(rejIdx, 1);
-                this.addAuditLog('user_rejected', rejRequest.email, '', '', 'rejected');
-                return { success: true };
-
-            case 'savePermissions':
-                this.mockData.permissions = JSON.parse(JSON.stringify(params.permissions));
-                this.addAuditLog('permissions_changed', '', '', '', 'Все роли');
-                return { success: true };
-
-            default:
-                return { error: 'Unknown action: ' + action };
-        }
-    },
-
-    addAuditLog(action, targetEmail, targetTeamId, oldValue, newValue) {
-        this.mockData.auditLog.unshift({
-            id: 'log-' + Date.now(),
-            timestamp: new Date().toISOString(),
-            actorEmail: this.currentUser?.email || 'admin@example.com',
-            actorRole: 'admin',
-            action: action,
-            targetEmail: targetEmail,
-            targetTeamId: targetTeamId,
-            oldValue: oldValue,
-            newValue: newValue,
-            details: ''
-        });
     },
 
     // ============ UI Updates ============
@@ -831,10 +695,10 @@ const adminApp = {
                 <span class="user-team${teamName ? '' : ' no-team'}">${this.escapeHtml(teamName) || 'Нет'}</span>
             </td>
             <td>
-                <span class="role-badge role-${this.escapeHtml(user.role)}" data-role-color="${RolesConfig.isCustomRole(user.role) ? this.escapeHtml(RolesConfig.getColor(user.role)) : ''}">${roleName}</span>
+                <span class="role-badge role-${this.escapeHtml(user.role)}" data-role-color="${RolesConfig.isCustomRole(user.role) ? this.escapeHtml(RolesConfig.getColor(user.role)) : ''}">${this.escapeHtml(roleName)}</span>
             </td>
             <td>
-                <span class="status-badge ${statusClass}">${statusText}</span>
+                <span class="status-badge ${this.escapeHtml(statusClass)}">${statusText}</span>
             </td>
             <td>
                 <button class="action-btn" data-action="open-edit-user-modal" data-email="${this.escapeHtml(user.email)}">Изменить</button>
@@ -1565,7 +1429,7 @@ const adminApp = {
             let cells = `
                 <td>
                     <div class="role-cell">
-                        <span class="role-badge role-${role}" data-role-color="${RolesConfig.isCustomRole(role) ? this.escapeHtml(RolesConfig.getColor(role)) : ''}">${roleName}</span>
+                        <span class="role-badge role-${this.escapeHtml(role)}" data-role-color="${RolesConfig.isCustomRole(role) ? this.escapeHtml(RolesConfig.getColor(role)) : ''}">${this.escapeHtml(roleName)}</span>
                     </div>
                 </td>
             `;
@@ -1972,27 +1836,6 @@ const adminApp = {
         this._paginationCallbacks = null;
     }
 };
-
-// Для отладки Mock API
-if (adminApp.USE_MOCK_API) {
-    window.adminMock = {
-        addTeam: (name, leaderEmail) => {
-            adminApp.apiCall('createTeam', { name, leaderEmail }).then(() => adminApp.loadAllData());
-        },
-        addRequest: (name, email, reddyId) => {
-            adminApp.mockData.requests.push({
-                id: 'req-' + Date.now(),
-                email: email,
-                name: name,
-                reddyId: reddyId,
-                picture: '',
-                status: 'pending',
-                requestedAt: new Date().toISOString()
-            });
-            adminApp.loadAllData();
-        }
-    };
-}
 
 // Initialize via PageLifecycle
 PageLifecycle.init({

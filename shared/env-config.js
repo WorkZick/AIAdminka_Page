@@ -33,13 +33,14 @@ const EnvConfig = {
     /**
      * Получить текущее окружение
      * На localhost автоматически используется test
+     * В production ВСЕГДА используется prod (игнорируем localStorage)
      */
     getCurrentEnv() {
-        // На localhost всегда test (для разработки)
         if (this.isLocalhost()) {
-            return 'test';
+            return localStorage.getItem(this.STORAGE_KEY) || 'test';
         }
-        return localStorage.getItem(this.STORAGE_KEY) || this.DEFAULT_ENV;
+        // В production всегда prod — защита от подмены через localStorage
+        return this.DEFAULT_ENV;
     },
 
     /**
@@ -66,6 +67,10 @@ const EnvConfig = {
      * Установить окружение
      */
     setEnvironment(env) {
+        if (!this.isLocalhost()) {
+            console.error('EnvConfig: Environment switching disabled in production');
+            return false;
+        }
         if (!this.ENVIRONMENTS[env]) {
             console.error('EnvConfig: Invalid environment:', env);
             return false;

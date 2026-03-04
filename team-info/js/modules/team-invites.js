@@ -187,13 +187,13 @@ const TeamInvites = {
         }
 
         const roleOptions = Object.entries(TeamState.assignableRoles)
-            .map(([value, label]) => `<option value="${value}">${label}</option>`)
+            .map(([value, label]) => `<option value="${TeamUtils.escapeHtml(value)}">${TeamUtils.escapeHtml(label)}</option>`)
             .join('');
 
         const guestsHtml = TeamState.availableGuests.map(guest => `
             <div class="guest-card" data-email="${TeamUtils.escapeHtml(guest.email)}">
                 <div class="guest-info">
-                    <img src="${guest.picture || '../shared/icons/add.svg'}"
+                    <img src="${TeamUtils.isValidImageUrl(guest.picture) ? TeamUtils.escapeHtml(guest.picture) : '../shared/icons/add.svg'}"
                          alt="${TeamUtils.escapeHtml(guest.name)}"
                          class="guest-avatar">
                     <div class="guest-details">
@@ -229,7 +229,7 @@ const TeamInvites = {
      */
     async inviteGuest(email) {
         // Получить выбранную роль для этого гостя
-        const roleSelect = document.querySelector(`.role-select[data-email="${email}"]`);
+        const roleSelect = document.querySelector(`.role-select[data-email="${CSS.escape(email)}"]`);
         const assignedRole = roleSelect ? roleSelect.value : (RolesConfig.ASSIGNABLE_ROLES[0] || 'sales');
 
         // Получить teamId
