@@ -8,7 +8,7 @@ const EnvConfig = {
     ENVIRONMENTS: {
         prod: {
             name: 'Production',
-            url: 'https://script.google.com/macros/s/AKfycbyeWmZs028zVkzKTrqNTbzTasKK0Z63eCfV1I4RUV6BJWMH8r62kScLh7U5B45bHRRILA/exec'
+            url: 'https://script.google.com/macros/s/AKfycbzyBCK_pgYgYo2Caz0xutGNLfapnxhpOKplgBPOfjrEr73XDRMgY5FgmIQivHC9rvfy/exec'
         },
         test: {
             name: 'Test',
