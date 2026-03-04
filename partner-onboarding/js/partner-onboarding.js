@@ -41,11 +41,16 @@ const PartnerOnboarding = (() => {
         OnboardingList.init();
         _loadUserData();
         _setupDevRoleSwitcher();
-        await _loadRequests();
+
+        // Параллельная загрузка: заявки + настройки источников (независимы друг от друга)
+        await Promise.all([
+            _loadRequests(),
+            OnboardingSource.init()
+        ]);
+
         OnboardingList.setupDefaultFilters();
         OnboardingList.applyFilters();
         _updateToolbarForRole();
-        await OnboardingSource.init();
     }
 
     function _loadUserData() {

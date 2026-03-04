@@ -17,8 +17,8 @@ const RoleGuard = {
 
     // Настройки кеширования
     CACHE_KEY: 'roleGuard',
-    CACHE_TTL: 300000, // 5 минут
-    STALE_MAX_AGE: 420000, // 7 минут — максимальный возраст stale-кеша (TTL=5мин + 2мин stale)
+    CACHE_TTL: 1800000, // 30 минут (роли меняются редко)
+    STALE_MAX_AGE: 2100000, // 35 минут — максимальный возраст stale-кеша (TTL=30мин + 5мин stale)
 
 
     /**
@@ -26,19 +26,19 @@ const RoleGuard = {
      * Загружает роль и права пользователя с бэкенда
      *
      * Стратегия загрузки (stale-while-revalidate):
-     * 1. Свежий кеш (< 5 мин) → мгновенный показ
-     * 2. Stale кеш (5-7 мин) → мгновенный показ + фоновое обновление
-     * 3. Нет кеша или кеш > 7 мин → ждём API
+     * 1. Свежий кеш (< 30 мин) → мгновенный показ
+     * 2. Stale кеш (30-35 мин) → мгновенный показ + фоновое обновление
+     * 3. Нет кеша или кеш > 35 мин → ждём API
      */
     async init() {
         if (this.initialized) return this;
 
-        // Safety-таймаут: показать UI даже если init зависнет
+        // Safety-таймаут: показать UI через 2с если init зависнет
         this._safetyTimer = setTimeout(() => {
             if (!document.body.classList.contains('role-ready')) {
                 document.body.classList.add('role-ready');
             }
-        }, 5000);
+        }, 2000);
 
         // 1. Свежий кеш (в пределах TTL)
         const cached = this.getCache();

@@ -20,12 +20,13 @@ const teamInfo = {
      */
     async init() {
         try {
-            // Загружаем данные
-            TeamState.data = await storage.loadData();
+            // Параллельная загрузка: данные + шаблоны
+            const [data] = await Promise.all([
+                storage.loadData(),
+                storage.loadTemplates()
+            ]);
+            TeamState.data = data;
             TeamState.loadTeamName();
-
-            // Загружаем шаблоны
-            await storage.loadTemplates();
 
             this.setupTextareaAutoResize();
             TeamRenderer.render();
