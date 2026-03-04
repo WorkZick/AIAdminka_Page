@@ -127,7 +127,7 @@
 
 .role-badge.role-leader {
     background: rgba(253, 190, 47, 0.2);
-    color: var(--yellow);
+    color: var(--status-yellow);
 }
 
 .role-badge.role-assistant {
@@ -181,7 +181,7 @@
 }
 
 .count-badge.yellow {
-    background: var(--yellow);
+    background: var(--status-yellow);
     color: var(--black);
 }
 

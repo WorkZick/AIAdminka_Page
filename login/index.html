@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход - AIAdminka</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:* ws://localhost:*; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:* ws://localhost:*">
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <!-- Design System (base styles) -->
     <link rel="stylesheet" href="../shared/css/design-system.css">
@@ -93,6 +93,39 @@
                         <label for="regReddyId">Ваш Reddy ID <span class="required">*</span></label>
                         <input type="text" id="regReddyId" name="reddyId" placeholder="123456" required
                                pattern="[0-9]+" title="Только цифры">
+                    </div>
+
+                    <!-- Leader Toggle -->
+                    <div class="leader-toggle">
+                        <label class="toggle-label" for="regIsLeader">
+                            <input type="checkbox" id="regIsLeader" name="isLeader">
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-text">Я руководитель</span>
+                        </label>
+                    </div>
+
+                    <!-- Leader Details (hidden by default) -->
+                    <div class="leader-details hidden" id="leaderDetails">
+                        <div class="leader-info-block">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="16" x2="12" y2="12"/>
+                                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                            </svg>
+                            <span>Руководитель создаёт команду и приглашает сотрудников. После одобрения администратором вы получите полный доступ к управлению.</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="regTeamName">Название команды <span class="required">*</span></label>
+                            <input type="text" id="regTeamName" name="teamName" placeholder="Моя команда"
+                                   minlength="2" maxlength="50">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="regTeamDesc">Краткое описание</label>
+                            <textarea id="regTeamDesc" name="teamDescription" placeholder="Чем занимается команда..."
+                                      rows="3" maxlength="200"></textarea>
+                        </div>
                     </div>
 
                     <button type="submit" class="submit-button" id="btnSubmitRegistration">

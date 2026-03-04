@@ -17,9 +17,12 @@
     --gray-darker: #1a1a1a;
     --bg-black: #0d0d0d;
 
-    /* Brand */
-    --yellow: #fdbe2f;
-    --yellow-hover: #e5a829;
+    /* Accent (yellow) */
+    --accent: #fdbe2f;
+    --accent-hover: #e5a829;
+    --accent-muted: rgba(253, 190, 47, 0.6);
+    --accent-bg: rgba(253, 190, 47, 0.15);
+    --accent-bg-hover: rgba(253, 190, 47, 0.25);
 
     /* Status */
     --status-green: #51cf66;
@@ -29,14 +32,17 @@
     --status-blue: #74c0fc;
     --status-purple: #da77f2;
 
-    /* Highlight */
-    --highlight-yellow: rgba(253, 190, 47, 0.15);
+    /* Delete */
     --red-delete: #ff6b6b;
+
+    /* Input focus */
+    --input-focus-bg: #2e2e2e;
 
     /* ==================== GLASSMORPHISM ==================== */
     --glass-bg: rgba(255, 255, 255, 0.02);
     --glass-bg-light: rgba(255, 255, 255, 0.04);
     --glass-bg-hover: rgba(255, 255, 255, 0.06);
+    --glass-bg-heavy: rgba(30, 30, 30, 0.95);
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-border-hover: rgba(253, 190, 47, 0.3);
     --glass-blur: 16px;

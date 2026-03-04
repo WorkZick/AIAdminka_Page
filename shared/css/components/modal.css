@@ -123,7 +123,7 @@
 }
 
 .modal-body a {
-    color: var(--yellow);
+    color: var(--accent);
     word-break: break-all;
 }
 
@@ -162,7 +162,7 @@
 }
 
 .modal-confirm .modal-icon.warning {
-    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg);
+    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
 }
 
 .modal-confirm .modal-icon.danger {
@@ -197,7 +197,7 @@
 }
 
 .prompt-modal-input:focus {
-    border-color: var(--yellow);
+    border-color: var(--accent-muted);
 }
 
 .prompt-modal-input::placeholder {

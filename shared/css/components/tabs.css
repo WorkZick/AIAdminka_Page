@@ -28,8 +28,8 @@
 }
 
 .tab.active {
-    color: var(--yellow);
-    border-bottom-color: var(--yellow);
+    color: var(--accent);
+    border-bottom-color: var(--accent);
 }
 
 .tab-content {

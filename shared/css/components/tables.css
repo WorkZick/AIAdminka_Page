@@ -58,3 +58,22 @@
     padding: var(--spacing-2xl);
     color: var(--gray-light);
 }
+
+/* ==================== TABLE COMPACT ==================== */
+.table--compact th,
+.table--compact td {
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+/* ==================== TABLE UPPERCASE HEADERS ==================== */
+.table--headers-uppercase th {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: var(--font-size-xs);
+}
+
+/* ==================== TABLE WITH BG HEADER ==================== */
+.table--header-bg th {
+    background: rgba(0, 0, 0, 0.2);
+}

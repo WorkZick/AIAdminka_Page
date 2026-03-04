@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://docs.google.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'sha256-hnlVisWd/fn32NbDovWmI6UTBdStgc7fO3K6SKtc9SU='; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://docs.google.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
     <title>Заведение партнёра - AIAdminka</title>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <link rel="stylesheet" href="../shared/css/design-system.css">
@@ -31,7 +32,7 @@
                 <div class="onb-view" id="viewList">
                     <div class="list-toolbar">
                         <div class="filter-box">
-                            <select class="onb-filter-select" id="mainFilter" data-action="onb-mainFilter">
+                            <select class="form-select form-select--compact" id="mainFilter" data-action="onb-mainFilter">
                                 <option value="all">Все заявки</option>
                                 <option value="status:new">Новые</option>
                                 <option value="status:in_progress">В работе</option>
@@ -39,15 +40,14 @@
                                 <option value="status:completed">Завершено</option>
                                 <option value="status:cancelled">Отменено</option>
                             </select>
-                            <img class="filter-arrow" src="../shared/icons/chevron-down.svg" width="14" height="14" alt="">
                         </div>
                         <div class="search-box">
                             <img class="search-icon" src="../shared/icons/search.svg" width="16" height="16" alt="Поиск">
                             <input type="text" class="search-input" id="searchInput" placeholder="Поиск..." data-action="onb-search">
                         </div>
-                        <button class="btn btn-ghost btn-new-request" id="btnNewRequest" data-action="onb-newRequest">Новая заявка</button>
+                        <button class="btn btn--ghost btn-sm btn-new-request" id="btnNewRequest" data-action="onb-newRequest">Новая заявка</button>
                         <div class="settings-dropdown-wrap">
-                            <button class="btn btn-ghost btn-settings hidden" id="btnSettings" data-action="onb-toggleSettings">Настройки</button>
+                            <button class="btn btn--ghost btn-sm btn-settings hidden" id="btnSettings" data-action="onb-toggleSettings">Настройки</button>
                             <div class="settings-dropdown hidden" id="settingsDropdown">
                                 <div class="settings-dropdown-item" data-action="onb-openSourceSettings">Источники</div>
                                 <div class="settings-dropdown-item" data-action="onb-openConditionsSettings">Условия</div>
@@ -58,7 +58,7 @@
 
                     <div class="source-sync-bar hidden" id="sourceSyncBar">
                         <span class="source-sync-text" id="sourceSyncText"></span>
-                        <button class="btn btn-ghost btn-sm" id="btnSyncNow" data-action="onb-syncNow">Обновить</button>
+                        <button class="btn btn-primary btn-sm" id="btnSyncNow" data-action="onb-syncNow">Обновить</button>
                     </div>
 
                     <div class="selection-toolbar hidden" id="selectionToolbar">
@@ -66,7 +66,7 @@
                             <input type="checkbox" id="selectAll" data-action="onb-selectAll">
                             <span><span id="selectedCount">0</span> выбрано</span>
                         </label>
-                        <button class="btn btn-ghost btn-danger-text" data-action="onb-deleteSelected">Удалить</button>
+                        <button class="btn btn-danger btn-sm" data-action="onb-deleteSelected">Удалить</button>
                     </div>
 
                     <div class="requests-table" id="requestsList">
@@ -82,7 +82,7 @@
                         <img class="empty-state-icon" src="../shared/icons/partners.svg" width="48" height="48" alt="">
                         <div class="empty-state-title">Заявок нет</div>
                         <div class="empty-state-text">Создайте первую заявку на заведение партнёра</div>
-                        <button class="btn btn-ghost btn-new-request" data-action="onb-newRequest">Новая заявка</button>
+                        <button class="btn btn--ghost btn-sm btn-new-request" data-action="onb-newRequest">Новая заявка</button>
                     </div>
                 </div>
 
@@ -105,11 +105,11 @@
                     </div>
                     <div class="detail-bottom-bar" id="formActions">
                         <div class="actions-left">
-                            <button class="btn btn-ghost" data-action="onb-showHistory">История</button>
+                            <button class="btn btn-primary" data-action="onb-showHistory">История</button>
                         </div>
                         <div class="actions-right">
                             <div class="admin-actions-inline" id="formAdminActions"></div>
-                            <button class="btn btn-ghost" id="btnFormSubmit" data-action="onb-submit">Отправить</button>
+                            <button class="btn btn-primary" id="btnFormSubmit" data-action="onb-submit">Отправить</button>
                             <div class="status-submit-wrap hidden" id="statusSubmitWrap"></div>
                         </div>
                     </div>
@@ -138,16 +138,16 @@
                         </div>
                         <div class="review-buttons">
                             <div class="actions-left">
-                                <button class="btn btn-ghost" data-action="onb-showHistory">История</button>
-                                <button class="btn btn-ghost hidden" id="btnReassign" data-action="onb-showReassign">Передать</button>
-                                <button class="btn btn-ghost hidden" id="btnRollback" data-action="onb-showRollback">Откатить</button>
+                                <button class="btn btn-primary" data-action="onb-showHistory">История</button>
+                                <button class="btn btn-primary hidden" id="btnReassign" data-action="onb-showReassign">Передать</button>
+                                <button class="btn btn-primary hidden" id="btnRollback" data-action="onb-showRollback">Откатить</button>
                             </div>
                             <div class="actions-right">
                                 <div class="admin-actions-inline" id="reviewAdminActions"></div>
-                                <button class="btn btn-ghost hidden" id="btnWithdraw" data-action="onb-withdraw">Отозвать</button>
-                                <button class="btn btn-ghost hidden" id="btnReject" data-action="onb-reject">Отклонить</button>
-                                <button class="btn btn-ghost hidden" id="btnApprove" data-action="onb-approve">Одобрить</button>
-                                <button class="btn btn-ghost hidden" id="btnReviewAdvance" data-action="onb-reviewAdvance">Далее</button>
+                                <button class="btn btn-primary hidden" id="btnWithdraw" data-action="onb-withdraw">Отозвать</button>
+                                <button class="btn btn-primary hidden" id="btnReject" data-action="onb-reject">Отклонить</button>
+                                <button class="btn btn-primary hidden" id="btnApprove" data-action="onb-approve">Одобрить</button>
+                                <button class="btn btn-primary hidden" id="btnReviewAdvance" data-action="onb-reviewAdvance">Далее</button>
                             </div>
                         </div>
                     </div>
@@ -184,7 +184,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" data-action="onb-closeReassign">Отмена</button>
+                <button class="btn btn-primary" data-action="onb-closeReassign">Отмена</button>
                 <button class="btn btn-primary" data-action="onb-confirmReassign">Передать</button>
             </div>
         </div>
@@ -212,7 +212,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" data-action="onb-closeRollback">Отмена</button>
+                <button class="btn btn-primary" data-action="onb-closeRollback">Отмена</button>
                 <button class="btn btn-primary" data-action="onb-confirmRollback">Откатить</button>
             </div>
         </div>
@@ -231,7 +231,7 @@
                 <!-- Generated by JS -->
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" data-action="onb-closeHistory">Закрыть</button>
+                <button class="btn btn-primary" data-action="onb-closeHistory">Закрыть</button>
             </div>
         </div>
     </div>
@@ -249,7 +249,7 @@
                 <!-- List View -->
                 <div id="sourceListView">
                     <div class="source-list" id="sourceListItems"></div>
-                    <button class="btn btn-ghost btn-add-source" data-action="onb-addSource">+ Добавить источник</button>
+                    <button class="btn btn--ghost btn--dashed btn-sm btn-block" data-action="onb-addSource">+ Добавить источник</button>
                     <div class="source-columns-hint">
                         <div class="source-columns-hint-title">Структура таблицы</div>
                         <div class="source-columns-hint-text">Первая строка — заголовки колонок:</div>
@@ -287,12 +287,12 @@
             </div>
             <div class="modal-footer">
                 <div id="sourceListFooter">
-                    <button class="btn btn-ghost" data-action="onb-closeSourceSettings">Закрыть</button>
+                    <button class="btn btn-primary" data-action="onb-closeSourceSettings">Закрыть</button>
                 </div>
                 <div id="sourceEditFooter" class="hidden">
-                    <button class="btn btn-ghost" data-action="onb-backToSourceList">Назад</button>
+                    <button class="btn btn-primary" data-action="onb-backToSourceList">Назад</button>
                     <div class="source-edit-actions">
-                        <button class="btn btn-ghost btn-danger-text hidden" id="btnDeleteSource" data-action="onb-deleteSource">Удалить</button>
+                        <button class="btn btn-danger btn-sm hidden" id="btnDeleteSource" data-action="onb-deleteSource">Удалить</button>
                         <button class="btn btn-primary" data-action="onb-saveSource">Сохранить</button>
                     </div>
                 </div>
@@ -332,7 +332,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" data-action="onb-closeConditions">Закрыть</button>
+                <button class="btn btn-primary" data-action="onb-closeConditions">Закрыть</button>
                 <button class="btn btn-primary" data-action="onb-saveConditions">Сохранить</button>
             </div>
         </div>
@@ -349,9 +349,9 @@
             </div>
             <div class="modal-body" id="roleConfigBody"></div>
             <div class="modal-footer role-config-footer">
-                <button class="btn btn-ghost" data-action="onb-resetRoleConfig">Сбросить</button>
+                <button class="btn btn-primary" data-action="onb-resetRoleConfig">Сбросить</button>
                 <div class="role-config-actions">
-                    <button class="btn btn-ghost" data-action="onb-closeRoleConfig">Отмена</button>
+                    <button class="btn btn-primary" data-action="onb-closeRoleConfig">Отмена</button>
                     <button class="btn btn-primary" data-action="onb-saveRoleConfig">Сохранить</button>
                 </div>
             </div>
@@ -368,7 +368,7 @@
                 <p id="confirmMessage"></p>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" data-action="onb-closeConfirm">Отмена</button>
+                <button class="btn btn-primary" data-action="onb-closeConfirm">Отмена</button>
                 <button class="btn btn-danger" id="confirmOk" data-action="onb-confirmAction">Подтвердить</button>
             </div>
         </div>

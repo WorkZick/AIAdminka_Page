@@ -58,14 +58,14 @@
 }
 
 .step.clickable:hover .step-number {
-    background: linear-gradient(135deg, var(--yellow) 0%, rgba(253, 190, 47, 0.7) 100%);
-    border-color: var(--yellow);
-    box-shadow: 0 0 12px rgba(253, 190, 47, 0.4);
+    background: rgba(253, 190, 47, 0.25);
+    border-color: rgba(253, 190, 47, 0.4);
+    box-shadow: 0 0 12px rgba(253, 190, 47, 0.3);
     transform: scale(1.1);
 }
 
 .step.clickable:hover .step-text {
-    color: var(--yellow);
+    color: var(--white);
 }
 
 .step.clickable:active .step-number {
@@ -90,7 +90,7 @@
 }
 
 .step.active .step-number {
-    background: var(--yellow);
+    background: var(--accent);
     color: var(--black);
 }
 
@@ -151,7 +151,7 @@
 }
 
 .step.completed + .step-line {
-    background: var(--yellow);
+    background: var(--accent-muted);
 }
 
 /* ==================== RESPONSIVE ==================== */

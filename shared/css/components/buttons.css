@@ -30,17 +30,17 @@
     height: 16px;
 }
 
-/* ==================== PRIMARY BUTTON ==================== */
+/* ==================== PRIMARY BUTTON (glassmorphism) ==================== */
 .btn-primary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     padding: 12px 20px;
-    background: var(--yellow);
-    border: none;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.20);
     border-radius: var(--radius-md);
-    color: var(--black);
+    color: var(--white);
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     font-weight: 700;
@@ -49,7 +49,9 @@
 }
 
 .btn-primary:hover {
-    background: var(--yellow-hover);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
 }
 
 .btn-primary:disabled {
@@ -60,7 +62,8 @@
 .btn-primary img {
     width: 16px;
     height: 16px;
-    filter: brightness(0);
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
 }
 
 /* ==================== SECONDARY BUTTON ==================== */
@@ -70,8 +73,8 @@
     justify-content: center;
     gap: 8px;
     padding: 12px 20px;
-    background: rgba(255, 255, 255, 0.08);
-    border: none;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: var(--radius-md);
     color: var(--white);
     font-family: var(--font-family);
@@ -82,7 +85,8 @@
 }
 
 .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.20);
 }
 
 .btn-secondary img {
@@ -140,29 +144,6 @@
 
 .btn-success:hover {
     background: rgba(81, 207, 102, 0.25);
-}
-
-/* ==================== GHOST BUTTON ==================== */
-.btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 20px;
-    background: transparent;
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    color: var(--white);
-    font-family: var(--font-family);
-    font-size: var(--font-size-base);
-    font-weight: 400;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.btn-ghost:hover {
-    background: var(--glass-bg-hover);
-    border-color: var(--glass-border-hover);
 }
 
 /* ==================== ICON BUTTONS ==================== */
@@ -248,6 +229,44 @@
 /* ==================== FULL WIDTH ==================== */
 .btn-block {
     width: 100%;
+}
+
+/* ==================== MODIFIERS ==================== */
+
+/* Ghost: transparent bg, visible border */
+.btn--ghost {
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    color: var(--white);
+    font-weight: 500;
+}
+
+.btn--ghost:hover {
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border-hover);
+    color: var(--accent);
+}
+
+/* Dashed border */
+.btn--dashed {
+    border-style: dashed;
+}
+
+/* Text-only (no bg, no border) */
+.btn--text {
+    background: none;
+    border: none;
+    padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.btn--text:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* ==================== LAYOUT HELPERS ==================== */
+.card-footer .btn,
+.form-footer .btn {
+    flex: 1;
 }
 
 /* ==================== ACTION BUTTON (with description) ==================== */

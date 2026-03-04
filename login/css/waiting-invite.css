@@ -136,7 +136,7 @@ body {
 .refresh-button:hover {
     background: var(--glass-bg-hover);
     border-color: var(--glass-border-hover);
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .refresh-button:disabled {
@@ -183,8 +183,8 @@ body {
     width: 64px;
     height: 64px;
     margin: 0 auto var(--spacing-lg);
-    background: rgba(253, 190, 47, 0.1);
-    border: 1px solid rgba(253, 190, 47, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -194,7 +194,7 @@ body {
 .waiting-icon svg {
     width: 28px;
     height: 28px;
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 .waiting-title {
@@ -231,7 +231,7 @@ body {
 .invites-title svg {
     width: 18px;
     height: 18px;
-    color: var(--yellow);
+    color: var(--accent);
 }
 
 /* ===========================================
@@ -273,8 +273,8 @@ body {
 .invite-role {
     font-size: var(--font-size-sm);
     padding: 3px 10px;
-    background: rgba(253, 190, 47, 0.15);
-    color: var(--yellow);
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--accent);
     border-radius: var(--radius-md);
 }
 
@@ -318,48 +318,9 @@ body {
     gap: var(--spacing-md);
 }
 
-.invite-actions button {
+/* btn-accept/btn-reject replaced with DS .btn-primary/.btn-danger */
+.invite-actions .btn {
     flex: 1;
-    padding: var(--spacing-sm) var(--spacing-lg);
-    border-radius: var(--radius-lg);
-    font-family: var(--font-family);
-    font-size: var(--font-size-base);
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.btn-accept {
-    background: linear-gradient(135deg, var(--yellow), var(--yellow-hover));
-    border: none;
-    color: var(--black);
-}
-
-.btn-accept:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(253, 190, 47, 0.3);
-}
-
-.btn-accept:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.btn-reject {
-    background: transparent;
-    border: 1px solid rgba(255, 107, 107, 0.3);
-    color: var(--status-red);
-}
-
-.btn-reject:hover {
-    background: rgba(255, 107, 107, 0.1);
-    border-color: rgba(255, 107, 107, 0.5);
-}
-
-.btn-reject:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
 }
 
 /* ===========================================
