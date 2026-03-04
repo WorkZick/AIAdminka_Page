@@ -125,7 +125,7 @@ const trafficCalc = {
 PageLifecycle.init({
     module: 'traffic',
     async onInit() {
-        trafficCalc.init();
+        await trafficCalc.init();
     }
 });
 

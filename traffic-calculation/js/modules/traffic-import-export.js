@@ -337,7 +337,7 @@ const TrafficImportExport = {
 
                 // Подтверждение перед импортом
                 const currentPartners = storage.getPartners();
-                var desc = currentPartners.length > 0
+                const desc = currentPartners.length > 0
                     ? 'Текущие ' + currentPartners.length + ' партнер(ов) будут заменены!'
                     : '';
 

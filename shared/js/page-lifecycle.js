@@ -77,7 +77,9 @@ const PageLifecycle = {
 
         // onReady callback
         if (config.onReady) {
-            try { config.onReady(); } catch (e) { /* silent */ }
+            try { config.onReady(); } catch (e) {
+                console.error('[PageLifecycle] onReady error:', e);
+            }
         }
 
         // Централизованные обработчики
@@ -145,12 +147,16 @@ const PageLifecycle = {
         const cleanup = () => {
             // Модульная очистка
             if (onDestroy) {
-                try { onDestroy(); } catch (e) { /* silent */ }
+                try { onDestroy(); } catch (e) {
+                    console.error('[PageLifecycle] onDestroy error:', e);
+                }
             }
 
             // Кастомные cleanup функции
             this._cleanupFns.forEach(fn => {
-                try { fn(); } catch (e) { /* silent */ }
+                try { fn(); } catch (e) {
+                    console.error('[PageLifecycle] cleanup error:', e);
+                }
             });
 
             // Очистка shared-модулей

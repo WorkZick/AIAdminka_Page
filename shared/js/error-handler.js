@@ -104,7 +104,6 @@ const ErrorHandler = (() => {
    */
   function detectSeverity(type, error) {
     switch (type) {
-      case ErrorType.CRITICAL:
       case ErrorType.AUTH:
         return ErrorSeverity.CRITICAL;
 

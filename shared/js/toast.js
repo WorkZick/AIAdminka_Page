@@ -54,7 +54,7 @@ const Toast = {
 
         toast.innerHTML = `
             <div class="toast-icon">${this.icons[type] || this.icons.info}</div>
-            <div class="toast-message">${message}</div>
+            <div class="toast-message"></div>
             <button class="toast-close">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18"/>
@@ -62,6 +62,9 @@ const Toast = {
                 </svg>
             </button>
         `;
+
+        // XSS protection: set message via textContent
+        toast.querySelector('.toast-message').textContent = message;
 
         // Добавляем обработчик закрытия
         const closeBtn = toast.querySelector('.toast-close');

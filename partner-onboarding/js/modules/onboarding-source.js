@@ -35,8 +35,14 @@ const OnboardingSource = (() => {
     // ── Init / Destroy ──
 
     async function init() {
+        // Show loading in sync bar while fetching settings
+        const bar = document.getElementById('sourceSyncBar');
+        if (bar) {
+            bar.classList.remove('hidden');
+            _updateSyncBar('syncing', 'Загрузка настроек...');
+        }
         try {
-            const result = await CloudStorage.callApi('getOnboardingSettings');
+            const result = await CloudStorage.getOnboardingSettings();
             _settingsCache = result.sources || { sources: [] };
             if (!_settingsCache.sources) _settingsCache.sources = [];
             _conditionsCache = result.conditions || { sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' };
@@ -70,6 +76,7 @@ const OnboardingSource = (() => {
         _settingsCache = settings;
         try {
             await CloudStorage.postApi('saveOnboardingSourceSettings', { settings });
+            CloudStorage.clearCache('onboardingSettings');
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'saveSourceSettings' });
         }
@@ -127,7 +134,7 @@ const OnboardingSource = (() => {
                     <span class="source-item-name">${Utils.escapeHtml(src.name)}</span>
                     <span class="source-item-meta">${Utils.escapeHtml(syncLabel)} · ${count} ${_pluralLeads(count)}</span>
                 </div>
-                <button class="btn btn-ghost btn-sm source-item-edit" data-action="onb-editSource" data-value="${Utils.escapeHtml(src.id)}">&#9881;</button>
+                <button class="btn btn-primary btn-sm source-item-edit" data-action="onb-editSource" data-value="${Utils.escapeHtml(src.id)}">&#9881;</button>
             </div>`;
         }).join('');
     }
@@ -170,7 +177,7 @@ const OnboardingSource = (() => {
         if (deleteBtn) deleteBtn.classList.toggle('hidden', !source);
     }
 
-    function saveSource() {
+    async function saveSource() {
         const nameInput = document.getElementById('sourceEditName');
         const urlInput = document.getElementById('sourceEditUrl');
         const intervalSelect = document.getElementById('sourceEditInterval');
@@ -193,99 +200,123 @@ const OnboardingSource = (() => {
             return;
         }
 
-        const settings = _getSettings();
+        const btn = document.querySelector('[data-action="onb-saveSource"]');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
 
-        if (_editingSourceId) {
-            // Edit existing
-            const source = _getSource(settings, _editingSourceId);
-            if (!source) return;
+        try {
+            const settings = _getSettings();
 
-            const sheetChanged = source.sheetId !== sheetId;
-            source.name = name;
-            source.sheetUrl = url;
-            source.sheetId = sheetId;
-            source.syncIntervalMinutes = interval;
-            if (sheetChanged) {
-                source.importedRowHashes = [];
-                source.importedCount = 0;
-                source.lastSyncTime = '';
-                source.lastSyncStatus = '';
+            if (_editingSourceId) {
+                // Edit existing
+                const source = _getSource(settings, _editingSourceId);
+                if (!source) return;
+
+                const sheetChanged = source.sheetId !== sheetId;
+                source.name = name;
+                source.sheetUrl = url;
+                source.sheetId = sheetId;
+                source.syncIntervalMinutes = interval;
+                if (sheetChanged) {
+                    source.importedRowHashes = [];
+                    source.importedCount = 0;
+                    source.lastSyncTime = '';
+                    source.lastSyncStatus = '';
+                }
+
+                _stopPeriodicSync(source.id);
+                if (interval > 0) _startPeriodicSync(source);
+            } else {
+                // Add new
+                const source = {
+                    id: 'src_' + Date.now(),
+                    name,
+                    sheetUrl: url,
+                    sheetId,
+                    syncIntervalMinutes: interval,
+                    importedRowHashes: [],
+                    importedCount: 0,
+                    lastSyncTime: '',
+                    lastSyncStatus: ''
+                };
+                settings.sources.push(source);
+
+                if (interval > 0) _startPeriodicSync(source);
+                _editingSourceId = source.id;
             }
 
-            _stopPeriodicSync(source.id);
-            if (interval > 0) _startPeriodicSync(source);
-        } else {
-            // Add new
-            const source = {
-                id: 'src_' + Date.now(),
-                name,
-                sheetUrl: url,
-                sheetId,
-                syncIntervalMinutes: interval,
-                importedRowHashes: [],
-                importedCount: 0,
-                lastSyncTime: '',
-                lastSyncStatus: ''
-            };
-            settings.sources.push(source);
+            await _saveSettingsToApi(settings);
+            updateSyncBarVisibility();
+            Toast.success('Источник сохранён');
 
-            if (interval > 0) _startPeriodicSync(source);
-            _editingSourceId = source.id;
+            // Sync immediately (guarded)
+            const savedSource = _getSource(settings, _editingSourceId);
+            if (savedSource && !_isSyncing) {
+                _isSyncing = true;
+                _doSync(savedSource).finally(() => { _isSyncing = false; });
+            }
+
+            // Back to list
+            _editingSourceId = null;
+            _renderSourceList();
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
-
-        _saveSettingsToApi(settings);
-        updateSyncBarVisibility();
-        Toast.success('Источник сохранён');
-
-        // Sync immediately (guarded)
-        const savedSource = _getSource(settings, _editingSourceId);
-        if (savedSource && !_isSyncing) {
-            _isSyncing = true;
-            _doSync(savedSource).finally(() => { _isSyncing = false; });
-        }
-
-        // Back to list
-        _editingSourceId = null;
-        _renderSourceList();
     }
 
-    function deleteSource(sourceId) {
+    async function deleteSource(sourceId) {
         const settings = _getSettings();
         const idx = settings.sources.findIndex(s => s.id === sourceId);
         if (idx === -1) return;
 
-        _stopPeriodicSync(sourceId);
-        settings.sources.splice(idx, 1);
-        _saveSettingsToApi(settings);
-        updateSyncBarVisibility();
-        Toast.success('Источник удалён');
+        const btn = document.getElementById('btnDeleteSource');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
 
-        _editingSourceId = null;
-        _renderSourceList();
+        try {
+            _stopPeriodicSync(sourceId);
+            settings.sources.splice(idx, 1);
+            await _saveSettingsToApi(settings);
+            updateSyncBarVisibility();
+            Toast.success('Источник удалён');
+
+            _editingSourceId = null;
+            _renderSourceList();
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
+        }
     }
 
     // ── Sync Bar ──
 
     function updateSyncBarVisibility() {
         const settings = _getSettings();
+        const condData = _getConditionsData();
         const bar = document.getElementById('sourceSyncBar');
         if (!bar) return;
 
         const myRole = OnboardingState.get('userRole');
-        if (settings.sources.length === 0 || myRole === 'executor') {
+        const hasSources = settings.sources.length > 0;
+        const hasConds = condData.conditions && condData.conditions.length > 0;
+
+        if ((!hasSources && !hasConds) || myRole === 'executor') {
             bar.classList.add('hidden');
             return;
         }
 
         bar.classList.remove('hidden');
 
-        const count = settings.sources.length;
-        const lastTimes = settings.sources.filter(s => s.lastSyncTime).map(s => new Date(s.lastSyncTime).getTime());
-        const lastSync = lastTimes.length > 0 ? _formatDateTime(new Date(Math.max(...lastTimes)).toISOString()) : null;
-
-        let text = `Источников: ${count}`;
-        if (lastSync) text += ` · Последняя синхр.: ${lastSync}`;
-        _updateSyncBar('idle', text);
+        const parts = [];
+        if (hasSources) {
+            const count = settings.sources.length;
+            const lastTimes = settings.sources.filter(s => s.lastSyncTime).map(s => new Date(s.lastSyncTime).getTime());
+            const lastSync = lastTimes.length > 0 ? _formatDateTime(new Date(Math.max(...lastTimes)).toISOString()) : null;
+            let srcText = `Источников: ${count}`;
+            if (lastSync) srcText += ` (синхр.: ${lastSync})`;
+            parts.push(srcText);
+        }
+        if (hasConds) {
+            parts.push(`Условий: ${condData.conditions.length}`);
+        }
+        _updateSyncBar('idle', parts.join(' · '));
     }
 
     function _updateSyncBar(status, message) {
@@ -388,7 +419,7 @@ const OnboardingSource = (() => {
                 src.importedCount = (src.importedCount || 0) + imported;
                 src.lastSyncTime = new Date().toISOString();
                 src.lastSyncStatus = 'success';
-                _saveSettingsToApi(settings);
+                await _saveSettingsToApi(settings);
             }
 
             if (imported > 0) {
@@ -586,7 +617,8 @@ const OnboardingSource = (() => {
     async function _saveConditionsToApi(data) {
         _conditionsCache = data;
         try {
-            await CloudStorage.postApi('saveOnboardingConditions', { conditions: data });
+            await CloudStorage.postApi('saveOnboardingConditions', { data: data });
+            CloudStorage.clearCache('onboardingSettings');
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'saveConditions' });
         }
@@ -636,6 +668,7 @@ const OnboardingSource = (() => {
             // Clear conditions
             _saveConditionsToApi({ sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' });
             _renderConditionsStatus({ conditions: [] });
+            updateSyncBarVisibility();
             Toast.success('Условия очищены');
             return;
         }
@@ -646,7 +679,8 @@ const OnboardingSource = (() => {
             return;
         }
 
-        Toast.info('Загрузка условий...');
+        const btn = document.querySelector('[data-action="onb-saveConditions"]');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
 
         try {
             const table = await _fetchSheet(sheetId);
@@ -665,12 +699,15 @@ const OnboardingSource = (() => {
                 lastSyncStatus: 'success'
             };
 
-            _saveConditionsToApi(data);
+            await _saveConditionsToApi(data);
             _renderConditionsStatus(data);
+            updateSyncBarVisibility();
             Toast.success(`Загружено ${conditions.length} ${_pluralConditions(conditions.length)}`);
 
         } catch (err) {
             Toast.error(err.message || 'Ошибка загрузки');
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
     }
 

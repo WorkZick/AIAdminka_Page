@@ -92,8 +92,11 @@ class UIRenderer {
             html += `
                 <div class="template-featured-section">
                     <div class="template-card-featured ${selectedClass}" data-action="select-template" data-template-id="${mainTemplate.id}">
-                        <div class="featured-badge">Общий отчёт</div>
-                        <div class="template-header">
+                        <div class="featured-header">
+                            <div class="featured-title-row">
+                                <img src="../shared/icons/bar-chart.svg" class="featured-icon" width="20" height="20" alt="">
+                                <h3 class="featured-title">Общий отчёт</h3>
+                            </div>
                             ${isSelected ? '<span class="selected-badge"><img src="../shared/icons/done.svg" width="12" height="12" alt="✓"> Выбран</span>' : ''}
                         </div>
                         <p class="template-description">${mainTemplate.obj.description}</p>
@@ -102,7 +105,7 @@ class UIRenderer {
                             <button type="button" class="components-toggle" data-action="toggle-components" data-target-id="${uniqueId}">
                                 <span class="toggle-icon">▶</span>
                                 <span class="toggle-text">Из чего состоит</span>
-                                <span class="components-count">(${reportComponents.length} отчётов)</span>
+                                <span class="components-count">${reportComponents.length} отчётов</span>
                             </button>
                             <div id="${uniqueId}" class="components-list hidden">
                                 <ul>
@@ -146,7 +149,7 @@ class UIRenderer {
                 <div class="step-header-nav">
                     <div class="nav-left">
                         ${prevStep ? `
-                            <button class="btn btn-ghost" data-action="navigate-back">
+                            <button class="btn btn-primary" data-action="navigate-back">
                                 Назад
                             </button>
                         ` : ''}
@@ -154,7 +157,7 @@ class UIRenderer {
                     <h2>${config.name}</h2>
                     <div class="nav-right">
                         ${nextStep && isCompleted ? `
-                            <button class="btn btn-ghost" data-action="navigate-next">
+                            <button class="btn btn-primary" data-action="navigate-next">
                                 Далее
                             </button>
                         ` : ''}
@@ -328,14 +331,14 @@ class UIRenderer {
                 <div class="step-header-nav">
                     <div class="nav-left">
                         ${prevStep ? `
-                            <button class="btn btn-ghost" data-action="navigate-back">
+                            <button class="btn btn-primary" data-action="navigate-back">
                                 Назад
                             </button>
                         ` : ''}
                     </div>
                     <h2>Обработка данных</h2>
                     <div class="nav-right">
-                        <button class="btn btn-ghost" data-action="show-reset-modal">
+                        <button class="btn btn-primary" data-action="show-reset-modal">
                             Начать заново
                         </button>
                     </div>
@@ -370,7 +373,7 @@ class UIRenderer {
                 </div>
 
                 <div class="process-actions">
-                    <button class="btn btn-ghost" data-action="process-files">
+                    <button class="btn btn-primary" data-action="process-files">
                         Обработать и экспортировать
                     </button>
                 </div>
@@ -463,7 +466,7 @@ class UIRenderer {
         content.className = 'spinner-content';
 
         const spinnerEl = document.createElement('div');
-        spinnerEl.className = 'loading-spinner';
+        spinnerEl.className = 'spinner spinner--lg';
 
         const textEl = document.createElement('div');
         textEl.className = 'spinner-text';

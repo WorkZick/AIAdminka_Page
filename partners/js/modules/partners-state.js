@@ -41,9 +41,6 @@ const PartnersState = {
     exportType: 'json',
     selectedExportTemplateId: null,
 
-    // Import state
-    importCancelled: false,
-
     // Column drag state
     draggedColumnIndex: null,
 

@@ -359,7 +359,7 @@ const OnboardingForm = (() => {
                             <input type="text" class="form-input list-add-input" id="listInput_${field.id}"
                                 placeholder="${Utils.escapeHtml(field.placeholder || 'Добавить...')}"
                                 data-action="onb-listInputKeypress" data-value="${field.id}">
-                            <button type="button" class="btn btn-ghost btn-sm" data-action="onb-addListItem" data-value="${field.id}">+</button>
+                            <button type="button" class="btn btn-primary btn-sm" data-action="onb-addListItem" data-value="${field.id}">+</button>
                         </div>
                         ${suggestionsHtml}
                     </div>
@@ -427,7 +427,7 @@ const OnboardingForm = (() => {
             const dropdownOptions = (submitField.options || []).filter(o => o.value !== defaultValue);
 
             statusWrap.innerHTML = `<div class="status-submit-btn">
-                <button class="btn btn-ghost status-submit-main" data-action="onb-toggleStatusDropdown">
+                <button class="btn btn-primary status-submit-main" data-action="onb-toggleStatusDropdown">
                     <span class="status-submit-label">${Utils.escapeHtml(buttonLabel)}</span>
                 </button>
                 <div class="status-submit-dropdown hidden" id="statusDropdown">
@@ -475,6 +475,20 @@ const OnboardingForm = (() => {
         const file = input.files[0];
         if (!file) return;
 
+        const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            Toast.error('Допустимые форматы: JPEG, PNG, WebP, GIF');
+            input.value = '';
+            return;
+        }
+        if (file.size > MAX_SIZE) {
+            Toast.error('Максимальный размер файла: 10 МБ');
+            input.value = '';
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = () => {
             _fileDataUrls[fieldId] = reader.result;
@@ -487,8 +501,19 @@ const OnboardingForm = (() => {
             const preview = document.createElement('div');
             preview.className = 'file-preview';
             preview.id = `preview_${fieldId}`;
-            preview.innerHTML = `<img src="${reader.result}" alt="" data-action="onb-openPhoto" data-value="${fieldId}">
-                <button class="file-remove-btn" data-action="onb-removeFile" data-value="${fieldId}" type="button">&times;</button>`;
+            const img = document.createElement('img');
+            img.src = reader.result;
+            img.alt = '';
+            img.dataset.action = 'onb-openPhoto';
+            img.dataset.value = fieldId;
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'file-remove-btn';
+            removeBtn.type = 'button';
+            removeBtn.dataset.action = 'onb-removeFile';
+            removeBtn.dataset.value = fieldId;
+            removeBtn.textContent = '\u00d7';
+            preview.appendChild(img);
+            preview.appendChild(removeBtn);
             area.prepend(preview);
 
             const label = group.querySelector('.file-upload-label span');
@@ -497,7 +522,7 @@ const OnboardingForm = (() => {
         reader.readAsDataURL(file);
     }
 
-    function collectFormData(stepNumber) {
+    function collectFormData(stepNumber, { excludeFiles = false } = {}) {
         const step = OnboardingConfig.getStep(stepNumber);
         if (!step) return {};
 
@@ -506,7 +531,7 @@ const OnboardingForm = (() => {
             const id = `field_${field.id}`;
             switch (field.type) {
                 case 'file':
-                    if (_fileDataUrls[field.id]) {
+                    if (!excludeFiles && _fileDataUrls[field.id]) {
                         data[field.id] = _fileDataUrls[field.id];
                     }
                     break;
@@ -694,6 +719,22 @@ const OnboardingForm = (() => {
         }
     }
 
+    /** Return pending file uploads (base64 data URLs not yet uploaded to server) */
+    function getPendingFiles() {
+        const files = {};
+        for (const [fieldId, dataUrl] of Object.entries(_fileDataUrls)) {
+            if (dataUrl && dataUrl.startsWith('data:')) {
+                files[fieldId] = dataUrl;
+            }
+        }
+        return files;
+    }
+
+    /** Replace local base64 with server URL after upload */
+    function setFileUrl(fieldId, url) {
+        _fileDataUrls[fieldId] = url;
+    }
+
     return {
         render,
         collectFormData,
@@ -702,6 +743,8 @@ const OnboardingForm = (() => {
         addListItem,
         addListSuggestion,
         removeListItem,
-        toggleChecklistComment
+        toggleChecklistComment,
+        getPendingFiles,
+        setFileUrl
     };
 })();

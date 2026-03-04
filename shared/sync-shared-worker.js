@@ -9,7 +9,7 @@
 let SCRIPT_URL = null;
 
 // Уникальный ID этого воркера
-const WORKER_ID = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+const WORKER_ID = Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
 
 // Лимит размера очереди для предотвращения переполнения памяти
 const MAX_QUEUE_SIZE = 100;

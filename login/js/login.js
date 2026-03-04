@@ -69,6 +69,23 @@ const loginApp = {
             }
         };
         document.addEventListener('submit', this._submitHandler);
+
+        // Leader toggle handler
+        const leaderCheckbox = document.getElementById('regIsLeader');
+        if (leaderCheckbox) {
+            this._leaderToggleHandler = () => {
+                const details = document.getElementById('leaderDetails');
+                const teamNameInput = document.getElementById('regTeamName');
+                if (leaderCheckbox.checked) {
+                    details.classList.remove('hidden');
+                    teamNameInput.required = true;
+                } else {
+                    details.classList.add('hidden');
+                    teamNameInput.required = false;
+                }
+            };
+            leaderCheckbox.addEventListener('change', this._leaderToggleHandler);
+        }
     },
 
     destroy() {
@@ -79,6 +96,11 @@ const loginApp = {
         if (this._submitHandler) {
             document.removeEventListener('submit', this._submitHandler);
             this._submitHandler = null;
+        }
+        if (this._leaderToggleHandler) {
+            const cb = document.getElementById('regIsLeader');
+            if (cb) cb.removeEventListener('change', this._leaderToggleHandler);
+            this._leaderToggleHandler = null;
         }
     },
 
@@ -144,7 +166,7 @@ const loginApp = {
 
     _login() {
         const state = this._generateState();
-        sessionStorage.setItem('oauth_state', state);
+        sessionStorage.setItem('oauth_state', JSON.stringify({ value: state, created: Date.now() }));
 
         const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
             '?client_id=' + encodeURIComponent(this.CLIENT_ID) +
@@ -213,6 +235,7 @@ const loginApp = {
                 if (result.error.includes('access token') || result.error.includes('Access denied') || result.error.includes('Invalid')) {
                     localStorage.removeItem('cloud-auth');
                     localStorage.removeItem('roleGuard');
+                    sessionStorage.removeItem('auth-redirect');
                     this.currentUser = null;
                     this._showLoginForm();
                     return;
@@ -228,6 +251,8 @@ const loginApp = {
                     status = 'waiting_invite';
                 } else if (result.status === 'blocked') {
                     status = 'blocked';
+                } else if (result.status === 'approved_no_team') {
+                    status = 'approved_no_team';
                 } else if (result.hasAccess === true) {
                     status = 'approved';
                 } else if (!result.email && !result.role) {
@@ -262,7 +287,7 @@ const loginApp = {
 
             this.currentRole = result.role || null;
 
-            if (result.role === 'guest') {
+            if (result.role === 'guest' && status !== 'approved_no_team') {
                 window.location.href = 'waiting-invite.html';
                 return;
             }
@@ -302,8 +327,19 @@ const loginApp = {
     // ============ REGISTRATION ============
 
     _showRegistration() {
+        sessionStorage.removeItem('auth-redirect');
         const input = document.getElementById('regReddyId');
         if (input) input.value = '';
+
+        // Reset leader toggle and fields
+        const leaderCb = document.getElementById('regIsLeader');
+        if (leaderCb) leaderCb.checked = false;
+        const leaderDetails = document.getElementById('leaderDetails');
+        if (leaderDetails) leaderDetails.classList.add('hidden');
+        const teamName = document.getElementById('regTeamName');
+        if (teamName) { teamName.value = ''; teamName.required = false; }
+        const teamDesc = document.getElementById('regTeamDesc');
+        if (teamDesc) teamDesc.value = '';
 
         this._hideAll();
         this._showUserInfo();
@@ -324,16 +360,33 @@ const loginApp = {
             return;
         }
 
+        const isLeader = document.getElementById('regIsLeader')?.checked || false;
+        const teamName = (formData.get('teamName') || '').trim();
+        const teamDescription = (formData.get('teamDescription') || '').trim();
+
+        if (isLeader && (!teamName || teamName.length < 2)) {
+            Toast.warning('Укажите название команды (минимум 2 символа)');
+            return;
+        }
+
         btn.disabled = true;
         btn.textContent = 'Отправка...';
 
         try {
-            const result = await this._secureApiCall('register', {
+            const params = {
                 reddyId,
                 name: this.currentUser?.name || '',
                 email: this.currentUser?.email || '',
                 picture: this.currentUser?.picture || ''
-            });
+            };
+
+            if (isLeader) {
+                params.isLeaderRequest = 'true';
+                params.teamName = teamName;
+                params.teamDescription = teamDescription;
+            }
+
+            const result = await this._secureApiCall('register', params);
 
             if (result.error) throw new Error(result.error);
             if (result.success) this._showAccessPending();
@@ -347,6 +400,7 @@ const loginApp = {
     // ============ CHOOSE ROLE ============
 
     _showChooseRole() {
+        sessionStorage.removeItem('auth-redirect');
         this._hideAll();
         this._showUserInfo();
         document.getElementById('loginChooseRole').classList.remove('hidden');
@@ -375,7 +429,10 @@ const loginApp = {
             const titleEl = pendingEl.querySelector('.access-title');
             if (titleEl) titleEl.textContent = 'Ожидайте приглашение';
             const descEl = pendingEl.querySelector('.access-description');
-            if (descEl) descEl.innerHTML = 'Ваш аккаунт активен.<br>Руководитель пригласит вас в команду по Reddy ID.';
+            if (descEl) {
+                descEl.textContent = '';
+                descEl.append('Ваш аккаунт активен.', document.createElement('br'), 'Руководитель пригласит вас в команду по Reddy ID.');
+            }
         }
 
         this._updateStatus('Ожидание приглашения', 'pending');
@@ -465,6 +522,7 @@ const loginApp = {
     },
 
     _showAccessPending() {
+        sessionStorage.removeItem('auth-redirect');
         this._hideAll();
         this._showUserInfo();
 
@@ -473,7 +531,10 @@ const loginApp = {
             const titleEl = pendingEl.querySelector('.access-title');
             if (titleEl) titleEl.textContent = 'Запрос отправлен';
             const descEl = pendingEl.querySelector('.access-description');
-            if (descEl) descEl.innerHTML = 'Ваш запрос отправлен администратору.<br>Ожидайте одобрения.';
+            if (descEl) {
+                descEl.textContent = '';
+                descEl.append('Ваш запрос отправлен администратору.', document.createElement('br'), 'Ожидайте одобрения.');
+            }
             pendingEl.classList.remove('hidden');
         }
 
@@ -481,6 +542,7 @@ const loginApp = {
     },
 
     _showAccessRejected() {
+        sessionStorage.removeItem('auth-redirect');
         this._hideAll();
         this._showUserInfo();
         document.getElementById('loginAccessRejected').classList.remove('hidden');
@@ -488,6 +550,7 @@ const loginApp = {
     },
 
     _showAccessBlocked() {
+        sessionStorage.removeItem('auth-redirect');
         this._hideAll();
         this._showUserInfo();
         document.getElementById('loginAccessBlocked').classList.remove('hidden');
@@ -508,6 +571,16 @@ const loginApp = {
         this._updateStatus('Авторизация успешна', 'success');
 
         setTimeout(() => {
+            // Проверяем, есть ли сохранённый URL для возврата
+            const redirectUrl = sessionStorage.getItem('auth-redirect');
+            if (redirectUrl) {
+                sessionStorage.removeItem('auth-redirect');
+                // Валидация: только относительные URL (защита от open redirect)
+                if (redirectUrl.startsWith('/') && !redirectUrl.startsWith('//')) {
+                    window.location.href = redirectUrl;
+                    return;
+                }
+            }
             window.location.href = '../index.html';
         }, 1500);
     },
@@ -564,8 +637,10 @@ const loginApp = {
 
     _updateStatus(text, type) {
         const statusEl = document.getElementById('loginStatus');
+        if (!statusEl) return;
         statusEl.className = 'login-status' + (type ? ' ' + type : '');
-        statusEl.querySelector('.status-text').textContent = text;
+        const statusText = statusEl.querySelector('.status-text');
+        if (statusText) statusText.textContent = text;
     },
 
     _retry() {

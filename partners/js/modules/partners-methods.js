@@ -1,5 +1,7 @@
 // Partners Methods - methods management
 const PartnersMethods = {
+    _actionInProgress: false,
+
     async loadMethods() {
         PartnersState.cachedMethods = await CloudStorage.getMethods();
         return PartnersState.cachedMethods;
@@ -39,6 +41,9 @@ const PartnersMethods = {
             return;
         }
 
+        const btn = document.querySelector('[data-action="partners-addMethod"]');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+
         try {
             const result = await CloudStorage.addMethod({ name: name });
             PartnersState.cachedMethods.push({ id: result.id, name: name });
@@ -48,10 +53,15 @@ const PartnersMethods = {
             input.focus();
         } catch (error) {
             PartnersUtils.showError('Ошибка добавления метода: ' + error.message);
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
     },
 
     async deleteMethod(methodId) {
+        const btn = document.querySelector(`[data-action="partners-deleteMethod"][data-method-id="${methodId}"]`);
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+
         try {
             await CloudStorage.deleteMethod(methodId);
             PartnersState.cachedMethods = PartnersState.cachedMethods.filter(m => m.id !== methodId);
@@ -73,6 +83,8 @@ const PartnersMethods = {
             } else {
                 PartnersUtils.showError('Ошибка удаления метода: ' + error.message);
             }
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
     },
 
@@ -110,6 +122,8 @@ const PartnersMethods = {
     },
 
     async saveEditMethod(methodId) {
+        if (this._actionInProgress) return;
+
         const input = document.getElementById(`editMethodInput_${methodId}`);
         const newName = input.value.trim();
 
@@ -126,6 +140,11 @@ const PartnersMethods = {
             Toast.warning('Метод с таким названием уже существует');
             return;
         }
+
+        const btn = document.querySelector(`[data-action="partners-saveEditMethod"][data-method-id="${methodId}"]`);
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+        PartnersUtils.showLoading(true);
+        this._actionInProgress = true;
 
         try {
             const oldName = methods[methodIndex].name;
@@ -160,6 +179,10 @@ const PartnersMethods = {
             } else {
                 PartnersUtils.showError('Ошибка сохранения метода: ' + error.message);
             }
+        } finally {
+            this._actionInProgress = false;
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
+            PartnersUtils.showLoading(false);
         }
     },
 

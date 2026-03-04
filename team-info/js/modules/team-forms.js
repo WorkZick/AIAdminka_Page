@@ -124,12 +124,19 @@ const TeamForms = {
 
         const employeeData = this._collectFormData(fullName, position, status);
 
-        if (TeamState.currentEmployeeId) {
-            // Редактирование существующего
-            await this._updateEmployee(employeeData);
-        } else {
-            // Добавление нового
-            await this._addEmployee(employeeData);
+        const saveBtn = document.getElementById('formSaveBtn');
+        if (saveBtn) { saveBtn.classList.add('btn-loading'); saveBtn.disabled = true; }
+
+        try {
+            if (TeamState.currentEmployeeId) {
+                // Редактирование существующего
+                await this._updateEmployee(employeeData);
+            } else {
+                // Добавление нового
+                await this._addEmployee(employeeData);
+            }
+        } finally {
+            if (saveBtn) { saveBtn.classList.remove('btn-loading'); saveBtn.disabled = false; }
         }
     },
 
@@ -141,16 +148,23 @@ const TeamForms = {
 
         const employee = TeamState.data.find(e => e.id === TeamState.currentEmployeeId);
         if (employee && await ConfirmModal.show('Удалить "' + employee.fullName + '"?', { danger: true })) {
-            const result = await storage.deleteEmployee(TeamState.currentEmployeeId);
+            const btn = document.getElementById('formDeleteBtn');
+            if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
 
-            if (result.success) {
-                TeamState.data = TeamState.data.filter(e => e.id !== TeamState.currentEmployeeId);
-                this.closeForm();
-                TeamRenderer.render();
-                TeamRenderer.updateStats();
-                Toast.success('Сотрудник удален!');
-            } else {
-                Toast.error('Ошибка удаления: ' + (result.error || 'Неизвестная ошибка'));
+            try {
+                const result = await storage.deleteEmployee(TeamState.currentEmployeeId);
+
+                if (result.success) {
+                    TeamState.data = TeamState.data.filter(e => e.id !== TeamState.currentEmployeeId);
+                    this.closeForm();
+                    TeamRenderer.render();
+                    TeamRenderer.updateStats();
+                    Toast.success('Сотрудник удален!');
+                } else {
+                    Toast.error('Ошибка удаления: ' + (result.error || 'Неизвестная ошибка'));
+                }
+            } finally {
+                if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
             }
         }
     },
@@ -163,16 +177,23 @@ const TeamForms = {
 
         const employee = TeamState.data.find(e => e.id === TeamState.currentEmployeeId);
         if (employee && await ConfirmModal.show('Удалить "' + employee.fullName + '"?', { danger: true })) {
-            const result = await storage.deleteEmployee(TeamState.currentEmployeeId);
+            const btn = document.querySelector('[data-action="team-deleteFromCard"]');
+            if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
 
-            if (result.success) {
-                TeamState.data = TeamState.data.filter(e => e.id !== TeamState.currentEmployeeId);
-                TeamNavigation.closeCard();
-                TeamRenderer.render();
-                TeamRenderer.updateStats();
-                Toast.success('Сотрудник удален!');
-            } else {
-                Toast.error('Ошибка удаления: ' + (result.error || 'Неизвестная ошибка'));
+            try {
+                const result = await storage.deleteEmployee(TeamState.currentEmployeeId);
+
+                if (result.success) {
+                    TeamState.data = TeamState.data.filter(e => e.id !== TeamState.currentEmployeeId);
+                    TeamNavigation.closeCard();
+                    TeamRenderer.render();
+                    TeamRenderer.updateStats();
+                    Toast.success('Сотрудник удален!');
+                } else {
+                    Toast.error('Ошибка удаления: ' + (result.error || 'Неизвестная ошибка'));
+                }
+            } finally {
+                if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
             }
         }
     },
@@ -207,8 +228,18 @@ const TeamForms = {
         const employee = TeamState.data.find(e => e.id === TeamState.currentEmployeeId);
         if (!employee) return;
 
+        const oldStatus = employee.status;
         employee.status = newStatus;
         employee.updatedAt = new Date().toISOString();
+
+        // Скрыть dropdown и показать новый статус сразу (optimistic)
+        const dropdown = document.getElementById('cardStatusDropdown');
+        dropdown.classList.remove('visible');
+        dropdown.classList.add('hidden');
+
+        const statusText = document.getElementById('cardStatusText');
+        const statusBadge = statusText?.closest('.status-badge-wrapper') || statusText?.parentElement;
+        if (statusBadge) statusBadge.style.opacity = '0.5';
 
         try {
             const result = await storage.saveEmployee(employee);
@@ -216,14 +247,8 @@ const TeamForms = {
             if (result.success || result.id) {
                 // Обновить badge
                 const statusClass = TeamUtils.getStatusClass(newStatus);
-                const statusText = document.getElementById('cardStatusText');
                 statusText.textContent = newStatus;
                 statusText.className = `status-badge ${statusClass}`;
-
-                // Скрыть dropdown
-                const dropdown = document.getElementById('cardStatusDropdown');
-                dropdown.classList.remove('visible');
-                dropdown.classList.add('hidden');
 
                 TeamRenderer.render();
                 TeamRenderer.updateStats();
@@ -231,11 +256,15 @@ const TeamForms = {
                 // Синхронизация с профилем
                 this.syncToProfile(employee);
             } else {
+                employee.status = oldStatus;
                 Toast.error('Ошибка сохранения статуса');
             }
         } catch (error) {
+            employee.status = oldStatus;
             console.error('[TeamForms] Error changing status:', error);
             Toast.error('Ошибка сохранения статуса');
+        } finally {
+            if (statusBadge) statusBadge.style.opacity = '';
         }
     },
 
@@ -341,12 +370,16 @@ const TeamForms = {
             'formCompany', 'formCrmLogin', 'formComment'
         ];
 
+        if (!this._boundOnFormChange) {
+            this._boundOnFormChange = this.onFormChange.bind(this);
+        }
+
         formFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field) {
                 const event = field.tagName === 'SELECT' ? 'change' : 'input';
-                field.removeEventListener(event, this.onFormChange.bind(this));
-                field.addEventListener(event, this.onFormChange.bind(this));
+                field.removeEventListener(event, this._boundOnFormChange);
+                field.addEventListener(event, this._boundOnFormChange);
             }
         });
     },
@@ -493,13 +526,13 @@ const TeamForms = {
         document.getElementById('formReddyId').value = employee.reddyId || employee.predefinedFields?.['Reddy'] || '';
         document.getElementById('formCorpTelegram').value = employee.corpTelegram || employee.predefinedFields?.['Корп. Telegram'] || '';
         document.getElementById('formPersonalTelegram').value = employee.personalTelegram || '';
-        document.getElementById('formBirthday').value = employee.birthday || '';
+        document.getElementById('formBirthday').value = (employee.birthday || '').substring(0, 10);
         document.getElementById('formCorpEmail').value = employee.corpEmail || employee.predefinedFields?.['Корп. e-mail'] || '';
         document.getElementById('formPersonalEmail').value = employee.personalEmail || '';
         document.getElementById('formCorpPhone').value = employee.corpPhone || employee.predefinedFields?.['Корп. телефон'] || '';
         document.getElementById('formPersonalPhone').value = employee.personalPhone || '';
         document.getElementById('formOffice').value = employee.office || '';
-        document.getElementById('formStartDate').value = employee.startDate || '';
+        document.getElementById('formStartDate').value = (employee.startDate || '').substring(0, 10);
         document.getElementById('formCompany').value = employee.company || '';
         document.getElementById('formCrmLogin').value = employee.crmLogin || '';
         document.getElementById('formComment').value = employee.comment || '';

@@ -83,13 +83,17 @@ const settingsApp = {
     loadUserData() {
         const authData = localStorage.getItem('cloud-auth');
         if (authData) {
-            const auth = JSON.parse(authData);
-            this.currentUser = {
-                email: auth.email,
-                name: auth.name,
-                picture: auth.picture,
-                timestamp: auth.timestamp
-            };
+            try {
+                const auth = JSON.parse(authData);
+                this.currentUser = {
+                    email: auth.email,
+                    name: auth.name,
+                    picture: auth.picture,
+                    timestamp: auth.timestamp
+                };
+            } catch (e) {
+                localStorage.removeItem('cloud-auth');
+            }
         }
     },
 
@@ -310,9 +314,9 @@ const settingsApp = {
         document.getElementById('profileCorpPhone').value = p.corpPhone || '';
         document.getElementById('profilePersonalPhone').value = p.personalPhone || '';
 
-        // Информация о работе
-        document.getElementById('profileBirthday').value = p.birthday || '';
-        document.getElementById('profileStartDate').value = p.startDate || '';
+        // Информация о работе (input[type=date] требует формат yyyy-MM-dd)
+        document.getElementById('profileBirthday').value = (p.birthday || '').substring(0, 10);
+        document.getElementById('profileStartDate').value = (p.startDate || '').substring(0, 10);
         document.getElementById('profileOffice').value = p.office || '';
         document.getElementById('profileCompany').value = p.company || '';
 

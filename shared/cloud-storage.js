@@ -100,7 +100,13 @@ const CloudStorage = {
         const authData = localStorage.getItem('cloud-auth');
         if (!authData) return null;
 
-        const auth = JSON.parse(authData);
+        let auth;
+        try {
+            auth = JSON.parse(authData);
+        } catch (e) {
+            localStorage.removeItem('cloud-auth');
+            return null;
+        }
 
         // Проверяем срок токена (~58 минут, Silent Refresh обновляет автоматически)
         if (Date.now() - auth.timestamp > 3500000) {
@@ -843,6 +849,49 @@ const CloudStorage = {
     getImageUrl(fileId) {
         if (!fileId) return null;
         return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w400';
+    },
+
+    // ============ ONBOARDING ============
+
+    /**
+     * Получить заявки на онбординг
+     * @param {boolean} useCache - использовать кеш
+     * @returns {Promise<Array>} массив заявок
+     */
+    async getOnboardingRequests(useCache = true) {
+        if (useCache) {
+            const cached = this.getFromCache('onboardingRequests');
+            if (cached) {
+                if (this._staleKeys.delete('onboardingRequests')) {
+                    this.getOnboardingRequests(false).catch(() => {});
+                }
+                return cached;
+            }
+        }
+        const result = await this.callApi('getOnboardingRequests');
+        const data = { requests: result.requests || [], history: result.history || {} };
+        this.setCache('onboardingRequests', data);
+        return data;
+    },
+
+    /**
+     * Получить настройки онбординга (источники, условия, роли)
+     * @param {boolean} useCache - использовать кеш
+     * @returns {Promise<Object>} объект настроек
+     */
+    async getOnboardingSettings(useCache = true) {
+        if (useCache) {
+            const cached = this.getFromCache('onboardingSettings');
+            if (cached) {
+                if (this._staleKeys.delete('onboardingSettings')) {
+                    this.getOnboardingSettings(false).catch(() => {});
+                }
+                return cached;
+            }
+        }
+        const result = await this.callApi('getOnboardingSettings');
+        this.setCache('onboardingSettings', result);
+        return result;
     },
 
     // ============ BULK OPERATIONS ============

@@ -18,6 +18,21 @@ const TokenManager = {
     warningShown: false,
 
     /**
+     * Безопасный парсинг auth данных из localStorage
+     * @returns {object|null}
+     */
+    _getAuth() {
+        const authData = localStorage.getItem('cloud-auth');
+        if (!authData) return null;
+        try {
+            return JSON.parse(authData);
+        } catch (e) {
+            localStorage.removeItem('cloud-auth');
+            return null;
+        }
+    },
+
+    /**
      * Получить REDIRECT_URI
      */
     getRedirectUri() {
@@ -32,12 +47,10 @@ const TokenManager = {
      * Проверить, нужно ли показать предупреждение
      */
     needsWarning() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return false;
+        const auth = this._getAuth();
+        if (!auth) return false;
 
-        const auth = JSON.parse(authData);
         const elapsed = Date.now() - auth.timestamp;
-
         return elapsed > (this.TOKEN_LIFETIME - this.WARN_BEFORE);
     },
 
@@ -45,12 +58,10 @@ const TokenManager = {
      * Проверить, истёк ли токен
      */
     isExpired() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return true;
+        const auth = this._getAuth();
+        if (!auth) return true;
 
-        const auth = JSON.parse(authData);
         const elapsed = Date.now() - auth.timestamp;
-
         return elapsed > this.TOKEN_LIFETIME;
     },
 
@@ -58,12 +69,10 @@ const TokenManager = {
      * Получить оставшееся время (мс)
      */
     getTimeRemaining() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return 0;
+        const auth = this._getAuth();
+        if (!auth) return 0;
 
-        const auth = JSON.parse(authData);
         const elapsed = Date.now() - auth.timestamp;
-
         return Math.max(0, this.TOKEN_LIFETIME - elapsed);
     },
 
@@ -223,7 +232,7 @@ const TokenManager = {
         if (prompt) prompt.remove();
 
         const state = this.generateState();
-        sessionStorage.setItem('oauth_state', state);
+        sessionStorage.setItem('oauth_state', JSON.stringify({ value: state, created: Date.now() }));
         sessionStorage.setItem('oauth_silent', 'true');
 
         const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
@@ -278,9 +287,8 @@ const TokenManager = {
      * Получить timestamp токена
      */
     getAuthTimestamp() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return 0;
-        return JSON.parse(authData).timestamp || 0;
+        const auth = this._getAuth();
+        return auth ? (auth.timestamp || 0) : 0;
     },
 
     /**
@@ -384,10 +392,14 @@ const AuthGuard = {
                         return false;
                     }
 
-                    // Guest - всегда редирект на экран ожидания приглашения
-                    // (роль guest = пользователь ещё не принял приглашение в команду)
+                    // Guest без команды: если approved_no_team — на выбор роли (login),
+                    // иначе — на экран ожидания приглашения
                     if (role === 'guest') {
-                        window.location.href = this.getBasePath() + '/login/waiting-invite.html';
+                        if (status === 'approved_no_team') {
+                            this.redirectToLogin();
+                        } else {
+                            window.location.href = this.getBasePath() + '/login/waiting-invite.html';
+                        }
                         return false;
                     }
                 }
@@ -439,10 +451,9 @@ const AuthGuard = {
     },
 
     getUser() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return null;
+        const auth = TokenManager._getAuth();
+        if (!auth) return null;
 
-        const auth = JSON.parse(authData);
         return {
             email: auth.email,
             name: auth.name,

@@ -1,5 +1,20 @@
 // Модуль загрузки файлов
 const TrafficUpload = {
+    // Валидация Excel файлов (тип и размер)
+    _validateExcelFiles(files) {
+        const allowedExtensions = ['.xlsx', '.xls', '.csv'];
+        const maxFileSize = 50 * 1024 * 1024; // 50 MB
+        for (const file of files) {
+            const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+            if (!allowedExtensions.includes(ext)) {
+                throw new Error(`Неподдерживаемый формат файла: ${file.name}. Допустимые: ${allowedExtensions.join(', ')}`);
+            }
+            if (file.size > maxFileSize) {
+                throw new Error(`Файл ${file.name} превышает максимальный размер (50 МБ)`);
+            }
+        }
+    },
+
     // Обработка загрузки "Пополнения и выводы"
     async handleDepositsUpload(event) {
         const files = event.target.files;
@@ -8,6 +23,12 @@ const TrafficUpload = {
         const statusDiv = document.getElementById('depositsStatus');
         statusDiv.className = 'upload-status info';
         statusDiv.textContent = 'Обработка файлов...';
+
+        try { TrafficUpload._validateExcelFiles(files); } catch (e) {
+            statusDiv.className = 'upload-status error';
+            statusDiv.textContent = e.message;
+            return;
+        }
 
         try {
             const allPartners = storage.getPartners();
@@ -59,6 +80,12 @@ const TrafficUpload = {
         const statusDiv = document.getElementById('qualityStatus');
         statusDiv.className = 'upload-status info';
         statusDiv.textContent = 'Обработка файлов...';
+
+        try { TrafficUpload._validateExcelFiles(files); } catch (e) {
+            statusDiv.className = 'upload-status error';
+            statusDiv.textContent = e.message;
+            return;
+        }
 
         try {
             // Шаг 1: Получаем всех партнеров из системы
@@ -136,6 +163,12 @@ const TrafficUpload = {
         const statusDiv = document.getElementById('percentStatus');
         statusDiv.className = 'upload-status info';
         statusDiv.textContent = 'Обработка файлов...';
+
+        try { TrafficUpload._validateExcelFiles(files); } catch (e) {
+            statusDiv.className = 'upload-status error';
+            statusDiv.textContent = e.message;
+            return;
+        }
 
         try {
             // Шаг 1: Получаем всех партнеров из системы

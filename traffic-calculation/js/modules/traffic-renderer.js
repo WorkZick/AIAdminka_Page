@@ -212,8 +212,11 @@ const TrafficRenderer = {
             `;
         }).join('');
 
-        // Event delegation для кнопок действий с партнёрами
-        tbody.addEventListener('click', (e) => {
+        // Event delegation для кнопок действий с партнёрами (убираем старый обработчик)
+        if (TrafficRenderer._partnersClickHandler) {
+            tbody.removeEventListener('click', TrafficRenderer._partnersClickHandler);
+        }
+        TrafficRenderer._partnersClickHandler = (e) => {
             const button = e.target.closest('[data-action]');
             if (!button) return;
 
@@ -225,7 +228,8 @@ const TrafficRenderer = {
             } else if (action === 'delete') {
                 TrafficImportExport.deletePartner(partnerId);
             }
-        });
+        };
+        tbody.addEventListener('click', TrafficRenderer._partnersClickHandler);
     },
 
     // Загрузка методов
@@ -296,13 +300,17 @@ const TrafficRenderer = {
             </div>
         `).join('');
 
-        // Event delegation для кнопок удаления методов
-        container.addEventListener('click', (e) => {
+        // Event delegation для кнопок удаления методов (убираем старый обработчик)
+        if (TrafficRenderer._methodsClickHandler) {
+            container.removeEventListener('click', TrafficRenderer._methodsClickHandler);
+        }
+        TrafficRenderer._methodsClickHandler = (e) => {
             const button = e.target.closest('[data-method]');
             if (!button) return;
 
             TrafficImportExport.deleteMethod(button.dataset.method);
-        });
+        };
+        container.addEventListener('click', TrafficRenderer._methodsClickHandler);
     },
 
     // Генерация отчета
@@ -554,10 +562,14 @@ const TrafficRenderer = {
         TrafficState.editingPartnerId = null;
     },
 
-    // Экранирование HTML
+    // Экранирование HTML (безопасно для использования в атрибутах)
     escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        if (text == null) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;');
     }
 };

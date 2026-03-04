@@ -81,9 +81,9 @@ const PartnersImportExport = {
         const requiredCols = ['Субагент', 'ID Субагента', 'Метод'];
         const baseTags = baseColumns.map(col => {
             const isRequired = requiredCols.includes(col);
-            return `<span class="excel-hint-column ${isRequired ? 'required' : 'optional'}">${col}</span>`;
+            return `<span class="excel-hint-column ${isRequired ? 'required' : 'optional'}">${PartnersUtils.escapeHtml(col)}</span>`;
         }).join('');
-        const customTags = customColumns.map(col => `<span class="excel-hint-column optional">${col}</span>`).join('');
+        const customTags = customColumns.map(col => `<span class="excel-hint-column optional">${PartnersUtils.escapeHtml(col)}</span>`).join('');
 
         previewInfo.innerHTML = `
             <div class="export-preview-title">Колонки для экспорта:</div>
@@ -525,7 +525,7 @@ const PartnersImportExport = {
                         const extraColsTags = extraColumns.map(c => `<span class="extra-column-tag">${PartnersUtils.escapeHtml(c)}</span>`).join('');
                         preview.innerHTML = `
                             <strong>Найдено партнеров:</strong> ${partners.length}<br>
-                            <small>Файл: ${file.name}</small>
+                            <small>Файл: ${PartnersUtils.escapeHtml(file.name)}</small>
                             <div class="extra-columns-warning">
                                 <div class="extra-columns-warning-title">Обнаружены дополнительные колонки:</div>
                                 <div class="extra-columns-list">${extraColsTags}</div>
@@ -540,7 +540,7 @@ const PartnersImportExport = {
                             </div>
                         `;
                     } else {
-                        preview.innerHTML = `<strong>Найдено партнеров:</strong> ${partners.length}<br><small>Файл: ${file.name}</small>`;
+                        preview.innerHTML = `<strong>Найдено партнеров:</strong> ${partners.length}<br><small>Файл: ${PartnersUtils.escapeHtml(file.name)}</small>`;
                     }
 
                     document.getElementById('importBtn').disabled = false;
@@ -786,7 +786,6 @@ const PartnersImportExport = {
     },
 
     cancelImport() {
-        PartnersState.importCancelled = true;
         PartnersImportExport.hideImportProgress();
     },
 

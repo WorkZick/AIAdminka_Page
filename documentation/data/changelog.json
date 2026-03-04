@@ -1,6 +1,40 @@
 {
-  "version": "2.23.0",
+  "version": "2.24.0",
   "updates": [
+    {
+      "version": "2.24.0",
+      "date": "2026-03-03",
+      "title": "Оптимизация производительности сервера и безопасность",
+      "changes": [
+        {
+          "category": "Улучшено",
+          "items": [
+            "Кеширование OAuth токенов — экономия ~300-500ms на повторных запросах",
+            "Per-request кеш для Core/Storage spreadsheet — убраны дублирующие openById",
+            "CacheService для permissions и roleConfig — данные кешируются между запросами (10 мин)",
+            "Batch setValues() в updateUser, saveEmployee, updatePartner — меньше записей в таблицу",
+            "Batch API (action='batch') — до 10 read-only запросов в одном HTTP-вызове",
+            "Отдельный пагинированный endpoint getAuditLog — админ-панель грузится быстрее"
+          ]
+        },
+        {
+          "category": "Безопасность",
+          "items": [
+            "Проверка audience (client_id) в OAuth токенах — защита от чужих токенов",
+            "Полный SHA-256 хеш для кеш-ключей токенов",
+            "Сокращённый TTL кеша токенов до 60 секунд",
+            "Дедупликация и валидация actions в Batch API",
+            "setOAuthClientId — API для настройки проверки audience (admin only)"
+          ]
+        },
+        {
+          "category": "Важно",
+          "items": [
+            "getAdminData больше не возвращает AuditLog — используйте getAuditLog с пагинацией"
+          ]
+        }
+      ]
+    },
     {
       "version": "2.23.0",
       "date": "2026-02-12",

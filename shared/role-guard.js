@@ -474,6 +474,8 @@ const RoleGuard = {
         if (!this.user) return false;
         // v2.2.0: Проверяем role='admin' ИЛИ isAdmin=true
         if (this.user.role === 'admin' || this.user.isAdmin === true) return true;
+        // Руководитель всегда может управлять командой
+        if (this.user.role === 'leader' && module === 'team-management') return true;
         return this.permissions?.[module]?.canEdit === true;
     },
 

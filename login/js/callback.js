@@ -38,8 +38,18 @@
             throw new Error('Токен не получен');
         }
 
-        // CSRF защита: проверяем state параметр
-        const savedState = sessionStorage.getItem('oauth_state');
+        // CSRF защита: проверяем state параметр с expiry (10 минут)
+        const savedStateRaw = sessionStorage.getItem('oauth_state');
+        var savedState = null;
+        try {
+            var parsed = JSON.parse(savedStateRaw);
+            if (parsed && parsed.value && parsed.created && (Date.now() - parsed.created < 600000)) {
+                savedState = parsed.value;
+            }
+        } catch (e) {
+            // Legacy format (plain string) — accept for backward compatibility
+            savedState = savedStateRaw;
+        }
         if (!savedState || savedState !== returnedState) {
             sessionStorage.removeItem('oauth_state');
             sessionStorage.removeItem('oauth_silent');
@@ -83,20 +93,12 @@
             message.className = 'message success';
             sub.textContent = 'Перенаправление...';
 
+            // Всегда перенаправляем на login/index.html для проверки доступа.
+            // auth-redirect остаётся в sessionStorage — login.js использует его
+            // после успешной верификации (предотвращает redirect-loop для
+            // удалённых/новых пользователей, которых приложение не знает).
             setTimeout(function() {
-                // Проверяем, есть ли сохранённый URL для редиректа
-                const redirectUrl = sessionStorage.getItem('auth-redirect');
-                if (redirectUrl) {
-                    sessionStorage.removeItem('auth-redirect');
-                    // Валидация: только относительные URL этого домена (защита от open redirect)
-                    if (redirectUrl.startsWith('/') && !redirectUrl.startsWith('//')) {
-                        window.location.href = redirectUrl;
-                    } else {
-                        window.location.href = 'index.html';
-                    }
-                } else {
-                    window.location.href = 'index.html';
-                }
+                window.location.href = 'index.html';
             }, 500);
         })
         .catch(function(e) {
@@ -105,7 +107,15 @@
                 window.close();
                 return;
             }
-            throw e;
+            spinner.style.display = 'none';
+            message.textContent = e.message;
+            message.className = 'message error';
+            var link = document.createElement('a');
+            link.href = 'index.html';
+            link.className = 'error-link';
+            link.textContent = 'Вернуться на страницу входа';
+            sub.textContent = '';
+            sub.appendChild(link);
         });
 
     } catch (e) {
@@ -117,6 +127,11 @@
         spinner.style.display = 'none';
         message.textContent = e.message;
         message.className = 'message error';
-        sub.innerHTML = '<a href="index.html" class="error-link">Вернуться на страницу входа</a>';
+        var link = document.createElement('a');
+        link.href = 'index.html';
+        link.className = 'error-link';
+        link.textContent = 'Вернуться на страницу входа';
+        sub.textContent = '';
+        sub.appendChild(link);
     }
 })();

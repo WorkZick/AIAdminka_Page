@@ -101,10 +101,16 @@ const OnboardingReview = (() => {
         const isTerminal = request.status === 'completed' || request.status === 'cancelled';
         const canReview = !isTerminal && isOnReview && isReviewer && step.number === request.currentStep;
 
-        container.innerHTML = `<div class="review-fields-list">${_renderReadonly(step, data, request, canReview)}</div>`;
+        // confirmAfterApprove: executor/admin can interact with confirm-phase checklist
+        const stageData = (request.stageData && request.stageData[step.number]) || {};
+        const isExecutor = OnboardingRoles.isExecutorForStep(sysRole, step.number);
+        const canConfirm = !isTerminal && step.confirmAfterApprove && stageData._approved &&
+            step.number === request.currentStep && (isExecutor || isAdminLike);
+
+        container.innerHTML = `<div class="review-fields-list">${_renderReadonly(step, data, request, canReview, canConfirm)}</div>`;
     }
 
-    function _renderReadonly(step, data, request, canReview) {
+    function _renderReadonly(step, data, request, canReview, canConfirm) {
         return step.fields.map(field => {
             // Hide showWhen fields that have no data (e.g. login/password not yet filled)
             if (field.showWhen && field.showWhen.phase === 'fill') {
@@ -128,11 +134,12 @@ const OnboardingReview = (() => {
 
             switch (field.type) {
                 case 'select':
-                    return _field(field.label, empty ? '—' : (OnboardingConfig.getOptionLabel(field.options || [], value) || value));
+                    return _field(field.label, empty ? '—' : Utils.escapeHtml(OnboardingConfig.getOptionLabel(field.options || [], value) || value));
 
                 case 'file':
                     if (empty) return _field(field.label, '—');
-                    const safeUrl = String(value).startsWith('data:') ? value : Utils.escapeHtml(String(value));
+                    // Always escape URL — even data: URLs must be escaped in HTML attributes
+                    const safeUrl = Utils.escapeHtml(String(value));
                     return `<div class="readonly-field">
                         <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
                         <span class="readonly-value"><img class="readonly-photo" src="${safeUrl}" alt="" data-action="onb-openPhoto"></span>
@@ -145,6 +152,11 @@ const OnboardingReview = (() => {
                 case 'checklist':
                     // Interactive checklist for reviewer
                     if (canReview) {
+                        _reviewChecklistField = field.id;
+                        return _renderReviewChecklist(field, value);
+                    }
+                    // Interactive checklist for executor in confirm phase
+                    if (canConfirm && field.showWhen && field.showWhen.phase === 'confirm') {
                         _reviewChecklistField = field.id;
                         return _renderReviewChecklist(field, value);
                     }

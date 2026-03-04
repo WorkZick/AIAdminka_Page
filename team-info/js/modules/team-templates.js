@@ -335,17 +335,22 @@ const TeamTemplates = {
 
             // Наконец, создать динамические поля из шаблона
             template.fields.forEach(field => {
-                const fieldHtml = `
-                    <div class="form-group-inline">
-                        <label>${field.label}:</label>
-                        ${field.type === 'textarea'
-                            ? `<textarea id="${field.id}" placeholder="${field.label}"></textarea>`
-                            : `<input type="${field.type}" id="${field.id}" placeholder="${field.label}">`
-                        }
-                    </div>
-                `;
+                const group = document.createElement('div');
+                group.className = 'form-group-inline';
 
-                document.querySelector('.form-body').insertAdjacentHTML('beforeend', fieldHtml);
+                const label = document.createElement('label');
+                label.textContent = field.label + ':';
+
+                const input = field.type === 'textarea'
+                    ? document.createElement('textarea')
+                    : document.createElement('input');
+                input.id = field.id;
+                input.placeholder = field.label;
+                if (field.type !== 'textarea') input.type = field.type;
+
+                group.appendChild(label);
+                group.appendChild(input);
+                document.querySelector('.form-body').appendChild(group);
             });
         }
     },
@@ -501,22 +506,54 @@ const TeamTemplates = {
      * @private
      */
     _addTemplateFieldToDOM(field) {
-        const fieldHtml = `
-            <div class="template-field-item" data-field-id="${field.id}">
-                <input type="text" class="template-field-input" placeholder="Название поля" value="${field.label || ''}"
-                    data-action="team-updateTemplateFieldLabel" data-field-id="${field.id}">
-                <select class="template-field-type" data-action="team-updateTemplateFieldType" data-field-id="${field.id}">
-                    <option value="text" ${field.type === 'text' ? 'selected' : ''}>Текст</option>
-                    <option value="email" ${field.type === 'email' ? 'selected' : ''}>Email</option>
-                    <option value="tel" ${field.type === 'tel' ? 'selected' : ''}>Телефон</option>
-                    <option value="date" ${field.type === 'date' ? 'selected' : ''}>Дата</option>
-                    <option value="textarea" ${field.type === 'textarea' ? 'selected' : ''}>Текстовая область</option>
-                </select>
-                <button class="template-field-remove" data-action="team-removeTemplateField" data-field-id="${field.id}">
-                    <img src="../shared/icons/cross.svg" width="16" height="16" alt="Удалить">
-                </button>
-            </div>
-        `;
-        document.getElementById('templateFieldsList').insertAdjacentHTML('beforeend', fieldHtml);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'template-field-item';
+        wrapper.dataset.fieldId = field.id;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'template-field-input';
+        input.placeholder = 'Название поля';
+        input.value = field.label || '';
+        input.dataset.action = 'team-updateTemplateFieldLabel';
+        input.dataset.fieldId = field.id;
+
+        const select = document.createElement('select');
+        select.className = 'template-field-type';
+        select.dataset.action = 'team-updateTemplateFieldType';
+        select.dataset.fieldId = field.id;
+
+        const typeOptions = [
+            { value: 'text', text: 'Текст' },
+            { value: 'email', text: 'Email' },
+            { value: 'tel', text: 'Телефон' },
+            { value: 'date', text: 'Дата' },
+            { value: 'textarea', text: 'Текстовая область' }
+        ];
+        typeOptions.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.text;
+            if (field.type === opt.value) option.selected = true;
+            select.appendChild(option);
+        });
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'template-field-remove';
+        removeBtn.dataset.action = 'team-removeTemplateField';
+        removeBtn.dataset.fieldId = field.id;
+
+        const removeIcon = document.createElement('img');
+        removeIcon.src = '../shared/icons/cross.svg';
+        removeIcon.width = 16;
+        removeIcon.height = 16;
+        removeIcon.alt = 'Удалить';
+        removeBtn.appendChild(removeIcon);
+
+        wrapper.appendChild(input);
+        wrapper.appendChild(select);
+        wrapper.appendChild(removeBtn);
+
+        document.getElementById('templateFieldsList').appendChild(wrapper);
     }
 };

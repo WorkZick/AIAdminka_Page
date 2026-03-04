@@ -253,10 +253,10 @@ const WaitingInvite = {
                     </div>
                 </div>
                 <div class="invite-actions">
-                    <button class="btn-accept" data-action="accept" data-invite-id="${id}">
+                    <button class="btn btn-primary" data-action="accept" data-invite-id="${id}">
                         Принять
                     </button>
-                    <button class="btn-reject" data-action="reject" data-invite-id="${id}">
+                    <button class="btn btn-danger" data-action="reject" data-invite-id="${id}">
                         Отклонить
                     </button>
                 </div>

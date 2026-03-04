@@ -28,7 +28,13 @@ const TeamAPI = {
     init() {
         const authData = localStorage.getItem('cloud-auth');
         if (authData && this.USE_MOCK_API) {
-            const auth = JSON.parse(authData);
+            let auth;
+            try {
+                auth = JSON.parse(authData);
+            } catch (e) {
+                console.error('Invalid cloud-auth data:', e);
+                return;
+            }
             this.mockData.team.leaderEmail = auth.email;
             this.mockData.members[0].email = auth.email;
             this.mockData.members[0].name = auth.name || this.mockData.members[0].name;
@@ -57,7 +63,14 @@ const TeamAPI = {
         }
 
         const response = await fetch(url.toString(), { method: 'GET' });
-        return response.json();
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        try {
+            return await response.json();
+        } catch (e) {
+            throw new Error('Неверный формат ответа сервера');
+        }
     },
 
     /**
