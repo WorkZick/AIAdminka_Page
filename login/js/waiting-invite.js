@@ -19,7 +19,7 @@ const WaitingInvite = {
     async init() {
         const authData = localStorage.getItem('cloud-auth');
         if (!authData) {
-            window.location.href = '/SimpleAIAdminka/login/';
+            window.location.href = 'index.html';
             return;
         }
 
@@ -27,7 +27,7 @@ const WaitingInvite = {
             const auth = JSON.parse(authData);
             if (Date.now() - auth.timestamp > 3500000) {
                 localStorage.removeItem('cloud-auth');
-                window.location.href = '/SimpleAIAdminka/login/';
+                window.location.href = 'index.html';
                 return;
             }
 
@@ -37,7 +37,7 @@ const WaitingInvite = {
                 picture: auth.picture || ''
             };
         } catch {
-            window.location.href = '/SimpleAIAdminka/login/';
+            window.location.href = 'index.html';
             return;
         }
 
@@ -161,7 +161,7 @@ const WaitingInvite = {
                 this._stopAutoRefresh();
                 localStorage.removeItem('roleGuard');
                 Toast.success('Вы уже в команде!');
-                setTimeout(() => { window.location.href = '/SimpleAIAdminka/'; }, 1500);
+                setTimeout(() => { window.location.href = '../index.html'; }, 1500);
                 return;
             }
 
@@ -169,7 +169,7 @@ const WaitingInvite = {
                 this.isRedirecting = true;
                 this._stopAutoRefresh();
                 Toast.error('Сессия истекла. Войдите снова.');
-                setTimeout(() => { window.location.href = '/SimpleAIAdminka/login/'; }, 1500);
+                setTimeout(() => { window.location.href = 'index.html'; }, 1500);
                 return;
             }
 
@@ -323,7 +323,7 @@ const WaitingInvite = {
                 localStorage.removeItem('roleGuard');
                 this.isRedirecting = true;
                 this._stopAutoRefresh();
-                setTimeout(() => { window.location.href = '/SimpleAIAdminka/'; }, 1500);
+                setTimeout(() => { window.location.href = '../index.html'; }, 1500);
             } else {
                 throw new Error(result.error || 'Ошибка принятия приглашения');
             }
@@ -379,7 +379,7 @@ const WaitingInvite = {
         localStorage.removeItem('cloud-auth');
         localStorage.removeItem('roleGuard');
         Toast.info('Выход из аккаунта...');
-        setTimeout(() => { window.location.href = '/SimpleAIAdminka/login/'; }, 500);
+        setTimeout(() => { window.location.href = 'index.html'; }, 500);
     }
 };
 

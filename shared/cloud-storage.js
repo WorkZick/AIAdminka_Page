@@ -347,7 +347,10 @@ const CloudStorage = {
                     if (typeof AuthGuard !== 'undefined') {
                         AuthGuard.redirectToLogin();
                     } else {
-                        window.location.href = '/SimpleAIAdminka/login/';
+                        // Определяем базовый путь динамически (как AuthGuard.getBasePath)
+                        const pathMatch = window.location.pathname.match(/^\/([^\/]+)\//);
+                        const basePath = pathMatch ? '/' + pathMatch[1] : '';
+                        window.location.href = basePath + '/login/index.html';
                     }
                 }, 1500);
             }

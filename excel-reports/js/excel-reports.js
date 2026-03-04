@@ -239,7 +239,10 @@ const excelApp = {
             if (!this.fileProcessor.areAllValid(results)) {
                 const errorMessage = this.fileProcessor.formatResults(results);
                 logger.log(errorMessage, 'error');
-                this.utils.showError('Ошибка загрузки файлов. См. детали в журнале.');
+                // Показываем конкретную ошибку пользователю
+                const failedFiles = results.filter(r => !r.success);
+                const userError = failedFiles.map(f => f.error).join('; ');
+                this.utils.showError(userError || 'Ошибка загрузки файлов');
                 return;
             }
 
@@ -287,7 +290,10 @@ const excelApp = {
             if (!this.fileProcessor.areAllValid(results)) {
                 const errorMessage = this.fileProcessor.formatResults(results);
                 logger.log(errorMessage, 'error');
-                this.utils.showError('Ошибка загрузки файла. См. детали в журнале.');
+                // Показываем конкретную ошибку пользователю
+                const failedFiles = results.filter(r => !r.success);
+                const userError = failedFiles.map(f => f.error).join('; ');
+                this.utils.showError(userError || 'Ошибка загрузки файла');
                 return;
             }
 
