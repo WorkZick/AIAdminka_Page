@@ -93,8 +93,8 @@ const PageLifecycle = {
     },
 
     /**
-     * Авто-синхронизация профиля в team-info при первом входе после одобрения
-     * Решает проблему: руководитель не появляется в модуле «Сотрудники» без ручного сохранения настроек
+     * Авто-синхронизация профиля в Employees при первом входе после одобрения
+     * Использует syncMyProfile — не требует прав на team-info, работает для всех ролей
      */
     async _autoSyncProfile() {
         try {
@@ -108,57 +108,31 @@ const PageLifecycle = {
             if (user.status !== 'active') return;
             if (!user.teamId && user.role !== 'admin') return;
 
-            // Только роли с правами на employees API (бэкенд запрещает остальным)
-            if (user.role !== 'leader' && user.role !== 'admin' && user.isAdmin !== true) return;
-
             // Проверяем флаг: синхронизация уже выполнена?
             const syncKey = 'profile-synced-' + user.email;
             if (localStorage.getItem(syncKey)) return;
 
-            // Первая синхронизация: создаём/обновляем карточку сотрудника
+            // Собираем данные профиля
             const authUser = typeof AuthGuard !== 'undefined' ? AuthGuard.getUser() : null;
 
-            const employeeData = {
-                email: user.email,
+            const profileData = {
                 fullName: user.name || authUser?.name || '',
                 position: user.position || '',
                 avatar: user.picture || authUser?.picture || '',
-                status: 'Работает',
                 reddyId: user.reddyId || '',
-                corpEmail: user.email,
                 corpTelegram: user.telegram || '',
                 corpPhone: user.phone || '',
                 predefinedFields: {},
                 customFields: {}
             };
 
-            if (employeeData.reddyId) {
-                employeeData.predefinedFields['Reddy'] = employeeData.reddyId;
+            if (profileData.reddyId) {
+                profileData.predefinedFields['Reddy'] = profileData.reddyId;
             }
-            if (employeeData.corpEmail) {
-                employeeData.predefinedFields['Корп. e-mail'] = employeeData.corpEmail;
-            }
+            profileData.predefinedFields['Корп. e-mail'] = user.email;
 
-            // Проверяем существующего сотрудника (только если есть права на employees)
-            const canViewEmployees = user.role === 'leader' || user.role === 'admin' || user.isAdmin === true;
-            if (canViewEmployees) {
-                try {
-                    const employees = await CloudStorage.getEmployees();
-                    const existing = employees.find(emp => emp.email === user.email || emp.corpEmail === user.email);
-                    if (existing) {
-                        employeeData.id = existing.id;
-                        if (existing.fullName) employeeData.fullName = existing.fullName;
-                        if (existing.position) employeeData.position = existing.position;
-                        if (existing.status) employeeData.status = existing.status;
-                        if (existing.avatar) employeeData.avatar = existing.avatar;
-                    }
-                } catch (e) {
-                    // Не удалось проверить — сохраняем как нового
-                }
-            }
-
-            await CloudStorage.saveEmployee(employeeData);
-            // Ставим флаг после успешного вызова
+            // syncMyProfile — безопасный эндпоинт, email привязан к токену на бэкенде
+            await CloudStorage.callApi('syncMyProfile', { data: profileData });
             localStorage.setItem(syncKey, Date.now().toString());
         } catch (e) {
             console.warn('[PageLifecycle] Auto-sync profile failed:', e.message);
