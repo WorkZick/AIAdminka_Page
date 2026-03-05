@@ -215,12 +215,23 @@ const TokenManager = {
         }, 120000);
     },
 
+    // Флаг: silent refresh не сработал, следующий клик → interactive
+    _needsInteractive: false,
+
     /**
      * Продлить сессию через popup
      * Стратегия: сначала prompt=none (тихий refresh), при неудаче → prompt=consent (интерактивный)
+     * COOP fix: при фейле silent не открываем попап из таймера (браузер блокирует),
+     * а показываем промпт заново — пользователь кликает сам (user gesture → popup разрешён)
      * @param {boolean} [interactive=false] - использовать интерактивный режим
      */
     extendSession(interactive) {
+        // Если предыдущий silent не сработал — форсируем interactive
+        if (this._needsInteractive) {
+            interactive = true;
+            this._needsInteractive = false;
+        }
+
         // Убираем уведомление
         const prompt = document.getElementById('token-refresh-prompt');
         if (prompt) prompt.remove();
@@ -265,7 +276,6 @@ const TokenManager = {
         let attempts = 0;
         const pollInterval = 500;
         const maxAttempts = interactive ? 120 : 30; // interactive: 60с, silent: 15с
-        const minAttemptsBeforeCloseCheck = 3;
         const self = this;
 
         const checkInterval = setInterval(() => {
@@ -283,37 +293,22 @@ const TokenManager = {
                 return;
             }
 
-            // Popup закрылся без обновления токена
-            let popupClosed = false;
-            try { popupClosed = popup.closed; } catch (_) { popupClosed = true; }
-
-            if (popupClosed && attempts > minAttemptsBeforeCloseCheck) {
+            // Таймаут ожидания (не проверяем popup.closed — COOP блокирует)
+            if (attempts >= maxAttempts) {
                 clearInterval(checkInterval);
                 sessionStorage.removeItem('oauth_silent');
+                try { popup.close(); } catch (_) {}
 
                 if (!interactive) {
-                    self.extendSession(true);
+                    // Silent не сработал → показываем промпт заново
+                    // Пользователь кликнет сам (user gesture → popup НЕ заблокирован)
+                    self._needsInteractive = true;
+                    self.warningShown = false;
+                    self.showTokenPrompt();
                 } else {
                     self.warningShown = false;
                     if (typeof Toast !== 'undefined') {
                         Toast.error('Не удалось продлить сессию. Попробуйте ещё раз.');
-                    }
-                }
-                return;
-            }
-
-            // Таймаут ожидания
-            if (attempts >= maxAttempts) {
-                clearInterval(checkInterval);
-                sessionStorage.removeItem('oauth_silent');
-                try { if (!popup.closed) popup.close(); } catch (_) {}
-
-                if (!interactive) {
-                    self.extendSession(true);
-                } else {
-                    self.warningShown = false;
-                    if (typeof Toast !== 'undefined') {
-                        Toast.error('Не удалось продлить сессию.');
                     }
                 }
             }
