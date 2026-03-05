@@ -1015,7 +1015,7 @@ const PartnerOnboarding = (() => {
                 _setActionLock(true);
                 _setBtnLoading('#confirmOk', true);
                 try {
-                    const result = await CloudStorage.postApi('deleteOnboardings', { ids });
+                    const result = await CloudStorage.postApi('deleteOnboardings', { requestIds: ids });
                     if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
                     CloudStorage.clearCache('onboardingRequests');
