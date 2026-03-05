@@ -10,7 +10,8 @@ const PartnerOnboarding = (() => {
     let _statusWatchExpected = null;
     let _listRefreshTimer = null;
     let _visibilityRefreshHandler = null;
-    const LIST_REFRESH_INTERVAL = 30000; // 30 секунд
+    let _lastKnownModified = null;
+    const POLL_INTERVAL = 5000; // 5 секунд — lightweight change detection
     const _debouncedSearch = Utils.debounce(() => OnboardingList.applyFilters(), 150);
     const _debouncedAutosave = Utils.debounce(() => _autosaveDraft(), 500);
 
@@ -50,6 +51,12 @@ const PartnerOnboarding = (() => {
             _loadRequests(),
             OnboardingSource.init()
         ]);
+
+        // Инициализируем timestamp для change detection polling
+        try {
+            const tsResult = await CloudStorage.postApi('getOnboardingLastModified', {});
+            _lastKnownModified = tsResult.ts || '0';
+        } catch (_) { _lastKnownModified = '0'; }
 
         OnboardingList.setupDefaultFilters();
         OnboardingList.applyFilters();
@@ -1327,7 +1334,7 @@ const PartnerOnboarding = (() => {
 
     function _startListRefresh() {
         _stopListRefresh();
-        _listRefreshTimer = setInterval(() => _refreshListData(), LIST_REFRESH_INTERVAL);
+        _listRefreshTimer = setInterval(() => _pollForChanges(), POLL_INTERVAL);
 
         if (!_visibilityRefreshHandler) {
             _visibilityRefreshHandler = () => {
@@ -1355,10 +1362,22 @@ const PartnerOnboarding = (() => {
         }
     }
 
+    async function _pollForChanges() {
+        if (_isActionLocked()) return;
+        try {
+            const result = await CloudStorage.postApi('getOnboardingLastModified', {});
+            const serverTs = result.ts || '0';
+            if (serverTs !== _lastKnownModified) {
+                _lastKnownModified = serverTs;
+                await _refreshCurrentView();
+            }
+        } catch (_) { /* silent */ }
+    }
+
     async function _refreshListData() {
         if (_isActionLocked()) return;
         try {
-            const data = await CloudStorage.getOnboardingRequests();
+            const data = await CloudStorage.getOnboardingRequests(false);
             const fresh = data.requests || [];
             const old = OnboardingState.get('requests') || [];
             // Обновляем только если данные изменились
@@ -1375,24 +1394,33 @@ const PartnerOnboarding = (() => {
         if (view === 'list') {
             await _refreshListData();
         } else {
-            // В detail view: обновляем текущую заявку
+            // В detail view: обновляем текущую заявку + фоновый список
             const current = OnboardingState.get('currentRequest');
             if (!current || _isActionLocked()) return;
             try {
-                const data = await CloudStorage.getOnboardingRequests();
+                const data = await CloudStorage.getOnboardingRequests(false);
                 const fresh = data.requests || [];
                 OnboardingState.set('requests', fresh);
                 if (data.history) OnboardingState.set('history', data.history);
+                OnboardingList.applyFilters(); // Список актуален при возврате
+
                 const updated = fresh.find(r => r.id === current.id);
                 if (updated) {
                     const changed = JSON.stringify(updated) !== JSON.stringify(current);
                     if (changed) {
                         OnboardingState.set('currentRequest', updated);
-                        // Перерисовываем текущий вид
                         const stepNumber = OnboardingState.get('currentStep');
                         if (view === 'form') {
-                            OnboardingForm.render(updated, stepNumber);
+                            // Form view: перерисовываем только при структурных изменениях
+                            // (status, step, assignee), чтобы не сбить текущее редактирование
+                            const structural = current.status !== updated.status
+                                || current.currentStep !== updated.currentStep
+                                || current.assigneeEmail !== updated.assigneeEmail;
+                            if (structural) {
+                                OnboardingForm.render(updated, stepNumber);
+                            }
                         } else if (view === 'review') {
+                            // Review view: read-only, перерисовываем всегда
                             OnboardingReview.render(updated, stepNumber);
                         }
                     }
