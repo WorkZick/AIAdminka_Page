@@ -627,11 +627,52 @@ const OnboardingSource = (() => {
 
     function openConditionsSettings() {
         const data = _getConditionsData();
-        const urlInput = document.getElementById('conditionsUrl');
-        if (urlInput) urlInput.value = data.sheetUrl || '';
+        const hasUrl = !!data.sheetUrl;
+
+        _toggleConditionsMode(hasUrl ? 'view' : 'edit', data);
         _renderConditionsStatus(data);
+
         const modal = document.getElementById('conditionsModal');
         if (modal) modal.classList.add('active');
+    }
+
+    function editConditionsUrl() {
+        const data = _getConditionsData();
+        _toggleConditionsMode('edit', data);
+    }
+
+    function _toggleConditionsMode(mode, data) {
+        const viewMode = document.getElementById('conditionsViewMode');
+        const editMode = document.getElementById('conditionsEditMode');
+        const saveBtn = document.getElementById('conditionsSaveBtn');
+        if (!viewMode || !editMode) return;
+
+        if (mode === 'view') {
+            viewMode.classList.remove('hidden');
+            editMode.classList.add('hidden');
+            if (saveBtn) saveBtn.classList.add('hidden');
+
+            const link = document.getElementById('conditionsLink');
+            if (link && data && data.sheetUrl) {
+                link.href = data.sheetUrl;
+                link.textContent = 'Открыть таблицу условий';
+            }
+        } else {
+            viewMode.classList.add('hidden');
+            editMode.classList.remove('hidden');
+            if (saveBtn) saveBtn.classList.remove('hidden');
+
+            const urlInput = document.getElementById('conditionsUrl');
+            if (urlInput) urlInput.value = (data && data.sheetUrl) || '';
+        }
+    }
+
+    async function clearConditions() {
+        await _saveConditionsToApi({ sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' });
+        _renderConditionsStatus({ conditions: [] });
+        updateSyncBarVisibility();
+        _toggleConditionsMode('edit', { sheetUrl: '' });
+        Toast.success('Условия удалены');
     }
 
     function _renderConditionsStatus(data) {
@@ -649,7 +690,7 @@ const OnboardingSource = (() => {
         const parts = [`<span class="conditions-status-count">${count}</span> ${_pluralConditions(count)}`];
         if (countries.size) parts.push(`Стран: ${countries.size}`);
         parts.push(`Типов: ${types.size}`);
-        el.innerHTML = `<div>${parts.join(' · ')}</div>` +
+        el.innerHTML = `<div class="conditions-status-row"><div>${parts.join(' · ')}</div><button class="conditions-delete-btn" data-action="onb-clearConditions" title="Удалить условия"><img src="../shared/icons/cross.svg" width="14" height="14" alt="Удалить"></button></div>` +
             (timeStr ? `<div class="conditions-status-time">Синхронизация: ${Utils.escapeHtml(timeStr)}</div>` : '');
     }
 
@@ -705,52 +746,10 @@ const OnboardingSource = (() => {
                 Toast.success(`Загружено ${conditions.length} ${_pluralConditions(conditions.length)}`);
             }
 
+            _toggleConditionsMode('view', data);
+
         } catch (err) {
             Toast.error(err.message || 'Ошибка загрузки');
-        } finally {
-            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
-        }
-    }
-
-    let _lastConditionsSync = 0;
-    const MIN_RESYNC_INTERVAL = 10000;
-
-    async function resyncConditions() {
-        const data = _getConditionsData();
-        if (!data.sheetId) return;
-
-        const now = Date.now();
-        if (now - _lastConditionsSync < MIN_RESYNC_INTERVAL) {
-            Toast.warning('Подождите перед повторной синхронизацией');
-            return;
-        }
-        _lastConditionsSync = now;
-
-        const btn = document.querySelector('[data-action="onb-resyncConditions"]');
-        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
-
-        try {
-            const table = await _fetchSheet(data.sheetId);
-            const conditions = _parseConditionsTable(table);
-
-            const updated = {
-                sheetUrl: data.sheetUrl,
-                sheetId: data.sheetId,
-                conditions: conditions,
-                lastSyncTime: new Date().toISOString(),
-                lastSyncStatus: 'success'
-            };
-
-            await _saveConditionsToApi(updated);
-            _renderConditionsStatus(updated);
-            updateSyncBarVisibility();
-            if (conditions.length === 0) {
-                Toast.warning('Условия пока пусты. Убедитесь что есть колонки: Тип метода, Название метода, и хотя бы одна заполненная строка');
-            } else {
-                Toast.success(`Обновлено: ${conditions.length} ${_pluralConditions(conditions.length)}`);
-            }
-        } catch (err) {
-            Toast.error(err.message || 'Ошибка обновления');
         } finally {
             if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
@@ -850,7 +849,7 @@ const OnboardingSource = (() => {
         init, destroy,
         openSettings, showList, showEditForm, saveSource, deleteSource,
         syncNow, updateSyncBarVisibility, _getEditingId,
-        openConditionsSettings, saveConditionsUrl, resyncConditions,
+        openConditionsSettings, saveConditionsUrl, editConditionsUrl, clearConditions,
         hasConditions, getConditions, getCountries, getMethodTypes, getMethodNames, getCondition
     };
 })();

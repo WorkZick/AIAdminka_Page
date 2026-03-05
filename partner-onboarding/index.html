@@ -302,7 +302,7 @@
 
     <!-- Conditions Settings Modal -->
     <div class="modal" id="conditionsModal">
-        <div class="modal-dialog modal-sm">
+        <div class="modal-dialog">
             <div class="modal-header">
                 <h2 class="modal-title">Условия</h2>
                 <button class="modal-close" data-action="onb-closeConditions">
@@ -310,32 +310,41 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">URL Google Таблицы с условиями (общая на команду)</label>
-                    <input type="text" class="form-input" id="conditionsUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
-                    <div class="form-hint">Доступ: «Все у кого есть ссылка». Одна таблица на всю команду — все участники увидят одинаковые условия.</div>
-                </div>
-                <div class="conditions-status hidden" id="conditionsStatus"></div>
-                <div class="source-columns-hint">
-                    <div class="source-columns-hint-title">Структура таблицы</div>
-                    <div class="source-columns-hint-text">Первая строка — заголовки колонок. Обязательные отмечены *:</div>
-                    <div class="source-columns-grid">
-                        <span class="source-col">Страна</span>
-                        <span class="source-col" style="font-weight:600">Тип метода *</span>
-                        <span class="source-col" style="font-weight:600">Название метода *</span>
-                        <span class="source-col">Пополнения</span>
-                        <span class="source-col">Выводы</span>
-                        <span class="source-col">Компенсация</span>
-                        <span class="source-col">Способ предоплаты</span>
-                        <span class="source-col">Сумма предоплаты</span>
+                <!-- View mode (when URL exists) -->
+                <div id="conditionsViewMode" class="hidden">
+                    <div class="conditions-link-row">
+                        <a id="conditionsLink" class="conditions-link" href="#" target="_blank" rel="noopener noreferrer">Открыть таблицу</a>
+                        <button class="btn btn-secondary btn-sm" data-action="onb-editConditionsUrl">Изменить</button>
                     </div>
-                    <div class="source-columns-hint-text" style="margin-top:6px; opacity:0.6">Можно сохранить таблицу без данных — условия подтянутся при добавлении строк и повторной синхронизации.</div>
+                    <div class="conditions-status hidden" id="conditionsStatus"></div>
+                </div>
+                <!-- Edit mode (no URL or editing) -->
+                <div id="conditionsEditMode">
+                    <div class="form-group">
+                        <label class="form-label">URL Google Таблицы с условиями (общая на команду)</label>
+                        <input type="text" class="form-input" id="conditionsUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+                        <div class="form-hint">Доступ: «Все у кого есть ссылка». Одна таблица на всю команду — все участники увидят одинаковые условия.</div>
+                    </div>
+                    <div class="source-columns-hint">
+                        <div class="source-columns-hint-title">Структура таблицы</div>
+                        <div class="source-columns-hint-text">Первая строка — заголовки колонок. Обязательные отмечены *:</div>
+                        <div class="source-columns-grid">
+                            <span class="source-col">Страна</span>
+                            <span class="source-col source-col-required">Тип метода *</span>
+                            <span class="source-col source-col-required">Название метода *</span>
+                            <span class="source-col">Пополнения</span>
+                            <span class="source-col">Выводы</span>
+                            <span class="source-col">Компенсация</span>
+                            <span class="source-col">Способ предоплаты</span>
+                            <span class="source-col">Сумма предоплаты</span>
+                        </div>
+                        <div class="source-columns-hint-text source-columns-hint-sub">Можно сохранить таблицу без данных — условия подтянутся при добавлении строк и повторной синхронизации.</div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-action="onb-resyncConditions" title="Обновить условия из таблицы">Обновить</button>
                 <button class="btn btn-primary" data-action="onb-closeConditions">Закрыть</button>
-                <button class="btn btn-primary" data-action="onb-saveConditions">Сохранить</button>
+                <button class="btn btn-primary" id="conditionsSaveBtn" data-action="onb-saveConditions">Сохранить</button>
             </div>
         </div>
     </div>
