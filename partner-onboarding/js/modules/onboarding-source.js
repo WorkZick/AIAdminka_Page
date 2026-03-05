@@ -622,6 +622,7 @@ const OnboardingSource = (() => {
             CloudStorage.clearCache('onboardingSettings');
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'saveConditions' });
+            throw e;
         }
     }
 
@@ -668,11 +669,15 @@ const OnboardingSource = (() => {
     }
 
     async function clearConditions() {
-        await _saveConditionsToApi({ sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' });
-        _renderConditionsStatus({ conditions: [] });
-        updateSyncBarVisibility();
-        _toggleConditionsMode('edit', { sheetUrl: '' });
-        Toast.success('Условия удалены');
+        try {
+            await _saveConditionsToApi({ sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' });
+            _renderConditionsStatus({ conditions: [] });
+            updateSyncBarVisibility();
+            _toggleConditionsMode('edit', { sheetUrl: '' });
+            Toast.success('Условия удалены');
+        } catch (e) {
+            // error already handled in _saveConditionsToApi
+        }
     }
 
     function _renderConditionsStatus(data) {
@@ -707,11 +712,14 @@ const OnboardingSource = (() => {
         const url = (urlInput ? urlInput.value : '').trim();
 
         if (!url) {
-            // Clear conditions
-            _saveConditionsToApi({ sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' });
-            _renderConditionsStatus({ conditions: [] });
-            updateSyncBarVisibility();
-            Toast.success('Условия очищены');
+            try {
+                await _saveConditionsToApi({ sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' });
+                _renderConditionsStatus({ conditions: [] });
+                updateSyncBarVisibility();
+                Toast.success('Условия очищены');
+            } catch (e) {
+                // error already handled in _saveConditionsToApi
+            }
             return;
         }
 
