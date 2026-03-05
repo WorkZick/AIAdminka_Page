@@ -108,6 +108,9 @@ const PageLifecycle = {
             if (user.status !== 'active') return;
             if (!user.teamId && user.role !== 'admin') return;
 
+            // Только роли с правами на employees API (бэкенд запрещает остальным)
+            if (user.role !== 'leader' && user.role !== 'admin' && user.isAdmin !== true) return;
+
             // Проверяем флаг: синхронизация уже выполнена?
             const syncKey = 'profile-synced-' + user.email;
             if (localStorage.getItem(syncKey)) return;
