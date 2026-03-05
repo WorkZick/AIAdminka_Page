@@ -112,7 +112,7 @@ const TeamInvites = {
             // Если пользователь - Admin без команды, загружаем список команд
             const currentRole = RoleGuard.getCurrentRole();
             const currentTeamId = RoleGuard.getTeamId();
-            const isAdminUser = currentRole === 'admin';
+            const isAdminUser = currentRole === 'admin' || (RoleGuard.isAdmin && RoleGuard.isAdmin());
             const hasTeamAssigned = !!currentTeamId;
 
             if (isAdminUser && !hasTeamAssigned) {
@@ -148,7 +148,7 @@ const TeamInvites = {
         // Проверяем, нужен ли селектор команд (для Admin без команды)
         const currentRole = RoleGuard.getCurrentRole();
         const teamId = RoleGuard.getTeamId();
-        const isAdmin = currentRole === 'admin';
+        const isAdmin = currentRole === 'admin' || (RoleGuard.isAdmin && RoleGuard.isAdmin());
         const hasTeam = !!teamId;
         const needsTeamSelector = isAdmin && !hasTeam && TeamState.availableTeams.length > 0;
 

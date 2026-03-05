@@ -260,7 +260,7 @@ const loginApp = {
                 } else {
                     switch (result.status) {
                         case 'active':
-                            if (result.role === 'admin' || result.teamId) {
+                            if (result.role === 'admin' || result.isAdmin === true || result.teamId) {
                                 status = 'approved';
                             } else {
                                 status = 'approved_no_team';

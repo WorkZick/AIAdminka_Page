@@ -8,6 +8,9 @@ const PartnerOnboarding = (() => {
     let _statusWatchTimer = null;
     let _statusWatchRequestId = null;
     let _statusWatchExpected = null;
+    let _listRefreshTimer = null;
+    let _visibilityRefreshHandler = null;
+    const LIST_REFRESH_INTERVAL = 30000; // 30 секунд
     const _debouncedSearch = Utils.debounce(() => OnboardingList.applyFilters(), 150);
     const _debouncedAutosave = Utils.debounce(() => _autosaveDraft(), 500);
 
@@ -51,13 +54,19 @@ const PartnerOnboarding = (() => {
         OnboardingList.setupDefaultFilters();
         OnboardingList.applyFilters();
         _updateToolbarForRole();
+        _startListRefresh();
     }
 
     function _loadUserData() {
-        const systemRole = (typeof RoleGuard !== 'undefined' && RoleGuard.getCurrentRole)
+        let systemRole = (typeof RoleGuard !== 'undefined' && RoleGuard.getCurrentRole)
             ? RoleGuard.getCurrentRole() : 'sales';
         const email = (typeof RoleGuard !== 'undefined' && RoleGuard.user)
             ? RoleGuard.user.email || '' : '';
+
+        // isAdmin privilege: пользователь с флагом isAdmin получает полные права
+        if (typeof RoleGuard !== 'undefined' && RoleGuard.isAdmin && RoleGuard.isAdmin()) {
+            systemRole = 'admin';
+        }
 
         OnboardingState.set('systemRole', systemRole);
         OnboardingState.set('userRole', OnboardingRoles.getGlobalModuleRole(systemRole));
@@ -1314,9 +1323,88 @@ const PartnerOnboarding = (() => {
         }
     }
 
+    // ── Auto-Refresh (list + detail views) ──
+
+    function _startListRefresh() {
+        _stopListRefresh();
+        _listRefreshTimer = setInterval(() => _refreshListData(), LIST_REFRESH_INTERVAL);
+
+        if (!_visibilityRefreshHandler) {
+            _visibilityRefreshHandler = () => {
+                if (document.visibilityState === 'visible') {
+                    _refreshCurrentView();
+                }
+            };
+            document.addEventListener('visibilitychange', _visibilityRefreshHandler);
+        }
+    }
+
+    function _stopListRefresh() {
+        if (_listRefreshTimer) {
+            clearInterval(_listRefreshTimer);
+            _listRefreshTimer = null;
+        }
+    }
+
+    function _destroyRefresh() {
+        _stopListRefresh();
+        _stopStatusWatch();
+        if (_visibilityRefreshHandler) {
+            document.removeEventListener('visibilitychange', _visibilityRefreshHandler);
+            _visibilityRefreshHandler = null;
+        }
+    }
+
+    async function _refreshListData() {
+        if (_isActionLocked()) return;
+        try {
+            const data = await CloudStorage.getOnboardingRequests();
+            const fresh = data.requests || [];
+            const old = OnboardingState.get('requests') || [];
+            // Обновляем только если данные изменились
+            if (JSON.stringify(fresh) !== JSON.stringify(old)) {
+                OnboardingState.set('requests', fresh);
+                if (data.history) OnboardingState.set('history', data.history);
+                OnboardingList.applyFilters();
+            }
+        } catch (_) { /* silent — фоновое обновление */ }
+    }
+
+    async function _refreshCurrentView() {
+        const view = OnboardingState.get('view');
+        if (view === 'list') {
+            await _refreshListData();
+        } else {
+            // В detail view: обновляем текущую заявку
+            const current = OnboardingState.get('currentRequest');
+            if (!current || _isActionLocked()) return;
+            try {
+                const data = await CloudStorage.getOnboardingRequests();
+                const fresh = data.requests || [];
+                OnboardingState.set('requests', fresh);
+                if (data.history) OnboardingState.set('history', data.history);
+                const updated = fresh.find(r => r.id === current.id);
+                if (updated) {
+                    const changed = JSON.stringify(updated) !== JSON.stringify(current);
+                    if (changed) {
+                        OnboardingState.set('currentRequest', updated);
+                        // Перерисовываем текущий вид
+                        const stepNumber = OnboardingState.get('currentStep');
+                        if (view === 'form') {
+                            OnboardingForm.render(updated, stepNumber);
+                        } else if (view === 'review') {
+                            OnboardingReview.render(updated, stepNumber);
+                        }
+                    }
+                }
+            } catch (_) { /* silent */ }
+        }
+    }
+
     // ── Destroy ──
 
     function _destroy() {
+        _destroyRefresh();
         OnboardingSource.destroy();
         OnboardingRoles.destroy();
         document.removeEventListener('click', _handleClick);

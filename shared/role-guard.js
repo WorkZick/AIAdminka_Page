@@ -473,9 +473,9 @@ const RoleGuard = {
             }
         });
 
-        // Элементы только для leader
+        // Элементы только для leader (v2.2.0: учитываем isAdmin)
         document.querySelectorAll('[data-leader-only]').forEach(el => {
-            if (this.user?.role !== 'leader' && this.user?.role !== 'admin') {
+            if (this.user?.role !== 'leader' && this.user?.role !== 'admin' && this.user?.isAdmin !== true) {
                 el.style.display = 'none';
             }
         });
@@ -574,7 +574,7 @@ const RoleGuard = {
 
         // Badge для admin
         const adminBadge = document.getElementById('adminRequestsBadge');
-        if (adminBadge && count > 0 && this.user?.role === 'admin') {
+        if (adminBadge && count > 0 && (this.user?.role === 'admin' || this.user?.isAdmin === true)) {
             adminBadge.textContent = count > 99 ? '99+' : count;
             adminBadge.style.display = 'flex';
         }

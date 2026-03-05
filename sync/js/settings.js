@@ -103,8 +103,8 @@ const settingsApp = {
             // Получаем данные пользователя из RoleGuard
             const roleGuardUser = typeof RoleGuard !== 'undefined' ? RoleGuard.user : null;
 
-            // Автоинициализация хранилища для leader/admin
-            if (roleGuardUser && (roleGuardUser.role === 'leader' || roleGuardUser.role === 'admin')) {
+            // Автоинициализация хранилища для leader/admin/isAdmin
+            if (roleGuardUser && (roleGuardUser.role === 'leader' || roleGuardUser.role === 'admin' || roleGuardUser.isAdmin === true)) {
                 try {
                     const storageResult = await CloudStorage.initStorage();
                     // Storage initialized successfully
@@ -240,7 +240,7 @@ const settingsApp = {
                 const teamName = savedTeamName || this.userProfile.teamName || 'Команда';
                 teamNameText.textContent = teamName;
 
-                if (this.userProfile.role === 'leader' || this.userProfile.role === 'admin') {
+                if (this.userProfile.role === 'leader' || this.userProfile.role === 'admin' || this.userProfile.isAdmin === true) {
                     teamNameDisplay.classList.remove('hidden');
                 } else {
                     teamNameDisplay.classList.add('hidden');
@@ -249,7 +249,7 @@ const settingsApp = {
 
             // Секция команды (показываем если не руководитель и не админ)
             if (teamInfoSection) {
-                if (this.userProfile.teamLeader && this.userProfile.role !== 'leader' && this.userProfile.role !== 'admin') {
+                if (this.userProfile.teamLeader && this.userProfile.role !== 'leader' && this.userProfile.role !== 'admin' && this.userProfile.isAdmin !== true) {
                     teamInfoSection.classList.remove('hidden');
                     leaderEl.textContent = this.userProfile.teamLeader;
                     descEl.textContent = RolesConfig.getDescription(this.userProfile.role);

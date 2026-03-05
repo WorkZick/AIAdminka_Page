@@ -163,7 +163,8 @@ const TokenManager = {
             dismissBtn.addEventListener('click', () => this.dismissPrompt());
         }
 
-        // Живой таймер
+        // Живой таймер (очистка предыдущего интервала для защиты от утечки)
+        if (this.countdownInterval) clearInterval(this.countdownInterval);
         this.updateCountdown();
         this.countdownInterval = setInterval(() => this.updateCountdown(), 1000);
     },
@@ -216,23 +217,30 @@ const TokenManager = {
 
     /**
      * Продлить сессию через popup
+     * Стратегия: сначала prompt=none (тихий refresh), при неудаче → prompt=consent (интерактивный)
+     * @param {boolean} [interactive=false] - использовать интерактивный режим
      */
-    extendSession() {
+    extendSession(interactive) {
         // Убираем уведомление
         const prompt = document.getElementById('token-refresh-prompt');
         if (prompt) prompt.remove();
+        if (this.countdownInterval) {
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
+        }
 
         const state = this.generateState();
         sessionStorage.setItem('oauth_state', state);
-        sessionStorage.setItem('oauth_silent', 'true');
+        sessionStorage.setItem('oauth_silent', interactive ? 'false' : 'true');
 
+        const promptParam = interactive ? 'consent' : 'none';
         const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
             '?client_id=' + encodeURIComponent(this.CLIENT_ID) +
             '&redirect_uri=' + encodeURIComponent(this.getRedirectUri()) +
             '&response_type=token' +
             '&scope=' + encodeURIComponent(this.SCOPES) +
             '&state=' + encodeURIComponent(state) +
-            '&prompt=none'; // Попробуем без UI
+            '&prompt=' + promptParam;
 
         const width = 500, height = 600;
         const left = (screen.width - width) / 2;
@@ -245,33 +253,71 @@ const TokenManager = {
         );
 
         if (!popup) {
-            Toast.warning('Popup заблокирован. Разрешите popup для этого сайта.');
+            if (typeof Toast !== 'undefined') {
+                Toast.warning('Popup заблокирован. Разрешите popup для этого сайта.');
+            }
+            this.warningShown = false;
             return;
         }
 
         // Следим за обновлением токена
         const originalTimestamp = this.getAuthTimestamp();
         let attempts = 0;
-        const maxAttempts = 150; // 30 секунд (150 * 200ms)
+        const pollInterval = 500;
+        const maxAttempts = interactive ? 120 : 30; // interactive: 60с, silent: 15с
+        const minAttemptsBeforeCloseCheck = 3;
+        const self = this;
 
         const checkInterval = setInterval(() => {
             attempts++;
-            const newTimestamp = this.getAuthTimestamp();
+            const newTimestamp = self.getAuthTimestamp();
 
-            // Проверяем, обновился ли токен
+            // Токен обновлён — успех
             if (newTimestamp > originalTimestamp) {
                 clearInterval(checkInterval);
-                this.warningShown = false;
+                self.warningShown = false;
                 sessionStorage.removeItem('oauth_silent');
+                if (typeof Toast !== 'undefined') {
+                    Toast.success('Сессия продлена');
+                }
                 return;
             }
 
-            // Останавливаем проверку после максимального количества попыток
+            // Popup закрылся без обновления токена
+            let popupClosed = false;
+            try { popupClosed = popup.closed; } catch (_) { popupClosed = true; }
+
+            if (popupClosed && attempts > minAttemptsBeforeCloseCheck) {
+                clearInterval(checkInterval);
+                sessionStorage.removeItem('oauth_silent');
+
+                if (!interactive) {
+                    self.extendSession(true);
+                } else {
+                    self.warningShown = false;
+                    if (typeof Toast !== 'undefined') {
+                        Toast.error('Не удалось продлить сессию. Попробуйте ещё раз.');
+                    }
+                }
+                return;
+            }
+
+            // Таймаут ожидания
             if (attempts >= maxAttempts) {
                 clearInterval(checkInterval);
                 sessionStorage.removeItem('oauth_silent');
+                try { if (!popup.closed) popup.close(); } catch (_) {}
+
+                if (!interactive) {
+                    self.extendSession(true);
+                } else {
+                    self.warningShown = false;
+                    if (typeof Toast !== 'undefined') {
+                        Toast.error('Не удалось продлить сессию.');
+                    }
+                }
             }
-        }, 200);
+        }, pollInterval);
     },
 
     /**

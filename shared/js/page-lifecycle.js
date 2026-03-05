@@ -61,6 +61,9 @@ const PageLifecycle = {
             }
         }
 
+        // Авто-синхронизация профиля (для новых пользователей после одобрения)
+        await this._autoSyncProfile();
+
         // Инициализация модуля (page-loading виден до завершения)
         try {
             if (config.onInit) await config.onInit();
@@ -83,6 +86,69 @@ const PageLifecycle = {
         // Централизованные обработчики
         this._setupModalHandlers(config.modals);
         this._setupCleanup(config.onDestroy);
+    },
+
+    /**
+     * Авто-синхронизация профиля в team-info при первом входе после одобрения
+     * Решает проблему: руководитель не появляется в модуле «Сотрудники» без ручного сохранения настроек
+     */
+    async _autoSyncProfile() {
+        try {
+            if (typeof RoleGuard === 'undefined' || !RoleGuard.initialized) return;
+            if (typeof CloudStorage === 'undefined' || !CloudStorage.isAuthenticated()) return;
+
+            const user = RoleGuard.user;
+            if (!user || !user.email) return;
+
+            // Только для активных пользователей с командой (или админов)
+            if (user.status !== 'active') return;
+            if (!user.teamId && user.role !== 'admin') return;
+
+            // Проверяем флаг: синхронизация уже выполнена?
+            const syncKey = 'profile-synced-' + user.email;
+            if (localStorage.getItem(syncKey)) return;
+
+            // Первая синхронизация: создаём/обновляем карточку сотрудника
+            const authUser = typeof AuthGuard !== 'undefined' ? AuthGuard.getUser() : null;
+
+            const employeeData = {
+                email: user.email,
+                fullName: user.name || authUser?.name || '',
+                position: user.position || '',
+                avatar: user.picture || authUser?.picture || '',
+                status: 'Работает',
+                reddyId: user.reddyId || '',
+                corpEmail: user.email,
+                corpTelegram: user.telegram || '',
+                corpPhone: user.phone || '',
+                predefinedFields: {},
+                customFields: {}
+            };
+
+            if (employeeData.reddyId) {
+                employeeData.predefinedFields['Reddy'] = employeeData.reddyId;
+            }
+            if (employeeData.corpEmail) {
+                employeeData.predefinedFields['Корп. e-mail'] = employeeData.corpEmail;
+            }
+
+            // Проверяем существующего сотрудника — не перезаписываем заполненные поля
+            const employees = await CloudStorage.getEmployees();
+            const existing = employees.find(emp => emp.email === user.email || emp.corpEmail === user.email);
+            if (existing) {
+                employeeData.id = existing.id;
+                if (existing.fullName) employeeData.fullName = existing.fullName;
+                if (existing.position) employeeData.position = existing.position;
+                if (existing.status) employeeData.status = existing.status;
+                if (existing.avatar) employeeData.avatar = existing.avatar;
+            }
+
+            const result = await CloudStorage.saveEmployee(employeeData);
+            // Ставим флаг после любого успешного вызова (без throw)
+            localStorage.setItem(syncKey, Date.now().toString());
+        } catch (e) {
+            console.warn('[PageLifecycle] Auto-sync profile failed:', e.message);
+        }
     },
 
     /**
