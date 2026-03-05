@@ -39,8 +39,8 @@ const CloudStorage = {
     },
 
     // Cache settings
-    CACHE_TTL: 60000, // 1 минута (fresh)
-    STALE_MAX_AGE: 300000, // 5 минут (stale-while-revalidate)
+    CACHE_TTL: 300000, // 5 минут (fresh)
+    STALE_MAX_AGE: 1800000, // 30 минут (stale-while-revalidate)
     CACHE_PREFIX: 'cs-cache-',
     cache: {}, // In-memory fallback
     _staleKeys: new Set(), // Ключи, отданные как stale
@@ -100,15 +100,20 @@ const CloudStorage = {
         const authData = localStorage.getItem('cloud-auth');
         if (!authData) return null;
 
-        const auth = JSON.parse(authData);
+        try {
+            const auth = JSON.parse(authData);
 
-        // Проверяем срок токена (~58 минут, Silent Refresh обновляет автоматически)
-        if (Date.now() - auth.timestamp > 3500000) {
+            // Проверяем срок токена (~58 минут, Silent Refresh обновляет автоматически)
+            if (Date.now() - auth.timestamp > 3500000) {
+                localStorage.removeItem('cloud-auth');
+                return null;
+            }
+
+            return auth;
+        } catch (e) {
             localStorage.removeItem('cloud-auth');
             return null;
         }
-
-        return auth;
     },
 
     /**

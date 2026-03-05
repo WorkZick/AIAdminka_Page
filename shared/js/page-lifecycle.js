@@ -30,9 +30,9 @@ const PageLifecycle = {
         const basePath = config.basePath || '..';
         const sharedPath = basePath === '.' ? 'shared' : '../shared';
 
-        // Загружаем shell-компоненты параллельно
+        // Параллельно: компоненты UI + CloudStorage (независимы)
         ComponentLoader.init(sharedPath);
-        await ComponentLoader.loadAll([
+        const componentsPromise = ComponentLoader.loadAll([
             {
                 name: 'sidebar',
                 target: '#sidebar-container',
@@ -45,15 +45,11 @@ const PageLifecycle = {
             }
         ]);
 
-        // Auth check
-        if (config.needsAuth !== false) {
-            if (!await AuthGuard.checkWithRole()) return;
-        }
-
-        // CloudStorage
+        // CloudStorage init — лёгкий (localStorage), запускаем параллельно
+        let csReady = false;
         if (config.needsCloudStorage !== false && typeof CloudStorage !== 'undefined') {
             try {
-                await CloudStorage.init();
+                csReady = await CloudStorage.init();
             } catch (e) {
                 if (typeof ErrorHandler !== 'undefined') {
                     ErrorHandler.handle(e, { module: config.module, action: 'cloudStorageInit' });
@@ -61,8 +57,16 @@ const PageLifecycle = {
             }
         }
 
-        // Авто-синхронизация профиля (для новых пользователей после одобрения)
-        await this._autoSyncProfile();
+        // Ждём компоненты (sidebar нужен для UI)
+        await componentsPromise;
+
+        // Auth check
+        if (config.needsAuth !== false) {
+            if (!await AuthGuard.checkWithRole()) return;
+        }
+
+        // Авто-синхронизация профиля — фоновая, не блокирует UI
+        this._autoSyncProfile();
 
         // Инициализация модуля (page-loading виден до завершения)
         try {
