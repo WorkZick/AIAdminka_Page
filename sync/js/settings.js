@@ -117,8 +117,12 @@ const settingsApp = {
             let teamInfoEmployee = null;
             const currentEmail = this.currentUser?.email;
 
-            // Пытаемся загрузить из CloudStorage
-            if (currentEmail && typeof CloudStorage !== 'undefined' && CloudStorage.isAuthenticated()) {
+            // Пытаемся загрузить из CloudStorage (только роли с правами на employees)
+            const canViewEmployees = roleGuardUser && (
+                roleGuardUser.role === 'leader' || roleGuardUser.role === 'admin' ||
+                roleGuardUser.role === 'assistant' || roleGuardUser.isAdmin === true
+            );
+            if (canViewEmployees && currentEmail && typeof CloudStorage !== 'undefined' && CloudStorage.isAuthenticated()) {
                 try {
                     const employees = await CloudStorage.getEmployees();
                     if (Array.isArray(employees)) {
