@@ -302,7 +302,7 @@
 
     <!-- Conditions Settings Modal -->
     <div class="modal" id="conditionsModal">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-header">
                 <h2 class="modal-title">Условия</h2>
                 <button class="modal-close" data-action="onb-closeConditions">
@@ -325,20 +325,58 @@
                         <input type="text" class="form-input" id="conditionsUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
                         <div class="form-hint">Доступ: «Все у кого есть ссылка». Одна таблица на всю команду — все участники увидят одинаковые условия.</div>
                     </div>
-                    <div class="source-columns-hint">
-                        <div class="source-columns-hint-title">Структура таблицы</div>
-                        <div class="source-columns-hint-text">Первая строка — заголовки колонок. Обязательные отмечены *:</div>
-                        <div class="source-columns-grid">
-                            <span class="source-col">Страна</span>
-                            <span class="source-col source-col-required">Тип метода *</span>
-                            <span class="source-col source-col-required">Название метода *</span>
-                            <span class="source-col">Пополнения</span>
-                            <span class="source-col">Выводы</span>
-                            <span class="source-col">Компенсация</span>
-                            <span class="source-col">Способ предоплаты</span>
-                            <span class="source-col">Сумма предоплаты</span>
+                    <div class="conditions-example">
+                        <div class="conditions-example-title">Пример заполнения таблицы</div>
+                        <div class="conditions-example-desc">Первая строка — заголовки (обязательные отмечены *). Ниже — пример данных:</div>
+                        <div class="table-responsive">
+                            <table class="conditions-example-table">
+                                <thead>
+                                    <tr>
+                                        <th>Страна</th>
+                                        <th>Тип метода *</th>
+                                        <th>Название метода *</th>
+                                        <th>Пополнения</th>
+                                        <th>Выводы</th>
+                                        <th>Компенсация</th>
+                                        <th>Способ предоплаты</th>
+                                        <th>Сумма предоплаты</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Казахстан</td>
+                                        <td>Карты</td>
+                                        <td>Visa KZ</td>
+                                        <td>3.5%</td>
+                                        <td>2%</td>
+                                        <td>0.5%</td>
+                                        <td>Перевод</td>
+                                        <td>$500</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Узбекистан</td>
+                                        <td>P2P</td>
+                                        <td>Payme UZ</td>
+                                        <td>4%</td>
+                                        <td>2.5%</td>
+                                        <td>1%</td>
+                                        <td>USDT</td>
+                                        <td>$1000</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Россия</td>
+                                        <td>СБП</td>
+                                        <td>SBP RU</td>
+                                        <td>2%</td>
+                                        <td>1.5%</td>
+                                        <td>—</td>
+                                        <td>—</td>
+                                        <td>—</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="source-columns-hint-text source-columns-hint-sub">Можно сохранить таблицу без данных — условия подтянутся при добавлении строк и повторной синхронизации.</div>
+                        <div class="conditions-example-note">Колонки «Тип метода» и «Название метода» — обязательные. Остальные заполняйте по необходимости.</div>
                     </div>
                 </div>
             </div>

@@ -191,6 +191,37 @@ const RolesConfig = {
      */
     getDefaultName(role) {
         return this._defaults.names[role] || role;
+    },
+
+    // Старые имена ролей из бэкенда (для обратной совместимости)
+    _legacyNames: {
+        'Ассистент': 'assistant',
+        'Руководитель команды': 'leader',
+        'Менеджер партнёров': 'partners_mgr',
+        'Отдел платежей': 'payments',
+        'Отдел безопасности': 'antifraud',
+        'Технический специалист': 'tech'
+    },
+
+    /**
+     * Обратный маппинг: по отображаемому имени или ключу получить ключ роли.
+     * Нужен потому что бэкенд может хранить displayName в position.
+     * @param {string} value - ключ роли ИЛИ отображаемое название
+     * @returns {string} ключ роли или исходное значение если не найден
+     */
+    resolveRoleKey(value) {
+        if (!value) return '';
+        if (this._defaults.names[value] || this.ALL_ROLES.includes(value)) return value;
+        if (this._legacyNames[value]) return this._legacyNames[value];
+        for (const [key, name] of Object.entries(this._defaults.names)) {
+            if (name === value) return key;
+        }
+        if (this._overrides?.names) {
+            for (const [key, name] of Object.entries(this._overrides.names)) {
+                if (name === value) return key;
+            }
+        }
+        return value;
     }
 };
 

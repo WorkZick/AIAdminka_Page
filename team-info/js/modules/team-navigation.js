@@ -81,7 +81,7 @@ const TeamNavigation = {
 
         // Заполнение карточки
         document.getElementById('cardFullName').textContent = employee.fullName || '';
-        document.getElementById('cardPosition').textContent = (typeof RolesConfig !== 'undefined' && employee.position) ? RolesConfig.getName(employee.position) : (employee.position || '');
+        document.getElementById('cardPosition').textContent = (typeof RolesConfig !== 'undefined' && employee.position) ? RolesConfig.getName(RolesConfig.resolveRoleKey(employee.position)) : (employee.position || '');
 
         const currentStatus = employee.status || 'Работает';
         const statusClass = TeamUtils.getStatusClass(currentStatus);

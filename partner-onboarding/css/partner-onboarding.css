@@ -363,7 +363,7 @@
     display: none;
 }
 
-/* Columns hint */
+/* Source columns hint (used in source modal) */
 .source-columns-hint {
     margin-top: var(--spacing-md);
     padding: var(--spacing-md);
@@ -397,6 +397,63 @@
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
     color: var(--gray-light);
+}
+
+/* Conditions example table */
+.conditions-example {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+}
+
+.conditions-example-title {
+    font-size: var(--font-size-sm);
+    color: var(--white);
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+}
+
+.conditions-example-desc {
+    font-size: var(--font-size-xs);
+    color: var(--gray);
+    margin-bottom: var(--spacing-sm);
+}
+
+.conditions-example .table-responsive {
+    overflow-x: auto;
+    margin-bottom: var(--spacing-sm);
+}
+
+.conditions-example-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+}
+
+.conditions-example-table th,
+.conditions-example-table td {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid var(--glass-border);
+    text-align: left;
+}
+
+.conditions-example-table th {
+    background: var(--glass-bg-light);
+    color: var(--accent-muted);
+    font-weight: 600;
+}
+
+.conditions-example-table td {
+    color: var(--gray-light);
+}
+
+.conditions-example-note {
+    font-size: var(--font-size-xs);
+    color: var(--gray);
+    opacity: 0.7;
 }
 
 /* ── Conditions Modal ── */
@@ -479,14 +536,6 @@
     filter: brightness(0) saturate(100%) invert(55%) sepia(63%) saturate(1000%) hue-rotate(314deg);
 }
 
-.source-col-required {
-    font-weight: 600;
-}
-
-.source-columns-hint-sub {
-    margin-top: 6px;
-    opacity: 0.6;
-}
 
 /* ── Selection Toolbar ── */
 

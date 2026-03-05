@@ -510,7 +510,8 @@ const TeamForms = {
     _fillFormFields(employee) {
         document.getElementById('formFullName').value = employee.fullName || '';
         this._populateRoleDropdown();
-        document.getElementById('formPosition').value = employee.position || '';
+        const roleKey = (typeof RolesConfig !== 'undefined' && employee.position) ? RolesConfig.resolveRoleKey(employee.position) : (employee.position || '');
+        document.getElementById('formPosition').value = roleKey;
 
         // Установка status badge
         TeamState.currentFormStatus = employee.status || 'Работает';
@@ -611,7 +612,7 @@ const TeamForms = {
             employeeCard.classList.add('visible-flex');
 
             document.getElementById('cardFullName').textContent = employee.fullName || '';
-            document.getElementById('cardPosition').textContent = (typeof RolesConfig !== 'undefined' && employee.position) ? RolesConfig.getName(employee.position) : (employee.position || '');
+            document.getElementById('cardPosition').textContent = (typeof RolesConfig !== 'undefined' && employee.position) ? RolesConfig.getName(RolesConfig.resolveRoleKey(employee.position)) : (employee.position || '');
 
             const currentStatus = employee.status || 'Работает';
             const statusClass = TeamUtils.getStatusClass(currentStatus);

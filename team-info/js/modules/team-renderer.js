@@ -55,7 +55,7 @@ const TeamRenderer = {
                     <div class="employee-avatar"></div>
                 </td>
                 <td class="col-name">${formattedName}</td>
-                <td class="col-position">${TeamUtils.escapeHtml(typeof RolesConfig !== 'undefined' && employee.position ? RolesConfig.getName(employee.position) : (employee.position || ''))}</td>
+                <td class="col-position">${TeamUtils.escapeHtml(typeof RolesConfig !== 'undefined' && employee.position ? RolesConfig.getName(RolesConfig.resolveRoleKey(employee.position)) : (employee.position || ''))}</td>
                 <td class="col-crm">${TeamUtils.escapeHtml(crmLogin)}</td>
                 <td class="col-id">${TeamUtils.escapeHtml(reddyId)}</td>
                 <td class="col-birthday">${birthday}</td>
