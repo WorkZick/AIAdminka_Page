@@ -191,32 +191,50 @@ document.getElementById('partnersTableBody').addEventListener('click', (e) => {
 });
 
 // Close dropdowns and menus when clicking outside
+// Cache DOM refs once (elements exist in static HTML)
+const _dropdownRefs = {
+    cardStatusBadge: null,
+    cardStatusDropdown: null,
+    cardStatusArrow: null,
+    formStatusBadge: null,
+    formStatusDropdown: null,
+    formStatusArrow: null,
+    columnsSettings: null,
+    columnsMenu: null,
+    _init: false
+};
+function _ensureDropdownRefs() {
+    if (_dropdownRefs._init) return;
+    _dropdownRefs.cardStatusBadge = document.getElementById('cardStatusBadge');
+    _dropdownRefs.cardStatusDropdown = document.getElementById('cardStatusDropdown');
+    _dropdownRefs.cardStatusArrow = _dropdownRefs.cardStatusBadge?.querySelector('.status-dropdown-icon');
+    _dropdownRefs.formStatusBadge = document.getElementById('formStatusBadge');
+    _dropdownRefs.formStatusDropdown = document.getElementById('formStatusDropdown');
+    _dropdownRefs.formStatusArrow = _dropdownRefs.formStatusBadge?.querySelector('.status-dropdown-icon');
+    _dropdownRefs.columnsSettings = document.querySelector('.columns-settings');
+    _dropdownRefs.columnsMenu = document.getElementById('columnsMenu');
+    _dropdownRefs._init = true;
+}
 document.addEventListener('click', (e) => {
-    const cardStatusBadge = document.getElementById('cardStatusBadge');
-    const cardStatusDropdown = document.getElementById('cardStatusDropdown');
-    const formStatusBadge = document.getElementById('formStatusBadge');
-    const formStatusDropdown = document.getElementById('formStatusDropdown');
-    const columnsSettings = document.querySelector('.columns-settings');
-    const columnsMenu = document.getElementById('columnsMenu');
+    _ensureDropdownRefs();
+    const r = _dropdownRefs;
 
-    if (cardStatusBadge && cardStatusDropdown && !cardStatusBadge.contains(e.target)) {
-        cardStatusDropdown.classList.add('hidden');
-        const arrow = cardStatusBadge.querySelector('.status-dropdown-icon');
-        if (arrow) {
-            arrow.classList.add('dropdown-arrow-closed');
-            arrow.classList.remove('dropdown-arrow-open');
+    if (r.cardStatusBadge && r.cardStatusDropdown && !r.cardStatusBadge.contains(e.target)) {
+        r.cardStatusDropdown.classList.add('hidden');
+        if (r.cardStatusArrow) {
+            r.cardStatusArrow.classList.add('dropdown-arrow-closed');
+            r.cardStatusArrow.classList.remove('dropdown-arrow-open');
         }
     }
-    if (formStatusBadge && formStatusDropdown && !formStatusBadge.contains(e.target)) {
-        formStatusDropdown.classList.add('hidden');
-        const arrow = formStatusBadge.querySelector('.status-dropdown-icon');
-        if (arrow) {
-            arrow.classList.add('dropdown-arrow-closed');
-            arrow.classList.remove('dropdown-arrow-open');
+    if (r.formStatusBadge && r.formStatusDropdown && !r.formStatusBadge.contains(e.target)) {
+        r.formStatusDropdown.classList.add('hidden');
+        if (r.formStatusArrow) {
+            r.formStatusArrow.classList.add('dropdown-arrow-closed');
+            r.formStatusArrow.classList.remove('dropdown-arrow-open');
         }
     }
-    if (columnsSettings && columnsMenu && !columnsSettings.contains(e.target)) {
-        columnsMenu.classList.remove('active');
+    if (r.columnsSettings && r.columnsMenu && !r.columnsSettings.contains(e.target)) {
+        r.columnsMenu.classList.remove('active');
     }
 });
 

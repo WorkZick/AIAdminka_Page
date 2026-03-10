@@ -84,10 +84,9 @@ const PartnerOnboarding = (() => {
     // ── Data (API) ──
 
     async function _loadRequests() {
-        const loadingEl = document.getElementById('listLoading');
-        const listEl = document.getElementById('requestsList');
-        if (loadingEl) loadingEl.classList.remove('hidden');
-        if (listEl) listEl.classList.add('hidden');
+        const r = _getViewRefs();
+        if (r.listLoading) r.listLoading.classList.remove('hidden');
+        if (r.requestsList) r.requestsList.classList.add('hidden');
         try {
             const data = await CloudStorage.getOnboardingRequests();
             OnboardingState.set('requests', data.requests || []);
@@ -96,8 +95,8 @@ const PartnerOnboarding = (() => {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'loadRequests' });
             OnboardingState.set('requests', []);
         } finally {
-            if (loadingEl) loadingEl.classList.add('hidden');
-            if (listEl) listEl.classList.remove('hidden');
+            if (r.listLoading) r.listLoading.classList.add('hidden');
+            if (r.requestsList) r.requestsList.classList.remove('hidden');
         }
     }
 
@@ -134,26 +133,50 @@ const PartnerOnboarding = (() => {
         OnboardingList.applyFilters();
     }
 
+    // ── Cached DOM refs ──
+    let _viewRefs = null;
+    function _getViewRefs() {
+        if (!_viewRefs) {
+            _viewRefs = {
+                viewList: document.getElementById('viewList'),
+                viewForm: document.getElementById('viewForm'),
+                viewReview: document.getElementById('viewReview'),
+                formFields: document.getElementById('formFields'),
+                reviewFields: document.getElementById('reviewFields'),
+                headerTitle: document.getElementById('headerTitle'),
+                headerRequestId: document.getElementById('headerRequestId'),
+                statusDropdown: document.getElementById('statusDropdown'),
+                settingsDropdown: document.getElementById('settingsDropdown'),
+                btnNewRequest: document.getElementById('btnNewRequest'),
+                btnSettings: document.getElementById('btnSettings'),
+                btnRoleConfig: document.getElementById('btnRoleConfig'),
+                listEmpty: document.getElementById('listEmpty'),
+                listLoading: document.getElementById('listLoading'),
+                requestsList: document.getElementById('requestsList')
+            };
+        }
+        return _viewRefs;
+    }
+
     // ── Views ──
 
     function _showView(view) {
         OnboardingState.set('view', view);
-        document.getElementById('viewList').classList.toggle('hidden', view !== 'list');
-        document.getElementById('viewForm').classList.toggle('hidden', view !== 'form');
-        document.getElementById('viewReview').classList.toggle('hidden', view !== 'review');
+        const r = _getViewRefs();
+        r.viewList.classList.toggle('hidden', view !== 'list');
+        r.viewForm.classList.toggle('hidden', view !== 'form');
+        r.viewReview.classList.toggle('hidden', view !== 'review');
 
         // Clear inactive view content to prevent duplicate element IDs (e.g. checkComment_*)
-        if (view !== 'form') {
-            const ff = document.getElementById('formFields');
-            if (ff) ff.innerHTML = '';
+        if (view !== 'form' && r.formFields) {
+            r.formFields.innerHTML = '';
         }
-        if (view !== 'review') {
-            const rf = document.getElementById('reviewFields');
-            if (rf) rf.innerHTML = '';
+        if (view !== 'review' && r.reviewFields) {
+            r.reviewFields.innerHTML = '';
         }
 
-        const headerTitle = document.getElementById('headerTitle');
-        const headerRequestId = document.getElementById('headerRequestId');
+        const headerTitle = r.headerTitle;
+        const headerRequestId = r.headerRequestId;
 
         if (view === 'list') {
             headerTitle.textContent = 'Заведение партнёра';
@@ -208,17 +231,15 @@ const PartnerOnboarding = (() => {
         const hideSettings = myRole === 'executor';
         const isReviewer = myRole === 'reviewer';
         const isLeaderOrAdmin = systemRole === 'admin' || systemRole === 'leader';
-        const btnNew = document.getElementById('btnNewRequest');
-        const btnSettings = document.getElementById('btnSettings');
-        const btnRoleConfig = document.getElementById('btnRoleConfig');
+        const r = _getViewRefs();
 
-        if (btnNew) btnNew.classList.toggle('hidden', isReviewer);
-        if (btnSettings) btnSettings.classList.toggle('hidden', hideSettings);
-        if (btnRoleConfig) btnRoleConfig.classList.toggle('hidden', !isLeaderOrAdmin);
+        if (r.btnNewRequest) r.btnNewRequest.classList.toggle('hidden', isReviewer);
+        if (r.btnSettings) r.btnSettings.classList.toggle('hidden', hideSettings);
+        if (r.btnRoleConfig) r.btnRoleConfig.classList.toggle('hidden', !isLeaderOrAdmin);
         OnboardingSource.updateSyncBarVisibility();
 
         // Empty state: hide "Новая заявка" button + adjust text for reviewer
-        const emptyState = document.getElementById('listEmpty');
+        const emptyState = r.listEmpty;
         if (emptyState) {
             const emptyBtn = emptyState.querySelector('.btn-new-request');
             const emptyText = emptyState.querySelector('.empty-state-text');
@@ -232,15 +253,13 @@ const PartnerOnboarding = (() => {
     // ── Event Delegation ──
 
     function _handleClick(e) {
-        // Close status dropdown when clicking outside
-        const statusDropdown = document.getElementById('statusDropdown');
-        if (statusDropdown && !statusDropdown.classList.contains('hidden') && !e.target.closest('.status-submit-btn')) {
-            statusDropdown.classList.add('hidden');
+        // Close dropdowns when clicking outside (cached refs)
+        const r = _getViewRefs();
+        if (r.statusDropdown && !r.statusDropdown.classList.contains('hidden') && !e.target.closest('.status-submit-btn')) {
+            r.statusDropdown.classList.add('hidden');
         }
-        // Close settings dropdown when clicking outside
-        const settingsDropdown = document.getElementById('settingsDropdown');
-        if (settingsDropdown && !settingsDropdown.classList.contains('hidden') && !e.target.closest('.settings-dropdown-wrap')) {
-            settingsDropdown.classList.add('hidden');
+        if (r.settingsDropdown && !r.settingsDropdown.classList.contains('hidden') && !e.target.closest('.settings-dropdown-wrap')) {
+            r.settingsDropdown.classList.add('hidden');
         }
 
         const target = e.target.closest('[data-action]');

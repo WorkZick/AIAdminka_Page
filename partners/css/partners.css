@@ -21,6 +21,7 @@
     border-radius: 0;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    contain: layout style;
 }
 
 /* Section header - Glassmorphism panel */
@@ -525,6 +526,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    contain: layout style paint;
 }
 
 /* Hint panel */
@@ -606,6 +608,7 @@
     border-radius: var(--radius-xl);
     overflow: hidden;
     position: relative;
+    contain: layout style;
 }
 
 .card-close-btn {

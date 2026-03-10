@@ -149,25 +149,31 @@ PageLifecycle.init({
 
 // ========== Глобальные event listeners ==========
 
-// Закрытие status dropdowns при клике вне
+// Закрытие status dropdowns при клике вне (DOM refs cached)
+const _teamDropdownRefs = { _init: false };
+function _ensureTeamDropdownRefs() {
+    if (_teamDropdownRefs._init) return;
+    _teamDropdownRefs.cardDropdown = document.getElementById('cardStatusDropdown');
+    _teamDropdownRefs.cardBadge = document.getElementById('cardStatusBadge');
+    _teamDropdownRefs.formDropdown = document.getElementById('formStatusDropdown');
+    _teamDropdownRefs.formBadge = document.getElementById('formStatusBadge');
+    _teamDropdownRefs._init = true;
+}
 document.addEventListener('click', (e) => {
-    // Card status dropdown
-    const cardDropdown = document.getElementById('cardStatusDropdown');
-    const cardStatusBadge = document.getElementById('cardStatusBadge');
-    if (cardDropdown && cardDropdown.classList.contains('visible')) {
-        if (!cardDropdown.contains(e.target) && !cardStatusBadge.contains(e.target)) {
-            cardDropdown.classList.remove('visible');
-            cardDropdown.classList.add('hidden');
+    _ensureTeamDropdownRefs();
+    const r = _teamDropdownRefs;
+
+    if (r.cardDropdown && r.cardDropdown.classList.contains('visible')) {
+        if (!r.cardDropdown.contains(e.target) && !r.cardBadge.contains(e.target)) {
+            r.cardDropdown.classList.remove('visible');
+            r.cardDropdown.classList.add('hidden');
         }
     }
 
-    // Form status dropdown
-    const formDropdown = document.getElementById('formStatusDropdown');
-    const formStatusBadge = document.getElementById('formStatusBadge');
-    if (formDropdown && formDropdown.classList.contains('visible')) {
-        if (!formDropdown.contains(e.target) && !formStatusBadge.contains(e.target)) {
-            formDropdown.classList.remove('visible');
-            formDropdown.classList.add('hidden');
+    if (r.formDropdown && r.formDropdown.classList.contains('visible')) {
+        if (!r.formDropdown.contains(e.target) && !r.formBadge.contains(e.target)) {
+            r.formDropdown.classList.remove('visible');
+            r.formDropdown.classList.add('hidden');
         }
     }
 });

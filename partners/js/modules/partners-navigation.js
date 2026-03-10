@@ -1,5 +1,24 @@
 // Partners Navigation - partner selection, card display, status management
 const PartnersNavigation = {
+    // Cached DOM refs for card panel (initialized lazily)
+    _cardRefs: null,
+    _getCardRefs() {
+        if (!this._cardRefs) {
+            this._cardRefs = {
+                hintPanel: document.getElementById('hintPanel'),
+                partnerCard: document.getElementById('partnerCard'),
+                partnerForm: document.getElementById('partnerForm'),
+                cardAvatar: document.getElementById('cardAvatar'),
+                cardAvatarPlaceholder: document.getElementById('cardAvatarPlaceholder'),
+                cardFullName: document.getElementById('cardFullName'),
+                cardPosition: document.getElementById('cardPosition'),
+                cardStatusText: document.getElementById('cardStatusText'),
+                cardBody: document.getElementById('cardBody')
+            };
+        }
+        return this._cardRefs;
+    },
+
     selectPartner(id) {
         if (PartnersState.selectedPartnerId === id) {
             PartnersNavigation.deselectPartner();
@@ -24,9 +43,10 @@ const PartnersNavigation = {
     },
 
     showHintPanel() {
-        document.getElementById('hintPanel').classList.remove('hidden');
-        document.getElementById('partnerCard').classList.add('hidden');
-        document.getElementById('partnerForm').classList.add('hidden');
+        const r = this._getCardRefs();
+        r.hintPanel.classList.remove('hidden');
+        r.partnerCard.classList.add('hidden');
+        r.partnerForm.classList.add('hidden');
     },
 
     showPartnerCard(id) {
@@ -34,34 +54,31 @@ const PartnersNavigation = {
         const partner = partners.find(p => p.id === id);
         if (!partner) return;
 
-        document.getElementById('hintPanel').classList.add('hidden');
-        document.getElementById('partnerCard').classList.remove('hidden');
-        document.getElementById('partnerForm').classList.add('hidden');
+        const r = this._getCardRefs();
+        r.hintPanel.classList.add('hidden');
+        r.partnerCard.classList.remove('hidden');
+        r.partnerForm.classList.add('hidden');
 
-        const cardAvatar = document.getElementById('cardAvatar');
-        const cardAvatarPlaceholder = document.getElementById('cardAvatarPlaceholder');
         // Используем avatarFileId для получения URL из Google Drive
         const avatarUrl = partner.avatarFileId ? CloudStorage.getImageUrl(partner.avatarFileId) : '';
         if (avatarUrl) {
-            cardAvatar.src = avatarUrl;
-            cardAvatar.classList.remove('hidden');
-            if (cardAvatarPlaceholder) cardAvatarPlaceholder.classList.add('hidden');
+            r.cardAvatar.src = avatarUrl;
+            r.cardAvatar.classList.remove('hidden');
+            if (r.cardAvatarPlaceholder) r.cardAvatarPlaceholder.classList.add('hidden');
         } else {
-            cardAvatar.src = '';
-            cardAvatar.classList.add('hidden');
-            if (cardAvatarPlaceholder) cardAvatarPlaceholder.classList.remove('hidden');
+            r.cardAvatar.src = '';
+            r.cardAvatar.classList.add('hidden');
+            if (r.cardAvatarPlaceholder) r.cardAvatarPlaceholder.classList.remove('hidden');
         }
 
-        document.getElementById('cardFullName').textContent = partner.subagent || '-';
-        document.getElementById('cardPosition').textContent = partner.subagentId || '-';
+        r.cardFullName.textContent = partner.subagent || '-';
+        r.cardPosition.textContent = partner.subagentId || '-';
 
         const status = partner.status || 'Открыт';
-        const statusText = document.getElementById('cardStatusText');
-        statusText.textContent = status;
-        statusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
+        r.cardStatusText.textContent = status;
+        r.cardStatusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
 
-        const cardBody = document.getElementById('cardBody');
-        cardBody.innerHTML = PartnersNavigation.generateCardInfo(partner);
+        r.cardBody.innerHTML = PartnersNavigation.generateCardInfo(partner);
     },
 
     generateCardInfo(partner) {
