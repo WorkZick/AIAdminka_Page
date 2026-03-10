@@ -59,7 +59,7 @@
     text-decoration: none;
     font-size: 12px;
     border-radius: 8px;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .toc-link:hover {
@@ -210,7 +210,7 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     padding: 16px;
     border-radius: 10px;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .advantage:hover {
@@ -565,7 +565,7 @@ pre code {
     background: rgba(255, 255, 255, 0.05);
     color: var(--white);
     font-family: inherit;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .changelog-search input::placeholder {
@@ -933,7 +933,7 @@ pre code {
     font-weight: 700;
     cursor: pointer;
     user-select: none;
-    transition: all 0.2s ease;
+    transition: var(--transition-colors);
 }
 
 /* Primary button - default */
@@ -1094,7 +1094,7 @@ pre code {
     font-family: inherit;
     font-size: 13px;
     color: var(--white);
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .ds-block .form-input:focus,
@@ -1407,7 +1407,7 @@ pre code {
     font-weight: 600;
     cursor: pointer;
     border-radius: 8px;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .ds-icons-btn:hover {
@@ -1472,7 +1472,7 @@ pre code {
     color: var(--gray-light);
     cursor: pointer;
     border-radius: 6px;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .icons-modal-close:hover {
@@ -1501,7 +1501,7 @@ pre code {
     border: 1px solid transparent;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .icon-item:hover {

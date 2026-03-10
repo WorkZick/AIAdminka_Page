@@ -135,7 +135,7 @@ body {
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .refresh-button:hover {
@@ -274,7 +274,7 @@ body {
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
@@ -384,7 +384,7 @@ body {
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     flex-shrink: 0;
 }
 
@@ -501,7 +501,7 @@ body {
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     box-shadow: 0 4px 16px rgba(255, 255, 255, 0.08);
     text-decoration: none;
     text-align: center;
@@ -618,7 +618,7 @@ body {
     font-family: var(--font-family);
     font-size: var(--font-size-md);
     color: var(--white);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .registration-form .form-group input::placeholder {
@@ -654,7 +654,7 @@ body {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .input-prefix:focus-within {
@@ -697,7 +697,7 @@ body {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .toggle-label:hover {
@@ -717,7 +717,7 @@ body {
     border: 1px solid var(--glass-border);
     border-radius: 11px;
     flex-shrink: 0;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .toggle-switch::after {
@@ -729,7 +729,7 @@ body {
     height: 16px;
     background: var(--gray-light);
     border-radius: 50%;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .toggle-label input:checked ~ .toggle-switch {
@@ -788,7 +788,7 @@ body {
     color: var(--white);
     resize: vertical;
     min-height: 60px;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .registration-form textarea::placeholder {
@@ -823,7 +823,7 @@ body {
     font-family: var(--font-family);
     font-size: var(--font-size-md);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .retry-button:hover {
@@ -864,7 +864,7 @@ body {
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     text-align: center;
 }
 

@@ -130,7 +130,7 @@ body {
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .refresh-button:hover {
@@ -249,7 +249,7 @@ body {
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     padding: var(--spacing-lg);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .invite-card:hover {

@@ -113,7 +113,7 @@
     color: var(--white);
     font-family: var(--font-family);
     font-size: var(--font-size-base);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .search-box .search-input:focus {
@@ -206,7 +206,8 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     cursor: pointer;
     transition: background var(--transition-fast);
-    contain: layout style;
+    contain: layout style paint;
+    will-change: background;
 }
 
 .employees-table tbody tr:hover {
@@ -309,7 +310,7 @@
     height: 20px;
     filter: brightness(0) invert(1);
     opacity: 0.3;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     transform: rotate(180deg);
 }
 
@@ -460,7 +461,7 @@
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s ease;
     z-index: 10;
 }
 
@@ -575,7 +576,7 @@
 
 .status-option {
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     padding: 4px;
     border-radius: 4px;
 }
@@ -696,7 +697,7 @@
     border: none;
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .form-close-btn:hover {
@@ -765,7 +766,7 @@
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     color: var(--white);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .form-field input:focus,
@@ -803,7 +804,7 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
@@ -954,7 +955,7 @@
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     color: var(--white);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .form-group-inline input:focus,
@@ -1001,7 +1002,7 @@
     font-family: var(--font-family);
     font-size: var(--font-size-sm);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     background: rgba(255, 255, 255, 0.10);
     color: var(--white);
     font-weight: 700;
@@ -1032,7 +1033,7 @@
     cursor: pointer;
     background: rgba(255, 255, 255, 0.05);
     color: var(--white);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1184,7 +1185,7 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .export-option:hover {
@@ -1254,7 +1255,7 @@
     border: 2px dashed rgba(255, 255, 255, 0.15);
     border-radius: var(--radius-lg);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .file-input-label:hover,
@@ -1291,7 +1292,7 @@
     padding: var(--spacing-2xl);
     text-align: center;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .import-dropzone:hover,
@@ -1660,7 +1661,7 @@
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
@@ -1743,7 +1744,7 @@
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     color: var(--white);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .invite-input-group input:focus {
@@ -1773,7 +1774,7 @@
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: var(--radius-md);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .guest-card:hover {
@@ -1993,7 +1994,7 @@
     border: none;
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .pending-invite-cancel:hover {
