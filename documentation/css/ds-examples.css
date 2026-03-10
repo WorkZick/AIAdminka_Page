@@ -1,0 +1,115 @@
+/* Design System Examples - Inline Style Replacements */
+/* Этот файл содержит классы для примеров в дизайн-системе */
+
+/* ============================================================
+   Color Swatches (Цветовые образцы)
+   ============================================================ */
+.ds-color-primary { background: #fdbe2f; }
+.ds-color-white { background: #f2f2f2; }
+.ds-color-gray { background: #6b6b6b; }
+.ds-color-black { background: #0d0d0d; border: 1px solid rgba(255,255,255,0.1); }
+.ds-color-gray-light { background: #a0a0a0; }
+.ds-color-gray-medium { background: #6b6b6b; }
+.ds-color-gray-dark { background: #3a3a3a; }
+.ds-color-gray-darker { background: #252525; }
+.ds-color-bg-dark { background: #1a1a1a; }
+.ds-color-success { background: #51cf66; }
+.ds-color-error { background: #ff6b6b; }
+.ds-color-warning { background: #ff922b; }
+.ds-color-blue { background: #74c0fc; }
+.ds-color-purple { background: #da77f2; }
+
+/* ============================================================
+   Status Dots (Точки статусов)
+   ============================================================ */
+.ds-status-dot-success { background: #51cf66; }
+.ds-status-dot-warning { background: #ff922b; }
+.ds-status-dot-error { background: #ff6b6b; }
+.ds-status-dot-gray { background: #6b6b6b; }
+
+/* ============================================================
+   Status Badges (Бейджи статусов)
+   ============================================================ */
+.ds-badge-success-demo { background: rgba(81, 207, 102, 0.15); color: #51cf66; }
+.ds-badge-warning-demo { background: rgba(255, 146, 43, 0.15); color: #ff922b; }
+.ds-badge-error-demo { background: rgba(255, 107, 107, 0.15); color: #ff6b6b; }
+.ds-badge-info-demo { background: rgba(116, 192, 252, 0.15); color: #74c0fc; }
+
+/* ============================================================
+   Glass Card Variations (Варианты стеклянных карточек)
+   ============================================================ */
+.ds-glass-demo-1 {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ds-glass-demo-2 {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ds-glass-demo-3 {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ds-glass-demo-accent {
+    background: rgba(40, 40, 40, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+}
+
+/* ============================================================
+   Button States (Состояния кнопок)
+   ============================================================ */
+.ds-btn-primary-hover-demo {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
+    color: var(--white);
+}
+
+.ds-btn-secondary-hover-demo {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
+}
+
+.ds-btn-primary-active-demo {
+    background: rgba(255, 255, 255, 0.20);
+    transform: scale(0.96);
+}
+
+.ds-btn-secondary-active-demo {
+    background: rgba(255, 255, 255, 0.05);
+    transform: scale(0.96);
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.ds-btn-primary-active-demo {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--white);
+    color: var(--white);
+    transform: scale(0.96);
+}
+
+/* ============================================================
+   Typography Examples (Примеры типографики)
+   ============================================================ */
+.ds-text-h1-demo { font-size: 24px; font-weight: 700; }
+.ds-text-h2-demo { font-size: 18px; font-weight: 700; }
+.ds-text-h3-demo { font-size: 14px; font-weight: 700; }
+.ds-text-body-demo { font-size: 13px; }
+.ds-text-small-demo { font-size: 11px; color: var(--gray-light); }
+.ds-text-caption-demo { font-size: 12px; color: var(--gray-light); margin: 0 0 16px; }
+
+/* ============================================================
+   Border Radius Examples (Примеры скруглений)
+   ============================================================ */
+.ds-radius-4 { border-radius: 4px; }
+.ds-radius-8 { border-radius: 8px; }
+.ds-radius-12 { border-radius: 12px; }
+.ds-radius-14 { border-radius: 14px; }
+
+/* ============================================================
+   Spacing Examples (Примеры отступов)
+   ============================================================ */
+.ds-mt-12 { margin-top: 12px; }

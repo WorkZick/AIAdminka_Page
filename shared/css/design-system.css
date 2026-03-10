@@ -1,0 +1,31 @@
+/* ============================================================
+   AIAdminka Design System - Entry Point
+   Version: 1.0
+   ============================================================ */
+
+/* Core */
+@import 'variables.css';
+@import 'base.css';
+
+/* Components */
+@import 'components/scrollbar.css';
+@import 'components/layout.css';
+@import 'components/sidebar.css';
+@import 'components/buttons.css';
+@import 'components/forms.css';
+@import 'components/modal.css';
+@import 'components/cards.css';
+@import 'components/badges.css';
+@import 'components/page-header.css';
+@import 'components/tabs.css';
+@import 'components/steps.css';
+@import 'components/tables.css';
+@import 'components/pagination.css';
+@import 'components/upload.css';
+@import 'components/toast.css';
+@import 'components/skeleton.css';
+@import 'components/sync-indicator.css';
+@import 'components/role-guard.css';
+@import 'components/lifecycle.css';
+@import 'components/loading.css';
+@import 'components/sub-tabs.css';

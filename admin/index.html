@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CSP: 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' только для Live Server (dev) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com; frame-ancestors 'self'">
+    <title>Администрирование - AIAdminka</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
+    <link rel="stylesheet" href="../shared/css/design-system.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Container -->
+        <div id="sidebar-container"></div>
+
+        <!-- Loading state (visible until lifecycle-ready) -->
+        <div class="page-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header -->
+            <header class="global-header">
+                <div class="header-title">Администрирование</div>
+                <div class="header-actions">
+                    <span class="admin-badge">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        Администратор
+                    </span>
+                </div>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Loading state -->
+                <div class="loading-state" id="adminLoadingState">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Загрузка данных...</div>
+                </div>
+
+                <!-- Tabs (hidden until data loads) -->
+                <div class="tabs-container hidden" id="adminTabsContainer">
+                    <div class="tabs">
+                        <button class="tab active" data-tab="teams" data-action="switch-tab">
+                            Команды
+                            <span class="tab-count" id="teamsCount">0</span>
+                        </button>
+                        <button class="tab" data-tab="users" data-action="switch-tab">
+                            Пользователи
+                            <span class="tab-count" id="usersCount">0</span>
+                        </button>
+                        <button class="tab" data-tab="requests" data-action="switch-tab">
+                            Запросы
+                            <span class="tab-count tab-count-pending" id="requestsCount">0</span>
+                        </button>
+                        <button class="tab" data-tab="permissions" data-action="switch-tab">
+                            Роли и права
+                        </button>
+                        <button class="tab" data-tab="audit" data-action="switch-tab">
+                            История
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab: Teams -->
+                <div class="tab-content active hidden" id="tab-teams">
+                    <div class="section-header">
+                        <div class="section-title">Все команды</div>
+                        <div class="section-actions">
+                            <div class="search-box">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="M21 21l-4.35-4.35"/>
+                                </svg>
+                                <input type="text" id="searchTeams" placeholder="Поиск..." data-action="filter-teams">
+                            </div>
+                            <button class="btn-primary" data-action="open-create-team-modal">
+                                Создать команду
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="teams-grid" id="teamsGrid">
+                        <div class="empty-state" id="emptyTeams">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            <p>Команды не найдены</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Users -->
+                <div class="tab-content" id="tab-users">
+                    <div class="section-header">
+                        <div class="section-title">Все пользователи</div>
+                        <div class="section-actions">
+                            <div class="search-box">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="M21 21l-4.35-4.35"/>
+                                </svg>
+                                <input type="text" id="searchUsers" placeholder="Поиск..." data-action="filter-users">
+                            </div>
+                            <select id="filterTeam" class="form-select form-select--compact" data-action="filter-users">
+                                <option value="">Все команды</option>
+                            </select>
+                            <select id="filterRole" class="form-select form-select--compact" data-action="filter-users">
+                                <option value="">Все роли</option>
+                                <!-- Заполняется динамически из RolesConfig -->
+                            </select>
+                            <select id="filterStatus" class="form-select form-select--compact" data-action="filter-users">
+                                <option value="">Все статусы</option>
+                                <option value="active">Активные</option>
+                                <option value="blocked">Заблокированные</option>
+                                <option value="approved_no_team">Без команды</option>
+                                <option value="waiting_invite">Ожидают приглашения</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="users-table-wrapper">
+                        <table class="table table--headers-uppercase table--header-bg users-table" id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>Пользователь</th>
+                                    <th>Команда</th>
+                                    <th>Роль</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                            </tbody>
+                        </table>
+                        <div class="empty-state hidden" id="emptyUsers">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            <p>Пользователи не найдены</p>
+                        </div>
+                    </div>
+
+                    <div class="pagination" id="usersPagination"></div>
+                </div>
+
+                <!-- Tab: Requests -->
+                <div class="tab-content" id="tab-requests">
+                    <div class="section-header">
+                        <div class="section-title">Запросы на регистрацию</div>
+                    </div>
+
+                    <div class="requests-grid" id="requestsGrid">
+                        <div class="empty-state" id="emptyRequests">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="8.5" cy="7" r="4"/>
+                                <line x1="20" y1="8" x2="20" y2="14"/>
+                                <line x1="23" y1="11" x2="17" y2="11"/>
+                            </svg>
+                            <p>Нет ожидающих запросов</p>
+                            <span>Все запросы на регистрацию обработаны</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Permissions -->
+                <div class="tab-content" id="tab-permissions">
+                    <div class="sub-tabs">
+                        <button class="sub-tab active" data-action="switch-permissions-subtab" data-subtab="roles">Управление ролями</button>
+                        <button class="sub-tab" data-action="switch-permissions-subtab" data-subtab="permissions">Настройка прав</button>
+                    </div>
+
+                    <!-- Sub-tab: Управление ролями -->
+                    <div class="sub-tab-content active" id="subtab-roles">
+                        <div class="section-header">
+                            <div class="section-actions">
+                                <button class="btn-primary" data-action="reset-role-names" id="btnResetRoleNames">Сбросить</button>
+                                <button class="btn-primary" data-action="save-role-names" id="btnSaveRoleNames">Сохранить</button>
+                            </div>
+                        </div>
+
+                        <div class="roles-card">
+                            <table class="roles-table">
+                                <thead>
+                                    <tr>
+                                        <th class="roles-col-color"></th>
+                                        <th class="roles-col-key">Ключ</th>
+                                        <th class="roles-col-name">Название</th>
+                                        <th class="roles-col-actions"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rolesTableBody"></tbody>
+                            </table>
+                            <div id="addRoleRow"></div>
+                            <button class="btn-primary roles-add-btn" data-action="toggle-add-role" id="btnAddRole">+ Добавить роль</button>
+                        </div>
+                    </div>
+
+                    <!-- Sub-tab: Настройка прав -->
+                    <div class="sub-tab-content" id="subtab-permissions">
+                        <div class="section-header">
+                            <div class="section-actions">
+                                <button class="btn-primary" data-action="save-permissions" id="btnSavePermissions">Сохранить</button>
+                            </div>
+                        </div>
+
+                        <div class="permissions-card">
+                            <div class="permissions-hint">
+                                <p>Настройте права доступа для каждой роли. Руководители смогут назначать только те роли, которые разрешены здесь.</p>
+                            </div>
+                            <div class="permissions-table-wrapper">
+                                <table class="permissions-table" id="permissionsTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="role-header">Роль</th>
+                                            <th>Партнёры</th>
+                                            <th>Заведение</th>
+                                            <th>Сотрудники</th>
+                                            <th>Трафик</th>
+                                            <th>Отчёты</th>
+                                            <th>Настройки</th>
+                                            <th>Документация</th>
+                                            <th>Моя команда</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="permissionsTableBody"></tbody>
+                                </table>
+                            </div>
+                            <div class="permissions-legend">
+                                <span class="legend-item"><span class="legend-icon view"></span> Просмотр</span>
+                                <span class="legend-item"><span class="legend-icon edit"></span> Редактирование</span>
+                                <span class="legend-item"><span class="legend-icon delete"></span> Удаление</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Audit -->
+                <div class="tab-content" id="tab-audit">
+                    <div class="section-header">
+                        <div class="section-title">История изменений</div>
+                        <div class="section-actions">
+                            <div class="search-box">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="M21 21l-4.35-4.35"/>
+                                </svg>
+                                <input type="text" id="searchAudit" placeholder="Поиск..." data-action="filter-audit">
+                            </div>
+                            <select id="filterAction" class="form-select form-select--compact" data-action="filter-audit">
+                                <option value="">Все действия</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="audit-list" id="auditList">
+                        <div class="empty-state" id="emptyAudit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <p>История пуста</p>
+                        </div>
+                    </div>
+
+                    <div class="pagination" id="auditPagination"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Team Modal -->
+    <div class="modal" id="createTeamModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Создать команду</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="createTeamModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="createTeamForm">
+                    <div class="form-group form-group--compact">
+                        <label>Название команды</label>
+                        <input type="text" class="form-input" id="newTeamName" placeholder="Например: Команда продаж" required>
+                    </div>
+                    <div class="form-group form-group--compact">
+                        <label>Руководитель (email)</label>
+                        <input type="email" class="form-input" id="newTeamLeader" placeholder="leader@example.com" required>
+                    </div>
+                    <div class="form-group form-group--compact">
+                        <label>Описание</label>
+                        <textarea class="form-textarea" id="newTeamDescription" placeholder="Краткое описание команды..." rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-action="close-modal" data-modal="createTeamModal">Отмена</button>
+                <button class="btn-primary" data-action="submit-create-team">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal" id="editUserModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Редактирование пользователя</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="editUserModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="user-modal-header">
+                    <div class="user-avatar" id="modalUserAvatar"></div>
+                    <div class="user-info">
+                        <div class="user-name" id="modalUserName">-</div>
+                        <div class="user-email" id="modalUserEmail">-</div>
+                    </div>
+                </div>
+
+                <div class="form-group form-group--compact">
+                    <label>Команда</label>
+                    <select id="modalUserTeam" class="form-select">
+                        <option value="">Без команды</option>
+                    </select>
+                </div>
+
+                <div class="form-group form-group--compact">
+                    <label>Роль</label>
+                    <select id="modalUserRole" class="form-select">
+                        <!-- Заполняется динамически из RolesConfig -->
+                    </select>
+                </div>
+
+                <div class="form-group form-group--compact">
+                    <label>Статус</label>
+                    <div class="status-toggle">
+                        <button type="button" class="status-btn active" data-action="set-modal-status" data-status="active">
+                            <span class="status-dot active"></span>
+                            Активен
+                        </button>
+                        <button type="button" class="status-btn" data-action="set-modal-status" data-status="blocked">
+                            <span class="status-dot blocked"></span>
+                            Заблокирован
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-between">
+                <button class="btn-danger btn-sm" data-action="confirm-delete-user">Удалить</button>
+                <div class="modal-actions">
+                    <button class="btn-secondary" data-action="close-modal" data-modal="editUserModal">Отмена</button>
+                    <button class="btn-primary" data-action="save-user">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete User Confirmation Modal -->
+    <div class="modal" id="deleteUserModal">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Удаление пользователя</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="deleteUserModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="delete-warning">Пользователь <strong id="deleteUserName"></strong> будет удалён из системы.</p>
+                <p class="delete-details">Будут удалены: учётная запись, данные из команды, карточка сотрудника. Логи действий сохранятся.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-action="close-modal" data-modal="deleteUserModal">Отмена</button>
+                <button class="btn-danger" data-action="delete-user">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Team Modal -->
+    <div class="modal" id="editTeamModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Редактирование команды</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="editTeamModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editTeamForm">
+                    <div class="form-group form-group--compact">
+                        <label>Название команды</label>
+                        <input type="text" class="form-input" id="editTeamName" required>
+                    </div>
+                    <div class="form-group form-group--compact">
+                        <label>Описание</label>
+                        <textarea class="form-textarea" id="editTeamDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group form-group--compact">
+                        <label>Статус</label>
+                        <div class="status-toggle">
+                            <button type="button" class="status-btn active" data-action="set-team-status" data-status="true">
+                                <span class="status-dot active"></span>
+                                Активна
+                            </button>
+                            <button type="button" class="status-btn" data-action="set-team-status" data-status="false">
+                                <span class="status-dot blocked"></span>
+                                Неактивна
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer modal-footer-between">
+                <button class="btn-danger btn-sm" data-action="confirm-delete-team">Удалить</button>
+                <div class="modal-actions">
+                    <button class="btn-secondary" data-action="close-modal" data-modal="editTeamModal">Отмена</button>
+                    <button class="btn-primary" data-action="submit-edit-team">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Team Confirmation Modal -->
+    <div class="modal" id="deleteTeamModal">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Удаление команды</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="deleteTeamModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="delete-warning">Команда <strong id="deleteTeamName"></strong> будет удалена.</p>
+                <p class="delete-details" id="deleteTeamDetails"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-action="close-modal" data-modal="deleteTeamModal">Отмена</button>
+                <button class="btn-danger" data-action="delete-team">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Reject Modal -->
+    <div class="modal" id="confirmRejectModal">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Подтверждение</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="confirmRejectModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Отклонить запрос на регистрацию?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-action="close-modal" data-modal="confirmRejectModal">Отмена</button>
+                <button class="btn-danger" data-action="confirm-reject">Отклонить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Role Modal -->
+    <div class="modal" id="deleteRoleModal">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Удаление роли</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="deleteRoleModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Роль <strong id="deleteRoleName"></strong> будет удалена.</p>
+                <div id="deleteRoleUsers" class="delete-role-users"></div>
+                <div class="form-group form-group--compact" id="reassignGroup">
+                    <label>Переназначить пользователей в роль:</label>
+                    <select class="form-select" id="reassignRoleSelect"></select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-action="close-modal" data-modal="deleteRoleModal">Отмена</button>
+                <button class="btn-danger" data-action="confirm-delete-role" id="btnConfirmDeleteRole">Удалить роль</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal Container -->
+    <div id="about-modal-container"></div>
+
+    <script src="../shared/version.js"></script>
+    <script src="../shared/env-config.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/auth-guard.js"></script>
+    <script src="../shared/roles-config.js"></script>
+    <script src="../shared/role-guard.js"></script>
+    <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/error-handler.js"></script>
+    <script src="../shared/js/component-loader.js"></script>
+    <script src="../shared/js/sidebar-controller.js"></script>
+    <script src="../shared/js/about-modal.js"></script>
+    <script src="../shared/js/page-lifecycle.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

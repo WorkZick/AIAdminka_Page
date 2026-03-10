@@ -1,0 +1,461 @@
+/* ============================================================
+   Settings Module - Specific Styles
+   Base styles provided by ../shared/css/design-system.css
+   ============================================================ */
+
+/* Content area - centered settings */
+.content-area {
+    justify-content: center;
+    overflow-y: auto;
+}
+
+/* ===========================================
+   Two-Column Settings Layout
+   =========================================== */
+
+.settings-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: var(--spacing-2xl);
+    max-width: 1000px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.settings-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+/* ===========================================
+   Settings Card (specific variant)
+   =========================================== */
+
+.settings-card {
+    background: rgba(40, 40, 40, 0.4);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-2xl);
+    padding: var(--spacing-xl);
+}
+
+.card-title {
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    color: var(--gray-light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: var(--spacing-lg);
+}
+
+.card-hint {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+    line-height: 1.5;
+    margin-top: var(--spacing-md);
+}
+
+/* Header Status */
+.header-status {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--gray-light);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gray);
+}
+
+.header-status.connected .status-dot {
+    background: var(--status-green);
+}
+
+.header-status.pending .status-dot {
+    background: var(--status-orange);
+}
+
+/* ===========================================
+   Profile Header
+   =========================================== */
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.profile-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--black);
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-name {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.profile-email {
+    font-size: var(--font-size-sm);
+    color: var(--gray-light);
+    margin-bottom: 6px;
+}
+
+.profile-role {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.team-name {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+}
+
+.team-name-editable {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    color: var(--gray-light);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.team-name-editable:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent);
+    color: var(--white);
+}
+
+.team-name-editable img {
+    opacity: 0.5;
+    filter: brightness(0) invert(1);
+    transition: opacity var(--transition-fast);
+}
+
+.team-name-editable:hover img {
+    opacity: 1;
+}
+
+.btn-logout {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    color: var(--status-red);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.btn-logout:hover {
+    background: rgba(255, 107, 107, 0.1);
+    border-color: var(--status-red);
+}
+
+.btn-logout svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ===========================================
+   Profile Form
+   =========================================== */
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+/* Form Sections */
+.form-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.form-section-title {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: var(--spacing-xs);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+}
+
+@media (max-width: 600px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Settings form groups — use DS .form-group--compact + .form-input / .form-select / .form-textarea */
+.settings-card .form-group input:disabled,
+.settings-card .form-group select:disabled {
+    opacity: 0.6;
+    cursor: default;
+    border-style: dashed;
+}
+
+/* Input with prefix */
+.input-with-prefix {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.input-with-prefix:focus-within {
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.input-with-prefix span {
+    padding: var(--spacing-sm) 0 var(--spacing-sm) var(--spacing-md);
+    color: var(--gray);
+    font-size: var(--font-size-base);
+}
+
+.input-with-prefix input {
+    border: none !important;
+    background: transparent !important;
+    padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm) 4px;
+    flex: 1;
+}
+
+/* Profile save button - uses design-system .btn classes */
+#btnSaveProfile {
+    align-self: flex-start;
+}
+
+#btnSaveProfile.success {
+    background: var(--status-green);
+    border-color: var(--status-green);
+    color: var(--black);
+}
+
+/* ===========================================
+   Info Row (Team section)
+   =========================================== */
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.info-row:last-of-type {
+    border-bottom: none;
+}
+
+.info-label {
+    font-size: var(--font-size-sm);
+    color: var(--gray-light);
+}
+
+.info-value {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+}
+
+/* ===========================================
+   System Row
+   =========================================== */
+
+.system-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: 10px 0;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.system-row:last-child {
+    border-bottom: none;
+}
+
+.system-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.system-icon svg {
+    width: 18px;
+    height: 18px;
+    color: var(--gray-light);
+}
+
+.system-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.system-label {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+}
+
+.system-value {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}
+
+.btn-text {
+    padding: 6px var(--spacing-md);
+    background: transparent;
+    border: none;
+    color: var(--gray-light);
+    font-family: var(--font-family);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+}
+
+.btn-text:hover {
+    color: var(--accent);
+}
+
+/* ===========================================
+   Danger Card
+   =========================================== */
+
+.card-danger {
+    border-color: rgba(255, 107, 107, 0.15);
+}
+
+.card-danger .card-title {
+    color: var(--status-red);
+}
+
+.btn-danger-outline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    padding: 10px var(--spacing-lg);
+    background: transparent;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    color: var(--status-red);
+    border-radius: var(--radius-md);
+    font-family: var(--font-family);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-top: var(--spacing-sm);
+}
+
+.btn-danger-outline:hover {
+    background: rgba(255, 107, 107, 0.1);
+    border-color: var(--status-red);
+}
+
+.btn-danger-outline svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ===========================================
+   Responsive
+   =========================================== */
+
+@media (max-width: 900px) {
+    .settings-layout {
+        grid-template-columns: 1fr;
+        max-width: 500px;
+    }
+
+    .settings-column-side {
+        order: -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .content-area {
+        padding: var(--spacing-xl) var(--spacing-lg);
+    }
+
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-md);
+    }
+
+    .profile-info {
+        text-align: center;
+    }
+
+    .profile-role {
+        justify-content: center;
+    }
+
+    .btn-logout {
+        position: absolute;
+        top: var(--spacing-md);
+        right: var(--spacing-md);
+    }
+
+    .settings-card:first-child {
+        position: relative;
+    }
+}
+
+
+/* =========================================
+   Utility Classes
+   ========================================= */
+
+.hidden {
+    display: none !important;
+}

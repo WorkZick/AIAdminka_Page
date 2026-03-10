@@ -1,0 +1,244 @@
+/* ============================================================
+   AIAdminka Design System - Badges
+   ============================================================ */
+
+/* ==================== STAT BADGE ==================== */
+.stat-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: default;
+}
+
+.stat-badge.green {
+    background: rgba(81, 207, 102, 0.2);
+    color: var(--status-green);
+}
+
+.stat-badge.red {
+    background: rgba(255, 107, 107, 0.2);
+    color: var(--status-red);
+}
+
+.stat-badge.yellow {
+    background: rgba(253, 190, 47, 0.2);
+    color: var(--status-yellow);
+}
+
+.stat-badge.orange {
+    background: rgba(255, 146, 43, 0.2);
+    color: var(--status-orange);
+}
+
+.stat-badge.blue {
+    background: rgba(116, 192, 252, 0.2);
+    color: var(--status-blue);
+}
+
+.stat-badge.purple {
+    background: rgba(218, 119, 242, 0.2);
+    color: var(--status-purple);
+}
+
+.stat-badge.gray {
+    background: rgba(107, 107, 107, 0.2);
+    color: var(--gray);
+}
+
+/* ==================== STATUS BADGE ==================== */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.status-badge.status-active,
+.status-badge.status-success {
+    background: rgba(81, 207, 102, 0.2);
+    color: var(--status-green);
+}
+
+.status-badge.status-inactive,
+.status-badge.status-blocked {
+    background: rgba(255, 107, 107, 0.2);
+    color: var(--status-red);
+}
+
+.status-badge.status-pending,
+.status-badge.status-new {
+    background: rgba(253, 190, 47, 0.2);
+    color: var(--status-yellow);
+}
+
+.status-badge.status-in_progress {
+    background: rgba(116, 192, 252, 0.2);
+    color: var(--status-blue);
+}
+
+.status-badge.status-need_info {
+    background: rgba(255, 146, 43, 0.2);
+    color: var(--status-orange);
+}
+
+.status-badge.status-resolved,
+.status-badge.status-closed {
+    background: rgba(107, 107, 107, 0.2);
+    color: var(--gray);
+}
+
+/* Status dot */
+.status-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.status-badge.no-dot::before {
+    display: none;
+}
+
+/* ==================== ROLE BADGE ==================== */
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+}
+
+.role-badge.role-admin {
+    background: rgba(255, 107, 107, 0.2);
+    color: var(--status-red);
+}
+
+.role-badge.role-leader {
+    background: rgba(253, 190, 47, 0.2);
+    color: var(--status-yellow);
+}
+
+.role-badge.role-assistant {
+    background: rgba(116, 192, 252, 0.2);
+    color: var(--status-blue);
+}
+
+.role-badge.role-employee {
+    background: rgba(81, 207, 102, 0.2);
+    color: var(--status-green);
+}
+
+.role-badge.role-sales {
+    background: rgba(218, 119, 242, 0.2);
+    color: var(--status-purple);
+}
+
+.role-badge.role-partners_mgr {
+    background: rgba(218, 119, 242, 0.2);
+    color: #da77f2;
+}
+
+.role-badge.role-payments {
+    background: rgba(56, 217, 169, 0.2);
+    color: #38d9a9;
+}
+
+.role-badge.role-antifraud {
+    background: rgba(255, 146, 43, 0.2);
+    color: #ff922b;
+}
+
+.role-badge.role-tech {
+    background: rgba(116, 143, 252, 0.2);
+    color: #748ffc;
+}
+
+/* ==================== COUNT BADGE ==================== */
+.count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    background: var(--status-red);
+    border-radius: 9px;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: var(--white);
+}
+
+.count-badge.yellow {
+    background: var(--status-yellow);
+    color: var(--black);
+}
+
+.count-badge.blue {
+    background: var(--status-blue);
+}
+
+.count-badge.green {
+    background: var(--status-green);
+}
+
+/* ==================== TAG ==================== */
+.tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--glass-bg-light);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    color: var(--white);
+}
+
+.tag img {
+    width: 14px;
+    height: 14px;
+    filter: brightness(0) invert(1);
+    opacity: 0.7;
+}
+
+.tag-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+    opacity: 0.5;
+    transition: opacity var(--transition-fast);
+}
+
+.tag-remove:hover {
+    opacity: 1;
+}
+
+.tag-remove img {
+    width: 12px;
+    height: 12px;
+}
+
+/* ==================== INLINE STATS ==================== */
+.stats-inline {
+    display: flex;
+    gap: 6px;
+}

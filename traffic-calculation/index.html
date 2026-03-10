@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com; frame-ancestors 'self'">
+    <title>Расчет трафика - AIAdminka</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
+    <link rel="stylesheet" href="../shared/css/design-system.css">
+    <link rel="stylesheet" href="css/traffic-calculation.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+            integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"
+            defer></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Container -->
+        <div id="sidebar-container"></div>
+
+        <!-- Loading state (visible until lifecycle-ready) -->
+        <div class="page-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header -->
+            <header class="global-header">
+                <div class="header-title">Расчет трафика</div>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Steps indicator -->
+                <div class="steps-indicator">
+                    <div class="step active" data-title="Партнёры" data-action="traffic-navigateToStep" data-step="1">
+                        <div class="step-number">1</div>
+                        <div class="step-text">Партнёры</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step" data-title="Пополнения" data-action="traffic-navigateToStep" data-step="2">
+                        <div class="step-number">2</div>
+                        <div class="step-text">Пополнения</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step" data-title="Качество" data-action="traffic-navigateToStep" data-step="3">
+                        <div class="step-number">3</div>
+                        <div class="step-text">Качество</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step" data-title="% Работы" data-action="traffic-navigateToStep" data-step="4">
+                        <div class="step-number">4</div>
+                        <div class="step-text">% Работы</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step" data-title="Автоотключение" data-action="traffic-navigateToStep" data-step="5">
+                        <div class="step-number">5</div>
+                        <div class="step-text">Автооткл.</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step" data-title="Нарушения" data-action="traffic-navigateToStep" data-step="6">
+                        <div class="step-number">6</div>
+                        <div class="step-text">Нарушения</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step" data-title="Отчёт" data-action="traffic-navigateToStep" data-step="7">
+                        <div class="step-number">7</div>
+                        <div class="step-text">Отчёт</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step" data-title="Настройки" data-action="traffic-navigateToStep" data-step="8">
+                        <div class="step-number">8</div>
+                        <div class="step-text">Настройки</div>
+                    </div>
+                    <div class="step-line"></div>
+                    <div class="step" data-title="Результаты" data-action="traffic-navigateToStep" data-step="9">
+                        <div class="step-number">9</div>
+                        <div class="step-text">Результаты</div>
+                    </div>
+                </div>
+
+                    <!-- Step 1: Выбор партнеров -->
+                    <div id="step1" class="analytics-step active">
+                        <div class="main-section flex-1-column">
+                            <div class="section-header">
+                                <div class="section-title">Выбор партнеров для анализа</div>
+                                <div class="section-actions">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-confirmResetAnalytics" title="Сбросить все данные аналитики">
+                                        Сбросить всё
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="section-body flex-1-column">
+
+                                <!-- Toolbar с кнопками выбора (скрыт до загрузки данных) -->
+                                <div id="selectionToolbar" class="selection-toolbar hidden">
+                                    <div class="toolbar-group">
+                                        <span class="toolbar-label">Выбрать:</span>
+                                        <button class="toolbar-btn" data-action="traffic-selectAll" title="Выбрать всех партнёров">
+                                            Всех
+                                        </button>
+                                        <button class="toolbar-btn" data-action="traffic-showMethodSelection" title="Выбрать по методу работы">
+                                            По методу
+                                        </button>
+                                        <button class="toolbar-btn" data-action="traffic-showManualSelection" title="Выбрать вручную">
+                                            Вручную
+                                        </button>
+                                    </div>
+                                    <div class="toolbar-group">
+                                        <button class="toolbar-btn toolbar-btn-clear" data-action="traffic-clearSelection" title="Очистить выбор">
+                                            Очистить
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Спиннер загрузки -->
+                                <div id="loadingSpinner" class="loading-spinner">
+                                    <div class="spinner"></div>
+                                    <div class="loading-text">Загрузка партнёров...</div>
+                                </div>
+
+                                <!-- Подсказка: нет партнёров -->
+                                <div id="noPartnersHint" class="no-partners-hint hidden">
+                                    <img src="../shared/icons/partners.svg" alt="" class="no-partners-hint-icon">
+                                    <div class="no-partners-hint-text">Нет партнёров для анализа</div>
+                                    <div class="no-partners-hint-subtext">Сначала добавьте партнёров на вкладке "Партнёры"</div>
+                                    <a href="../partners/index.html" class="no-partners-hint-link">
+                                        <img src="../shared/icons/partners.svg" alt="">
+                                        Перейти к партнёрам
+                                    </a>
+                                </div>
+
+                                <!-- Панель выбора по методу -->
+                                <div id="methodSelectionPanel" class="selection-panel-modern hidden">
+                                    <div class="panel-header">
+                                        <h3>Выберите методы</h3>
+                                        <button class="panel-close" data-action="traffic-hideAllPanels">
+                                            <img src="../shared/icons/cross.svg" alt="Закрыть">
+                                        </button>
+                                    </div>
+                                    <div id="methodCheckboxes" class="checkbox-grid"></div>
+                                    <div class="panel-actions">
+                                        <button class="btn btn-secondary" data-action="traffic-hideAllPanels">Отмена</button>
+                                        <button class="btn btn-primary" data-action="traffic-applyMethodSelection">Применить</button>
+                                    </div>
+                                </div>
+
+                                <!-- Панель ручного выбора -->
+                                <div id="manualSelectionPanel" class="selection-panel-modern hidden">
+                                    <div class="panel-header">
+                                        <h3>Выберите партнеров</h3>
+                                        <button class="panel-close" data-action="traffic-hideAllPanels">
+                                            <img src="../shared/icons/cross.svg" alt="Закрыть">
+                                        </button>
+                                    </div>
+                                    <div id="partnerCheckboxes" class="checkbox-grid"></div>
+                                    <div class="panel-actions">
+                                        <button class="btn btn-secondary" data-action="traffic-hideAllPanels">Отмена</button>
+                                        <button class="btn btn-primary" data-action="traffic-applyManualSelection">Применить</button>
+                                    </div>
+                                </div>
+
+                                <!-- Таблица выбранных партнёров (скрыта до загрузки данных) -->
+                                <div class="partners-preview hidden">
+                                    <div class="preview-header">
+                                        <span class="preview-title">Выбранные партнёры</span>
+                                        <span class="partner-count-badge" id="selectedCount">0</span>
+                                    </div>
+                                    <div class="table-container flex-1">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Метод</th>
+                                                    <th>Субагент</th>
+                                                    <th>Субагент ID</th>
+                                                    <th>Статус</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="selectedPartnersTableBody">
+                                                <tr>
+                                                    <td colspan="4" class="empty-state">Партнеры не выбраны</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <div></div>
+                                <button id="step1NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="2" disabled>
+                                    Далее
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Пополнения и выводы -->
+                    <div id="step2" class="analytics-step">
+                        <div class="main-section flex-1">
+                            <div class="section-header">
+                                <div class="section-title">Пополнения и выводы</div>
+                                <div class="section-actions">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetDepositsData" title="Сбросить данные пополнений и выводов">
+                                        Сбросить
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="section-body">
+                                <div class="step-hint">
+                                    <img src="../shared/icons/filter.svg" alt="">
+                                    <span>Загрузите Excel-файлы с данными о пополнениях и выводах для подсчета "back" и "cringe"</span>
+                                </div>
+
+                                <div class="upload-zone" data-action="traffic-fileZoneClick" data-file-input-id="depositsFileInput">
+                                    <img src="../shared/icons/import.svg" class="upload-zone-icon" alt="">
+                                    <div class="upload-zone-text">Перетащите файлы сюда</div>
+                                    <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
+                                    <input type="file" id="depositsFileInput" accept=".xlsx" multiple class="hidden">
+                                </div>
+                                <div id="depositsStatus" class="upload-status"></div>
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="1">Назад</button>
+                                <button id="step2NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="3" disabled>Далее</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Контроль качества -->
+                    <div id="step3" class="analytics-step">
+                        <div class="main-section flex-1">
+                            <div class="section-header">
+                                <div class="section-title">Контроль качества</div>
+                                <div class="section-actions">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetQualityData" title="Сбросить данные контроля качества">
+                                        Сбросить
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="section-body">
+                                <div class="step-hint">
+                                    <img src="../shared/icons/filter.svg" alt="">
+                                    <span>Загрузите Excel-файлы с данными о контроле качества работы</span>
+                                </div>
+
+                                <div class="upload-zone" data-action="traffic-fileZoneClick" data-file-input-id="qualityFileInput">
+                                    <img src="../shared/icons/import.svg" class="upload-zone-icon" alt="">
+                                    <div class="upload-zone-text">Перетащите файлы сюда</div>
+                                    <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
+                                    <input type="file" id="qualityFileInput" accept=".xlsx" multiple class="hidden">
+                                </div>
+                                <div id="qualityStatus" class="upload-status"></div>
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="2">
+                                    Назад
+                                </button>
+                                <button id="step3NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="4" disabled>
+                                    Далее
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: % Времени работы -->
+                    <div id="step4" class="analytics-step">
+                        <div class="main-section flex-1">
+                            <div class="section-header">
+                                <div class="section-title">% Времени работы</div>
+                                <div class="section-actions">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetAllWorkTimeData" title="Сбросить все данные по времени работы">
+                                        Сбросить
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="section-body">
+                                <div class="step-hint">
+                                    <img src="../shared/icons/pen.svg" alt="">
+                                    <span>Выберите субагента слева и укажите % времени работы</span>
+                                </div>
+
+                                <div class="worktime-layout">
+                                    <!-- Левая колонка: выбор субагента -->
+                                    <div class="worktime-selector">
+                                        <div class="form-group">
+                                            <label for="partnerSearchInput">Поиск</label>
+                                            <input type="text" id="partnerSearchInput" placeholder="Поиск..." data-action="traffic-filterPartnersList">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="partnerSelectList">Субагент</label>
+                                            <select id="partnerSelectList" size="8" data-action="traffic-loadPartnerManualData">
+                                                <option value="">Выберите на шаге 1</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Правая колонка: форма времени работы -->
+                                    <div class="worktime-form-container">
+                                        <div id="manualDataForm" class="hidden">
+                                            <div class="worktime-form-header">
+                                                <h3 class="worktime-form-title">% Времени: <span id="selectedPartnerName"></span></h3>
+                                                <button class="btn btn-danger btn-sm" data-action="traffic-resetWorkTimeData" title="Сбросить">
+                                                    Сбросить
+                                                </button>
+                                            </div>
+
+                                            <div class="worktime-grid">
+                                                <div class="worktime-item">
+                                                    <span class="worktime-label">На пополнения</span>
+                                                    <div class="worktime-input-group">
+                                                        <input type="number" id="depositWorkTimePercent" value="0" min="0" max="100" data-action="traffic-saveCurrentManualData">
+                                                        <span class="percent-sign">%</span>
+                                                    </div>
+                                                </div>
+                                                <div class="worktime-item">
+                                                    <span class="worktime-label">На вывод</span>
+                                                    <div class="worktime-input-group">
+                                                        <input type="number" id="withdrawalWorkTimePercent" value="0" min="0" max="100" data-action="traffic-saveCurrentManualData">
+                                                        <span class="percent-sign">%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="3">
+                                    Назад
+                                </button>
+                                <button id="step4NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="5" disabled>
+                                    Далее
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Автоотключения -->
+                    <div id="step5" class="analytics-step">
+                        <div class="main-section flex-1">
+                            <div class="section-header">
+                                <div class="section-title">Автоотключения</div>
+                                <div class="section-actions">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetPercentData" title="Сбросить данные автоотключений">
+                                        Сбросить
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="section-body">
+                                <div class="step-hint">
+                                    <img src="../shared/icons/filter.svg" alt="">
+                                    <span>Загрузите Excel-файлы с данными о процентовках для подсчета автоотключений</span>
+                                </div>
+
+                                <div class="upload-zone" data-action="traffic-fileZoneClick" data-file-input-id="percentFileInput">
+                                    <img src="../shared/icons/import.svg" class="upload-zone-icon" alt="">
+                                    <div class="upload-zone-text">Перетащите файлы сюда</div>
+                                    <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
+                                    <input type="file" id="percentFileInput" accept=".xlsx" multiple class="hidden">
+                                </div>
+                                <div id="percentStatus" class="upload-status"></div>
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="4">
+                                    Назад
+                                </button>
+                                <button id="step5NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="6" disabled>
+                                    Далее
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 6: Нарушения -->
+                    <div id="step6" class="analytics-step">
+                        <div class="main-section flex-1">
+                            <div class="section-header">
+                                <div class="section-title">Нарушения</div>
+                                <div class="section-actions">
+                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetAllViolationsData" title="Сбросить все данные по нарушениям">
+                                        Сбросить
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="section-body">
+                                <div class="step-hint">
+                                    <img src="../shared/icons/pen.svg" alt="">
+                                    <span>Выберите субагента слева и укажите данные по нарушениям. Этот шаг опционален.</span>
+                                </div>
+
+                                <div class="violations-layout">
+                                    <!-- Левая колонка: выбор субагента -->
+                                    <div class="violations-selector">
+                                        <div class="form-group">
+                                            <label for="partnerSearchInput6">Поиск</label>
+                                            <input type="text" id="partnerSearchInput6" placeholder="Поиск..." data-action="traffic-filterPartnersListStep6">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="partnerSelectList6">Субагент</label>
+                                            <select id="partnerSelectList6" size="8" data-action="traffic-loadPartnerManualDataStep6">
+                                                <option value="">Выберите на шаге 1</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Правая колонка: форма нарушений -->
+                                    <div class="violations-form-container">
+                                        <div id="manualDataForm6" class="hidden">
+                                            <div class="violations-form-header">
+                                                <h3 class="violations-form-title">Нарушения: <span id="selectedPartnerName6"></span></h3>
+                                                <button class="btn btn-danger btn-sm" data-action="traffic-resetViolationsData" title="Сбросить">
+                                                    Сбросить
+                                                </button>
+                                            </div>
+
+                                            <div class="violations-grid">
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Игнорирование чатов</span>
+                                                    <div class="number-input-group">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="chatIgnoring">
+                                                            <img src="../shared/icons/minus.svg" alt="-">
+                                                        </button>
+                                                        <input type="number" id="chatIgnoring" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="chatIgnoring">
+                                                            <img src="../shared/icons/plus.svg" alt="+">
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Игнор Webmanagement</span>
+                                                    <div class="number-input-group">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="webmanagementIgnore">
+                                                            <img src="../shared/icons/minus.svg" alt="-">
+                                                        </button>
+                                                        <input type="number" id="webmanagementIgnore" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="webmanagementIgnore">
+                                                            <img src="../shared/icons/plus.svg" alt="+">
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Очереди на пополнение</span>
+                                                    <div class="number-input-group">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="depositQueues">
+                                                            <img src="../shared/icons/minus.svg" alt="-">
+                                                        </button>
+                                                        <input type="number" id="depositQueues" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="depositQueues">
+                                                            <img src="../shared/icons/plus.svg" alt="+">
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Очереди на вывод</span>
+                                                    <div class="number-input-group">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="withdrawalQueues">
+                                                            <img src="../shared/icons/minus.svg" alt="-">
+                                                        </button>
+                                                        <input type="number" id="withdrawalQueues" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="withdrawalQueues">
+                                                            <img src="../shared/icons/plus.svg" alt="+">
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Зачисление вне лимитов</span>
+                                                    <div class="number-input-group">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="creditsOutsideLimits">
+                                                            <img src="../shared/icons/minus.svg" alt="-">
+                                                        </button>
+                                                        <input type="number" id="creditsOutsideLimits" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="creditsOutsideLimits">
+                                                            <img src="../shared/icons/plus.svg" alt="+">
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="violation-item">
+                                                    <span class="violation-label">Одобрение неверной суммы</span>
+                                                    <div class="number-input-group">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="wrongAmountApproval">
+                                                            <img src="../shared/icons/minus.svg" alt="-">
+                                                        </button>
+                                                        <input type="number" id="wrongAmountApproval" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="wrongAmountApproval">
+                                                            <img src="../shared/icons/plus.svg" alt="+">
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="other-violations-section">
+                                                <div class="other-violations-header">
+                                                    <span class="violation-label">Другие нарушения</span>
+                                                    <div class="number-input-group">
+                                                        <button type="button" class="btn-icon" data-action="traffic-decrementManualValue" data-field="otherViolations">
+                                                            <img src="../shared/icons/minus.svg" alt="-">
+                                                        </button>
+                                                        <input type="number" id="otherViolations" value="0" min="0" data-action="traffic-saveCurrentManualDataStep6">
+                                                        <button type="button" class="btn-icon" data-action="traffic-incrementManualValue" data-field="otherViolations">
+                                                            <img src="../shared/icons/plus.svg" alt="+">
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <textarea id="otherViolationsDescription" class="violations-description-large" placeholder="Опишите нарушения подробно..." data-action="traffic-saveCurrentManualDataStep6"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Навигация (вне section-body для постоянной видимости) -->
+                            <div class="step-navigation-modern">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="5">
+                                    Назад
+                                </button>
+                                <button id="step6NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="7">
+                                    Далее
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                <!-- Step 7: Отчёт -->
+                <div id="step7" class="analytics-step">
+                    <div class="main-section">
+                        <div class="section-header">
+                            <div class="section-title">Детальный отчёт</div>
+                            <div class="section-actions">
+                                <button class="btn btn-primary btn-sm" data-action="traffic-exportReportToExcel">Экспорт в Excel</button>
+                            </div>
+                        </div>
+
+                        <div id="reportNotGenerated" class="report-placeholder">
+                            <div class="report-placeholder-content">
+                                <img src="../shared/icons/documents.svg" alt="">
+                                <p>Отчёт формируется...</p>
+                                <p class="report-hint">Данные собираются на основе предыдущих шагов</p>
+                            </div>
+                        </div>
+
+                        <div id="reportGenerated" class="step7-table-wrapper hidden">
+                            <div class="step7-table-scroll">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Метод</th>
+                                            <th>Субагент</th>
+                                            <th>Субагент ID</th>
+                                            <th>Статус</th>
+                                            <th>Дата добавления</th>
+                                            <th>Back</th>
+                                            <th>Cringe</th>
+                                            <th>Автоотключение</th>
+                                            <th>Кол-во пополнений</th>
+                                            <th>Кол-во выводов</th>
+                                            <th>Обращений по пополнениям</th>
+                                            <th>Обращения 15+ мин</th>
+                                            <th>% успешных пополнений</th>
+                                            <th>% успешных выводов</th>
+                                            <th>% Времени на пополнения</th>
+                                            <th>% Времени на вывод</th>
+                                            <th>Игнор чатов</th>
+                                            <th>Игнор Webmanagement</th>
+                                            <th>Очереди попол.</th>
+                                            <th>Очереди вывод</th>
+                                            <th>Вне лимитов</th>
+                                            <th>Неверная сумма</th>
+                                            <th>Другие наруш.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reportTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="step-navigation-modern">
+                            <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="6">Назад</button>
+                            <button id="step7NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="8">Далее</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 8: Настройки расчёта -->
+                <div id="step8" class="analytics-step">
+                    <div class="main-section flex-1-column">
+                        <div class="section-header">
+                            <div class="section-title">Настройки расчёта % трафика</div>
+                            <div class="section-actions">
+                                <button class="btn btn-primary btn-sm" data-action="traffic-toggleHelp">Справка</button>
+                                <button class="btn btn-primary btn-sm" data-action="traffic-exportTrafficSettings">Экспорт</button>
+                                <button class="btn btn-primary btn-sm" data-action="traffic-importTrafficSettings">Импорт</button>
+                            </div>
+                        </div>
+                        <div class="section-body flex-1-overflow">
+                            <div class="step-hint">
+                                <img src="../shared/icons/pen.svg" alt="">
+                                <span>Укажите диапазоны и баллы. Чем больше баллов — тем меньше % трафика.</span>
+                            </div>
+
+                            <div id="trafficHelpContent" class="traffic-help-content hidden">
+                                <h4>Формула расчета % трафика</h4>
+                                <p><strong>Общий балл партнёра</strong> = сумма баллов по всем параметрам</p>
+                                <p>Каждый параметр имеет 4 уровня оценки:</p>
+                                <ul>
+                                    <li><span class="score-good">Хороший</span> — лучший результат, минимальные баллы</li>
+                                    <li><span class="score-normal">Нормальный</span> — приемлемый результат</li>
+                                    <li><span class="score-bad">Плохой</span> — результат ниже нормы</li>
+                                    <li><span class="score-terrible">Ужасный</span> — критически плохой результат</li>
+                                </ul>
+                                <p><strong>Пример:</strong> В методе 2 партнёра с баллами 10 и 30. Первый получит 75%, второй — 25%.</p>
+                            </div>
+
+                            <div id="trafficSettingsForm" class="traffic-settings-form"></div>
+                        </div>
+                        <div class="step-navigation-modern">
+                            <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="7">Назад</button>
+                            <button id="step8NextBtn" class="btn btn-primary" data-action="traffic-calculateAndShowResults">Рассчитать</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 9: Результаты расчёта -->
+                <div id="step9" class="analytics-step">
+                    <div class="main-section flex-1-column">
+                        <div class="section-header">
+                            <div class="section-title">Результаты расчёта % трафика</div>
+                            <div class="section-actions">
+                                <button class="btn btn-primary btn-sm" data-action="traffic-exportTrafficResults">Экспорт в Excel</button>
+                            </div>
+                        </div>
+                        <div class="section-body flex-1-column">
+                            <div id="resultsNotCalculated" class="report-placeholder">
+                                <div class="report-placeholder-content">
+                                    <img src="../shared/icons/documents.svg" alt="">
+                                    <p>Расчёт не выполнен</p>
+                                    <p class="report-hint">Вернитесь на предыдущий шаг и нажмите "Рассчитать"</p>
+                                </div>
+                            </div>
+
+                            <div id="resultsCalculated" class="report-generated hidden">
+                                <div class="table-container flex-1">
+                                    <table class="data-table traffic-results-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Метод</th>
+                                                <th>Субагент</th>
+                                                <th>ID Субагента</th>
+                                                <th class="score-good">Хороший</th>
+                                                <th class="score-normal">Нормальный</th>
+                                                <th class="score-bad">Плохой</th>
+                                                <th class="score-terrible">Ужасный</th>
+                                                <th class="score-total">Всего</th>
+                                                <th class="traffic-percent-header">% Трафика</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="trafficResultsTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="step-navigation-modern">
+                            <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="8">Назад</button>
+                            <button class="btn btn-primary" data-action="traffic-confirmResetAnalytics">Начать заново</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal Container -->
+    <div id="about-modal-container"></div>
+
+    <script src="../shared/version.js"></script>
+    <script src="../shared/storage.js"></script>
+    <script src="../shared/env-config.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/auth-guard.js"></script>
+    <script src="../shared/roles-config.js"></script>
+    <script src="../shared/role-guard.js"></script>
+    <script src="../shared/js/component-loader.js"></script>
+    <script src="../shared/js/sidebar-controller.js"></script>
+    <script src="../shared/js/about-modal.js"></script>
+    <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/confirm-modal.js"></script>
+    <script src="../shared/js/error-handler.js"></script>
+    <script src="../shared/js/page-lifecycle.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/modules/traffic-state.js"></script>
+    <script src="js/modules/traffic-parsers.js"></script>
+    <script src="js/modules/traffic-navigation.js"></script>
+    <script src="js/modules/traffic-upload.js"></script>
+    <script src="js/modules/traffic-manual-data.js"></script>
+    <script src="js/modules/traffic-calculator.js"></script>
+    <script src="js/modules/traffic-renderer.js"></script>
+    <script src="js/modules/traffic-import-export.js"></script>
+    <script src="js/traffic-calculation.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+/* ============================================================
+   Home Page - Specific Styles
+   Base styles provided by shared/css/design-system.css
+   ============================================================ */
+
+/* ===========================================
+   Content Area - Home specific layout
+   =========================================== */
+
+.content-area {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    padding: 80px 40px 20px 40px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* ===========================================
+   Skeleton Placeholder (loading state)
+   =========================================== */
+
+.skeleton-modules-placeholder {
+    display: contents;
+}
+
+/* ===========================================
+   Responsive
+   =========================================== */
+
+@media (max-width: 900px) {
+    .content-area {
+        padding: 60px 20px 20px 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .content-area {
+        padding: 40px 16px 16px 16px;
+    }
+}

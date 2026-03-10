@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'sha256-hnlVisWd/fn32NbDovWmI6UTBdStgc7fO3K6SKtc9SU=' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com">
+    <title>Документация - AIAdminka</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
+    <!-- Design System (base styles) -->
+    <link rel="stylesheet" href="../shared/css/design-system.css">
+    <!-- Module-specific styles -->
+    <link rel="stylesheet" href="css/documentation.css">
+    <link rel="stylesheet" href="css/ds-examples.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Container (loaded via ComponentLoader) -->
+        <div id="sidebar-container"></div>
+
+        <!-- Loading state (visible until lifecycle-ready) -->
+        <div class="page-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header -->
+            <header class="global-header">
+                <div class="header-title">Документация</div>
+                <div class="header-actions">
+                    <a href="#design-system" class="btn btn-secondary">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        Дизайн-система
+                    </a>
+                    <button class="btn btn-primary" data-action="show-changelog">История обновлений</button>
+                </div>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Left panel - Table of Contents -->
+                <aside class="left-panel">
+                    <div class="toc-panel">
+                        <div class="panel-header">
+                            <span>Содержание</span>
+                        </div>
+                        <div class="panel-content">
+                            <nav class="toc-nav">
+                                <a href="#overview" class="toc-link active">1. Что это?</a>
+                                <a href="#auth" class="toc-link">2. Авторизация</a>
+                                <a href="#partners" class="toc-link">3. Партнеры</a>
+                                <a href="#team-info" class="toc-link">4. Сотрудники</a>
+                                <a href="#traffic-calc" class="toc-link">5. Расчет трафика</a>
+                                <a href="#excel-reports" class="toc-link">6. Отчеты</a>
+                                <a href="#sync" class="toc-link">7. Настройки</a>
+                                <a href="#home" class="toc-link">8. Главная</a>
+                                <a href="#troubleshooting" class="toc-link">9. Проблемы</a>
+                                <a href="#architecture" class="toc-link">10. Архитектура</a>
+                                <a href="#design-system" class="toc-link">11. Дизайн-система</a>
+                            </nav>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Main section - Documentation content -->
+                <main class="main-section">
+                    <div class="doc-container">
+                        <!-- Header -->
+                        <div class="doc-header">
+                            <h1>Документация AIAdminka</h1>
+                            <p class="doc-subtitle">Полное руководство по использованию модулей</p>
+                            <div class="doc-meta">
+                                <span class="app-version" data-format="russian">Версия: ...</span>
+                                <span class="meta-separator">•</span>
+                                <span id="currentDate"></span>
+                            </div>
+                        </div>
+
+                        <!-- 1. Обзор -->
+                        <section class="doc-section" id="overview">
+                            <h2>1. Что это?</h2>
+
+                            <p>AIAdminka — административная панель для работы с партнёрами, командой и аналитикой. Современный минималистичный дизайн с облачной синхронизацией через Google Drive.</p>
+
+                            <h3>Модули:</h3>
+                            <ul>
+                                <li><strong>Партнеры</strong> — управление партнёрами с аватарами, статусами и методами</li>
+                                <li><strong>Сотрудники</strong> — карточки сотрудников с настраиваемыми полями</li>
+                                <li><strong>Расчет трафика</strong> — аналитика и калькулятор % трафика на основе данных партнёров</li>
+                                <li><strong>Отчеты</strong> — обработка Excel файлов по шаблонам</li>
+                                <li><strong>Настройки</strong> — профиль, облачное хранение, управление сессией</li>
+                                <li><strong>Документация</strong> — справочное руководство и история обновлений</li>
+                            </ul>
+
+                            <h3>Особенности:</h3>
+                            <div class="advantages">
+                                <div class="advantage">
+                                    <h4>Облачная синхронизация</h4>
+                                    <p>Данные и аватары хранятся в Google Drive</p>
+                                </div>
+                                <div class="advantage">
+                                    <h4>Авторизация</h4>
+                                    <p>Вход через Google OAuth с контролем доступа</p>
+                                </div>
+                                <div class="advantage">
+                                    <h4>Автономность</h4>
+                                    <p>Работает без установки программ</p>
+                                </div>
+                                <div class="advantage">
+                                    <h4>Безопасность</h4>
+                                    <p>OAuth 2.0, CSP заголовки, валидация данных</p>
+                                </div>
+                            </div>
+
+                            <h3>Быстрый старт:</h3>
+                            <ol>
+                                <li>Откройте <a href="https://workzick.github.io/AIAdminka_Page/" target="_blank">https://workzick.github.io/AIAdminka_Page/</a></li>
+                                <li>Нажмите "Войти через Google" и авторизуйтесь</li>
+                                <li>Если это первый вход — нажмите "Запросить доступ"</li>
+                                <li>После одобрения администратором — полный доступ ко всем модулям</li>
+                            </ol>
+                        </section>
+
+                        <!-- 2. Авторизация -->
+                        <section class="doc-section" id="auth">
+                            <h2>2. Авторизация</h2>
+
+                            <p>Система контроля доступа через Google OAuth. Новые пользователи должны получить одобрение администратора.</p>
+
+                            <h3>Как войти:</h3>
+                            <ol>
+                                <li><strong>Откройте приложение</strong> — вы попадёте на страницу входа</li>
+                                <li><strong>Нажмите "Войти через Google"</strong> — откроется окно авторизации Google</li>
+                                <li><strong>Выберите аккаунт</strong> — используйте корпоративный email</li>
+                                <li><strong>Дайте разрешение</strong> — приложению нужен доступ к вашему профилю</li>
+                            </ol>
+
+                            <h3>Статусы доступа:</h3>
+                            <ul>
+                                <li><strong>Не авторизован</strong> — требуется вход через Google</li>
+                                <li><strong>Ожидание (жёлтый)</strong> — запрос отправлен, ожидает одобрения администратора</li>
+                                <li><strong>Подключено (зелёный)</strong> — полный доступ к системе</li>
+                            </ul>
+
+                            <h3>Первый вход (новый пользователь):</h3>
+                            <ol>
+                                <li>После авторизации Google вы увидите "Доступ запрещён"</li>
+                                <li>Нажмите <strong>"Запросить доступ"</strong></li>
+                                <li>Ваш запрос будет отправлен администратору</li>
+                                <li>Нажмите <strong>"Проверить доступ"</strong> (раз в 10 сек) или подождите уведомления</li>
+                                <li>После одобрения вы автоматически получите доступ</li>
+                            </ol>
+
+                            <h3>Сессия:</h3>
+                            <ul>
+                                <li><strong>Время жизни:</strong> 8 часов после авторизации</li>
+                                <li><strong>Автопродление:</strong> нет, требуется повторный вход</li>
+                                <li><strong>Выход:</strong> кнопка "Выйти" в разделе Настройки</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Что делать если статус "Ожидание"?</h4>
+                                <p>Это нормально для новых пользователей. Подождите одобрения или свяжитесь с администратором через Reddy ID: 62219492522</p>
+                            </div>
+                        </section>
+
+                        <!-- 3. Партнеры -->
+                        <section class="doc-section" id="partners">
+                            <h2>3. Партнеры</h2>
+
+                            <p>Центральный модуль для управления партнёрами. Данные партнёров используются в модуле "Расчет трафика" для аналитики.</p>
+
+                            <h3>Интерфейс:</h3>
+                            <ul>
+                                <li><strong>Таблица партнёров:</strong> DEP|WITH|COMP, Фото, Субагент, ID, Метод, Статус</li>
+                                <li><strong>Правая панель:</strong> Статистика или карточка выбранного партнёра</li>
+                                <li><strong>Поиск:</strong> Быстрый поиск по всем полям в реальном времени</li>
+                                <li><strong>Сортировка:</strong> Клик по заголовку колонки</li>
+                                <li><strong>Настройка колонок:</strong> Кнопка фильтра → выбор видимых колонок (макс. 5)</li>
+                            </ul>
+
+                            <h3>Как добавить партнёра:</h3>
+                            <ol>
+                                <li>Нажмите <strong>"+ Добавить"</strong> в шапке</li>
+                                <li>Заполните обязательные поля: <strong>Субагент, ID Субагента, Метод</strong></li>
+                                <li>Загрузите аватар (опционально) — будет сохранён в Google Drive</li>
+                                <li>Заполните дополнительные поля из шаблона</li>
+                                <li>Нажмите <strong>"Сохранить"</strong></li>
+                            </ol>
+
+                            <h3>Колонки таблицы:</h3>
+                            <ul>
+                                <li><strong>DEP | WITH | COMP:</strong> Счётчики (редактируются в карточке партнёра)</li>
+                                <li><strong>Фото:</strong> Аватар партнёра (хранится в Google Drive)</li>
+                                <li><strong>Субагент:</strong> Название компании/партнёра</li>
+                                <li><strong>ID Субагента:</strong> Уникальный идентификатор</li>
+                                <li><strong>Метод:</strong> Способ работы (выбирается из списка)</li>
+                                <li><strong>Статус:</strong> Открыт / Закрыт</li>
+                            </ul>
+
+                            <h3>Статусы партнёров:</h3>
+                            <ul>
+                                <li><strong>Открыт (зелёный):</strong> Активный партнёр</li>
+                                <li><strong>Закрыт (красный):</strong> Неактивный партнёр</li>
+                            </ul>
+
+                            <h3>Управление методами:</h3>
+                            <ol>
+                                <li>Нажмите иконку <strong>шестерёнки</strong> рядом с полем "Метод"</li>
+                                <li>Добавьте новый метод или удалите существующий</li>
+                                <li>Методы автоматически добавляются при импорте данных</li>
+                            </ol>
+
+                            <h3>Импорт/Экспорт:</h3>
+                            <ul>
+                                <li><strong>JSON:</strong> Полный экспорт/импорт всех данных</li>
+                                <li><strong>Excel:</strong> Экспорт/импорт с выбором шаблона колонок</li>
+                                <li><strong>Пример файла:</strong> Кнопка "Скачать пример" для Excel импорта</li>
+                            </ul>
+
+                            <h3>Аватары и облако:</h3>
+                            <ul>
+                                <li>Аватары загружаются в Google Drive (папка images)</li>
+                                <li>При замене аватара старый файл автоматически удаляется</li>
+                                <li>Изображения сохраняются без сжатия</li>
+                                <li>Обрезка — только визуальная (CSS object-fit: cover)</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Как настроить колонки таблицы?</h4>
+                                <p>Нажмите иконку фильтра в заголовке таблицы → отметьте нужные колонки → перетащите для изменения порядка → "Применить"</p>
+                            </div>
+                        </section>
+
+                        <!-- 4. Сотрудники -->
+                        <section class="doc-section" id="team-info">
+                            <h2>4. Сотрудники</h2>
+
+                            <p>Модуль для управления информацией о команде с гибкой системой шаблонов полей.</p>
+
+                            <h3>Интерфейс:</h3>
+                            <ul>
+                                <li><strong>Таблица сотрудников:</strong> Аватары, ФИО, должность, статус</li>
+                                <li><strong>Правая панель:</strong> Статистика команды или карточка сотрудника</li>
+                                <li><strong>Поиск:</strong> Быстрый поиск в реальном времени</li>
+                                <li><strong>Сортировка:</strong> По любому столбцу таблицы</li>
+                            </ul>
+
+                            <h3>Как добавить сотрудника:</h3>
+                            <ol>
+                                <li>Нажмите <strong>"+ Добавить"</strong></li>
+                                <li>Выберите <strong>шаблон</strong> (определяет набор полей)</li>
+                                <li>Заполните <strong>ФИО, Должность, Грейд</strong></li>
+                                <li>Загрузите аватар (опционально)</li>
+                                <li>Заполните остальные поля по шаблону</li>
+                                <li>Нажмите <strong>"Сохранить"</strong></li>
+                            </ol>
+
+                            <h3>Обязательные поля:</h3>
+                            <ul>
+                                <li><strong>ФИО:</strong> Полное имя сотрудника</li>
+                                <li><strong>Должность:</strong> Позиция в компании</li>
+                                <li><strong>Грейд:</strong> Junior / Middle / Senior / Lead</li>
+                            </ul>
+
+                            <h3>Предзаполненные поля (по умолчанию):</h3>
+                            <ul>
+                                <li>Логин УРС, Reddy ID, Корп. e-mail</li>
+                                <li>Корп. Telegram, Корп. телефон</li>
+                                <li>Дата рождения, Дата устройства</li>
+                            </ul>
+
+                            <h3>Статусы сотрудников:</h3>
+                            <ul>
+                                <li><strong>Работает (зелёный):</strong> Активный сотрудник</li>
+                                <li><strong>В отпуске (жёлтый):</strong> Временно отсутствует</li>
+                                <li><strong>Командировка (синий):</strong> В рабочей поездке</li>
+                                <li><strong>Уволен (красный):</strong> Бывший сотрудник</li>
+                                <li><strong>Болеет (фиолетовый):</strong> На больничном</li>
+                            </ul>
+
+                            <h3>Система шаблонов:</h3>
+                            <ul>
+                                <li><strong>Создание:</strong> Настройте набор полей для разных типов сотрудников</li>
+                                <li><strong>Типы полей:</strong> Текст, Email, Телефон, Дата, Текстовая область</li>
+                                <li><strong>Основной шаблон:</strong> Применяется по умолчанию</li>
+                                <li><strong>Выбор:</strong> Селектор шаблона при добавлении сотрудника</li>
+                            </ul>
+
+                            <h3>Экспорт/импорт:</h3>
+                            <ul>
+                                <li><strong>Экспорт JSON:</strong> Полный список с аватарами (base64)</li>
+                                <li><strong>Импорт JSON:</strong> Загрузка из файла с миграцией старых форматов</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Как создать свой шаблон?</h4>
+                                <p>Нажмите "Шаблоны" → "Создать" → добавьте поля нужных типов → "Сохранить" → выберите "Сделать основным" если нужно</p>
+                            </div>
+                        </section>
+
+                        <!-- 5. Расчет трафика -->
+                        <section class="doc-section" id="traffic-calc">
+                            <h2>5. Расчет трафика</h2>
+
+                            <p>Модуль аналитики партнёров. <strong>Важно:</strong> данные партнёров берутся из модуля "Партнеры" (единый источник данных).</p>
+
+                            <h3>Источник данных:</h3>
+                            <ul>
+                                <li>Партнёры загружаются из модуля "Партнеры" (localStorage)</li>
+                                <li>Методы определяются автоматически из данных партнёров</li>
+                                <li>Статусы маппятся: Открыт → новый, Закрыт → закрыт</li>
+                                <li>Управление партнёрами — только через модуль "Партнеры"</li>
+                            </ul>
+
+                            <h3>Как провести аналитику:</h3>
+                            <ol>
+                                <li><strong>Шаг 1:</strong> Выберите партнёров (все / по методу / выборочно)</li>
+                                <li><strong>Шаг 2:</strong> Загрузите файлы пополнений и выводов (.xlsx)</li>
+                                <li><strong>Шаг 3:</strong> Загрузите отчёт "Контроль качества работы"</li>
+                                <li><strong>Шаг 4:</strong> Введите % времени работы (пополнения/выводы)</li>
+                                <li><strong>Шаг 5:</strong> Загрузите отчёт автоотключений</li>
+                                <li><strong>Шаг 6:</strong> Введите нарушения (опционально)</li>
+                                <li>Нажмите <strong>"Завершить"</strong> — перейдёте на вкладку Отчёт</li>
+                            </ol>
+
+                            <h3>Навигация по шагам:</h3>
+                            <ul>
+                                <li>Кликабельные индикаторы шагов — переход на любой шаг</li>
+                                <li>Зелёные галочки — завершённые шаги</li>
+                                <li>Данные сохраняются при переключении между шагами</li>
+                                <li>Кнопка "Сбросить всё" — начать новый анализ</li>
+                            </ul>
+
+                            <h3>Шаг 4 — % Времени работы:</h3>
+                            <ul>
+                                <li>Слева: выбор партнёра из списка</li>
+                                <li>Справа: карточки для ввода % на пополнения и вывод</li>
+                                <li>Кнопки +/- для изменения значений</li>
+                                <li>"Сбросить" — очистить данные текущего партнёра</li>
+                                <li>"Сбросить всё" — очистить данные всех партнёров</li>
+                            </ul>
+
+                            <h3>Шаг 6 — Нарушения:</h3>
+                            <ul>
+                                <li>8 типов нарушений с счётчиками</li>
+                                <li>"Другие нарушения" — с текстовым описанием</li>
+                                <li>Шаг необязательный — можно пропустить</li>
+                            </ul>
+
+                            <h3>Отчёт:</h3>
+                            <ul>
+                                <li>Детальная таблица с данными по каждому партнёру</li>
+                                <li>Экспорт в Excel (.xlsx)</li>
+                            </ul>
+
+                            <h3>Калькулятор % трафика:</h3>
+                            <ul>
+                                <li>Расчёт отдельно по каждому методу (100% на метод)</li>
+                                <li>16 параметров с 4 уровнями оценки</li>
+                                <li>Настройка баллов: больше баллов = меньше трафика</li>
+                                <li>Экспорт результатов в Excel</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Как настроить параметры калькулятора?</h4>
+                                <p>Кнопка "Настройки" → для каждого параметра задайте диапазоны и баллы → "Сохранить". Баллы: 0 = хорошо, 10 = плохо.</p>
+                            </div>
+                        </section>
+
+                        <!-- 6. Отчеты -->
+                        <section class="doc-section" id="excel-reports">
+                            <h2>6. Отчеты</h2>
+
+                            <p>Модуль для обработки Excel файлов по шаблонам. Поддерживает .xlsx формат.</p>
+
+                            <h3>Доступные шаблоны:</h3>
+                            <ul>
+                                <li><strong>Общий отчёт:</strong> Генерирует все таблицы T1-T9 за один проход (требует 7 файлов)</li>
+                                <li><strong>Пополнения и выводы:</strong> Отчёт по депозитам и выплатам (T1.1, T1.3, T2, T2.1, T5, К)</li>
+                                <li><strong>Регистрации:</strong> Статистика регистраций по типам и платформам (T3.1, T3.2, T6, T7)</li>
+                                <li><strong>B-TAG:</strong> Анализ транзакций по статусам (T3.4)</li>
+                                <li><strong>Аналитика T9:</strong> Статистика по типам продуктов (T9)</li>
+                                <li><strong>Активные пользователи:</strong> Анализ активности (T4, T4.1)</li>
+                            </ul>
+
+                            <h3>Как обработать файлы:</h3>
+                            <ol>
+                                <li><strong>Шаг 1:</strong> Выберите шаблон (Общий отчёт или один из dropdown)</li>
+                                <li><strong>Шаг 2:</strong> Загрузите файлы (drag & drop или клик по области)</li>
+                                <li><strong>Шаг 3:</strong> Дождитесь обработки (спиннер показывает прогресс)</li>
+                                <li><strong>Шаг 4:</strong> Нажмите "Далее" для перехода к следующему шагу</li>
+                                <li><strong>Шаг 5:</strong> Нажмите "Обработать" и скачайте результат</li>
+                            </ol>
+
+                            <h3>Интерфейс:</h3>
+                            <ul>
+                                <li><strong>Индикатор шагов:</strong> Показывает текущий этап (Шаблон → Файлы → Обработка)</li>
+                                <li><strong>Навигация:</strong> Кнопки "Назад" / "Далее" в заголовке каждой панели</li>
+                                <li><strong>Спиннер загрузки:</strong> Отображает прогресс обработки файлов</li>
+                                <li><strong>Статус загрузки:</strong> Галочка с количеством загруженных файлов</li>
+                                <li><strong>Журнал операций:</strong> Правая панель с логами обработки</li>
+                                <li><strong>Начать заново:</strong> Кнопка в header на этапе обработки</li>
+                            </ul>
+
+                            <h3>Требования к файлам:</h3>
+                            <ul>
+                                <li>Формат: только .xlsx (Excel 2007+)</li>
+                                <li>Заголовки в первой строке обязательны</li>
+                                <li>Структура колонок зависит от шаблона (см. описание при загрузке)</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Файл не обрабатывается?</h4>
+                                <p>Проверьте формат (.xlsx), откройте в Excel и убедитесь что заголовки в первой строке. Пересохраните файл.</p>
+                            </div>
+                        </section>
+
+                        <!-- 7. Настройки -->
+                        <section class="doc-section" id="sync">
+                            <h2>7. Настройки</h2>
+
+                            <p>Страница профиля, облачного хранения и управления сессией.</p>
+
+                            <h3>Секции страницы:</h3>
+                            <ul>
+                                <li><strong>Профиль:</strong> Имя и email авторизованного пользователя</li>
+                                <li><strong>Статус облака:</strong> Подключено / Не подключено</li>
+                                <li><strong>Сессия:</strong> Время до истечения токена</li>
+                                <li><strong>Управление:</strong> Кнопки действий</li>
+                            </ul>
+
+                            <h3>Доступные действия:</h3>
+                            <ul>
+                                <li><strong>Экспорт в облако:</strong> Сохранить данные в Google Drive</li>
+                                <li><strong>Импорт из облака:</strong> Загрузить данные из облака</li>
+                                <li><strong>Очистить кэш:</strong> Принудительная перезагрузка данных</li>
+                                <li><strong>Выйти:</strong> Завершить сессию и очистить данные</li>
+                            </ul>
+
+                            <h3>Облачное хранение:</h3>
+                            <ul>
+                                <li>Данные хранятся в Google Drive (Apps Script)</li>
+                                <li>Аватары партнёров — в папке images</li>
+                                <li>При выходе все кэшированные данные очищаются</li>
+                            </ul>
+
+                            <h3>Сессия:</h3>
+                            <ul>
+                                <li><strong>Время жизни:</strong> 8 часов после авторизации</li>
+                                <li><strong>Отображение:</strong> Время до истечения в секции "Сессия"</li>
+                                <li><strong>Истечение:</strong> Автоматический редирект на страницу входа</li>
+                            </ul>
+
+                            <div class="troubleshooting-item">
+                                <h4>Пример: Данные не синхронизируются?</h4>
+                                <p>Нажмите "Очистить кэш" → перезагрузите страницу → попробуйте снова. Проверьте статус облака (должен быть "Подключено").</p>
+                            </div>
+                        </section>
+
+                        <!-- 8. Главная -->
+                        <section class="doc-section" id="home">
+                            <h2>8. Главная</h2>
+
+                            <p>Стартовая страница с навигацией по всем модулям системы.</p>
+
+                            <h3>Интерфейс:</h3>
+                            <ul>
+                                <li><strong>Сетка модулей:</strong> 6 карточек (3x2 на десктопе)</li>
+                                <li><strong>Боковое меню:</strong> Навигация с возможностью сворачивания</li>
+                                <li><strong>Заголовок:</strong> "AIAdminka" в центре</li>
+                            </ul>
+
+                            <h3>Карточки модулей:</h3>
+                            <ul>
+                                <li><strong>Отчеты:</strong> Обработка Excel файлов</li>
+                                <li><strong>Сотрудники:</strong> Управление командой</li>
+                                <li><strong>Расчет трафика:</strong> Аналитика партнёров</li>
+                                <li><strong>Партнеры:</strong> База партнёров</li>
+                                <li><strong>Документация:</strong> Справка и changelog</li>
+                                <li><strong>Настройки:</strong> Профиль и синхронизация</li>
+                            </ul>
+
+                            <h3>Сайдбар:</h3>
+                            <ul>
+                                <li>Кнопка со стрелкой — сворачивание/разворачивание</li>
+                                <li>Активный пункт — подсвечен жёлтым</li>
+                                <li>"О разработке" — информация о проекте и контакты</li>
+                                <li>Версия — внизу сайдбара</li>
+                            </ul>
+
+                            <h3>Дизайн:</h3>
+                            <ul>
+                                <li><strong>Тема:</strong> Тёмная (#1a1a1a, #2e2e2e)</li>
+                                <li><strong>Сайдбар:</strong> Светлый (#e8e8e8)</li>
+                                <li><strong>Акцент:</strong> Жёлтый (#fdbe2f)</li>
+                                <li><strong>Шрифт:</strong> TT Firs Neue</li>
+                                <li><strong>Адаптивность:</strong> 3→2→1 колонки</li>
+                            </ul>
+                        </section>
+
+                        <!-- 9. Решение проблем -->
+                        <section class="doc-section" id="troubleshooting">
+                            <h2>9. Решение проблем</h2>
+
+                            <h3>Авторизация:</h3>
+                            <div class="troubleshooting-item">
+                                <h4>Не могу войти / "Доступ запрещён"</h4>
+                                <ul>
+                                    <li>Нажмите "Запросить доступ" и подождите одобрения</li>
+                                    <li>Проверьте статус через "Проверить доступ"</li>
+                                    <li>Свяжитесь с администратором (Reddy ID: 62219492522)</li>
+                                </ul>
+                            </div>
+
+                            <div class="troubleshooting-item">
+                                <h4>Сессия истекла</h4>
+                                <ul>
+                                    <li>Нажмите "Войти через Google" повторно</li>
+                                    <li>Сессия длится 8 часов</li>
+                                </ul>
+                            </div>
+
+                            <h3>Данные:</h3>
+                            <div class="troubleshooting-item">
+                                <h4>Данные не сохраняются</h4>
+                                <ul>
+                                    <li>Проверьте статус облака в Настройках</li>
+                                    <li>Нажмите "Очистить кэш" и перезагрузите</li>
+                                    <li>Проверьте свободное место в localStorage (F12 → Application)</li>
+                                </ul>
+                            </div>
+
+                            <div class="troubleshooting-item">
+                                <h4>Аватары не загружаются</h4>
+                                <ul>
+                                    <li>Проверьте подключение к интернету</li>
+                                    <li>Аватары хранятся в Google Drive</li>
+                                    <li>Попробуйте перезагрузить страницу</li>
+                                </ul>
+                            </div>
+
+                            <h3>Файлы:</h3>
+                            <div class="troubleshooting-item">
+                                <h4>Excel файл не обрабатывается</h4>
+                                <ul>
+                                    <li>Проверьте формат (.xlsx, не .xls)</li>
+                                    <li>Откройте в Excel → проверьте заголовки в 1 строке</li>
+                                    <li>Пересохраните файл</li>
+                                </ul>
+                            </div>
+
+                            <h3>Полный сброс:</h3>
+                            <ol>
+                                <li>Сначала экспортируйте данные!</li>
+                                <li>F12 → Application → Local Storage</li>
+                                <li>Удалите записи AIAdminka</li>
+                                <li>Перезагрузите страницу</li>
+                            </ol>
+
+                            <div class="warning">
+                                <h4>Внимание!</h4>
+                                <p>При сбросе ВСЕ локальные данные будут удалены. Данные в облаке сохранятся.</p>
+                            </div>
+
+                            <h3>Системные требования:</h3>
+                            <ul>
+                                <li>Chrome 80+, Firefox 75+, Safari 13+, Edge 80+</li>
+                                <li>JavaScript включён, Cookies разрешены</li>
+                                <li>Доступ к googleapis.com и accounts.google.com</li>
+                            </ul>
+                        </section>
+
+                        <!-- 10. Архитектура -->
+                        <section class="doc-section" id="architecture">
+                            <h2>10. Архитектура</h2>
+
+                            <p>Проект автономен — работает без установки программ (Node.js, Python и т.п.).</p>
+
+                            <h3>Структура:</h3>
+                            <ul>
+                                <li><strong>AIAdminka/</strong> — корневая папка проекта</li>
+                                <li><strong>shared/</strong> — общие модули для всех страниц</li>
+                                <li><strong>partners/, team-info/, ...</strong> — модули приложения</li>
+                                <li><strong>login/</strong> — страница авторизации</li>
+                                <li><strong>documentation/</strong> — документация и changelog</li>
+                            </ul>
+
+                            <h3>Папка shared/:</h3>
+                            <ul>
+                                <li><strong>auth-guard.js</strong> — проверка авторизации, редирект, logout</li>
+                                <li><strong>cloud-storage.js</strong> — работа с Google Drive (uploadImage, deleteImage)</li>
+                                <li><strong>storage.js</strong> — единый модуль для localStorage</li>
+                                <li><strong>utils.js</strong> — утилиты (escapeHtml, formatDate, loadJSON)</li>
+                                <li><strong>version.js</strong> — загрузка версии из changelog</li>
+                                <li><strong>icons.js</strong> — локальные SVG иконки</li>
+                                <li><strong>icons/</strong> — 32 SVG иконки</li>
+                            </ul>
+
+                            <h3>Хранение данных:</h3>
+                            <ul>
+                                <li><strong>localStorage:</strong> Локальный кэш (partners-data, team-info-data, ...)</li>
+                                <li><strong>Google Drive:</strong> Облачное хранение данных и аватаров</li>
+                                <li><strong>Apps Script:</strong> Бэкенд для обработки запросов</li>
+                            </ul>
+
+                            <h3>Безопасность (CSP):</h3>
+                            <ul>
+                                <li><strong>script-src 'self':</strong> только локальные скрипты</li>
+                                <li><strong>connect-src:</strong> self + Google APIs (script.google.com, accounts.google.com)</li>
+                                <li><strong>frame-ancestors 'self':</strong> защита от clickjacking</li>
+                            </ul>
+
+                            <h3>OAuth Flow:</h3>
+                            <ol>
+                                <li>Пользователь нажимает "Войти через Google"</li>
+                                <li>Редирект на accounts.google.com</li>
+                                <li>После авторизации — callback с токеном</li>
+                                <li>Токен сохраняется в localStorage (8 часов)</li>
+                                <li>AuthGuard проверяет токен на каждой странице</li>
+                            </ol>
+                        </section>
+
+                        <!-- 11. Дизайн-система -->
+                        <section class="doc-section" id="design-system">
+                            <h2>11. Дизайн-система</h2>
+
+                            <p>Минималистичная тёмная тема с 4 основными цветами. Дизайн в стиле тёмного стекломорфизма.</p>
+
+                            <!-- Цветовая палитра (4 цвета) -->
+                            <h3>Цветовая палитра</h3>
+                            <div class="ds-block">
+                                <div class="ds-colors-grid ds-colors-4">
+                                    <div class="ds-color-item ds-color-large">
+                                        <div class="ds-color-swatch ds-color-primary"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Жёлтый</span>
+                                            <span class="ds-color-role">Акцент, CTA, активные элементы</span>
+                                            <code>#fdbe2f</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item ds-color-large">
+                                        <div class="ds-color-swatch ds-color-white"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Белый</span>
+                                            <span class="ds-color-role">Текст, иконки</span>
+                                            <code>#f2f2f2</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item ds-color-large">
+                                        <div class="ds-color-swatch ds-color-gray"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Серый</span>
+                                            <span class="ds-color-role">Вторичный текст, границы</span>
+                                            <code>#6b6b6b</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item ds-color-large">
+                                        <div class="ds-color-swatch ds-color-black"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Чёрный</span>
+                                            <span class="ds-color-role">Фон, подложки</span>
+                                            <code>#0d0d0d</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Оттенки серого -->
+                            <h3>Оттенки серого</h3>
+                            <div class="ds-block">
+                                <div class="ds-colors-grid ds-colors-5">
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch ds-color-gray-light"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Светло-серый</span>
+                                            <span class="ds-color-var">--gray-light</span>
+                                            <code>#a0a0a0</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch ds-color-gray"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Серый</span>
+                                            <span class="ds-color-var">--gray</span>
+                                            <code>#6b6b6b</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch ds-color-gray-dark"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Средне-серый</span>
+                                            <span class="ds-color-var">--gray-medium</span>
+                                            <code>#3a3a3a</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch ds-color-gray-darker"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Тёмно-серый</span>
+                                            <span class="ds-color-var">--gray-dark</span>
+                                            <code>#252525</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch ds-color-bg-dark"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Очень тёмный</span>
+                                            <span class="ds-color-var">--gray-darker</span>
+                                            <code>#1a1a1a</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Статусные цвета -->
+                            <h3>Статусные цвета</h3>
+                            <div class="ds-block">
+                                <div class="ds-colors-grid ds-colors-5">
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch ds-color-success"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Зелёный</span>
+                                            <span class="ds-color-role">Успех, активный, онлайн</span>
+                                            <span class="ds-color-var">--status-green</span>
+                                            <code>#51cf66</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch ds-color-error"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Красный</span>
+                                            <span class="ds-color-role">Ошибка, удаление, опасность</span>
+                                            <span class="ds-color-var">--status-red</span>
+                                            <code>#ff6b6b</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch ds-color-warning"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Оранжевый</span>
+                                            <span class="ds-color-role">Предупреждение, ожидание</span>
+                                            <span class="ds-color-var">--status-orange</span>
+                                            <code>#ff922b</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch ds-color-blue"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Синий</span>
+                                            <span class="ds-color-role">Информация, ссылки</span>
+                                            <span class="ds-color-var">--status-blue</span>
+                                            <code>#74c0fc</code>
+                                        </div>
+                                    </div>
+                                    <div class="ds-color-item">
+                                        <div class="ds-color-swatch ds-color-purple"></div>
+                                        <div class="ds-color-info">
+                                            <span class="ds-color-name">Фиолетовый</span>
+                                            <span class="ds-color-role">Особый статус, VIP</span>
+                                            <span class="ds-color-var">--status-purple</span>
+                                            <code>#da77f2</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Примеры использования статусов -->
+                            <h3>Примеры использования</h3>
+                            <div class="ds-block">
+                                <div class="ds-status-examples">
+                                    <div class="ds-status-example">
+                                        <span class="ds-status-dot ds-color-success"></span>
+                                        <span>Онлайн / Активен</span>
+                                    </div>
+                                    <div class="ds-status-example">
+                                        <span class="ds-status-dot ds-color-warning"></span>
+                                        <span>Ожидает / В процессе</span>
+                                    </div>
+                                    <div class="ds-status-example">
+                                        <span class="ds-status-dot ds-color-error"></span>
+                                        <span>Ошибка / Отклонено</span>
+                                    </div>
+                                    <div class="ds-status-example">
+                                        <span class="ds-status-dot ds-color-gray"></span>
+                                        <span>Офлайн / Неактивен</span>
+                                    </div>
+                                </div>
+                                <div class="ds-status-badges">
+                                    <span class="ds-badge-status ds-badge-success-demo">Выполнено</span>
+                                    <span class="ds-badge-status ds-badge-warning-demo">В обработке</span>
+                                    <span class="ds-badge-status ds-badge-error-demo">Отклонено</span>
+                                    <span class="ds-badge-status ds-badge-info-demo">Информация</span>
+                                </div>
+                            </div>
+
+                            <!-- Glassmorphism -->
+                            <h3>Glassmorphism</h3>
+                            <div class="ds-block">
+                                <p class="ds-hint">Полупрозрачные цвета для эффекта "матового стекла"</p>
+                                <div class="ds-glass-examples">
+                                    <div class="ds-glass-card ds-glass-demo-1">
+                                        <span class="ds-glass-label">--glass-bg</span>
+                                        <code>rgba(255, 255, 255, 0.02)</code>
+                                    </div>
+                                    <div class="ds-glass-card ds-glass-demo-2">
+                                        <span class="ds-glass-label">--glass-bg-light</span>
+                                        <code>rgba(255, 255, 255, 0.04)</code>
+                                    </div>
+                                    <div class="ds-glass-card ds-glass-demo-3">
+                                        <span class="ds-glass-label">--glass-bg-hover</span>
+                                        <code>rgba(255, 255, 255, 0.06)</code>
+                                    </div>
+                                    <div class="ds-glass-card ds-glass-demo-accent">
+                                        <span class="ds-glass-label">Карточка с акцентом</span>
+                                        <code>border: --glass-border-hover</code>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Кнопки с эффектами -->
+                            <h3>Кнопки</h3>
+                            <div class="ds-block ds-buttons-demo">
+                                <div class="ds-buttons-section">
+                                    <!-- Базовое состояние -->
+                                    <div class="ds-buttons-row">
+                                        <span class="ds-state-label">Базовое</span>
+                                        <span class="ds-btn ds-btn-primary">Основная</span>
+                                        <span class="ds-btn ds-btn-secondary">Вторичная</span>
+                                        <span class="ds-btn ds-btn-primary">Контурная</span>
+                                    </div>
+                                    <!-- Наведение (статичный пример) -->
+                                    <div class="ds-buttons-row">
+                                        <span class="ds-state-label">Наведение</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-primary-hover-demo">Основная</span>
+                                        <span class="ds-btn ds-btn-secondary ds-btn-secondary-hover-demo">Вторичная</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-primary-hover-demo">Контурная</span>
+                                    </div>
+                                    <!-- Нажатие (статичный пример) -->
+                                    <div class="ds-buttons-row">
+                                        <span class="ds-state-label">Нажатие</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-primary-active-demo">Основная</span>
+                                        <span class="ds-btn ds-btn-secondary ds-btn-secondary-active-demo">Вторичная</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-primary-active-demo">Контурная</span>
+                                    </div>
+                                    <!-- Неактивно -->
+                                    <div class="ds-buttons-row">
+                                        <span class="ds-state-label">Неактивно</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-disabled">Основная</span>
+                                        <span class="ds-btn ds-btn-secondary ds-btn-disabled">Вторичная</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-disabled">Контурная</span>
+                                    </div>
+                                    <!-- Загрузка -->
+                                    <div class="ds-buttons-row">
+                                        <span class="ds-state-label">Загрузка</span>
+                                        <span class="ds-btn ds-btn-primary ds-btn-loading">
+                                            <span class="spinner spinner--dark"></span>
+                                        </span>
+                                        <span class="ds-btn ds-btn-secondary ds-btn-loading">
+                                            <span class="spinner"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>.btn-primary</code> | <code>.btn-secondary</code> | <code>.btn-primary</code> | <code>.btn-loading</code> | <code>disabled</code>
+                                </div>
+                            </div>
+
+                            <!-- Спиннер -->
+                            <h3>Спиннер</h3>
+                            <div class="ds-block">
+                                <div class="ds-component-row">
+                                    <div class="ds-spinner-item">
+                                        <span class="spinner spinner--sm"></span>
+                                        <span class="ds-spinner-label">Маленький</span>
+                                    </div>
+                                    <div class="ds-spinner-item">
+                                        <span class="spinner"></span>
+                                        <span class="ds-spinner-label">Стандартный</span>
+                                    </div>
+                                    <div class="ds-spinner-item">
+                                        <span class="spinner spinner--lg"></span>
+                                        <span class="ds-spinner-label">Большой</span>
+                                    </div>
+                                    <div class="ds-spinner-item ds-spinner-block">
+                                        <span class="spinner spinner--lg"></span>
+                                        <span>Загрузка данных...</span>
+                                    </div>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>.spinner</code> | <code>.spinner--sm</code> | <code>.spinner--lg</code> | <code>.spinner--dark</code>
+                                </div>
+                            </div>
+
+                            <!-- Прокрутка -->
+                            <h3>Прокрутка</h3>
+                            <div class="ds-block">
+                                <div class="ds-scrollbar-demo">
+                                    <div class="ds-scroll-container">
+                                        <div class="ds-scroll-content">
+                                            <p>Прокрутка контента</p>
+                                            <p>Строка 2</p>
+                                            <p>Строка 3</p>
+                                            <p>Строка 4</p>
+                                            <p>Строка 5</p>
+                                            <p>Строка 6</p>
+                                            <p>Строка 7</p>
+                                            <p>Строка 8</p>
+                                        </div>
+                                    </div>
+                                    <div class="ds-scroll-specs">
+                                        <div class="ds-scroll-spec">
+                                            <span class="ds-spec-label">Ширина</span>
+                                            <span class="ds-spec-value">6px</span>
+                                        </div>
+                                        <div class="ds-scroll-spec">
+                                            <span class="ds-spec-label">Трек</span>
+                                            <span class="ds-spec-value">прозрачный</span>
+                                        </div>
+                                        <div class="ds-scroll-spec">
+                                            <span class="ds-spec-label">Ползунок</span>
+                                            <span class="ds-spec-value">rgba(255,255,255,0.15)</span>
+                                        </div>
+                                        <div class="ds-scroll-spec">
+                                            <span class="ds-spec-label">Наведение</span>
+                                            <span class="ds-spec-value">rgba(253,190,47,0.4)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>::-webkit-scrollbar { width: 6px }</code> | <code>::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15) }</code>
+                                </div>
+                            </div>
+
+                            <!-- Бейджи -->
+                            <h3>Бейджи</h3>
+                            <div class="ds-block">
+                                <div class="ds-component-row">
+                                    <span class="role-badge role-admin">АДМИН</span>
+                                    <span class="role-badge role-leader">РУКОВОДИТЕЛЬ</span>
+                                    <span class="role-badge">СОТРУДНИК</span>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>.role-badge</code> | <code>.role-admin</code> | <code>.role-leader</code>
+                                </div>
+                            </div>
+
+                            <!-- Формы -->
+                            <h3>Формы</h3>
+                            <div class="ds-block">
+                                <div class="ds-form-demo">
+                                    <div class="form-group">
+                                        <label>Текстовое поле</label>
+                                        <input type="text" class="form-input" placeholder="Введите значение...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Выпадающий список</label>
+                                        <select class="form-select" required>
+                                            <option value="" disabled selected hidden>Выберите опцию</option>
+                                            <option value="1">Опция 1</option>
+                                            <option value="2">Опция 2</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Поиск</label>
+                                        <div class="search-input-wrapper">
+                                            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <circle cx="11" cy="11" r="8"/>
+                                                <path d="m21 21-4.35-4.35"/>
+                                            </svg>
+                                            <input type="text" class="form-input search-input" placeholder="Поиск...">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>.form-group</code> | <code>.form-input</code> | <code>.form-select</code>
+                                </div>
+                            </div>
+
+                            <!-- Карточки -->
+                            <h3>Карточки (Стекломорфизм)</h3>
+                            <div class="ds-block">
+                                <div class="ds-cards-demo">
+                                    <div class="ds-card-example">
+                                        <div class="ds-card-header">
+                                            <span>Заголовок карточки</span>
+                                            <span class="badge badge-active">Активно</span>
+                                        </div>
+                                        <div class="ds-card-body">
+                                            <p>Содержимое карточки с backdrop-filter: blur(16px) эффектом.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ds-code-hint">
+                                    <code>background: rgba(40, 40, 40, 0.5)</code> | <code>backdrop-filter: blur(16px)</code> | <code>border: 1px solid rgba(255,255,255,0.08)</code>
+                                </div>
+                            </div>
+
+                            <!-- Типографика -->
+                            <h3>Типографика</h3>
+                            <div class="ds-block">
+                                <div class="ds-typography">
+                                    <div class="ds-type-row">
+                                        <span class="ds-type-label">Заголовок 1 (24px)</span>
+                                        <span class="ds-type-example ds-text-h1-demo">TT Firs Neue Жирный</span>
+                                    </div>
+                                    <div class="ds-type-row">
+                                        <span class="ds-type-label">Заголовок 2 (18px)</span>
+                                        <span class="ds-type-example ds-text-h2-demo">TT Firs Neue Жирный</span>
+                                    </div>
+                                    <div class="ds-type-row">
+                                        <span class="ds-type-label">Заголовок 3 (14px)</span>
+                                        <span class="ds-type-example ds-text-h3-demo">TT Firs Neue Жирный</span>
+                                    </div>
+                                    <div class="ds-type-row">
+                                        <span class="ds-type-label">Основной (13px)</span>
+                                        <span class="ds-type-example ds-text-body-demo">TT Firs Neue Обычный</span>
+                                    </div>
+                                    <div class="ds-type-row">
+                                        <span class="ds-type-label">Мелкий (11px)</span>
+                                        <span class="ds-type-example ds-text-small-demo">TT Firs Neue Тонкий</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Отступы и скругления -->
+                            <h3>Отступы и скругления</h3>
+                            <div class="ds-block">
+                                <div class="ds-spacing-demo">
+                                    <div class="ds-spacing-row">
+                                        <span class="ds-spacing-label">Отступы:</span>
+                                        <code>4px</code> <code>8px</code> <code>12px</code> <code>16px</code> <code>20px</code> <code>24px</code>
+                                    </div>
+                                    <div class="ds-spacing-row">
+                                        <span class="ds-spacing-label">Скругления:</span>
+                                        <span class="ds-radius-box ds-radius-4">4px</span>
+                                        <span class="ds-radius-box ds-radius-8">8px</span>
+                                        <span class="ds-radius-box ds-radius-12">12px</span>
+                                        <span class="ds-radius-box ds-radius-14">14px</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CSS переменные -->
+                            <h3>CSS Переменные</h3>
+                            <div class="ds-block">
+                                <div class="ds-variables">
+                                    <code>--accent: #fdbe2f</code>
+                                    <code>--glass-bg: rgba(255,255,255,0.02)</code>
+                                    <code>--glass-border: rgba(255,255,255,0.08)</code>
+                                    <code>--glass-blur: 16px</code>
+                                    <code>--radius-md: 8px</code>
+                                    <code>--transition-fast: 0.2s ease</code>
+                                </div>
+                                <div class="ds-code-hint ds-mt-12">
+                                    Все переменные в <code>shared/css/variables.css</code>
+                                </div>
+                            </div>
+
+                            <!-- Иконки -->
+                            <h3>Иконки</h3>
+                            <div class="ds-block">
+                                <p class="ds-text-caption-demo">SVG иконки проекта разделены на 2 категории</p>
+
+                                <div class="ds-icons-categories">
+                                    <div class="ds-icons-category">
+                                        <span class="ds-icons-cat-title">Навигация</span>
+                                        <span class="ds-icons-cat-count">11 иконок</span>
+                                        <span class="ds-icons-cat-path"><code>icons/</code></span>
+                                    </div>
+                                    <div class="ds-icons-category">
+                                        <span class="ds-icons-cat-title">UI элементы</span>
+                                        <span class="ds-icons-cat-count">42 иконки</span>
+                                        <span class="ds-icons-cat-path"><code>shared/icons/</code></span>
+                                    </div>
+                                </div>
+
+                                <button class="ds-icons-btn" data-action="show-icons-modal">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="7" height="7"/>
+                                        <rect x="14" y="3" width="7" height="7"/>
+                                        <rect x="14" y="14" width="7" height="7"/>
+                                        <rect x="3" y="14" width="7" height="7"/>
+                                    </svg>
+                                    Открыть каталог иконок
+                                </button>
+                            </div>
+                        </section>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- Icons Modal -->
+    <div class="icons-modal" id="iconsModal" data-action="close-modal-backdrop">
+        <div class="icons-modal-content">
+            <div class="icons-modal-header">
+                <h3>Каталог иконок (53 шт.)</h3>
+                <button class="icons-modal-close" data-action="hide-icons-modal">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="icons-modal-body">
+                <div class="icons-section">
+                    <h4 class="icons-section-title">Навигация <span class="icons-section-path">icons/</span></h4>
+                    <div class="icons-grid" id="iconsGridNav"></div>
+                </div>
+                <div class="icons-section">
+                    <h4 class="icons-section-title">UI элементы <span class="icons-section-path">shared/icons/</span></h4>
+                    <div class="icons-grid" id="iconsGridUI"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal Container (loaded via ComponentLoader) -->
+    <div id="about-modal-container"></div>
+
+    <!-- Shared JS -->
+    <script src="../shared/js/component-loader.js"></script>
+    <script src="../shared/js/sidebar-controller.js"></script>
+    <script src="../shared/js/about-modal.js"></script>
+    <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/error-handler.js"></script>
+    <script src="../shared/utils.js"></script>
+    <script src="../shared/version.js"></script>
+    <script src="../shared/env-config.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/auth-guard.js"></script>
+    <script src="../shared/roles-config.js"></script>
+    <script src="../shared/role-guard.js"></script>
+    <script src="../shared/js/page-lifecycle.js"></script>
+
+    <!-- Module JS -->
+    <script src="js/changelog.js"></script>
+    <script src="js/documentation.js"></script>
+</body>
+</html>

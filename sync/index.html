@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com; frame-ancestors 'self'">
+    <title>Настройки - AIAdminka</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
+    <!-- Design System (base styles) -->
+    <link rel="stylesheet" href="../shared/css/design-system.css">
+    <!-- Module-specific styles -->
+    <link rel="stylesheet" href="css/sync.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Container (loaded via ComponentLoader) -->
+        <div id="sidebar-container"></div>
+
+        <!-- Loading state (visible until lifecycle-ready) -->
+        <div class="page-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header -->
+            <header class="global-header">
+                <div class="header-title">Настройки</div>
+                <div class="header-status" id="connectionStatus">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Подключено</span>
+                </div>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Loading state -->
+                <div class="loading-state" id="settingsLoadingState">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Загрузка профиля...</div>
+                </div>
+
+                <div class="settings-layout hidden" id="settingsLayout">
+
+                    <!-- Left Column: Profile -->
+                    <div class="settings-column settings-column-main">
+
+                        <!-- Profile Card -->
+                        <div class="settings-card">
+                            <div class="profile-header">
+                                <div class="profile-avatar" id="userAvatar"></div>
+                                <div class="profile-info">
+                                    <div class="profile-name" id="userName">-</div>
+                                    <div class="profile-email" id="userEmail">-</div>
+                                    <div class="profile-role">
+                                        <span class="role-badge" id="userRole">-</span>
+                                        <span class="team-name-editable" id="teamNameDisplay" data-leader-only data-action="edit-team-name">
+                                            <span id="teamNameText">Команда</span>
+                                            <img src="../shared/icons/pen.svg" width="12" height="12" alt="Редактировать">
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Profile Form -->
+                        <div class="settings-card">
+                            <div class="card-title">Профиль</div>
+                            <form class="profile-form" id="profileForm">
+                                <!-- Основная информация -->
+                                <div class="form-section">
+                                    <div class="form-section-title">Основная информация</div>
+                                    <div class="form-row">
+                                        <div class="form-group form-group--compact">
+                                            <label>ФИО</label>
+                                            <input type="text" class="form-input" id="profileName" name="name" placeholder="Иванов Иван Иванович">
+                                        </div>
+                                        <div class="form-group form-group--compact">
+                                            <label>Роль</label>
+                                            <select class="form-select" id="profilePosition" name="position" disabled></select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Идентификация -->
+                                <div class="form-section">
+                                    <div class="form-section-title">Идентификация</div>
+                                    <div class="form-row">
+                                        <div class="form-group form-group--compact">
+                                            <label>Reddy ID</label>
+                                            <input type="text" class="form-input" id="profileReddyId" name="reddyId" readonly disabled>
+                                        </div>
+                                        <div class="form-group form-group--compact">
+                                            <label>Логин CRM</label>
+                                            <input type="text" class="form-input" id="profileCrmLogin" name="crmLogin" placeholder="ivanov.i">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Контакты -->
+                                <div class="form-section">
+                                    <div class="form-section-title">Контакты</div>
+                                    <div class="form-row">
+                                        <div class="form-group form-group--compact">
+                                            <label>Рабочий Telegram</label>
+                                            <div class="input-with-prefix">
+                                                <span>@</span>
+                                                <input type="text" id="profileCorpTelegram" name="corpTelegram" placeholder="work_username">
+                                            </div>
+                                        </div>
+                                        <div class="form-group form-group--compact">
+                                            <label>Личный Telegram</label>
+                                            <div class="input-with-prefix">
+                                                <span>@</span>
+                                                <input type="text" id="profilePersonalTelegram" name="personalTelegram" placeholder="username">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group form-group--compact">
+                                            <label>Рабочая почта</label>
+                                            <input type="email" class="form-input" id="profileCorpEmail" name="corpEmail" placeholder="work@company.com" readonly disabled>
+                                        </div>
+                                        <div class="form-group form-group--compact">
+                                            <label>Личная почта</label>
+                                            <input type="email" class="form-input" id="profilePersonalEmail" name="personalEmail" placeholder="personal@mail.com">
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group form-group--compact">
+                                            <label>Рабочий телефон</label>
+                                            <input type="tel" class="form-input" id="profileCorpPhone" name="corpPhone" placeholder="+7 999 123-45-67">
+                                        </div>
+                                        <div class="form-group form-group--compact">
+                                            <label>Личный телефон</label>
+                                            <input type="tel" class="form-input" id="profilePersonalPhone" name="personalPhone" placeholder="+7 999 123-45-67">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Информация о работе -->
+                                <div class="form-section">
+                                    <div class="form-section-title">Информация о работе</div>
+                                    <div class="form-row">
+                                        <div class="form-group form-group--compact">
+                                            <label>День рождения</label>
+                                            <input type="date" class="form-input" id="profileBirthday" name="birthday">
+                                        </div>
+                                        <div class="form-group form-group--compact">
+                                            <label>Начало работы</label>
+                                            <input type="date" class="form-input" id="profileStartDate" name="startDate">
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group form-group--compact">
+                                            <label>Офис</label>
+                                            <input type="text" class="form-input" id="profileOffice" name="office" placeholder="Москва">
+                                        </div>
+                                        <div class="form-group form-group--compact">
+                                            <label>Компания</label>
+                                            <input type="text" class="form-input" id="profileCompany" name="company" placeholder='ООО "Компания"'>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Дополнительно -->
+                                <div class="form-section">
+                                    <div class="form-section-title">Дополнительно</div>
+                                    <div class="form-group form-group--compact">
+                                        <label>Примечание</label>
+                                        <textarea class="form-textarea" id="profileComment" name="comment" placeholder="Любая дополнительная информация..." rows="2"></textarea>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" id="btnSaveProfile">
+                                    Сохранить изменения
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Team & System -->
+                    <div class="settings-column settings-column-side">
+
+                        <!-- Team Info (for non-leaders) -->
+                        <div class="settings-card hidden" id="teamInfoSection">
+                            <div class="card-title">Команда</div>
+                            <div class="info-row">
+                                <span class="info-label">Руководитель</span>
+                                <span class="info-value" id="teamLeader">-</span>
+                            </div>
+                            <p class="card-hint" id="roleDescription"></p>
+                        </div>
+
+                        <!-- System Info -->
+                        <div class="settings-card">
+                            <div class="card-title">Система</div>
+
+                            <div class="system-row">
+                                <div class="system-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+                                    </svg>
+                                </div>
+                                <div class="system-info">
+                                    <span class="system-label">Облачное хранилище</span>
+                                    <span class="system-value" id="storageStatus">Подключено</span>
+                                </div>
+                            </div>
+
+                            <div class="system-row">
+                                <div class="system-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <polyline points="12,6 12,12 16,14"/>
+                                    </svg>
+                                </div>
+                                <div class="system-info">
+                                    <span class="system-label">Сессия до</span>
+                                    <span class="system-value" id="sessionExpiry">-</span>
+                                </div>
+                            </div>
+
+                            <div class="system-row">
+                                <div class="system-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3,6 5,6 6,18 18,18 19,6"/>
+                                        <line x1="8" y1="10" x2="8" y2="14"/>
+                                        <line x1="12" y1="10" x2="12" y2="14"/>
+                                        <line x1="16" y1="10" x2="16" y2="14"/>
+                                    </svg>
+                                </div>
+                                <div class="system-info">
+                                    <span class="system-label">Локальный кэш</span>
+                                    <span class="system-value" id="localCacheSize">-</span>
+                                </div>
+                                <button class="btn btn-primary btn-sm" data-action="clear-cache">Очистить</button>
+                            </div>
+                        </div>
+
+                        <!-- Danger Zone -->
+                        <div class="settings-card card-danger">
+                            <div class="card-title">Опасная зона</div>
+                            <p class="card-hint">Выход из системы удалит локальные данные авторизации.</p>
+                            <button class="btn btn-danger" data-action="logout">Выйти из аккаунта</button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal Container (loaded via ComponentLoader) -->
+    <div id="about-modal-container"></div>
+
+    <!-- Confirm Logout Modal (module-specific) -->
+    <div class="modal" id="logoutModal">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Выход из аккаунта</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="logoutModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите выйти?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="close-modal" data-modal="logoutModal">Отмена</button>
+                <button class="btn btn-danger" data-action="confirm-logout">Выйти</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Team Name Modal -->
+    <div class="modal" id="teamNameModal">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Название команды</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="teamNameModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group form-group--compact">
+                    <label>Введите название</label>
+                    <input type="text" class="form-input" id="teamNameModalInput" placeholder="Название команды">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="close-modal" data-modal="teamNameModal">Отмена</button>
+                <button class="btn btn-primary" data-action="save-team-name">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear Cache Confirmation Modal -->
+    <div class="modal" id="clearCacheModal">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Очистить кэш</h2>
+                <button class="modal-close" data-action="close-modal" data-modal="clearCacheModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Очистить кэш данных? Данные будут загружены заново из облака при следующем посещении.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="close-modal" data-modal="clearCacheModal">Отмена</button>
+                <button class="btn btn-danger" data-action="confirm-clear-cache">Очистить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shared JS -->
+    <script src="../shared/js/component-loader.js"></script>
+    <script src="../shared/js/sidebar-controller.js"></script>
+    <script src="../shared/js/about-modal.js"></script>
+    <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/error-handler.js"></script>
+    <script src="../shared/version.js"></script>
+    <script src="../shared/storage.js"></script>
+    <script src="../shared/env-config.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/auth-guard.js"></script>
+    <script src="../shared/roles-config.js"></script>
+    <script src="../shared/role-guard.js"></script>
+    <script src="../shared/js/page-lifecycle.js"></script>
+
+    <!-- Module JS -->
+    <script src="js/settings.js"></script>
+</body>
+</html>

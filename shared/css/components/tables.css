@@ -1,0 +1,79 @@
+/* ============================================================
+   Tables Component
+   ============================================================ */
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th,
+.table td {
+    padding: var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.table th {
+    color: var(--gray-light);
+    font-weight: 400;
+    font-size: var(--font-size-sm);
+}
+
+.table td {
+    color: var(--white);
+    font-size: var(--font-size-base);
+}
+
+.table tr:hover {
+    background: var(--glass-bg-hover);
+}
+
+.table-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+/* Table container with scroll */
+.table-container {
+    overflow-x: auto;
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+}
+
+/* Sortable headers */
+.table th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.table th.sortable:hover {
+    color: var(--white);
+}
+
+/* Empty state */
+.table-empty {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--gray-light);
+}
+
+/* ==================== TABLE COMPACT ==================== */
+.table--compact th,
+.table--compact td {
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+/* ==================== TABLE UPPERCASE HEADERS ==================== */
+.table--headers-uppercase th {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: var(--font-size-xs);
+}
+
+/* ==================== TABLE WITH BG HEADER ==================== */
+.table--header-bg th {
+    background: rgba(0, 0, 0, 0.2);
+}

@@ -1,0 +1,90 @@
+/* ============================================================
+   AIAdminka Design System - CSS Variables
+   ============================================================ */
+
+:root {
+    /* ==================== COLORS ==================== */
+
+    /* Base */
+    --white: #f2f2f2;
+    --black: #0a0a0a;
+
+    /* Grays */
+    --gray: #6b6b6b;
+    --gray-light: #a0a0a0;
+    --gray-medium: #3a3a3a;
+    --gray-dark: #252525;
+    --gray-darker: #1a1a1a;
+    --bg-black: #0d0d0d;
+
+    /* Accent (yellow) */
+    --accent: #fdbe2f;
+    --accent-hover: #e5a829;
+    --accent-muted: rgba(253, 190, 47, 0.6);
+    --accent-bg: rgba(253, 190, 47, 0.15);
+    --accent-bg-hover: rgba(253, 190, 47, 0.25);
+
+    /* Status */
+    --status-green: #51cf66;
+    --status-red: #ff6b6b;
+    --status-yellow: #fdbe2f;
+    --status-orange: #ff922b;
+    --status-blue: #74c0fc;
+    --status-purple: #da77f2;
+
+    /* Delete */
+    --red-delete: #ff6b6b;
+
+    /* Input focus */
+    --input-focus-bg: #2e2e2e;
+
+    /* ==================== GLASSMORPHISM ==================== */
+    --glass-bg: rgba(255, 255, 255, 0.02);
+    --glass-bg-light: rgba(255, 255, 255, 0.04);
+    --glass-bg-hover: rgba(255, 255, 255, 0.06);
+    --glass-bg-heavy: rgba(30, 30, 30, 0.95);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-border-hover: rgba(253, 190, 47, 0.3);
+    --glass-blur: 16px;
+    --glass-blur-strong: 24px;
+
+    /* ==================== TYPOGRAPHY ==================== */
+    --font-family: 'TT Firs Neue', 'Segoe UI', sans-serif;
+    --font-size-xs: 10px;
+    --font-size-sm: 11px;
+    --font-size-base: 13px;
+    --font-size-md: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 18px;
+    --font-size-2xl: 24px;
+
+    /* ==================== SPACING ==================== */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    --spacing-2xl: 24px;
+
+    /* ==================== BORDER RADIUS ==================== */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    --radius-xl: 12px;
+    --radius-2xl: 14px;
+
+    /* ==================== SHADOWS ==================== */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+    /* ==================== TRANSITIONS ==================== */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+
+    /* ==================== Z-INDEX ==================== */
+    --z-sidebar: 50;
+    --z-header: 100;
+    --z-dropdown: 500;
+    --z-modal: 2000;
+}

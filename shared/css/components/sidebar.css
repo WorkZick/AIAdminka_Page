@@ -1,0 +1,452 @@
+/* ============================================================
+   AIAdminka Design System - Sidebar
+   ============================================================ */
+
+/* ==================== SIDEBAR WRAPPER ==================== */
+/* Container для динамической загрузки через ComponentLoader */
+#sidebar-container {
+    display: contents;
+}
+
+/* ==================== SIDEBAR ==================== */
+.sidebar {
+    width: 200px;
+    min-width: 200px;
+    background: rgba(20, 20, 20, 0.8);
+    backdrop-filter: blur(var(--glass-blur-strong));
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong));
+    border-right: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
+    transition: width var(--transition-normal), min-width var(--transition-normal);
+    z-index: var(--z-sidebar);
+}
+
+.sidebar.no-transition,
+.sidebar.no-transition * {
+    transition: none !important;
+}
+
+.sidebar.collapsed {
+    width: 60px;
+    min-width: 60px;
+}
+
+/* ==================== BACK BUTTON (Toggle) ==================== */
+.back-button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 16px;
+    height: 60px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.back-button:hover {
+    background: var(--glass-bg-hover);
+}
+
+.back-button img {
+    width: 24px;
+    height: 24px;
+    transition: transform var(--transition-normal);
+    filter: brightness(0) invert(1);
+    opacity: 0.7;
+}
+
+.sidebar.collapsed .back-button img {
+    transform: rotate(180deg);
+}
+
+/* ==================== SIDEBAR MENU ==================== */
+.sidebar-menu {
+    flex: 1;
+    padding-top: 40px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==================== MENU ITEM ==================== */
+.menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    color: var(--gray-light);
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+}
+
+.menu-item span {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.menu-item img {
+    width: 18px;
+    height: 18px;
+    filter: brightness(0) invert(1);
+    opacity: 0.5;
+    flex-shrink: 0;
+}
+
+.menu-item:hover {
+    background: var(--glass-bg-hover);
+    color: var(--white);
+}
+
+.menu-item:hover img {
+    opacity: 0.8;
+}
+
+/* Active state */
+.menu-item.active {
+    background: linear-gradient(90deg, rgba(253, 190, 47, 0.10) 0%, transparent 100%);
+    border-left: 3px solid var(--accent);
+    color: var(--white);
+    font-weight: 700;
+}
+
+.menu-item.active img {
+    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
+    opacity: 1;
+}
+
+/* Collapsed state */
+.sidebar.collapsed .menu-item {
+    justify-content: center;
+    padding: 14px;
+}
+
+.sidebar.collapsed .menu-item span {
+    display: none;
+}
+
+/* ==================== MENU SEPARATOR ==================== */
+.menu-separator {
+    height: 1px;
+    background: var(--glass-border);
+    margin: 12px 16px;
+}
+
+.sidebar.collapsed .menu-separator {
+    margin: 12px 8px;
+}
+
+/* ==================== VERSION INFO ==================== */
+/* Стилизован как menu-item для единообразия */
+.version-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    color: var(--gray-light);
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.version-info:hover {
+    background: var(--glass-bg-hover);
+    color: var(--white);
+}
+
+.version-info:hover img {
+    opacity: 0.8;
+}
+
+.version-info .version-text-full {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.version-info .version-number {
+    font-size: var(--font-size-xs);
+    color: var(--gray);
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.version-info img {
+    width: 18px;
+    height: 18px;
+    filter: brightness(0) invert(1);
+    opacity: 0.5;
+    flex-shrink: 0;
+    transition: opacity var(--transition-fast);
+}
+
+/* Collapsed state */
+.sidebar.collapsed .version-info {
+    justify-content: center;
+    padding: 14px;
+}
+
+.sidebar.collapsed .version-info .version-text-full,
+.sidebar.collapsed .version-info .version-number {
+    display: none;
+}
+
+/* ==================== REQUESTS BADGE ==================== */
+.requests-badge {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    background: var(--status-red);
+    border-radius: 9px;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: var(--white);
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.requests-badge:not(:empty) {
+    display: flex;
+}
+
+.sidebar.collapsed .requests-badge {
+    top: 4px;
+    right: 4px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 9px;
+}
+
+/* ==================== AUTH USER INFO ==================== */
+.auth-user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin: 10px;
+}
+
+.auth-user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--white);
+    overflow: hidden;
+}
+
+.auth-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.auth-user-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.auth-user-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.auth-user-email {
+    font-size: 11px;
+    opacity: 0.7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.auth-logout-btn {
+    background: none;
+    border: none;
+    padding: 6px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity var(--transition-fast);
+    color: inherit;
+}
+
+.auth-logout-btn:hover {
+    opacity: 1;
+}
+
+.sidebar.collapsed .auth-user-details,
+.sidebar.collapsed .auth-logout-btn {
+    display: none;
+}
+
+.sidebar.collapsed .auth-user-info {
+    justify-content: center;
+    padding: 10px;
+}
+
+/* ==================== ROLE GUARDS ==================== */
+/* Скрытые элементы по ролям */
+[data-hidden-by-role] {
+    display: none !important;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 60px;
+        min-width: 60px;
+    }
+
+    .sidebar .menu-item span {
+        display: none;
+    }
+
+    .sidebar .menu-item {
+        justify-content: center;
+        padding: 14px;
+    }
+
+    .sidebar .version-info {
+        justify-content: center;
+        padding: 14px;
+    }
+
+    .sidebar .version-info .version-text-full,
+    .sidebar .version-info .version-number {
+        display: none;
+    }
+
+    .sidebar .menu-separator {
+        margin: 12px 8px;
+    }
+}
+
+/* ==================== TOKEN REFRESH PROMPT ==================== */
+.token-prompt-box {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 99999;
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 14px 16px;
+    min-width: 240px;
+    font-family: 'TT Firs Neue', 'Segoe UI', system-ui, sans-serif;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.token-prompt-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.token-prompt-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--accent-bg);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.token-prompt-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: var(--accent);
+}
+
+.token-prompt-text {
+    flex: 1;
+}
+
+.token-prompt-title {
+    color: #f2f2f2;
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.token-prompt-subtitle {
+    color: #6b6b6b;
+    font-size: 11px;
+}
+
+.token-prompt-time {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.token-prompt-time.warning {
+    color: #ff6b6b;
+}
+
+.token-prompt-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.token-prompt-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: none;
+}
+
+.token-prompt-btn-primary {
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--white);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+}
+
+.token-prompt-btn-primary:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.token-prompt-btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: #6b6b6b;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.token-prompt-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #a0a0a0;
+}

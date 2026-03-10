@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com; frame-ancestors 'self'">
+    <title>Сотрудники - AIAdminka</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
+    <link rel="stylesheet" href="../shared/css/design-system.css">
+    <link rel="stylesheet" href="css/team-info.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Container -->
+        <div id="sidebar-container"></div>
+
+        <!-- Loading state (visible until lifecycle-ready) -->
+        <div class="page-loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Загрузка...</div>
+        </div>
+
+        <!-- Main wrapper -->
+        <div class="main-wrapper">
+            <!-- Global header -->
+            <header class="global-header">
+                <div class="header-title">Сотрудники</div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" data-action="team-showExportDialog">
+                        Экспорт списка
+                    </button>
+                    <button class="btn btn-primary" data-action="team-showImportDialog">
+                        Импорт списка
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content area -->
+            <div class="content-area">
+                <!-- Sub-tabs (видимы только leader/admin) -->
+                <div class="sub-tabs" data-requires-edit="team-management">
+                    <button class="sub-tab active" data-action="team-switchSubtab" data-value="employees">Список сотрудников</button>
+                    <button class="sub-tab" data-action="team-switchSubtab" data-value="invites">Приглашения</button>
+                </div>
+
+                <!-- Sub-tab: Список сотрудников (default) -->
+                <div class="sub-tab-content active" id="subtab-employees">
+                <div class="employees-layout">
+                <!-- Table section -->
+                <main class="table-section">
+                    <!-- Section header -->
+                    <header class="section-header">
+                        <div class="header-left-section">
+                            <button class="btn btn-primary" data-action="team-showAddModal">Добавить</button>
+                            <div class="stats-inline" id="statsInline">
+                                <div class="stat-badge green" title="Работает"><span id="workingCount">0</span></div>
+                                <div class="stat-badge yellow" title="В отпуске"><span id="leaveCount">0</span></div>
+                                <div class="stat-badge purple" title="Болеет"><span id="sickCount">0</span></div>
+                                <div class="stat-badge blue" title="Командировка"><span id="tripCount">0</span></div>
+                                <div class="stat-badge red" title="Уволен"><span id="firedCount">0</span></div>
+                            </div>
+                        </div>
+                        <div class="search-box">
+                            <img class="search-icon" src="../shared/icons/search.svg" width="16" height="16" alt="Поиск">
+                            <input type="text" class="search-input" placeholder="Поиск по имени, должности..." id="searchInput" data-action="team-filterTable">
+                        </div>
+                    </header>
+
+                    <!-- Table -->
+                    <div class="table-container">
+                        <table class="employees-table hidden">
+                            <thead id="employeesTableHead">
+                                <tr>
+                                    <th class="col-status">
+                                        <div class="sort-header" data-action="team-sortBy" data-value="status">
+                                            Статус
+                                            <img src="../shared/icons/filter.svg" width="12" height="12" alt="Сортировка">
+                                        </div>
+                                    </th>
+                                    <th class="col-photo">Фото</th>
+                                    <th class="col-name">
+                                        <div class="sort-header" data-action="team-sortBy" data-value="name">
+                                            Ф.И.О.
+                                            <img src="../shared/icons/filter.svg" width="12" height="12" alt="Сортировка">
+                                        </div>
+                                    </th>
+                                    <th class="col-position">Роль</th>
+                                    <th class="col-crm">Логин CRM</th>
+                                    <th class="col-id">Reddy ID</th>
+                                    <th class="col-birthday">День рождения</th>
+                                    <th class="col-arrow"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="employeesTableBody">
+                                <!-- Generated by JS -->
+                            </tbody>
+                        </table>
+
+                        <!-- Loading spinner -->
+                        <div class="loading-state" id="loadingState">
+                            <div class="spinner"></div>
+                            <div class="loading-text">Загрузка сотрудников...</div>
+                        </div>
+
+                        <!-- Empty state -->
+                        <div class="empty-state hidden" id="emptyState">
+                            <img class="empty-state-icon" src="../shared/icons/partners.svg" alt="Team">
+                            <div class="empty-state-title">Команда пока пуста</div>
+                            <div class="empty-state-text">Добавьте первого сотрудника, чтобы начать</div>
+                            <button class="btn btn-primary" data-action="team-showAddModal">Добавить сотрудника</button>
+                        </div>
+                    </div>
+                </main>
+
+                <!-- Right panel -->
+                <aside class="right-panel" id="rightPanel">
+                    <!-- Hint panel (when nothing selected) -->
+                    <div class="hint-panel" id="hintPanel">
+                        <div class="tab-content active" id="tabStats">
+                            <div class="team-name" id="teamName">Команда</div>
+                            <div class="hint-icon">
+                                <img src="../shared/icons/team_info.svg" width="48" height="48" alt="">
+                            </div>
+                            <div class="hint-text">Выберите сотрудника из списка для просмотра информации</div>
+                            <div class="hint-divider"></div>
+                            <div class="hint-stats">
+                                <div class="hint-stat-item">
+                                    <span class="hint-stat-count" id="totalCount">0</span>
+                                    <span class="hint-stat-label">всего сотрудников</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Employee card -->
+                    <div class="employee-card hidden" id="employeeCard">
+                        <button class="card-close-btn" data-action="team-closeCard" title="Закрыть">
+                            <img src="../shared/icons/cross.svg" width="16" height="16" alt="Закрыть">
+                        </button>
+                        <div class="card-header">
+                            <div class="card-avatar">
+                                <img id="cardAvatar" class="hidden" src="" alt="">
+                                <div class="card-avatar-placeholder" id="cardAvatarPlaceholder">
+                                    <img src="../shared/icons/team_info.svg" width="32" height="32" alt="">
+                                </div>
+                            </div>
+                            <div class="card-info-section">
+                                <div class="card-name" id="cardFullName">Сотрудник</div>
+                                <div class="card-position" id="cardPosition">Роль</div>
+                                <div class="card-status-badge" id="cardStatusBadge" data-action="team-toggleStatusDropdown">
+                                    <span class="status-badge green" id="cardStatusText">Работает</span>
+                                    <img class="status-dropdown-icon" src="../shared/icons/arrow.svg" width="12" height="12" alt="Выбрать">
+                                    <div class="status-dropdown hidden" id="cardStatusDropdown">
+                                        <div class="status-option" data-action="team-changeStatus" data-value="Работает">
+                                            <span class="status-badge green">Работает</span>
+                                        </div>
+                                        <div class="status-option" data-action="team-changeStatus" data-value="В отпуске">
+                                            <span class="status-badge yellow">В отпуске</span>
+                                        </div>
+                                        <div class="status-option" data-action="team-changeStatus" data-value="Болеет">
+                                            <span class="status-badge purple">Болеет</span>
+                                        </div>
+                                        <div class="status-option" data-action="team-changeStatus" data-value="Командировка">
+                                            <span class="status-badge blue">Командировка</span>
+                                        </div>
+                                        <div class="status-option" data-action="team-changeStatus" data-value="Уволен">
+                                            <span class="status-badge red">Уволен</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body" id="cardBody">
+                            <!-- Info will be generated by JavaScript -->
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-primary" data-action="team-editFromCard">Редактировать</button>
+                            <button class="btn btn-danger" data-action="team-deleteFromCard">Удалить</button>
+                        </div>
+                    </div>
+
+                    <!-- Employee form -->
+                    <div class="employee-form hidden" id="employeeForm">
+                        <div class="form-header">
+                            <h3 class="form-title" id="formTitle">Новый сотрудник</h3>
+                            <button class="form-close-btn" data-action="team-closeForm" title="Закрыть">
+                                <img src="../shared/icons/cross.svg" width="16" height="16" alt="Закрыть">
+                            </button>
+                        </div>
+                        <div class="form-employee-info">
+                            <input type="file" id="formAvatarInput" class="hidden" accept="image/*" data-action="team-handleAvatarUpload">
+                            <div class="form-avatar" data-action="team-avatarClick">
+                                <img class="form-avatar-placeholder" src="../shared/icons/download_photo_placeholder.svg" alt="Загрузить фото">
+                                <img id="formAvatar" class="hidden" src="" alt="">
+                            </div>
+                            <div class="form-info-section">
+                                <input type="text" class="form-name-input" id="formFullName" placeholder="Ф.И.О.">
+                                <select class="form-position-input" id="formPosition">
+                                    <option value="">Выберите роль</option>
+                                </select>
+                                <div class="form-status-badge" id="formStatusBadge" data-action="team-toggleFormStatusDropdown">
+                                    <span class="status-badge green" id="formStatusText">Работает</span>
+                                    <img class="status-dropdown-icon" src="../shared/icons/arrow.svg" width="12" height="12" alt="Выбрать">
+                                    <div class="status-dropdown hidden" id="formStatusDropdown">
+                                        <div class="status-option" data-action="team-changeFormStatus" data-value="Работает">
+                                            <span class="status-badge green">Работает</span>
+                                        </div>
+                                        <div class="status-option" data-action="team-changeFormStatus" data-value="В отпуске">
+                                            <span class="status-badge yellow">В отпуске</span>
+                                        </div>
+                                        <div class="status-option" data-action="team-changeFormStatus" data-value="Болеет">
+                                            <span class="status-badge purple">Болеет</span>
+                                        </div>
+                                        <div class="status-option" data-action="team-changeFormStatus" data-value="Командировка">
+                                            <span class="status-badge blue">Командировка</span>
+                                        </div>
+                                        <div class="status-option" data-action="team-changeFormStatus" data-value="Уволен">
+                                            <span class="status-badge red">Уволен</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-body" id="formBody">
+                            <div class="form-section">
+                                <div class="form-section-title">Идентификация</div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Reddy ID</label>
+                                        <input type="text" id="formReddyId" placeholder="ID">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Логин CRM</label>
+                                        <input type="text" id="formCrmLogin" placeholder="login.i">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-section">
+                                <div class="form-section-title">Контакты</div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Рабочий Telegram</label>
+                                        <input type="text" id="formCorpTelegram" placeholder="@username">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Личный Telegram</label>
+                                        <input type="text" id="formPersonalTelegram" placeholder="@username">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Рабочая почта</label>
+                                        <input type="email" id="formCorpEmail" placeholder="work@company.com">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Личная почта</label>
+                                        <input type="email" id="formPersonalEmail" placeholder="personal@mail.com">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Рабочий телефон</label>
+                                        <input type="tel" id="formCorpPhone" placeholder="+7 999 123-45-67">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Личный телефон</label>
+                                        <input type="tel" id="formPersonalPhone" placeholder="+7 999 123-45-67">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-section">
+                                <div class="form-section-title">Информация о работе</div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>День рождения</label>
+                                        <input type="date" id="formBirthday">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Начало работы</label>
+                                        <input type="date" id="formStartDate">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Офис</label>
+                                        <input type="text" id="formOffice" placeholder="Москва">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Компания</label>
+                                        <input type="text" id="formCompany" placeholder='ООО "Компания"'>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-section">
+                                <div class="form-section-title">Дополнительно</div>
+                                <div class="form-field full-width">
+                                    <label>Примечание</label>
+                                    <textarea id="formComment" placeholder="Любая дополнительная информация..." rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-footer">
+                            <button class="btn btn-primary" data-action="team-closeForm">Отмена</button>
+                            <button class="btn btn-danger hidden" data-action="team-deleteFromForm" id="formDeleteBtn">Удалить</button>
+                            <button class="btn btn-primary" data-action="team-saveFromForm" id="formSaveBtn"><span id="formSaveBtnText">Сохранить</span></button>
+                        </div>
+                    </div>
+                </aside>
+                </div> <!-- /.employees-layout -->
+                </div> <!-- /#subtab-employees -->
+
+                <!-- Sub-tab: Приглашения (leader/admin only) -->
+                <div class="sub-tab-content" id="subtab-invites" data-requires-edit="team-management">
+                    <div class="invite-page">
+                        <!-- Header with mode toggle -->
+                        <header class="section-header">
+                            <div class="invite-mode-toggle">
+                                <button class="invite-mode active" data-type="guests" data-action="team-switchInviteType" data-value="guests">
+                                    Одобренные гости
+                                    <span class="stat-badge yellow" id="guestsCount">0</span>
+                                </button>
+                                <button class="invite-mode" data-type="manual" data-action="team-switchInviteType" data-value="manual">
+                                    Ручной ввод
+                                </button>
+                            </div>
+                        </header>
+
+                        <!-- Panel: Guests List (API) -->
+                        <div class="invite-panel" id="inviteFromGuests">
+                            <div class="guests-list" id="guestsList">
+                                <div class="loading-state">
+                                    <div class="spinner"></div>
+                                    <div class="loading-text">Загрузка списка гостей...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel: Manual Invite -->
+                        <div class="invite-panel hidden" id="inviteManual">
+                            <div class="tabs invite-manual-toggle">
+                                <button class="tab active" data-type="reddyId" data-action="team-switchInviteType" data-value="reddyId">По Reddy ID</button>
+                                <button class="tab" data-type="email" data-action="team-switchInviteType" data-value="email">По Email</button>
+                            </div>
+                            <div class="invite-form-fields">
+                                <div class="invite-input-group" id="inviteByReddyId">
+                                    <label>Reddy ID</label>
+                                    <input type="text" id="inviteReddyId" placeholder="Введите Reddy ID (11 цифр)" maxlength="11">
+                                </div>
+                                <div class="invite-input-group hidden" id="inviteByEmail">
+                                    <label>Email</label>
+                                    <input type="email" id="inviteEmail" placeholder="email@example.com">
+                                </div>
+                                <div class="invite-input-group">
+                                    <label>Роль</label>
+                                    <select class="form-select" id="inviteManualRole"></select>
+                                </div>
+                                <button class="btn btn-primary" data-action="team-sendInvite">Отправить приглашение</button>
+                            </div>
+                        </div>
+
+                        <!-- Panel: Pending Invites (Local) -->
+                        <div class="invite-panel hidden" id="pendingInvites">
+                            <div class="pending-invites-header">
+                                <span>Ожидают подтверждения</span>
+                                <span class="pending-count" id="pendingCount">0</span>
+                            </div>
+                            <div class="pending-invites-list" id="pendingInvitesList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal" id="exportModal">
+        <div class="modal-dialog modal-dialog-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Экспорт данных</h2>
+                <button class="modal-close" data-action="team-closeExportDialog">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="export-info-box">
+                    <img src="../shared/icons/export.svg" width="24" height="24" alt="Export">
+                    <div class="export-info-text">
+                        <span class="export-info-title">Экспорт в JSON</span>
+                        <span class="export-info-desc">Все сотрудники со всеми полями</span>
+                    </div>
+                </div>
+                <div class="export-count" id="exportCount"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="team-closeExportDialog">Отмена</button>
+                <button class="btn btn-primary" data-action="team-doExport">Экспортировать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal" id="importModal">
+        <div class="modal-dialog modal-dialog-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Импорт данных</h2>
+                <button class="modal-close" data-action="team-closeImportDialog">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="importFileInput" accept=".json">
+                        <label for="importFileInput" class="file-input-label">
+                            <img src="../shared/icons/import.svg" alt="Импорт">
+                            <span class="file-input-text">
+                                <span class="main-text">Выберите JSON файл</span>
+                                <span class="sub-text">или перетащите сюда</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <div id="importPreview" class="hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="team-closeImportDialog">Отмена</button>
+                <button class="btn btn-primary" data-action="team-importData" id="importBtn" disabled>Импортировать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crop Modal -->
+    <div class="modal" id="cropModal">
+        <div class="modal-dialog modal-dialog-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Обрезка фото</h2>
+                <button class="modal-close" data-action="team-closeCropModal">
+                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="crop-container">
+                    <div class="crop-preview" id="cropPreview">
+                        <img id="cropImage" src="" alt="">
+                    </div>
+                </div>
+                <p class="crop-hint">Используйте колесо мыши для масштабирования и перетаскивайте для позиционирования</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="team-closeCropModal">Отмена</button>
+                <button class="btn btn-primary" data-action="team-applyCrop">Применить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal Container -->
+    <div id="about-modal-container"></div>
+
+    <script src="../shared/version.js"></script>
+    <script src="../shared/storage.js"></script>
+    <script src="../shared/env-config.js"></script>
+    <script src="../shared/cloud-storage.js"></script>
+    <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/auth-guard.js"></script>
+    <script src="../shared/roles-config.js"></script>
+    <script src="../shared/role-guard.js"></script>
+    <script src="../shared/js/component-loader.js"></script>
+    <script src="../shared/js/sidebar-controller.js"></script>
+    <script src="../shared/js/about-modal.js"></script>
+    <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/confirm-modal.js"></script>
+    <script src="../shared/js/prompt-modal.js"></script>
+    <script src="../shared/js/error-handler.js"></script>
+    <script src="js/storage.js"></script>
+
+    <!-- Team Info Modules -->
+    <script src="js/modules/team-utils.js"></script>
+    <script src="js/modules/team-state.js"></script>
+    <script src="js/modules/team-renderer.js"></script>
+    <script src="js/modules/team-navigation.js"></script>
+    <script src="js/modules/team-forms.js"></script>
+    <script src="js/modules/team-templates.js"></script>
+    <script src="js/modules/team-avatars.js"></script>
+    <script src="js/modules/team-import-export.js"></script>
+    <script src="js/modules/team-invites.js"></script>
+    <script src="../shared/js/page-lifecycle.js"></script>
+
+    <!-- Team Info Main Controller -->
+    <script src="js/team-info.js"></script>
+</body>
+</html>

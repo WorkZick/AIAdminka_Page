@@ -1,0 +1,254 @@
+/* ============================================================
+   AIAdminka Design System - Cards
+   ============================================================ */
+
+/* ==================== BASE CARD ==================== */
+.card {
+    background: rgba(30, 30, 30, 0.6);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    transition: all var(--transition-fast);
+}
+
+.card:hover {
+    border-color: var(--glass-border-hover);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: rgba(25, 25, 25, 0.8);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.card-title {
+    font-size: var(--font-size-md);
+    font-weight: 700;
+    color: var(--white);
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.card-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--glass-border);
+    background: rgba(25, 25, 25, 0.5);
+}
+
+/* ==================== MODULE CARD (Home page) ==================== */
+.module-card {
+    background: rgba(40, 40, 40, 0.5);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-radius: var(--radius-2xl);
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.module-card:hover {
+    background: rgba(50, 50, 50, 0.6);
+    border-color: var(--glass-border-hover);
+    transform: translateY(-4px);
+}
+
+.module-icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-2xl);
+    padding: 14px;
+    transition: all var(--transition-fast);
+}
+
+.module-card:hover .module-icon {
+    background: var(--accent-bg);
+}
+
+.module-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+    transition: all var(--transition-normal);
+}
+
+.module-card:hover .module-icon img {
+    opacity: 1;
+    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
+}
+
+.module-title {
+    font-size: var(--font-size-md);
+    font-weight: 400;
+    color: var(--white);
+    text-align: center;
+    transition: color var(--transition-normal);
+}
+
+.module-card:hover .module-title {
+    color: var(--accent);
+}
+
+.module-desc {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* Module card variants */
+.module-card-admin {
+    border: 1px solid rgba(255, 107, 107, 0.25);
+}
+
+.module-card-admin .module-icon {
+    background: rgba(255, 107, 107, 0.12);
+}
+
+.module-card-admin .module-icon img {
+    filter: brightness(0) saturate(100%) invert(59%) sepia(94%) saturate(1500%) hue-rotate(324deg) brightness(100%) contrast(100%);
+}
+
+.module-card-admin:hover {
+    border-color: rgba(255, 107, 107, 0.4);
+}
+
+.module-card-admin:hover .module-icon {
+    background: rgba(255, 107, 107, 0.2);
+}
+
+/* ==================== SETTINGS CARD ==================== */
+.settings-card {
+    background: rgba(30, 30, 30, 0.6);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    padding: 20px;
+}
+
+.settings-card-title {
+    font-size: var(--font-size-md);
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.settings-card.card-danger {
+    border-color: rgba(255, 107, 107, 0.3);
+}
+
+.settings-card.card-danger .settings-card-title {
+    color: var(--status-red);
+}
+
+/* ==================== STAT CARD ==================== */
+.stat-card {
+    background: rgba(30, 30, 30, 0.6);
+    backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-card-value {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--white);
+}
+
+.stat-card-label {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+}
+
+.stat-card.stat-green .stat-card-value {
+    color: var(--status-green);
+}
+
+.stat-card.stat-red .stat-card-value {
+    color: var(--status-red);
+}
+
+.stat-card.stat-yellow .stat-card-value {
+    color: var(--status-yellow);
+}
+
+/* ==================== INFO CARD ==================== */
+.info-card {
+    background: var(--glass-bg-light);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+}
+
+.info-card-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.info-card-row:last-child {
+    border-bottom: none;
+}
+
+.info-card-label {
+    font-size: var(--font-size-base);
+    color: var(--gray);
+}
+
+.info-card-value {
+    font-size: var(--font-size-base);
+    color: var(--white);
+    font-weight: 700;
+}
+
+/* ==================== MODULES GRID ==================== */
+.modules-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    max-width: 900px;
+    width: 100%;
+}
+
+@media (max-width: 900px) {
+    .modules-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .modules-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .module-card {
+        padding: 24px 20px;
+    }
+}
