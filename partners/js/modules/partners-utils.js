@@ -1,10 +1,6 @@
 // Partners Utils - utility functions
 const PartnersUtils = {
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    },
+    escapeHtml(text) { return Utils.escapeHtml(text); },
 
     isValidImageUrl(url) {
         if (!url) return false;

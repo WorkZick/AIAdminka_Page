@@ -3,10 +3,6 @@
  * Показывает уведомление за 10 минут до истечения токена
  */
 const TokenManager = {
-    // OAuth Config
-    CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
-    SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-
     // Временные параметры
     TOKEN_LIFETIME: 3500000,       // ~58 минут (Google токен живёт 60 мин)
     WARN_BEFORE: 600000,           // Предупреждать за 10 минут
@@ -24,17 +20,6 @@ const TokenManager = {
     _AUTH_CACHE_TTL: 1000, // 1 секунда
 
     /**
-     * Получить REDIRECT_URI
-     */
-    getRedirectUri() {
-        const host = window.location.hostname;
-        if (host === '127.0.0.1' || host === 'localhost') {
-            return 'http://127.0.0.1:5500/SimpleAIAdminka/login/callback.html';
-        }
-        return 'https://workzick.github.io/AIAdminka_Page/login/callback.html';
-    },
-
-    /**
      * Кешированное чтение auth-данных (1 localStorage + JSON.parse вместо 3)
      */
     _getAuth() {
@@ -48,7 +33,7 @@ const TokenManager = {
             this._authCache = JSON.parse(raw);
             this._authCacheTime = now;
             return this._authCache;
-        } catch (e) { this._authCache = null; this._authCacheTime = 0; return null; }
+        } catch (e) { localStorage.removeItem('cloud-auth'); this._authCache = null; this._authCacheTime = 0; return null; }
     },
 
     /**
@@ -75,15 +60,6 @@ const TokenManager = {
         const auth = this._getAuth();
         if (!auth) return 0;
         return Math.max(0, this.TOKEN_LIFETIME - (Date.now() - auth.timestamp));
-    },
-
-    /**
-     * Генерация state параметра
-     */
-    generateState() {
-        const array = new Uint8Array(32);
-        crypto.getRandomValues(array);
-        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
     },
 
     /**
@@ -263,7 +239,7 @@ const TokenManager = {
         const currentPath = window.location.pathname + window.location.search;
         sessionStorage.setItem('auth-redirect', currentPath);
 
-        const state = this.generateState();
+        const state = EnvConfig.OAUTH.generateState();
         sessionStorage.setItem('oauth_state', state);
 
         const promptParam = interactive ? 'consent' : 'none';
@@ -275,10 +251,10 @@ const TokenManager = {
         sessionStorage.removeItem('oauth_silent');
 
         const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
-            '?client_id=' + encodeURIComponent(this.CLIENT_ID) +
-            '&redirect_uri=' + encodeURIComponent(this.getRedirectUri()) +
+            '?client_id=' + encodeURIComponent(EnvConfig.OAUTH.CLIENT_ID) +
+            '&redirect_uri=' + encodeURIComponent(EnvConfig.OAUTH.getRedirectUri()) +
             '&response_type=token' +
-            '&scope=' + encodeURIComponent(this.SCOPES) +
+            '&scope=' + encodeURIComponent(EnvConfig.OAUTH.SCOPES) +
             '&state=' + encodeURIComponent(state) +
             '&prompt=' + promptParam;
 
@@ -434,6 +410,9 @@ const AuthGuard = {
      * Показать экран блокировки (для заблокированных пользователей)
      */
     showBlockedScreen() {
+        // Останавливаем таймеры до уничтожения DOM
+        TokenManager.stopAutoRefresh();
+
         // Создаём overlay блокировки
         const overlay = document.createElement('div');
         overlay.id = 'auth-blocked-overlay';
@@ -532,7 +511,7 @@ const AuthGuard = {
         const initials = this.getInitials(user.name);
 
         const esc = this._escapeHtml.bind(this);
-        const safeAvatar = user.picture && user.picture.startsWith('https://') ? user.picture : null;
+        const safeAvatar = Utils.isGoogleAvatar(user.picture) ? user.picture : null;
         container.innerHTML = `
             <div class="auth-user-info">
                 <div class="auth-user-avatar">
@@ -556,21 +535,8 @@ const AuthGuard = {
         }
     },
 
-    _escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    },
-
-    getInitials(name) {
-        if (!name) return '?';
-        const parts = name.trim().split(' ');
-        if (parts.length >= 2) {
-            return (parts[0][0] + parts[1][0]).toUpperCase();
-        }
-        return name.substring(0, 2).toUpperCase();
-    }
+    _escapeHtml(text) { return Utils.escapeHtml(text); },
+    getInitials(name) { return Utils.getInitials(name); }
 };
 
 // Автопроверка при загрузке

@@ -10,6 +10,7 @@ const WaitingInvite = {
     _clickHandler: null,
     _beforeUnloadHandler: null,
     _keydownHandler: null,
+    _visibilityHandler: null,
     _confirmResolve: null,
     isLoading: false,
     isRedirecting: false,
@@ -47,15 +48,7 @@ const WaitingInvite = {
         this._startAutoRefresh();
     },
 
-    _escapeHtml(text) {
-        if (text === null || text === undefined) return '';
-        return String(text)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    },
+    _escapeHtml(text) { return Utils.escapeHtml(text); },
 
     _bindEvents() {
         this._clickHandler = (e) => {
@@ -89,6 +82,17 @@ const WaitingInvite = {
 
         this._beforeUnloadHandler = () => this.destroy();
         window.addEventListener('beforeunload', this._beforeUnloadHandler);
+
+        // Pause auto-refresh when tab is hidden (saves network requests)
+        this._visibilityHandler = () => {
+            if (document.hidden) {
+                this._stopAutoRefresh();
+            } else if (!this.isRedirecting) {
+                this.loadInvites();
+                this._startAutoRefresh();
+            }
+        };
+        document.addEventListener('visibilitychange', this._visibilityHandler);
     },
 
     destroy() {
@@ -104,6 +108,10 @@ const WaitingInvite = {
         if (this._beforeUnloadHandler) {
             window.removeEventListener('beforeunload', this._beforeUnloadHandler);
             this._beforeUnloadHandler = null;
+        }
+        if (this._visibilityHandler) {
+            document.removeEventListener('visibilitychange', this._visibilityHandler);
+            this._visibilityHandler = null;
         }
     },
 
@@ -128,7 +136,7 @@ const WaitingInvite = {
         if (email) email.textContent = this.user.email;
 
         if (avatar) {
-            if (this.user.picture && this.user.picture.startsWith('https://lh')) {
+            if (Utils.isGoogleAvatar(this.user.picture)) {
                 const img = document.createElement('img');
                 img.src = this.user.picture;
                 img.alt = '';
@@ -224,17 +232,18 @@ const WaitingInvite = {
     _renderInviteCard(invite) {
         const expiresDate = new Date(invite.expiresDate);
         const daysLeft = Math.ceil((expiresDate - new Date()) / (1000 * 60 * 60 * 24));
+        const isExpired = daysLeft <= 0;
         const isExpiringSoon = daysLeft <= 2;
         const id = this._escapeHtml(invite.inviteId);
 
-        const expiresText = daysLeft <= 0
-            ? 'Истекает сегодня'
+        const expiresText = isExpired
+            ? 'Срок истёк'
             : daysLeft === 1
                 ? 'Истекает завтра'
                 : `Истекает через ${daysLeft} дн.`;
 
         return `
-            <div class="invite-card" data-invite-id="${id}">
+            <div class="invite-card${isExpired ? ' expired' : ''}" data-invite-id="${id}">
                 <div class="invite-header">
                     <div class="invite-team-name">${this._escapeHtml(invite.teamName)}</div>
                     <div class="invite-role">${this._escapeHtml(invite.assignedRoleName || invite.assignedRole)}</div>
@@ -246,15 +255,15 @@ const WaitingInvite = {
                     </div>
                     <div class="invite-info-row">
                         <span class="label">Дата:</span>
-                        <span class="value">${Utils.formatDate(invite.createdDate)}</span>
+                        <span class="value">${this._escapeHtml(Utils.formatDate(invite.createdDate))}</span>
                     </div>
-                    <div class="invite-expires ${isExpiringSoon ? 'expiring-soon' : ''}">
+                    <div class="invite-expires ${isExpired ? 'expired' : isExpiringSoon ? 'expiring-soon' : ''}">
                         ${expiresText}
                     </div>
                 </div>
                 <div class="invite-actions">
-                    <button class="btn btn-primary" data-action="accept" data-invite-id="${id}">
-                        Принять
+                    <button class="btn btn-primary" data-action="accept" data-invite-id="${id}"${isExpired ? ' disabled' : ''}>
+                        ${isExpired ? 'Истекло' : 'Принять'}
                     </button>
                     <button class="btn btn-danger" data-action="reject" data-invite-id="${id}">
                         Отклонить
@@ -354,22 +363,22 @@ const WaitingInvite = {
         try {
             const result = await CloudStorage.callApi('rejectInvite', { inviteId });
 
-            if (result.success) {
-                Toast.success('Приглашение отклонено');
-                this.isLoading = false;
-                await this.loadInvites();
-            } else {
+            if (!result.success) {
                 throw new Error(result.error || 'Ошибка отклонения приглашения');
             }
+            Toast.success('Приглашение отклонено');
         } catch (error) {
             Toast.error('Ошибка: ' + error.message);
             this._setInviteButtonsDisabled(inviteId, false);
+        } finally {
             this.isLoading = false;
         }
+        // Перезагружаем список после полного сброса isLoading
+        await this.loadInvites();
     },
 
     _setInviteButtonsDisabled(inviteId, disabled) {
-        const card = document.querySelector(`[data-invite-id="${inviteId}"]`);
+        const card = document.querySelector(`[data-invite-id="${CSS.escape(inviteId)}"]`);
         if (!card) return;
         card.querySelectorAll('button').forEach(btn => { btn.disabled = disabled; });
     },

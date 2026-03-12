@@ -1798,27 +1798,8 @@ const adminApp = {
 
     // ============ Helpers ============
 
-    getInitials(name) {
-        if (!name) return '?';
-        const parts = name.trim().split(' ').filter(p => p.length > 0);
-        if (parts.length >= 2) {
-            return (parts[0][0] + parts[1][0]).toUpperCase();
-        }
-        if (parts.length === 1 && parts[0].length > 0) {
-            return parts[0].substring(0, 2).toUpperCase();
-        }
-        return '?';
-    },
-
-    escapeHtml(text) {
-        if (!text) return '';
-        return String(text)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    },
+    getInitials(name) { return Utils.getInitials(name); },
+    escapeHtml(text) { return Utils.escapeHtml(text); },
 
     destroy() {
         if (this._inputHandler) {

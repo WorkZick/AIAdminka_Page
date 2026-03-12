@@ -199,17 +199,6 @@ const CloudStorage = {
             .catch(queuedRequest.reject);
     },
 
-    /**
-     * Получить статистику очереди (для отладки)
-     */
-    getQueueStats() {
-        return {
-            activeRequests: this.activeRequests,
-            queuedRequests: this.requestQueue.length,
-            maxConcurrent: this.MAX_CONCURRENT_REQUESTS
-        };
-    },
-
     // ============ API CALLS ============
 
     // Retry settings
@@ -953,25 +942,6 @@ const CloudStorage = {
     },
 
     // ============ HELPERS ============
-
-    /**
-     * Проверка онлайн статуса
-     */
-    checkOnline() {
-        if (!navigator.onLine) {
-            this.showOfflineMessage();
-            return false;
-        }
-        return true;
-    },
-
-    /**
-     * Показать сообщение об отсутствии интернета
-     */
-    showOfflineMessage() {
-        // Можно переопределить в конкретном модуле
-        Toast.error('Нет подключения к интернету. Проверьте соединение и попробуйте снова.');
-    },
 
     /**
      * Редирект на страницу входа

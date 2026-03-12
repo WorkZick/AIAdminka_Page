@@ -9,17 +9,6 @@
  */
 
 const loginApp = {
-    CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
-    SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-
-    get REDIRECT_URI() {
-        const host = window.location.hostname;
-        if (host === '127.0.0.1' || host === 'localhost') {
-            return 'http://127.0.0.1:5500/SimpleAIAdminka/login/callback.html';
-        }
-        return 'https://workzick.github.io/AIAdminka_Page/login/callback.html';
-    },
-
     get SCRIPT_URL() {
         return EnvConfig.getScriptUrl();
     },
@@ -27,16 +16,9 @@ const loginApp = {
     currentUser: null,
     currentRole: null,
     storageReady: false,
+    _userInfoPopulated: false,
     _clickHandler: null,
     _submitHandler: null,
-
-    // ============ SECURITY ============
-
-    _generateState() {
-        const array = new Uint8Array(32);
-        crypto.getRandomValues(array);
-        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-    },
 
     // ============ INITIALIZATION ============
 
@@ -106,6 +88,8 @@ const loginApp = {
             if (cb) cb.removeEventListener('change', this._leaderToggleHandler);
             this._leaderToggleHandler = null;
         }
+        this._hideableElements = null;
+        this._userInfoPopulated = false;
     },
 
     // ============ AUTH CHECK ============
@@ -144,6 +128,9 @@ const loginApp = {
     },
 
     _checkAuthCallback() {
+        // currentUser уже проверен в _checkExistingAuth, повторный JSON.parse не нужен
+        if (this.currentUser) return;
+
         const authData = localStorage.getItem('cloud-auth');
         if (!authData) return;
 
@@ -151,7 +138,7 @@ const loginApp = {
             const auth = JSON.parse(authData);
             const isRecent = Date.now() - auth.timestamp < 10000;
 
-            if (isRecent && !this.currentUser) {
+            if (isRecent) {
                 this.currentUser = {
                     email: auth.email,
                     name: auth.name,
@@ -169,14 +156,15 @@ const loginApp = {
     // ============ OAUTH ============
 
     _login() {
-        const state = this._generateState();
+        const oauth = EnvConfig.OAUTH;
+        const state = oauth.generateState();
         sessionStorage.setItem('oauth_state', state);
 
         const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
-            '?client_id=' + encodeURIComponent(this.CLIENT_ID) +
-            '&redirect_uri=' + encodeURIComponent(this.REDIRECT_URI) +
+            '?client_id=' + encodeURIComponent(oauth.CLIENT_ID) +
+            '&redirect_uri=' + encodeURIComponent(oauth.getRedirectUri()) +
             '&response_type=token' +
-            '&scope=' + encodeURIComponent(this.SCOPES) +
+            '&scope=' + encodeURIComponent(oauth.SCOPES) +
             '&state=' + encodeURIComponent(state) +
             '&prompt=consent';
 
@@ -376,8 +364,8 @@ const loginApp = {
         const formData = new FormData(form);
         const reddyId = formData.get('reddyId').trim();
 
-        if (!reddyId) {
-            Toast.warning('Введите Reddy ID');
+        if (!reddyId || !/^\d{4,10}$/.test(reddyId)) {
+            Toast.warning('Введите корректный Reddy ID (4-10 цифр)');
             return;
         }
 
@@ -481,6 +469,8 @@ const loginApp = {
             const result = await this._secureApiCall('checkStorage');
 
             if (result.error) {
+                // Бэкенд без checkStorage endpoint возвращает "Unknown action" —
+                // это значит хранилище не нуждается в проверке, считаем готовым
                 if (result.error.includes('Unknown action')) {
                     this.storageReady = true;
                     this._showSuccess();
@@ -661,7 +651,8 @@ const loginApp = {
      * Populate user info in the left panel of the wide card
      */
     _populateUserInfo() {
-        if (!this.currentUser) return;
+        if (!this.currentUser || this._userInfoPopulated) return;
+        this._userInfoPopulated = true;
 
         const avatarEl = document.getElementById('userAvatar');
         const nameEl = document.getElementById('userName');
@@ -670,7 +661,7 @@ const loginApp = {
         if (this.currentUser.picture) {
             avatarEl.innerHTML = '';
             const pictureUrl = this.currentUser.picture;
-            if (pictureUrl && pictureUrl.startsWith('https://lh')) {
+            if (Utils.isGoogleAvatar(pictureUrl)) {
                 const img = document.createElement('img');
                 img.src = pictureUrl;
                 img.alt = '';
@@ -723,14 +714,7 @@ const loginApp = {
 
     // ============ HELPERS ============
 
-    _getInitials(name) {
-        if (!name) return '?';
-        const parts = name.trim().split(' ');
-        if (parts.length >= 2) {
-            return (parts[0][0] + parts[1][0]).toUpperCase();
-        }
-        return name.substring(0, 2).toUpperCase();
-    }
+    _getInitials(name) { return Utils.getInitials(name); }
 };
 
 document.addEventListener('DOMContentLoaded', () => loginApp.init());

@@ -16,7 +16,7 @@
     const isRedirectRefresh = sessionStorage.getItem('oauth_redirect_refresh') === 'true';
 
     // Счётчик ошибок state для защиты от бесконечного цикла редиректов
-    var stateErrorCount = parseInt(sessionStorage.getItem('oauth_state_errors') || '0');
+    const stateErrorCount = parseInt(sessionStorage.getItem('oauth_state_errors') || '0');
 
     function handleCallbackError(e) {
         if (isSilentRefresh) {
@@ -84,8 +84,8 @@
         // State не удаляем до успешной валидации токена (защита от race condition)
 
         // Получаем данные пользователя для обновления токена
-        var fetchController = new AbortController();
-        var fetchTimeout = setTimeout(function() { fetchController.abort(); }, 10000);
+        const fetchController = new AbortController();
+        const fetchTimeout = setTimeout(function() { fetchController.abort(); }, 10000);
 
         fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
             headers: { 'Authorization': 'Bearer ' + accessToken },
@@ -132,7 +132,7 @@
             if (isRedirectRefresh) {
                 // Redirect refresh: возвращаемся напрямую на страницу (минуя login)
                 sessionStorage.removeItem('oauth_redirect_refresh');
-                var returnUrl = sessionStorage.getItem('auth-redirect');
+                const returnUrl = sessionStorage.getItem('auth-redirect');
                 sessionStorage.removeItem('auth-redirect');
                 if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
                     window.location.href = returnUrl;

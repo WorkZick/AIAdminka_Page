@@ -124,20 +124,34 @@ const PartnersNavigation = {
         return html;
     },
 
-    toggleStatusDropdown() {
-        const dropdown = document.getElementById('cardStatusDropdown');
-        const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
+    _toggleDropdown(dropdownId, badgeId) {
+        const dropdown = document.getElementById(dropdownId);
+        const arrow = document.querySelector('#' + badgeId + ' .status-dropdown-icon');
         const isOpen = dropdown.classList.contains('hidden');
         dropdown.classList.toggle('hidden');
         if (arrow) {
-            if (isOpen) {
-                arrow.classList.add('dropdown-arrow-open');
-                arrow.classList.remove('dropdown-arrow-closed');
-            } else {
-                arrow.classList.add('dropdown-arrow-closed');
-                arrow.classList.remove('dropdown-arrow-open');
-            }
+            arrow.classList.toggle('dropdown-arrow-open', isOpen);
+            arrow.classList.toggle('dropdown-arrow-closed', !isOpen);
         }
+    },
+
+    _closeDropdown(dropdownId, badgeId) {
+        document.getElementById(dropdownId).classList.add('hidden');
+        const arrow = document.querySelector('#' + badgeId + ' .status-dropdown-icon');
+        if (arrow) {
+            arrow.classList.add('dropdown-arrow-closed');
+            arrow.classList.remove('dropdown-arrow-open');
+        }
+    },
+
+    _updateStatusBadge(textId, status) {
+        const statusText = document.getElementById(textId);
+        statusText.textContent = status;
+        statusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
+    },
+
+    toggleStatusDropdown() {
+        this._toggleDropdown('cardStatusDropdown', 'cardStatusBadge');
     },
 
     async changeStatus(status) {
@@ -151,23 +165,13 @@ const PartnersNavigation = {
             partner.status = status;
             await CloudStorage.updatePartner(PartnersState.selectedPartnerId, partner);
 
-            // Update cache
             const index = PartnersState.cachedPartners.findIndex(p => p.id === PartnersState.selectedPartnerId);
             if (index !== -1) {
                 PartnersState.cachedPartners[index].status = status;
             }
 
-            const statusText = document.getElementById('cardStatusText');
-            statusText.textContent = status;
-            statusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
-
-            document.getElementById('cardStatusDropdown').classList.add('hidden');
-            const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
-            if (arrow) {
-                arrow.classList.add('dropdown-arrow-closed');
-                arrow.classList.remove('dropdown-arrow-open');
-            }
-
+            this._updateStatusBadge('cardStatusText', status);
+            this._closeDropdown('cardStatusDropdown', 'cardStatusBadge');
             PartnersRenderer.render();
         } catch (error) {
             PartnersUtils.showError('Ошибка обновления статуса: ' + error.message);
@@ -175,32 +179,12 @@ const PartnersNavigation = {
     },
 
     toggleFormStatusDropdown() {
-        const dropdown = document.getElementById('formStatusDropdown');
-        const arrow = document.querySelector('#formStatusBadge .status-dropdown-icon');
-        const isOpen = dropdown.classList.contains('hidden');
-        dropdown.classList.toggle('hidden');
-        if (arrow) {
-            if (isOpen) {
-                arrow.classList.add('dropdown-arrow-open');
-                arrow.classList.remove('dropdown-arrow-closed');
-            } else {
-                arrow.classList.add('dropdown-arrow-closed');
-                arrow.classList.remove('dropdown-arrow-open');
-            }
-        }
+        this._toggleDropdown('formStatusDropdown', 'formStatusBadge');
     },
 
     changeFormStatus(status) {
         PartnersState.formStatus = status;
-        const statusText = document.getElementById('formStatusText');
-        statusText.textContent = status;
-        statusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
-
-        document.getElementById('formStatusDropdown').classList.add('hidden');
-        const arrow = document.querySelector('#formStatusBadge .status-dropdown-icon');
-        if (arrow) {
-            arrow.classList.add('dropdown-arrow-closed');
-            arrow.classList.remove('dropdown-arrow-open');
-        }
+        this._updateStatusBadge('formStatusText', status);
+        this._closeDropdown('formStatusDropdown', 'formStatusBadge');
     }
 };

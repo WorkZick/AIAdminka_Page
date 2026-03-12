@@ -4,6 +4,26 @@
  */
 
 const EnvConfig = {
+    // OAuth конфигурация (Single Source of Truth)
+    OAUTH: {
+        CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
+        SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+
+        getRedirectUri() {
+            const host = window.location.hostname;
+            if (host === '127.0.0.1' || host === 'localhost') {
+                return 'http://127.0.0.1:5500/SimpleAIAdminka/login/callback.html';
+            }
+            return 'https://workzick.github.io/AIAdminka_Page/login/callback.html';
+        },
+
+        generateState() {
+            const array = new Uint8Array(32);
+            crypto.getRandomValues(array);
+            return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+        }
+    },
+
     // Доступные окружения
     ENVIRONMENTS: {
         prod: {
