@@ -36,7 +36,15 @@ const RoleGuard = {
         // Safety-таймаут: показать UI через 2с если init зависнет
         this._safetyTimer = setTimeout(() => {
             if (!document.body.classList.contains('role-ready')) {
-                document.body.classList.add('role-ready');
+                // Fallback: применяем guest-права вместо полного доступа
+                if (!this.initialized) {
+                    this.user = { role: 'guest', status: 'unknown' };
+                    this.permissions = this.buildPermissions(false);
+                    this.initialized = true;
+                    this.applyUI();
+                } else {
+                    document.body.classList.add('role-ready');
+                }
             }
         }, 2000);
 

@@ -12,7 +12,13 @@ const loginApp = {
     CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
     SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
 
-    REDIRECT_URI: 'https://workzick.github.io/AIAdminka_Page/login/callback.html',
+    get REDIRECT_URI() {
+        const host = window.location.hostname;
+        if (host === '127.0.0.1' || host === 'localhost') {
+            return 'http://127.0.0.1:5500/SimpleAIAdminka/login/callback.html';
+        }
+        return 'https://workzick.github.io/AIAdminka_Page/login/callback.html';
+    },
 
     get SCRIPT_URL() {
         return EnvConfig.getScriptUrl();

@@ -8,7 +8,6 @@ const trafficCalc = {
 
         // Загружаем партнёров из облака
         await storage.loadPartners();
-        TrafficState.dataLoaded = true;
         this.setupEventListeners();
         TrafficRenderer.renderAnalytics();
     },
@@ -122,9 +121,43 @@ const trafficCalc = {
 PageLifecycle.init({
     module: 'traffic',
     async onInit() {
-        trafficCalc.init();
+        await trafficCalc.init();
+    },
+    onDestroy() {
+        TrafficParsers.destroy();
     }
 });
+
+// Whitelist допустимых действий для event delegation
+const _ALLOWED_ACTIONS = new Set([
+    // Navigation
+    'toggleSidebar', 'goToStep', 'navigateToStep', 'skipStep',
+    'completeAnalytics', 'confirmResetAnalytics', 'resetAnalytics',
+    // Upload
+    'resetDepositsData', 'resetQualityData', 'resetPercentData',
+    // Manual Data
+    'prepareStep5PartnersList', 'filterPartnersList', 'loadPartnerManualData',
+    'saveCurrentManualData', 'checkManualDataCompletion', 'resetWorkTimeData', 'resetAllWorkTimeData',
+    'prepareStep6PartnersList', 'filterPartnersListStep6', 'loadPartnerManualDataStep6',
+    'saveCurrentManualDataStep6', 'checkManualDataCompletionStep6', 'resetViolationsData', 'resetAllViolationsData',
+    'incrementManualValue', 'decrementManualValue',
+    // Calculator
+    'saveTrafficSettings', 'renderTrafficSettings', 'toggleHelp',
+    'calculateTraffic', 'calculateAndShowResults', 'prepareStep7Report', 'prepareStep8Settings',
+    // Renderer
+    'renderAnalytics', 'updateSelectedPartnersView', 'selectAll', 'clearSelection',
+    'showMethodSelection', 'applyMethodSelection', 'showManualSelection', 'applyManualSelection',
+    'hideAllPanels', 'renderPartners', 'loadMethods', 'updateCounts',
+    'showMethodModal', 'closeMethodModal', 'renderMethodsList',
+    'generateReport', 'showTrafficResults', 'showTrafficResultsInStep', 'closeTrafficResults',
+    'openTrafficCalculator', 'closeTrafficCalculator', 'saveEdit', 'closeEditModal',
+    // Import/Export
+    'exportTrafficSettings', 'importTrafficSettings', 'exportTrafficResults', 'exportReportToExcel',
+    'exportPartners', 'showImportModal', 'closeImportModal', 'importPartners',
+    'addPartner', 'addMethod', 'updatePartnerStatuses', 'filterPartners',
+    // Special
+    'fileZoneClick'
+]);
 
 // Event delegation для всех data-action="traffic-*" атрибутов
 document.addEventListener('click', (e) => {
@@ -132,6 +165,8 @@ document.addEventListener('click', (e) => {
     if (!target) return;
 
     const action = target.dataset.action.replace('traffic-', '');
+
+    if (!_ALLOWED_ACTIONS.has(action)) return;
 
     // Специальная обработка для fileZoneClick
     if (action === 'fileZoneClick') {
@@ -175,15 +210,17 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Event delegation для input событий
+// Event delegation для input событий (с debounce 150мс)
+let _inputDebounceTimer = null;
 document.addEventListener('input', (e) => {
     const target = e.target.closest('[data-action^="traffic-"]');
     if (!target) return;
 
     const action = target.dataset.action.replace('traffic-', '');
 
-    if (typeof trafficCalc[action] === 'function') {
-        trafficCalc[action]();
+    if (_ALLOWED_ACTIONS.has(action) && typeof trafficCalc[action] === 'function') {
+        clearTimeout(_inputDebounceTimer);
+        _inputDebounceTimer = setTimeout(() => trafficCalc[action](), 150);
     }
 });
 
@@ -206,7 +243,7 @@ document.addEventListener('change', (e) => {
 
     const action = target.dataset.action.replace('traffic-', '');
 
-    if (typeof trafficCalc[action] === 'function') {
+    if (_ALLOWED_ACTIONS.has(action) && typeof trafficCalc[action] === 'function') {
         trafficCalc[action]();
     }
 });

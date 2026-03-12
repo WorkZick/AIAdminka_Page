@@ -52,13 +52,22 @@ const TrafficImportExport = {
                         throw new Error('Неверная структура файла настроек');
                     }
 
+                    // Валидация ключей настроек
+                    const validKeys = TrafficState.trafficParams.map(p => p.key);
+                    const sanitizedSettings = {};
+                    for (const key of validKeys) {
+                        if (key in jsonData.settings && typeof jsonData.settings[key] === 'object' && jsonData.settings[key] !== null) {
+                            sanitizedSettings[key] = jsonData.settings[key];
+                        }
+                    }
+
                     // Подтверждение перед импортом
                     if (!await ConfirmModal.show('Вы уверены, что хотите заменить текущие настройки на импортированные?')) {
                         return;
                     }
 
                     // Применяем настройки
-                    TrafficState.trafficSettings = jsonData.settings;
+                    TrafficState.trafficSettings = sanitizedSettings;
                     TrafficCalculator.saveTrafficSettings();
 
                     // Перерисовываем форму с новыми настройками
@@ -291,7 +300,7 @@ const TrafficImportExport = {
                 } catch (error) {
                     preview.classList.remove('hidden');
                     preview.classList.add('preview-error');
-                    preview.innerHTML = `<strong>Ошибка:</strong> ${error.message}`;
+                    preview.textContent = 'Ошибка: ' + error.message;
                     importBtn.disabled = true;
                 }
             };
@@ -365,7 +374,7 @@ const TrafficImportExport = {
                 const processedPartners = jsonData.partners.map(partner => {
                     // Убеждаемся что есть обязательные поля
                     if (!partner.id) {
-                        partner.id = Date.now().toString() + Math.random().toString(36).slice(2, 11);
+                        partner.id = Utils.generateId();
                     }
                     if (!partner.dateAdded) {
                         partner.dateAdded = new Date().toISOString();
@@ -393,8 +402,16 @@ const TrafficImportExport = {
                     return partner;
                 });
 
-                // Сохраняем импортированные данные
+                // Сохраняем аналитику и обновляем кеш партнёров
                 storage.savePartners(processedPartners);
+                storage.replacePartners(processedPartners.map(p => ({
+                    id: p.id,
+                    method: p.method || '',
+                    subagent: p.subagent || '',
+                    subagentId: p.subagentId || '',
+                    status: p.status || 'новый',
+                    createdAt: p.dateAdded || new Date().toISOString()
+                })));
 
                 // Обновляем интерфейс
                 TrafficRenderer.renderPartners();

@@ -6,7 +6,6 @@ const TrafficState = {
     currentReportData: null,
     currentStep: 1,
     completedSteps: [],
-    dataLoaded: false, // Флаг: данные загружены из облака
     filesUploaded: {
         deposits: false,
         quality: false,

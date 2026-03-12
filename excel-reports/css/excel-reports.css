@@ -569,6 +569,24 @@
     gap: 12px;
 }
 
+.btn-clear {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--gray-light);
+    padding: 4px 12px;
+    font-size: 12px;
+    font-family: var(--font-family);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.btn-clear:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
 .log-drawer-close {
     background: rgba(255, 255, 255, 0.1);
     border: none;

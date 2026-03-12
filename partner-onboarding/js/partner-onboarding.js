@@ -343,6 +343,7 @@ const PartnerOnboarding = (() => {
 
             // Selection (admin/leader)
             case 'onb-toggleSelect': OnboardingList.updateSelection(); break;
+            case 'onb-goToPage': OnboardingList.goToPage(value); break;
             case 'onb-selectAll': OnboardingList.toggleSelectAll(target.checked); break;
             case 'onb-deleteSelected': _deleteSelectedRequests(); break;
 
@@ -1422,10 +1423,11 @@ const PartnerOnboarding = (() => {
             _visibilityRefreshHandler = () => {
                 if (document.visibilityState === 'visible') {
                     _pollErrorCount = 0;
-                    if (!_listRefreshTimer) {
-                        _listRefreshTimer = setInterval(() => _pollForChanges(), POLL_INTERVAL);
-                    }
+                    _stopListRefresh();
+                    _listRefreshTimer = setInterval(() => _pollForChanges(), POLL_INTERVAL);
                     _pollForChanges();
+                } else {
+                    _stopListRefresh();
                 }
             };
             document.addEventListener('visibilitychange', _visibilityRefreshHandler);

@@ -68,6 +68,40 @@ img {
     display: block;
 }
 
+/* ==================== PERFORMANCE ==================== */
+
+/* GPU-ускорение для часто анимируемых элементов */
+.module-card,
+.template-card {
+    will-change: transform;
+}
+
+/* Изоляция перерисовок: мутации внутри не трогают внешний layout */
+.card,
+.settings-card,
+.stat-card,
+.info-card,
+.table-section {
+    contain: layout style;
+}
+
+/* Accessibility: отключаем декоративные анимации для пользователей, которые этого хотят */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    /* Функциональные анимации (спиннеры) — НЕ отключаем */
+    .spinner,
+    .btn-loading::after {
+        animation-duration: 1s !important;
+        animation-iteration-count: infinite !important;
+    }
+}
+
 /* ==================== HIDDEN UTILITY ==================== */
 .hidden {
     display: none !important;

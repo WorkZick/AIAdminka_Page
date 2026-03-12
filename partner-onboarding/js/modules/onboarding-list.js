@@ -3,6 +3,9 @@
 const OnboardingList = (() => {
     'use strict';
 
+    let _currentPage = 1;
+    const _perPage = 30;
+
     function _totalSteps() {
         return OnboardingConfig.getVisibleStepCount(OnboardingState.get('userRole'));
     }
@@ -13,7 +16,7 @@ const OnboardingList = (() => {
     }
 
     function render() {
-        const requests = OnboardingState.get('filteredRequests') || [];
+        const allRequests = OnboardingState.get('filteredRequests') || [];
         const container = document.getElementById('requestsList');
         const emptyState = document.getElementById('listEmpty');
         const loading = document.getElementById('listLoading');
@@ -22,19 +25,74 @@ const OnboardingList = (() => {
 
         loading.classList.add('hidden');
 
-        if (requests.length === 0) {
+        if (allRequests.length === 0) {
             container.innerHTML = '';
             container.classList.add('hidden');
             emptyState.classList.remove('hidden');
             _hideSelectionToolbar();
+            _renderPagination(0);
             return;
         }
 
         emptyState.classList.add('hidden');
         container.classList.remove('hidden');
+
+        // Pagination
+        const totalPages = Math.max(1, Math.ceil(allRequests.length / _perPage));
+        if (_currentPage > totalPages) _currentPage = totalPages;
+        const start = (_currentPage - 1) * _perPage;
+        const pagedRequests = allRequests.slice(start, start + _perPage);
+
         const total = _totalSteps();
-        container.innerHTML = requests.map(r => _renderRow(r, total)).join('');
+        container.innerHTML = pagedRequests.map(r => _renderRow(r, total)).join('');
         _updateSelectionToolbar();
+        _renderPagination(totalPages);
+    }
+
+    function _renderPagination(totalPages) {
+        const container = document.getElementById('onboardingPagination');
+        if (!container) return;
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'page-btn';
+        prevBtn.textContent = '\u2190';
+        prevBtn.disabled = _currentPage === 1;
+        prevBtn.dataset.action = 'onb-goToPage';
+        prevBtn.dataset.value = _currentPage - 1;
+        container.appendChild(prevBtn);
+
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= _currentPage - 1 && i <= _currentPage + 1)) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = 'page-btn' + (i === _currentPage ? ' active' : '');
+                pageBtn.textContent = i;
+                pageBtn.dataset.action = 'onb-goToPage';
+                pageBtn.dataset.value = i;
+                container.appendChild(pageBtn);
+            } else if (i === _currentPage - 2 || i === _currentPage + 2) {
+                const dots = document.createElement('span');
+                dots.className = 'pagination-dots';
+                dots.textContent = '...';
+                container.appendChild(dots);
+            }
+        }
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'page-btn';
+        nextBtn.textContent = '\u2192';
+        nextBtn.disabled = _currentPage === totalPages;
+        nextBtn.dataset.action = 'onb-goToPage';
+        nextBtn.dataset.value = _currentPage + 1;
+        container.appendChild(nextBtn);
+    }
+
+    function goToPage(page) {
+        const p = parseInt(page);
+        if (isNaN(p) || p < 1) return;
+        _currentPage = p;
+        render();
     }
 
     function _renderRow(request, total) {
@@ -103,6 +161,7 @@ const OnboardingList = (() => {
     }
 
     function applyFilters() {
+        _currentPage = 1;
         const requests = OnboardingState.get('requests') || [];
         const status = OnboardingState.get('filters.status');
         const search = (OnboardingState.get('filters.search') || '').toLowerCase();
@@ -250,5 +309,5 @@ const OnboardingList = (() => {
         _updateSelectionToolbar();
     }
 
-    return { init, render, applyFilters, setupDefaultFilters, getSelectedIds, toggleSelectAll, updateSelection: _updateSelectionToolbar };
+    return { init, render, applyFilters, setupDefaultFilters, getSelectedIds, toggleSelectAll, updateSelection: _updateSelectionToolbar, goToPage };
 })();

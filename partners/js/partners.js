@@ -3,9 +3,7 @@ const partnersApp = {
     // ==================== INITIALIZATION ====================
     async init() {
         // AuthGuard.checkWithRole() и CloudStorage.init() уже вызваны в PageLifecycle
-
-        // Show loading
-        PartnersUtils.showLoading(true);
+        // Полноэкранный спиннер (.page-loading) показывается PageLifecycle на время onInit()
 
         try {
             // Load data from cloud
@@ -22,8 +20,6 @@ const partnersApp = {
         } catch (error) {
             console.error('Init error:', error);
             PartnersUtils.showError('Ошибка загрузки данных: ' + error.message);
-        } finally {
-            PartnersUtils.showLoading(false);
         }
 
         // Слушаем завершение синхронизации для обновления данных
@@ -82,6 +78,7 @@ const partnersApp = {
     updateStats: (...args) => PartnersRenderer.updateStats(...args),
     sortBy: (...args) => PartnersRenderer.sortBy(...args),
     filterTable: (...args) => PartnersRenderer.filterTable(...args),
+    goToPage: (page) => PartnersRenderer.goToPage(page),
     toggleSidebar: (...args) => PartnersRenderer.toggleSidebar(...args),
 
     // Navigation
@@ -172,7 +169,7 @@ const partnersApp = {
 PageLifecycle.init({
     module: 'partners',
     async onInit() {
-        partnersApp.init();
+        await partnersApp.init();
     },
     modals: {
         '#importModal': () => partnersApp.closeImportDialog(),

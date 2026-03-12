@@ -263,7 +263,9 @@ const TrafficCalculator = {
             }
         }).join('');
 
-        // Event delegation для всех настроек трафика
+        // Event delegation для всех настроек трафика (guard от повторной регистрации)
+        if (container._hasChangeListener) return;
+        container._hasChangeListener = true;
         container.addEventListener('change', (e) => {
             const input = e.target;
 
@@ -294,18 +296,27 @@ const TrafficCalculator = {
         });
     },
 
+    // Debounced сохранение настроек (для частых изменений через input)
+    _settingsSaveTimer: null,
+    saveTrafficSettingsDebounced() {
+        clearTimeout(TrafficCalculator._settingsSaveTimer);
+        TrafficCalculator._settingsSaveTimer = setTimeout(() => {
+            TrafficCalculator.saveTrafficSettings();
+        }, 300);
+    },
+
     // Обновить настройку
     updateTrafficSetting(paramKey, level, field, value) {
         if (!TrafficState.trafficSettings[paramKey]) return;
         TrafficState.trafficSettings[paramKey][level][field] = value;
-        TrafficCalculator.saveTrafficSettings();
+        TrafficCalculator.saveTrafficSettingsDebounced();
     },
 
     // Обновить настройку множителя
     updateTrafficSettingMultiplier(paramKey, field, value) {
         if (!TrafficState.trafficSettings[paramKey]) return;
         TrafficState.trafficSettings[paramKey][field] = value;
-        TrafficCalculator.saveTrafficSettings();
+        TrafficCalculator.saveTrafficSettingsDebounced();
 
         // Обновляем пример (3 нарушения × баллы = штрафные баллы)
         const multiplierEl = document.getElementById(paramKey + 'Multiplier');

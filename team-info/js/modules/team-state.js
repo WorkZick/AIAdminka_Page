@@ -100,41 +100,74 @@ const TeamState = {
             this.sortField = field;
             this.sortDirection = 'asc';
         }
-
-        this.data.sort((a, b) => {
-            let aVal, bVal;
-
-            if (field === 'name') {
-                aVal = a.fullName || '';
-                bVal = b.fullName || '';
-            } else if (field === 'status') {
-                aVal = a.status || 'Работает';
-                bVal = b.status || 'Работает';
-            }
-
-            if (this.sortDirection === 'asc') {
-                return aVal.localeCompare(bVal);
-            } else {
-                return bVal.localeCompare(aVal);
-            }
-        });
     },
 
+    // Pagination & filtering
+    currentPage: 1,
+    perPage: 50,
+    searchQuery: '',
     _filterTimer: null,
+    _filteredCache: null,
 
-    /**
-     * Фильтрация таблицы по поисковому запросу (с debounce)
-     */
+    _invalidateFiltered() {
+        this._filteredCache = null;
+    },
+
+    getFilteredData() {
+        if (this._filteredCache) return this._filteredCache;
+
+        let data = [...this.data];
+
+        if (this.searchQuery) {
+            const q = this.searchQuery.toLowerCase();
+            data = data.filter(emp => {
+                const searchable = [
+                    emp.fullName, emp.position, emp.status,
+                    emp.crmLogin, emp.reddyId,
+                    emp.predefinedFields?.['Reddy'],
+                    emp.corpTelegram, emp.personalTelegram,
+                    emp.corpEmail, emp.personalEmail
+                ].filter(Boolean).join(' ').toLowerCase();
+                return searchable.includes(q);
+            });
+        }
+
+        if (this.sortField) {
+            data.sort((a, b) => {
+                let aVal, bVal;
+                if (this.sortField === 'name') {
+                    aVal = a.fullName || '';
+                    bVal = b.fullName || '';
+                } else if (this.sortField === 'status') {
+                    aVal = a.status || 'Работает';
+                    bVal = b.status || 'Работает';
+                }
+                return this.sortDirection === 'asc'
+                    ? aVal.localeCompare(bVal)
+                    : bVal.localeCompare(aVal);
+            });
+        }
+
+        this._filteredCache = data;
+        return data;
+    },
+
+    getTotalPages() {
+        return Math.max(1, Math.ceil(this.getFilteredData().length / this.perPage));
+    },
+
+    getPagedData() {
+        const filtered = this.getFilteredData();
+        const start = (this.currentPage - 1) * this.perPage;
+        return filtered.slice(start, start + this.perPage);
+    },
+
     filterTable() {
         clearTimeout(TeamState._filterTimer);
         TeamState._filterTimer = setTimeout(() => {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const rows = document.getElementById('employeesTableBody').children;
-
-            for (let i = 0; i < rows.length; i++) {
-                const text = rows[i].textContent.toLowerCase();
-                rows[i].classList.toggle('filtered-hidden', !text.includes(search));
-            }
+            TeamState.searchQuery = document.getElementById('searchInput').value;
+            TeamState.currentPage = 1;
+            TeamRenderer.render();
         }, 150);
     }
 };

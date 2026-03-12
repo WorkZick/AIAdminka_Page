@@ -16,51 +16,65 @@ const TokenManager = {
     refreshTimer: null,
     visibilityHandler: null,
     warningShown: false,
+    _countdownEl: null,
+
+    // Кеш auth-данных (избегаем повторных localStorage.getItem + JSON.parse)
+    _authCache: null,
+    _authCacheTime: 0,
+    _AUTH_CACHE_TTL: 1000, // 1 секунда
 
     /**
      * Получить REDIRECT_URI
      */
     getRedirectUri() {
+        const host = window.location.hostname;
+        if (host === '127.0.0.1' || host === 'localhost') {
+            return 'http://127.0.0.1:5500/SimpleAIAdminka/login/callback.html';
+        }
         return 'https://workzick.github.io/AIAdminka_Page/login/callback.html';
     },
 
     /**
-     * Проверить, нужно ли показать предупреждение
+     * Кешированное чтение auth-данных (1 localStorage + JSON.parse вместо 3)
      */
+    _getAuth() {
+        const now = Date.now();
+        if (this._authCache && (now - this._authCacheTime) < this._AUTH_CACHE_TTL) {
+            return this._authCache;
+        }
+        const raw = localStorage.getItem('cloud-auth');
+        if (!raw) { this._authCache = null; return null; }
+        try {
+            this._authCache = JSON.parse(raw);
+            this._authCacheTime = now;
+            return this._authCache;
+        } catch (e) { this._authCache = null; this._authCacheTime = 0; return null; }
+    },
+
+    /**
+     * Сбросить кеш (при logout/login)
+     */
+    _invalidateAuthCache() {
+        this._authCache = null;
+        this._authCacheTime = 0;
+    },
+
     needsWarning() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return false;
-
-        const auth = JSON.parse(authData);
-        const elapsed = Date.now() - auth.timestamp;
-
-        return elapsed > (this.TOKEN_LIFETIME - this.WARN_BEFORE);
+        const auth = this._getAuth();
+        if (!auth) return false;
+        return (Date.now() - auth.timestamp) > (this.TOKEN_LIFETIME - this.WARN_BEFORE);
     },
 
-    /**
-     * Проверить, истёк ли токен
-     */
     isExpired() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return true;
-
-        const auth = JSON.parse(authData);
-        const elapsed = Date.now() - auth.timestamp;
-
-        return elapsed > this.TOKEN_LIFETIME;
+        const auth = this._getAuth();
+        if (!auth) return true;
+        return (Date.now() - auth.timestamp) > this.TOKEN_LIFETIME;
     },
 
-    /**
-     * Получить оставшееся время (мс)
-     */
     getTimeRemaining() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return 0;
-
-        const auth = JSON.parse(authData);
-        const elapsed = Date.now() - auth.timestamp;
-
-        return Math.max(0, this.TOKEN_LIFETIME - elapsed);
+        const auth = this._getAuth();
+        if (!auth) return 0;
+        return Math.max(0, this.TOKEN_LIFETIME - (Date.now() - auth.timestamp));
     },
 
     /**
@@ -102,7 +116,7 @@ const TokenManager = {
      * Проверка токена
      */
     checkToken() {
-        if (!localStorage.getItem('cloud-auth')) {
+        if (!this._getAuth()) {
             return;
         }
 
@@ -159,6 +173,9 @@ const TokenManager = {
             dismissBtn.addEventListener('click', () => this.dismissPrompt());
         }
 
+        // Кешируем ссылку на countdown элемент (вместо getElementById каждую секунду)
+        this._countdownEl = prompt.querySelector('#token-countdown');
+
         // Живой таймер (очистка предыдущего интервала для защиты от утечки)
         if (this.countdownInterval) clearInterval(this.countdownInterval);
         this.updateCountdown();
@@ -169,7 +186,7 @@ const TokenManager = {
      * Обновить обратный отсчёт
      */
     updateCountdown() {
-        const el = document.getElementById('token-countdown');
+        const el = this._countdownEl || document.getElementById('token-countdown');
         if (!el) {
             if (this.countdownInterval) clearInterval(this.countdownInterval);
             return;
@@ -200,6 +217,7 @@ const TokenManager = {
     dismissPrompt() {
         const prompt = document.getElementById('token-refresh-prompt');
         if (prompt) prompt.remove();
+        this._countdownEl = null;
         if (this.countdownInterval) clearInterval(this.countdownInterval);
 
         // Показать снова через 2 минуты если токен ещё не истёк
@@ -273,15 +291,16 @@ const TokenManager = {
      * Получить timestamp токена
      */
     getAuthTimestamp() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return 0;
-        return JSON.parse(authData).timestamp || 0;
+        const auth = this._getAuth();
+        if (!auth) return 0;
+        return auth.timestamp || 0;
     },
 
     /**
      * Обработка истёкшего токена
      */
     handleExpiredToken() {
+        this._invalidateAuthCache();
         localStorage.removeItem('cloud-auth');
         const currentPath = window.location.pathname + window.location.search;
         sessionStorage.setItem('auth-redirect', currentPath);
@@ -319,9 +338,9 @@ const AuthGuard = {
     },
 
     check(redirect = true) {
-        const authData = localStorage.getItem('cloud-auth');
+        const auth = TokenManager._getAuth();
 
-        if (!authData) {
+        if (!auth) {
             if (redirect) this.redirectToLogin();
             return false;
         }
@@ -335,7 +354,6 @@ const AuthGuard = {
         // Создать cloud-storage-info если его нет (для обратной совместимости)
         if (!localStorage.getItem('cloud-storage-info')) {
             try {
-                const auth = JSON.parse(authData);
                 localStorage.setItem('cloud-storage-info', JSON.stringify({
                     connected: true,
                     email: auth.email,
@@ -439,10 +457,9 @@ const AuthGuard = {
     },
 
     getUser() {
-        const authData = localStorage.getItem('cloud-auth');
-        if (!authData) return null;
+        const auth = TokenManager._getAuth();
+        if (!auth) return null;
 
-        const auth = JSON.parse(authData);
         return {
             email: auth.email,
             name: auth.name,
@@ -463,6 +480,8 @@ const AuthGuard = {
             localStorage.removeItem('sync-queue');
         }
 
+        TokenManager._invalidateAuthCache();
+        TokenManager.stopAutoRefresh();
         localStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
         localStorage.removeItem('partners-data');

@@ -83,13 +83,18 @@ const settingsApp = {
     loadUserData() {
         const authData = localStorage.getItem('cloud-auth');
         if (authData) {
-            const auth = JSON.parse(authData);
-            this.currentUser = {
-                email: auth.email,
-                name: auth.name,
-                picture: auth.picture,
-                timestamp: auth.timestamp
-            };
+            try {
+                const auth = JSON.parse(authData);
+                this.currentUser = {
+                    email: auth.email,
+                    name: auth.name,
+                    picture: auth.picture,
+                    timestamp: auth.timestamp
+                };
+            } catch (e) {
+                localStorage.removeItem('cloud-auth');
+                this.currentUser = null;
+            }
         }
     },
 
@@ -98,69 +103,38 @@ const settingsApp = {
             // RoleGuard уже инициализирован через PageLifecycle → AuthGuard.checkWithRole()
             const roleGuardUser = typeof RoleGuard !== 'undefined' ? RoleGuard.user : null;
 
-            // Автоинициализация хранилища только при первом входе
-            const storageInitKey = 'storage-initialized-' + (roleGuardUser?.teamId || 'personal');
-            if (roleGuardUser && !localStorage.getItem(storageInitKey) &&
-                (roleGuardUser.role === 'leader' || roleGuardUser.role === 'admin' || roleGuardUser.isAdmin === true)) {
-                try {
-                    await CloudStorage.initStorage();
-                    localStorage.setItem(storageInitKey, '1');
-                } catch (e) {
-                    // Storage init failed, continue without it
-                }
-            }
-
-            // Загружаем данные сотрудника из облака (кеш getEmployees работает 5 мин)
-            let teamInfoEmployee = null;
-            const currentEmail = this.currentUser?.email;
-
-            // Пытаемся загрузить из CloudStorage (только роли с правами на employees)
-            const canViewEmployees = roleGuardUser && (
-                roleGuardUser.role === 'leader' || roleGuardUser.role === 'admin' ||
-                roleGuardUser.role === 'assistant' || roleGuardUser.isAdmin === true
-            );
-            if (canViewEmployees && currentEmail && typeof CloudStorage !== 'undefined' && CloudStorage.isAuthenticated()) {
-                try {
-                    const employees = await CloudStorage.getEmployees();
-                    if (Array.isArray(employees)) {
-                        teamInfoEmployee = employees.find(emp =>
-                            emp.email === currentEmail || emp.corpEmail === currentEmail || emp.id === currentEmail
-                        );
-                    }
-                } catch (e) {
-                    // Cloud load failed, continue with local data
-                }
-            }
-
-            // Формируем профиль из доступных данных (приоритет: cloud > RoleGuard > currentUser)
+            // 1. Мгновенно формируем профиль из RoleGuard (без API-вызовов)
             this.userProfile = {
                 email: this.currentUser?.email || '',
-                name: teamInfoEmployee?.fullName || roleGuardUser?.name || this.currentUser?.name || '',
-                picture: teamInfoEmployee?.avatar || this.currentUser?.picture || '',
+                name: roleGuardUser?.name || this.currentUser?.name || '',
+                picture: this.currentUser?.picture || '',
                 role: roleGuardUser?.role || 'user',
-                reddyId: teamInfoEmployee?.reddyId || roleGuardUser?.reddyId || '',
+                reddyId: roleGuardUser?.reddyId || '',
                 teamId: roleGuardUser?.teamId || '',
                 teamName: roleGuardUser?.teamName || 'Команда',
                 teamLeader: roleGuardUser?.teamLeader || null,
-                status: teamInfoEmployee?.status || roleGuardUser?.status || 'active',
-                position: teamInfoEmployee?.position || roleGuardUser?.position || '',
-                // Контактные данные из карточки сотрудника
-                crmLogin: teamInfoEmployee?.crmLogin || '',
-                corpTelegram: teamInfoEmployee?.corpTelegram || '',
-                personalTelegram: teamInfoEmployee?.personalTelegram || '',
+                status: roleGuardUser?.status || 'active',
+                position: roleGuardUser?.position || '',
+                crmLogin: '',
+                corpTelegram: '',
+                personalTelegram: '',
                 corpEmail: this.currentUser?.email || '',
-                personalEmail: teamInfoEmployee?.personalEmail || '',
-                corpPhone: teamInfoEmployee?.corpPhone || '',
-                personalPhone: teamInfoEmployee?.personalPhone || '',
-                birthday: teamInfoEmployee?.birthday || '',
-                startDate: teamInfoEmployee?.startDate || '',
-                office: teamInfoEmployee?.office || '',
-                company: teamInfoEmployee?.company || '',
-                comment: teamInfoEmployee?.comment || ''
+                personalEmail: '',
+                corpPhone: '',
+                personalPhone: '',
+                birthday: '',
+                startDate: '',
+                office: '',
+                company: '',
+                comment: ''
             };
 
+            // 2. Показываем UI сразу с базовыми данными
             this.updateUI();
             this.fillProfileForm();
+
+            // 3. Детальные данные (контакты) — фоновая загрузка, не блокирует UI
+            this._detailedLoading = this._loadDetailedProfile(roleGuardUser).catch(() => {});
 
         } catch (error) {
             ErrorHandler.handle(error, {
@@ -168,6 +142,75 @@ const settingsApp = {
                 action: 'loadProfile'
             });
             this.updateUI();
+        }
+    },
+
+    /**
+     * Фоновая загрузка детальных данных профиля (контакты из Employees)
+     * initStorage и getEmployees запускаются параллельно
+     */
+    async _loadDetailedProfile(roleGuardUser) {
+        const currentEmail = this.currentUser?.email;
+        if (!currentEmail) return;
+
+        // initStorage — только при первом входе leader/admin
+        const storageInitKey = 'storage-initialized-' + (roleGuardUser?.teamId || 'personal');
+        const needsInit = roleGuardUser && !localStorage.getItem(storageInitKey) &&
+            (roleGuardUser.role === 'leader' || roleGuardUser.role === 'admin' || roleGuardUser.isAdmin === true);
+
+        // getEmployees — для ролей с доступом к сотрудникам
+        const canViewEmployees = roleGuardUser && (
+            roleGuardUser.role === 'leader' || roleGuardUser.role === 'admin' ||
+            roleGuardUser.role === 'assistant' || roleGuardUser.isAdmin === true
+        );
+        const needsEmployees = canViewEmployees &&
+            typeof CloudStorage !== 'undefined' && CloudStorage.isAuthenticated();
+
+        if (!needsInit && !needsEmployees) return;
+
+        try {
+            // Запускаем параллельно
+            const [, employees] = await Promise.all([
+                needsInit
+                    ? CloudStorage.initStorage()
+                        .then(() => localStorage.setItem(storageInitKey, '1'))
+                        .catch(() => {})
+                    : Promise.resolve(),
+                needsEmployees
+                    ? CloudStorage.getEmployees().catch(() => null)
+                    : Promise.resolve(null)
+            ]);
+
+            // Обновляем профиль из данных сотрудника
+            if (Array.isArray(employees)) {
+                const emp = employees.find(e =>
+                    e.email === currentEmail || e.corpEmail === currentEmail || e.id === currentEmail
+                );
+                if (emp) {
+                    Object.assign(this.userProfile, {
+                        name: emp.fullName || this.userProfile.name,
+                        picture: emp.avatar || this.userProfile.picture,
+                        reddyId: emp.reddyId || this.userProfile.reddyId,
+                        status: emp.status || this.userProfile.status,
+                        position: emp.position || this.userProfile.position,
+                        crmLogin: emp.crmLogin || '',
+                        corpTelegram: emp.corpTelegram || '',
+                        personalTelegram: emp.personalTelegram || '',
+                        personalEmail: emp.personalEmail || '',
+                        corpPhone: emp.corpPhone || '',
+                        personalPhone: emp.personalPhone || '',
+                        birthday: emp.birthday || '',
+                        startDate: emp.startDate || '',
+                        office: emp.office || '',
+                        company: emp.company || '',
+                        comment: emp.comment || ''
+                    });
+                    this.updateUI();
+                    this.fillProfileForm();
+                }
+            }
+        } catch (e) {
+            // Детальные данные не загрузились — продолжаем с базовыми
         }
     },
 
@@ -378,6 +421,9 @@ const settingsApp = {
     async saveProfile(event) {
         event.preventDefault();
 
+        // Дождаться фоновой загрузки, чтобы не затереть контакты пустыми значениями
+        if (this._detailedLoading) await this._detailedLoading;
+
         const form = document.getElementById('profileForm');
         const btn = document.getElementById('btnSaveProfile');
         const formData = new FormData(form);
@@ -483,11 +529,13 @@ const settingsApp = {
     // ============ Modals ============
 
     openModal(modalId) {
-        document.getElementById(modalId).classList.add('active');
+        const el = document.getElementById(modalId);
+        if (el) el.classList.add('active');
     },
 
     closeModal(modalId) {
-        document.getElementById(modalId).classList.remove('active');
+        const el = document.getElementById(modalId);
+        if (el) el.classList.remove('active');
     },
 
     // ============ Helpers ============

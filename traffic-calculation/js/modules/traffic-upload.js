@@ -1,22 +1,82 @@
 // Модуль загрузки файлов
 const TrafficUpload = {
+    _MAX_FILE_SIZE: 100 * 1024 * 1024, // 100 MB
+    _MAX_FILES: 20,
+    _ALLOWED_EXTENSIONS: ['.xlsx', '.xls'],
+
+    _validateFile(file) {
+        const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        if (!this._ALLOWED_EXTENSIONS.includes(ext)) {
+            return `Файл "${file.name}" не является Excel файлом. Поддерживаются только .xlsx и .xls`;
+        }
+        if (file.size > this._MAX_FILE_SIZE) {
+            return `Файл "${file.name}" слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимум: 100 МБ`;
+        }
+        return null;
+    },
+
+    // Отображение результата загрузки
+    _showUploadResult(statusDiv, errors, totalCount, stepKey, btnId) {
+        const successCount = totalCount - errors.length;
+        if (errors.length > 0 && successCount === 0) {
+            statusDiv.className = 'upload-status error';
+            statusDiv.textContent = `Ошибки: ${errors.join('; ')}`;
+        } else if (errors.length > 0) {
+            statusDiv.className = 'upload-status warning';
+            statusDiv.textContent = `Обработано ${successCount} из ${totalCount}. Ошибки: ${errors.join('; ')}`;
+            this._markStepComplete(stepKey, btnId);
+        } else {
+            statusDiv.className = 'upload-status success';
+            statusDiv.textContent = `Успешно обработано ${totalCount} файл(ов). Данные обновлены.`;
+            this._markStepComplete(stepKey, btnId);
+        }
+    },
+
+    // Проверка количества файлов
+    _checkFileCount(files, statusDiv) {
+        if (files.length > this._MAX_FILES) {
+            statusDiv.className = 'upload-status error';
+            statusDiv.textContent = `Слишком много файлов (${files.length}). Максимум: ${this._MAX_FILES}`;
+            return false;
+        }
+        return true;
+    },
+
     // Обработка загрузки "Пополнения и выводы"
     async handleDepositsUpload(event) {
         const files = event.target.files;
         if (!files || files.length === 0) return;
 
         const statusDiv = document.getElementById('depositsStatus');
+        if (!this._checkFileCount(files, statusDiv)) return;
         statusDiv.className = 'upload-status info';
-        statusDiv.textContent = 'Обработка файлов...';
+        statusDiv.textContent = `Обработка файлов (0/${files.length})...`;
 
         try {
             const allPartners = storage.getPartners();
-            const commentsData = {};
+            const commentsData = Object.create(null);
+            const errors = [];
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                const data = await TrafficParsers.readExcelFile(file);
-                TrafficParsers.parseDepositsData(data, commentsData);
+                statusDiv.textContent = `Обработка файлов (${i + 1}/${files.length}): ${file.name}`;
+
+                const validationError = this._validateFile(file);
+                if (validationError) {
+                    errors.push(validationError);
+                    continue;
+                }
+
+                try {
+                    const data = await TrafficParsers.readExcelFile(file);
+                    if (!data || data.length === 0) {
+                        errors.push(`"${file.name}": файл пуст`);
+                        continue;
+                    }
+                    TrafficParsers.parseDepositsData(data, commentsData);
+                } catch (error) {
+                    errors.push(`"${file.name}": ${error.message}`);
+                }
             }
 
             // Обновляем данные партнеров
@@ -27,25 +87,11 @@ const TrafficUpload = {
             });
 
             storage.savePartners(allPartners);
-
-            statusDiv.className = 'upload-status success';
-            statusDiv.textContent = `Успешно обработано ${files.length} файл(ов). Данные обновлены.`;
-
-            TrafficState.filesUploaded.deposits = true;
-            // Отмечаем шаг 2 как завершенный
-            if (!TrafficState.completedSteps.includes(2)) {
-                TrafficState.completedSteps.push(2);
-            }
-            TrafficNavigation.updateStepsIndicator(TrafficState.currentStep);
-            document.getElementById('step2NextBtn').disabled = false;
-
+            this._showUploadResult(statusDiv, errors, files.length, 'deposits', 'step2NextBtn');
             event.target.value = '';
 
         } catch (error) {
-            ErrorHandler.handle(error, {
-                module: 'traffic-calculation',
-                action: 'handleDepositsUpload'
-            });
+            ErrorHandler.handle(error, { module: 'traffic-calculation', action: 'handleDepositsUpload' });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
         }
@@ -57,72 +103,55 @@ const TrafficUpload = {
         if (!files || files.length === 0) return;
 
         const statusDiv = document.getElementById('qualityStatus');
+        if (!this._checkFileCount(files, statusDiv)) return;
         statusDiv.className = 'upload-status info';
-        statusDiv.textContent = 'Обработка файлов...';
+        statusDiv.textContent = `Обработка файлов (0/${files.length})...`;
 
         try {
-            // Шаг 1: Получаем всех партнеров из системы
             const allPartners = storage.getPartners();
-
-            // Шаг 2: Собираем список наших Субагент ID (приводим к строкам для сравнения)
             TrafficState.ourPartnerIds = allPartners.map(p => String(p.subagentId));
+            const qualityData = Object.create(null);
+            const errors = [];
 
-            // Шаг 3: Создаем объект для хранения данных контроля качества
-            // Формат: { "ID": { depositTransactionsCount: 0, withdrawalTransactionsCount: 0, ... } }
-            const qualityData = {};
-
-            // Шаг 4: Обрабатываем каждый загруженный файл
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                const excelData = await TrafficParsers.readExcelFile(file);
-                TrafficParsers.parseQualityControlData(excelData, qualityData);
+                statusDiv.textContent = `Обработка файлов (${i + 1}/${files.length}): ${file.name}`;
+
+                const validationError = this._validateFile(file);
+                if (validationError) {
+                    errors.push(validationError);
+                    continue;
+                }
+
+                try {
+                    const excelData = await TrafficParsers.readExcelFile(file);
+                    if (!excelData || excelData.length === 0) {
+                        errors.push(`"${file.name}": файл пуст`);
+                        continue;
+                    }
+                    TrafficParsers.parseQualityControlData(excelData, qualityData);
+                } catch (error) {
+                    errors.push(`"${file.name}": ${error.message}`);
+                }
             }
 
-            // Шаг 5: Обновляем данные каждого партнера
+            // Обновляем данные каждого партнера
             allPartners.forEach(partner => {
                 const data = qualityData[String(partner.subagentId)] || {};
-
-                // Кол-во пополнений
                 partner.depositTransactionsCount = data.depositTransactionsCount || 0;
-
-                // Кол-во выводов
                 partner.withdrawalTransactionsCount = data.withdrawalTransactionsCount || 0;
-
-                // Обращений по пополнениям
                 partner.depositAppealsCount = data.depositAppealsCount || 0;
-
-                // Обращения обработанные 15+ минут
                 partner.delayedAppealsCount = data.delayedAppealsCount || 0;
-
-                // Процент успешных пополнений (конвертируем 0.89 -> 89)
                 partner.depositSuccessPercent = data.depositSuccessPercent || 0;
-
-                // Процент успешных выводов (конвертируем 0.89 -> 89)
                 partner.withdrawalSuccessPercent = data.withdrawalSuccessPercent || 0;
             });
 
-            // Шаг 6: Сохраняем обновленные данные
             storage.savePartners(allPartners);
-
-            // Успех!
-            statusDiv.className = 'upload-status success';
-            statusDiv.textContent = `Успешно обработано ${files.length} файл(ов). Данные обновлены.`;
-
-            TrafficState.filesUploaded.quality = true;
-            // Отмечаем шаг 3 как завершенный
-            if (!TrafficState.completedSteps.includes(3)) {
-                TrafficState.completedSteps.push(3);
-            }
-            TrafficNavigation.updateStepsIndicator(TrafficState.currentStep);
-            document.getElementById('step3NextBtn').disabled = false;
-
+            this._showUploadResult(statusDiv, errors, files.length, 'quality', 'step3NextBtn');
             event.target.value = '';
 
         } catch (error) {
-            ErrorHandler.handle(error, {
-                module: 'traffic-calculation',
-                action: 'handleQualityUpload'
-            });
+            ErrorHandler.handle(error, { module: 'traffic-calculation', action: 'handleQualityUpload' });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
         }
@@ -134,59 +163,71 @@ const TrafficUpload = {
         if (!files || files.length === 0) return;
 
         const statusDiv = document.getElementById('percentStatus');
+        if (!this._checkFileCount(files, statusDiv)) return;
         statusDiv.className = 'upload-status info';
-        statusDiv.textContent = 'Обработка файлов...';
+        statusDiv.textContent = `Обработка файлов (0/${files.length})...`;
 
         try {
-            // Шаг 1: Получаем всех партнеров из системы
             const allPartners = storage.getPartners();
-
-            // Шаг 2: Собираем список наших Субагент ID (приводим к строкам для сравнения)
             TrafficState.ourPartnerIds = allPartners.map(p => String(p.subagentId));
+            const autoDisableCounters = Object.create(null);
+            const errors = [];
 
-            // Шаг 3: Создаем объект для хранения счетчиков автоотключений
-            // Формат: { "ID": количество }
-            const autoDisableCounters = {};
-
-            // Шаг 4: Обрабатываем каждый загруженный файл
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                const excelData = await TrafficParsers.readExcelFile(file);
-                TrafficParsers.countAutoDisables(excelData, autoDisableCounters);
+                statusDiv.textContent = `Обработка файлов (${i + 1}/${files.length}): ${file.name}`;
+
+                const validationError = this._validateFile(file);
+                if (validationError) {
+                    errors.push(validationError);
+                    continue;
+                }
+
+                try {
+                    const excelData = await TrafficParsers.readExcelFile(file);
+                    if (!excelData || excelData.length === 0) {
+                        errors.push(`"${file.name}": файл пуст`);
+                        continue;
+                    }
+                    TrafficParsers.countAutoDisables(excelData, autoDisableCounters);
+                } catch (error) {
+                    errors.push(`"${file.name}": ${error.message}`);
+                }
             }
 
-            // Шаг 5: Обновляем данные каждого партнера
             allPartners.forEach(partner => {
-                // Берем количество автоотключений для данного ID
-                // Если в файле не нашли - ставим 0
                 partner.autoDisableCount = autoDisableCounters[String(partner.subagentId)] || 0;
             });
-
-            // Шаг 6: Сохраняем обновленные данные
             storage.savePartners(allPartners);
-
-            // Успех!
-            statusDiv.className = 'upload-status success';
-            statusDiv.textContent = `Успешно обработано ${files.length} файл(ов). Данные обновлены.`;
-
-            TrafficState.filesUploaded.percent = true;
-            // Отмечаем шаг 5 как завершенный
-            if (!TrafficState.completedSteps.includes(5)) {
-                TrafficState.completedSteps.push(5);
-            }
-            TrafficNavigation.updateStepsIndicator(TrafficState.currentStep);
-            document.getElementById('step5NextBtn').disabled = false;
-
+            this._showUploadResult(statusDiv, errors, files.length, 'percent', 'step5NextBtn');
             event.target.value = '';
 
         } catch (error) {
-            ErrorHandler.handle(error, {
-                module: 'traffic-calculation',
-                action: 'handlePercentUpload'
-            });
+            ErrorHandler.handle(error, { module: 'traffic-calculation', action: 'handlePercentUpload' });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
         }
+    },
+
+    // Отметка шага как завершенного
+    _markStepComplete(stepKey, btnId) {
+        TrafficState.filesUploaded[stepKey] = true;
+        const stepNumbers = { deposits: 2, quality: 3, percent: 5 };
+        const stepNumber = stepNumbers[stepKey];
+        if (!TrafficState.completedSteps.includes(stepNumber)) {
+            TrafficState.completedSteps.push(stepNumber);
+        }
+        TrafficNavigation.updateStepsIndicator(TrafficState.currentStep);
+        document.getElementById(btnId).disabled = false;
+    },
+
+    // Сброс шага (общий метод)
+    _resetStepUI(statusId, fileInputId, btnId) {
+        const statusDiv = document.getElementById(statusId);
+        statusDiv.textContent = '';
+        statusDiv.className = 'upload-status';
+        document.getElementById(fileInputId).value = '';
+        document.getElementById(btnId).disabled = true;
     },
 
     // Сброс данных шага 2 (пополнения и выводы)
@@ -209,12 +250,7 @@ const TrafficUpload = {
 
         TrafficState.filesUploaded.deposits = false;
         TrafficState.completedSteps = TrafficState.completedSteps.filter(s => s !== 2);
-
-        document.getElementById('depositsStatus').textContent = '';
-        document.getElementById('depositsStatus').className = 'upload-status';
-        document.getElementById('depositsFileInput').value = '';
-        document.getElementById('step2NextBtn').disabled = true;
-
+        this._resetStepUI('depositsStatus', 'depositsFileInput', 'step2NextBtn');
         TrafficNavigation.updateStepsIndicator(TrafficState.currentStep);
         Toast.success('Данные пополнений и выводов сброшены');
     },
@@ -243,12 +279,7 @@ const TrafficUpload = {
 
         TrafficState.filesUploaded.quality = false;
         TrafficState.completedSteps = TrafficState.completedSteps.filter(s => s !== 3);
-
-        document.getElementById('qualityStatus').textContent = '';
-        document.getElementById('qualityStatus').className = 'upload-status';
-        document.getElementById('qualityFileInput').value = '';
-        document.getElementById('step3NextBtn').disabled = true;
-
+        this._resetStepUI('qualityStatus', 'qualityFileInput', 'step3NextBtn');
         TrafficNavigation.updateStepsIndicator(TrafficState.currentStep);
         Toast.success('Данные контроля качества сброшены');
     },
@@ -272,12 +303,7 @@ const TrafficUpload = {
 
         TrafficState.filesUploaded.percent = false;
         TrafficState.completedSteps = TrafficState.completedSteps.filter(s => s !== 5);
-
-        document.getElementById('percentStatus').textContent = '';
-        document.getElementById('percentStatus').className = 'upload-status';
-        document.getElementById('percentFileInput').value = '';
-        document.getElementById('step5NextBtn').disabled = true;
-
+        this._resetStepUI('percentStatus', 'percentFileInput', 'step5NextBtn');
         TrafficNavigation.updateStepsIndicator(TrafficState.currentStep);
         Toast.success('Данные автоотключений сброшены');
     }

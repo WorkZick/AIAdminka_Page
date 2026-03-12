@@ -843,17 +843,6 @@
     opacity: 0.9;
 }
 
-/* Loading spinner (uses DS .spinner + .loading-text) */
-.loading-spinner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    text-align: center;
-    gap: var(--spacing-lg);
-}
-
 /* Worktime layout - Glassmorphism */
 .worktime-layout {
     display: grid;

@@ -1,88 +1,87 @@
-// Partners Renderer - render, updateStats, sortBy, filterTable, toggleSidebar
+// Partners Renderer - render, updateStats, sortBy, filterTable, toggleSidebar, renderPagination
 const PartnersRenderer = {
     _filterTimer: null,
 
     render() {
-        const partnersData = PartnersState.getPartners();
+        PartnersState._invalidateFiltered();
+        const allPartners = PartnersState.getPartners();
         const tbody = document.getElementById('partnersTableBody');
         const emptyState = document.getElementById('emptyState');
         const table = document.querySelector('.partners-table');
 
-        if (partnersData.length === 0) {
-            emptyState.classList.remove('hidden');
-            table.classList.add('hidden');
-        } else {
-            emptyState.classList.add('hidden');
-            table.classList.remove('hidden');
-
-            let sortedData = [...partnersData];
-            if (PartnersState.sortField) {
-                sortedData.sort((a, b) => {
-                    const valA = (a[PartnersState.sortField] || '').toString().toLowerCase();
-                    const valB = (b[PartnersState.sortField] || '').toString().toLowerCase();
-                    if (valA < valB) return PartnersState.sortDirection === 'asc' ? -1 : 1;
-                    if (valA > valB) return PartnersState.sortDirection === 'asc' ? 1 : -1;
-                    return 0;
-                });
-            }
-
-            const columns = PartnersColumns.getColumnsConfig();
-            const visibleColumns = columns.filter(c => c.visible);
-            const selectedId = PartnersState.selectedPartnerId;
-            const fragment = document.createDocumentFragment();
-
-            sortedData.forEach(partner => {
-                const statusClass = PartnersUtils.getStatusColor(partner.status || 'Открыт');
-                const avatar = partner.avatarFileId ? CloudStorage.getImageUrl(partner.avatarFileId) : '';
-                const isValidAvatar = !!avatar;
-
-                const tr = document.createElement('tr');
-                tr.className = selectedId === partner.id ? 'selected' : '';
-                tr.dataset.partnerId = partner.id;
-
-                let rowHtml = `
-                    <td>
-                        <div class="counters-cell">
-                            <span>${parseInt(partner.dep) || 0}</span>
-                            <span>${parseInt(partner.with) || 0}</span>
-                            <span>${parseInt(partner.comp) || 0}</span>
-                        </div>
-                    </td>
-                `;
-
-                visibleColumns.forEach(col => {
-                    rowHtml += PartnersColumns.renderColumnCell(col.id, partner, statusClass, isValidAvatar);
-                });
-
-                rowHtml += `
-                    <td class="col-arrow">
-                        <img class="row-arrow" src="../shared/icons/arrow.svg" alt="">
-                    </td>
-                `;
-
-                tr.innerHTML = rowHtml;
-
-                if (isValidAvatar) {
-                    const avatarDiv = tr.querySelector('.partner-avatar');
-                    if (avatarDiv) {
-                        const placeholder = avatarDiv.querySelector('.avatar-placeholder');
-                        if (placeholder) placeholder.classList.add('hidden');
-                        const img = document.createElement('img');
-                        img.src = avatar;
-                        img.alt = '';
-                        img.loading = 'lazy';
-                        avatarDiv.appendChild(img);
-                    }
-                }
-
-                fragment.appendChild(tr);
-            });
-
-            tbody.innerHTML = '';
-            tbody.appendChild(fragment);
+        if (allPartners.length === 0) {
+            if (emptyState) emptyState.classList.remove('hidden');
+            if (table) table.classList.add('hidden');
+            PartnersRenderer.updateStats();
+            PartnersRenderer.renderPagination();
+            return;
         }
 
+        if (emptyState) emptyState.classList.add('hidden');
+        if (table) table.classList.remove('hidden');
+
+        // Clamp page
+        const totalPages = PartnersState.getTotalPages();
+        if (PartnersState.currentPage > totalPages) PartnersState.currentPage = totalPages;
+
+        const pagedData = PartnersState.getPagedPartners();
+        const columns = PartnersColumns.getColumnsConfig();
+        const visibleColumns = columns.filter(c => c.visible);
+        const selectedId = PartnersState.selectedPartnerId;
+        const fragment = document.createDocumentFragment();
+
+        pagedData.forEach(partner => {
+            const statusClass = PartnersUtils.getStatusColor(partner.status || 'Открыт');
+            const avatar = partner.avatarFileId ? CloudStorage.getImageUrl(partner.avatarFileId) : '';
+            const isValidAvatar = !!avatar;
+
+            const tr = document.createElement('tr');
+            tr.className = selectedId === partner.id ? 'selected' : '';
+            tr.dataset.partnerId = partner.id;
+
+            let rowHtml = `
+                <td>
+                    <div class="counters-cell">
+                        <span>${parseInt(partner.dep) || 0}</span>
+                        <span>${parseInt(partner.with) || 0}</span>
+                        <span>${parseInt(partner.comp) || 0}</span>
+                    </div>
+                </td>
+            `;
+
+            visibleColumns.forEach(col => {
+                rowHtml += PartnersColumns.renderColumnCell(col.id, partner, statusClass, isValidAvatar);
+            });
+
+            rowHtml += `
+                <td class="col-arrow">
+                    <img class="row-arrow" src="../shared/icons/arrow.svg" alt="">
+                </td>
+            `;
+
+            tr.innerHTML = rowHtml;
+
+            if (isValidAvatar) {
+                const avatarDiv = tr.querySelector('.partner-avatar');
+                if (avatarDiv) {
+                    const placeholder = avatarDiv.querySelector('.avatar-placeholder');
+                    if (placeholder) placeholder.classList.add('hidden');
+                    const img = document.createElement('img');
+                    img.src = avatar;
+                    img.alt = '';
+                    img.loading = 'lazy';
+                    avatarDiv.appendChild(img);
+                }
+            }
+
+            fragment.appendChild(tr);
+        });
+
+        tbody.innerHTML = '';
+        tbody.appendChild(fragment);
+
         PartnersRenderer.updateStats();
+        PartnersRenderer.renderPagination();
     },
 
     // Обновить только выделение строк без полной перерисовки
@@ -125,20 +124,70 @@ const PartnersRenderer = {
             PartnersState.sortField = field;
             PartnersState.sortDirection = 'asc';
         }
+        PartnersState.currentPage = 1;
         PartnersRenderer.render();
     },
 
     filterTable() {
         clearTimeout(PartnersRenderer._filterTimer);
         PartnersRenderer._filterTimer = setTimeout(() => {
-            const searchValue = document.getElementById('searchInput').value.toLowerCase();
-            const rows = document.getElementById('partnersTableBody').children;
-
-            for (let i = 0; i < rows.length; i++) {
-                const text = rows[i].textContent.toLowerCase();
-                rows[i].classList.toggle('hidden', !text.includes(searchValue));
-            }
+            PartnersState.searchQuery = document.getElementById('searchInput').value;
+            PartnersState.currentPage = 1;
+            PartnersRenderer.render();
         }, 150);
+    },
+
+    renderPagination() {
+        const container = document.getElementById('partnersPagination');
+        if (!container) return;
+
+        const totalPages = PartnersState.getTotalPages();
+        const currentPage = PartnersState.currentPage;
+
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        // Prev
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'page-btn';
+        prevBtn.textContent = '\u2190';
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.dataset.action = 'partners-goToPage';
+        prevBtn.dataset.value = currentPage - 1;
+        container.appendChild(prevBtn);
+
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+                pageBtn.textContent = i;
+                pageBtn.dataset.action = 'partners-goToPage';
+                pageBtn.dataset.value = i;
+                container.appendChild(pageBtn);
+            } else if (i === currentPage - 2 || i === currentPage + 2) {
+                const dots = document.createElement('span');
+                dots.className = 'pagination-dots';
+                dots.textContent = '...';
+                container.appendChild(dots);
+            }
+        }
+
+        // Next
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'page-btn';
+        nextBtn.textContent = '\u2192';
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.dataset.action = 'partners-goToPage';
+        nextBtn.dataset.value = currentPage + 1;
+        container.appendChild(nextBtn);
+    },
+
+    goToPage(page) {
+        const p = parseInt(page);
+        if (isNaN(p) || p < 1) return;
+        PartnersState.currentPage = p;
+        PartnersRenderer.render();
     },
 
     toggleSidebar() {

@@ -522,6 +522,7 @@ const CloudStorage = {
             try {
                 const result = await this.callApi('getPartners');
                 let partners = result.partners || [];
+                if (result.ts) this._partnersTs = result.ts;
 
                 // Парсим customFields и маппим поля из Google Sheets формата
                 partners.forEach(p => {
@@ -736,6 +737,7 @@ const CloudStorage = {
             try {
                 const result = await this.callApi('getEmployees');
                 let employees = result.employees || [];
+                if (result.ts) this._employeesTs = result.ts;
 
                 // Парсим customFields если они в виде строки
                 employees.forEach(emp => {

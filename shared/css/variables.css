@@ -82,7 +82,8 @@
     --transition-fast: 0.2s ease;
     --transition-normal: 0.3s ease;
     /* Specific property transitions (perf: avoids "transition: all" recalc) */
-    --transition-colors: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
+    /* box-shadow убран — вызывает дорогой repaint при каждом hover */
+    --transition-colors: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
 
     /* ==================== Z-INDEX ==================== */
     --z-sidebar: 50;

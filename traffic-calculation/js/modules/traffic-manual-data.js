@@ -383,12 +383,7 @@ const TrafficManualData = {
         if (!input) return;
 
         input.value = parseInt(input.value || 0) + 1;
-        // Сохраняем в зависимости от того, на каком шаге мы находимся
-        if (TrafficState.currentStep === 6) {
-            TrafficManualData.saveCurrentManualDataStep6();
-        } else {
-            TrafficManualData.saveCurrentManualData();
-        }
+        TrafficManualData._debouncedSaveForCurrentStep();
     },
 
     // Уменьшение значения
@@ -399,12 +394,19 @@ const TrafficManualData = {
         const currentValue = parseInt(input.value || 0);
         if (currentValue > 0) {
             input.value = currentValue - 1;
-            // Сохраняем в зависимости от того, на каком шаге мы находимся
+            TrafficManualData._debouncedSaveForCurrentStep();
+        }
+    },
+
+    _debouncedSaveForCurrentStep() {
+        clearTimeout(TrafficManualData._incDecTimer);
+        TrafficManualData._incDecTimer = setTimeout(() => {
             if (TrafficState.currentStep === 6) {
                 TrafficManualData.saveCurrentManualDataStep6();
             } else {
                 TrafficManualData.saveCurrentManualData();
             }
-        }
-    }
+        }, 300);
+    },
+    _incDecTimer: null
 };

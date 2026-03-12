@@ -1,23 +1,122 @@
-// Модуль парсеров данных (чистые функции без DOM)
+// Модуль парсеров данных (Web Worker для Excel + функции парсинга)
 const TrafficParsers = {
-    // Чтение Excel файла
+    _AUTO_DISABLE_ADMIN: 'Aвтоотключалка', // A — латинская (U+0041)
+    _worker: null,
+    _workerBusy: false,
+    _workerQueue: [],
+
+    // Получить или создать Worker (ленивая инициализация)
+    _getWorker() {
+        if (!this._worker) {
+            this._worker = new Worker('js/modules/excel-worker.js');
+            this._worker.onerror = (e) => {
+                console.error('Excel Worker error:', e.message);
+            };
+        }
+        return this._worker;
+    },
+
+    // Чтение Excel файла через Web Worker (с очередью)
     readExcelFile(file) {
         return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-                    resolve(jsonData);
-                } catch (error) {
-                    reject(error);
+            const task = () => this._processInWorker(file).then(resolve, reject);
+
+            if (this._workerBusy) {
+                this._workerQueue.push(task);
+            } else {
+                this._workerBusy = true;
+                task().finally(() => this._processNextInQueue());
+            }
+        });
+    },
+
+    // Обработать следующую задачу из очереди
+    _processNextInQueue() {
+        const next = this._workerQueue.shift();
+        if (next) {
+            next().finally(() => this._processNextInQueue());
+        } else {
+            this._workerBusy = false;
+        }
+    },
+
+    // Отправка файла в Worker и ожидание результата
+    async _processInWorker(file) {
+        const WORKER_TIMEOUT = 120000; // 2 минуты
+        const arrayBuffer = await file.arrayBuffer();
+        const worker = this._getWorker();
+
+        return new Promise((resolve, reject) => {
+            let batchedData = null;
+
+            const timer = setTimeout(() => {
+                cleanup();
+                this._worker.terminate();
+                this._worker = null;
+                reject(new Error('Превышено время обработки файла. Файл слишком большой или повреждён.'));
+            }, WORKER_TIMEOUT);
+
+            const cleanup = () => {
+                clearTimeout(timer);
+                worker.removeEventListener('message', handler);
+                worker.removeEventListener('error', errorHandler);
+            };
+
+            const errorHandler = (e) => {
+                cleanup();
+                reject(new Error('Ошибка Worker: ' + (e.message || 'неизвестная ошибка')));
+            };
+
+            const handler = (e) => {
+                const msg = e.data;
+
+                switch (msg.type) {
+                    case 'done':
+                        cleanup();
+                        resolve(msg.data);
+                        break;
+
+                    case 'start':
+                        batchedData = new Array(msg.totalRows);
+                        break;
+
+                    case 'batch':
+                        for (let i = 0; i < msg.batch.length; i++) {
+                            batchedData[msg.offset + i] = msg.batch[i];
+                        }
+                        break;
+
+                    case 'batch-end':
+                        cleanup();
+                        for (let i = 0; i < msg.batch.length; i++) {
+                            batchedData[msg.offset + i] = msg.batch[i];
+                        }
+                        resolve(batchedData);
+                        break;
+
+                    case 'error':
+                        cleanup();
+                        reject(new Error(msg.error));
+                        break;
                 }
             };
-            reader.onerror = reject;
-            reader.readAsArrayBuffer(file);
+
+            worker.addEventListener('message', handler);
+            worker.addEventListener('error', errorHandler);
+
+            // Transferable ArrayBuffer — zero-copy transfer to Worker
+            worker.postMessage({ arrayBuffer, fileIndex: 0 }, [arrayBuffer]);
         });
+    },
+
+    // Завершение Worker при уничтожении
+    destroy() {
+        if (this._worker) {
+            this._worker.terminate();
+            this._worker = null;
+        }
+        this._workerBusy = false;
+        this._workerQueue = [];
     },
 
     // Парсинг данных из отчета "Пополнения и выводы"
@@ -119,8 +218,8 @@ const TrafficParsers = {
             const subagent = subagentValue.toString().trim();
 
             // Шаг 3: Проверяем, есть ли в колонке admin слово "Aвтоотключалка"
-            // ВАЖНО: слово начинается с английской буквы A!
-            if (admin !== 'Aвтоотключалка') continue;
+            // ВАЖНО: первая A — латинская (U+0041), остальное — кириллица
+            if (admin !== TrafficParsers._AUTO_DISABLE_ADMIN) continue;
 
             // Шаг 4: Извлекаем все числа из колонки subagent
             // Пример: "Jajje kddd dskd ksdks 51553" -> ["51553"]
@@ -131,16 +230,16 @@ const TrafficParsers = {
             if (!foundNumbers || foundNumbers.length === 0) continue;
 
             // Шаг 5: Проверяем каждое найденное число
-            foundNumbers.forEach(numberId => {
+            for (let j = 0; j < foundNumbers.length; j++) {
+                const numberId = foundNumbers[j];
                 // Проверяем: есть ли этот ID в нашей системе?
                 if (TrafficState.ourPartnerIds.includes(numberId)) {
-                    // Если да - увеличиваем счетчик
                     if (!counters[numberId]) {
-                        counters[numberId] = 0; // Инициализируем, если еще нет
+                        counters[numberId] = 0;
                     }
-                    counters[numberId]++; // +1 автоотключение
+                    counters[numberId]++;
                 }
-            });
+            }
         }
     },
 
@@ -169,7 +268,7 @@ const TrafficParsers = {
         const subagentIdIndex = headerRow.findIndex(header => {
             if (!header) return false;
             const h = header.toString().trim().toLowerCase();
-            return h === 'субагент id' || h === 'id субагента' || h === 'id cубагента' || h.includes('субагент') && h.includes('id');
+            return h === 'субагент id' || h === 'id субагента' || h === 'id cубагента' || (h.includes('субагент') && h.includes('id'));
         });
 
         // Ищем целевые колонки с данными (точные названия)

@@ -4,21 +4,42 @@
  */
 
 const EnvConfig = {
-    // Production окружение
+    // Доступные окружения
     ENVIRONMENTS: {
         prod: {
             name: 'Production',
             url: 'https://script.google.com/macros/s/AKfycbzyBCK_pgYgYo2Caz0xutGNLfapnxhpOKplgBPOfjrEr73XDRMgY5FgmIQivHC9rvfy/exec'
+        },
+        test: {
+            name: 'Test',
+            url: 'https://script.google.com/macros/s/AKfycbxodDVUhGmzK9sOsHcOJF-Qi2d4RdmAXlH3W2PQR8RXzpuKFsFp-Hddlnhs-VyhNYcjmw/exec'
         }
     },
+
+    // Ключ в localStorage
+    STORAGE_KEY: 'cloud-storage-env',
 
     // Окружение по умолчанию
     DEFAULT_ENV: 'prod',
 
     /**
-     * Получить текущее окружение (всегда prod)
+     * Проверка localhost (для автоматического выбора test)
+     */
+    isLocalhost() {
+        const host = window.location.hostname;
+        return host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.');
+    },
+
+    /**
+     * Получить текущее окружение
+     * На localhost автоматически используется test
+     * В production ВСЕГДА используется prod (игнорируем localStorage)
      */
     getCurrentEnv() {
+        if (this.isLocalhost()) {
+            return localStorage.getItem(this.STORAGE_KEY) || 'test';
+        }
+        // В production всегда prod — защита от подмены через localStorage
         return this.DEFAULT_ENV;
     },
 
@@ -26,40 +47,50 @@ const EnvConfig = {
      * Получить URL текущего окружения
      */
     getScriptUrl() {
-        return this.ENVIRONMENTS[this.DEFAULT_ENV].url;
+        const env = this.getCurrentEnv();
+        return this.ENVIRONMENTS[env]?.url || this.ENVIRONMENTS[this.DEFAULT_ENV].url;
     },
 
     /**
      * Получить информацию о текущем окружении
      */
     getInfo() {
+        const env = this.getCurrentEnv();
         return {
-            current: 'prod',
-            name: 'Production',
+            current: env,
+            name: this.ENVIRONMENTS[env]?.name || 'Unknown',
             url: this.getScriptUrl()
         };
     },
 
     /**
-     * Установить окружение (отключено в production)
+     * Установить окружение
      */
-    setEnvironment() {
-        console.error('EnvConfig: Environment switching disabled in production');
-        return false;
+    setEnvironment(env) {
+        if (!this.isLocalhost()) {
+            console.error('EnvConfig: Environment switching disabled in production');
+            return false;
+        }
+        if (!this.ENVIRONMENTS[env]) {
+            console.error('EnvConfig: Invalid environment:', env);
+            return false;
+        }
+        localStorage.setItem(this.STORAGE_KEY, env);
+        return true;
     },
 
     /**
      * Проверить, является ли текущее окружение тестовым
      */
     isTestEnv() {
-        return false;
+        return this.getCurrentEnv() === 'test';
     },
 
     /**
      * Проверить, является ли текущее окружение production
      */
     isProduction() {
-        return true;
+        return this.getCurrentEnv() === 'prod' && !this.isLocalhost();
     }
 };
 

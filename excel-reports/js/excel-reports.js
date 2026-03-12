@@ -708,6 +708,11 @@ PageLifecycle.init({
     async onInit() {
         excelApp.init();
     },
+    onDestroy() {
+        if (excelApp.fileProcessor) {
+            excelApp.fileProcessor.destroy();
+        }
+    },
     modals: {
         '#resetModal': () => excelApp.closeResetModal()
     }

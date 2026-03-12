@@ -47,8 +47,9 @@ const teamInfo = {
     get currentEmployeeId() { return TeamState.currentEmployeeId; },
     set currentEmployeeId(value) { TeamState.currentEmployeeId = value; },
     loadTeamName: () => TeamState.loadTeamName(),
-    sortBy: (field) => { TeamState.sortBy(field); TeamRenderer.render(); },
+    sortBy: (field) => { TeamState.sortBy(field); TeamState.currentPage = 1; TeamRenderer.render(); },
     filterTable: () => TeamState.filterTable(),
+    goToPage: (page) => TeamRenderer.goToPage(page),
 
     // TeamRenderer
     render: () => TeamRenderer.render(),
