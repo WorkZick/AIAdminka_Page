@@ -169,23 +169,36 @@ const OnboardingSource = (() => {
 
         const nameInput = document.getElementById('sourceEditName');
         const urlInput = document.getElementById('sourceEditUrl');
-        const intervalSelect = document.getElementById('sourceEditInterval');
+        const intervalInput = document.getElementById('sourceEditIntervalValue');
+        const intervalLabel = document.getElementById('sourceEditIntervalLabel');
+        const intervalTrigger = document.getElementById('sourceEditIntervalTrigger');
+        const intervalMenu = document.getElementById('sourceEditIntervalMenu');
         const deleteBtn = document.getElementById('btnDeleteSource');
 
         if (nameInput) nameInput.value = source ? source.name : '';
         if (urlInput) urlInput.value = source ? (source.sheetUrl || '') : '';
-        if (intervalSelect) intervalSelect.value = source ? String(source.syncIntervalMinutes ?? 5) : '5';
+        const intervalVal = source ? String(source.syncIntervalMinutes ?? 5) : '5';
+        if (intervalInput) intervalInput.value = intervalVal;
+        // Update label and active state
+        if (intervalMenu) {
+            intervalMenu.querySelectorAll('.dropdown-item').forEach(item => {
+                const isActive = (item.dataset.value || '') === intervalVal;
+                item.classList.toggle('active', isActive);
+                if (isActive && intervalLabel) intervalLabel.textContent = item.textContent;
+            });
+        }
+        if (intervalTrigger) intervalTrigger.classList.remove('placeholder');
         if (deleteBtn) deleteBtn.classList.toggle('hidden', !source);
     }
 
     async function saveSource() {
         const nameInput = document.getElementById('sourceEditName');
         const urlInput = document.getElementById('sourceEditUrl');
-        const intervalSelect = document.getElementById('sourceEditInterval');
+        const intervalInput = document.getElementById('sourceEditIntervalValue');
 
         const name = (nameInput ? nameInput.value : '').trim();
         const url = (urlInput ? urlInput.value : '').trim();
-        const interval = parseInt(intervalSelect ? intervalSelect.value : '5', 10);
+        const interval = parseInt(intervalInput ? intervalInput.value : '5', 10);
 
         if (!name) {
             Toast.error('Укажите название источника');

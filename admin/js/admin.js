@@ -111,16 +111,22 @@ const adminApp = {
         };
         document.addEventListener('input', this._inputHandler);
 
-        // Delegate for all change events (selects)
+        // Delegate for all change events (form selects in modals)
         this._changeHandler = (e) => {
             const action = e.target.dataset.action;
-            if (action === 'filter-users') this.filterUsers();
-            else if (action === 'filter-audit') this.filterAudit();
+            if (!action) return;
         };
         document.addEventListener('change', this._changeHandler);
 
         // Delegate for all click events
         this._clickHandler = (e) => {
+            // Close open dropdowns when clicking outside
+            document.querySelectorAll('.dropdown-menu:not(.hidden)').forEach(menu => {
+                if (!e.target.closest('.dropdown-wrap') || e.target.closest('.dropdown-wrap') !== menu.closest('.dropdown-wrap')) {
+                    menu.classList.add('hidden');
+                }
+            });
+
             const target = e.target.closest('[data-action]');
             if (!target) return;
 
@@ -215,6 +221,25 @@ const adminApp = {
                         callback(page);
                     }
                     break;
+                case 'toggle-dropdown': {
+                    const menuId = target.dataset.target;
+                    if (menuId) this._toggleDropdown(menuId);
+                    break;
+                }
+                case 'select-filter': {
+                    const filterName = target.dataset.filter;
+                    const filterValue = target.dataset.value;
+                    if (filterName) this._selectFilter(filterName, filterValue, target);
+                    break;
+                }
+                case 'toggle-form-dropdown': {
+                    this._toggleFormDropdown(target);
+                    break;
+                }
+                case 'select-form-dropdown': {
+                    this._selectFormDropdown(target);
+                    break;
+                }
             }
         };
         document.addEventListener('click', this._clickHandler);
@@ -313,19 +338,21 @@ const adminApp = {
         const roles = RolesConfig.ALL_ROLES.filter(r => r !== 'guest');
 
         // Фильтр ролей
-        const filterSelect = document.getElementById('filterRole');
-        if (filterSelect) {
-            const currentValue = filterSelect.value;
-            const firstOpt = filterSelect.querySelector('option[value=""]');
-            filterSelect.innerHTML = '';
-            if (firstOpt) filterSelect.appendChild(firstOpt);
+        const filterMenu = document.getElementById('filterRoleMenu');
+        if (filterMenu) {
+            const currentValue = this._getFilterValue('filterRole');
+            const firstItem = filterMenu.querySelector('.dropdown-item');
+            filterMenu.innerHTML = '';
+            if (firstItem) filterMenu.appendChild(firstItem);
             roles.forEach(role => {
-                const opt = document.createElement('option');
-                opt.value = role;
-                opt.textContent = RolesConfig.getName(role);
-                filterSelect.appendChild(opt);
+                const item = document.createElement('div');
+                item.className = 'dropdown-item' + (role === currentValue ? ' active' : '');
+                item.dataset.action = 'select-filter';
+                item.dataset.filter = 'filterRole';
+                item.dataset.value = role;
+                item.textContent = RolesConfig.getName(role);
+                filterMenu.appendChild(item);
             });
-            filterSelect.value = currentValue;
         }
 
         // Модалка редактирования — заполняется в openEditUserModal
@@ -337,28 +364,86 @@ const adminApp = {
         document.getElementById('requestsCount').textContent = this.requests.length;
     },
 
-    populateTeamFilter() {
-        const select = document.getElementById('filterTeam');
-        if (!select) return;
+    _filterValues: {},
 
-        // Сохранить текущее значение
-        const currentValue = select.value;
-
-        // Очистить (кроме первого option)
-        while (select.options.length > 1) {
-            select.remove(1);
-        }
-
-        // Добавить команды
-        this.teams.forEach(team => {
-            const option = document.createElement('option');
-            option.value = team.id;
-            option.textContent = team.name;
-            select.appendChild(option);
+    _toggleDropdown(menuId) {
+        const menu = document.getElementById(menuId);
+        if (!menu) return;
+        // Close other dropdowns first
+        document.querySelectorAll('.dropdown-menu:not(.hidden)').forEach(m => {
+            if (m.id !== menuId) m.classList.add('hidden');
         });
+        menu.classList.toggle('hidden');
+    },
 
-        // Восстановить значение
-        select.value = currentValue;
+    _toggleFormDropdown(trigger) {
+        const menuId = trigger.dataset.target;
+        const menu = document.getElementById(menuId);
+        if (!menu) return;
+        document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden)').forEach(m => {
+            if (m !== menu) m.classList.add('hidden');
+        });
+        menu.classList.toggle('hidden');
+    },
+
+    _selectFormDropdown(target) {
+        const menu = target.closest('.dropdown-menu');
+        const wrap = target.closest('.dropdown-wrap--form');
+        if (!menu || !wrap) return;
+        const value = target.dataset.value ?? '';
+        const label = target.textContent;
+        const input = wrap.querySelector('input[type="hidden"]');
+        if (input) input.value = value;
+        const trigger = wrap.querySelector('.dropdown-trigger--form');
+        const labelEl = trigger?.querySelector('span');
+        if (labelEl) labelEl.textContent = label;
+        trigger?.classList.toggle('placeholder', !value);
+        menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+        target.classList.add('active');
+        menu.classList.add('hidden');
+    },
+
+    _selectFilter(filterName, value, target) {
+        this._filterValues[filterName] = value || '';
+        // Update active state
+        const menu = target.closest('.dropdown-menu');
+        if (menu) {
+            menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+            target.classList.add('active');
+            menu.classList.add('hidden');
+        }
+        // Update label
+        const label = document.getElementById(filterName + 'Label');
+        if (label) label.textContent = target.textContent;
+        // Trigger filter
+        if (filterName === 'filterAction') this.filterAudit();
+        else this.filterUsers();
+    },
+
+    _getFilterValue(filterName) {
+        return this._filterValues[filterName] || '';
+    },
+
+    populateTeamFilter() {
+        const menu = document.getElementById('filterTeamMenu');
+        if (!menu) return;
+
+        const currentValue = this._getFilterValue('filterTeam');
+
+        // Keep first item ("Все команды"), rebuild rest
+        const firstItem = menu.querySelector('.dropdown-item');
+        menu.innerHTML = '';
+        if (firstItem) menu.appendChild(firstItem);
+
+        this.teams.forEach(team => {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item' + (team.id === currentValue ? ' active' : '');
+            item.dataset.action = 'select-filter';
+            item.dataset.filter = 'filterTeam';
+            item.dataset.value = team.id;
+            item.textContent = team.name;
+            menu.appendChild(item);
+        });
     },
 
     // ============ Teams ============
@@ -595,9 +680,9 @@ const adminApp = {
         const pagination = document.getElementById('usersPagination');
 
         const searchValue = document.getElementById('searchUsers')?.value.toLowerCase() || '';
-        const teamFilter = document.getElementById('filterTeam')?.value || '';
-        const roleFilter = document.getElementById('filterRole')?.value || '';
-        const statusFilter = document.getElementById('filterStatus')?.value || '';
+        const teamFilter = this._getFilterValue('filterTeam');
+        const roleFilter = this._getFilterValue('filterRole');
+        const statusFilter = this._getFilterValue('filterStatus');
 
         // Фильтрация
         let filtered = [...this.users];
@@ -742,51 +827,52 @@ const adminApp = {
         document.getElementById('modalUserName').textContent = user.name;
         document.getElementById('modalUserEmail').textContent = user.email;
 
-        // Заполнить select команды
-        const teamSelect = document.getElementById('modalUserTeam');
-        teamSelect.innerHTML = '<option value="">Без команды</option>';
+        // Заполнить dropdown команды
+        const teamMenu = document.getElementById('modalUserTeamMenu');
+        const teamInput = document.getElementById('modalUserTeamValue');
+        const teamLabel = document.getElementById('modalUserTeamLabel');
+        const teamTrigger = teamMenu?.closest('.dropdown-wrap--form')?.querySelector('.dropdown-trigger--form');
 
         // Leader видит только свою команду (но admin-leader видит все)
         const isAdminUser = typeof RoleGuard !== 'undefined' && RoleGuard.isAdmin();
         const isLeader = !isAdminUser && typeof RoleGuard !== 'undefined' && RoleGuard.hasRole('leader');
         const myTeamId = RoleGuard?.user?.teamId;
 
+        let teamHtml = '<div class="dropdown-item' + (!user.teamId ? ' active' : '') + '" data-action="select-form-dropdown" data-value="">Без команды</div>';
         this.teams.forEach(team => {
-            // Leader может назначать только в свою команду
             if (isLeader && team.id !== myTeamId) return;
-
-            const option = document.createElement('option');
-            option.value = team.id;
-            option.textContent = team.name;
-            if (team.id === user.teamId) option.selected = true;
-            teamSelect.appendChild(option);
+            const isActive = team.id === user.teamId ? ' active' : '';
+            teamHtml += '<div class="dropdown-item' + isActive + '" data-action="select-form-dropdown" data-value="' + this.escapeHtml(team.id) + '">' + this.escapeHtml(team.name) + '</div>';
         });
+        if (teamMenu) teamMenu.innerHTML = teamHtml;
+        if (teamInput) teamInput.value = user.teamId || '';
+        const selectedTeam = user.teamId ? this.teams.find(t => t.id === user.teamId) : null;
+        if (teamLabel) teamLabel.textContent = selectedTeam ? selectedTeam.name : 'Без команды';
+        if (teamTrigger) teamTrigger.classList.toggle('placeholder', !user.teamId);
 
-        // Заполнить select ролей (только доступные)
-        const roleSelect = document.getElementById('modalUserRole');
-        roleSelect.innerHTML = '';
+        // Заполнить dropdown ролей (только доступные)
+        const roleMenu = document.getElementById('modalUserRoleMenu');
+        const roleInput = document.getElementById('modalUserRoleValue');
+        const roleLabel = document.getElementById('modalUserRoleLabel');
+        const roleTrigger = roleMenu?.closest('.dropdown-wrap--form')?.querySelector('.dropdown-trigger--form');
 
         const assignableRoles = typeof RoleGuard !== 'undefined'
             ? RoleGuard.getAssignableRoles()
             : ['assistant', 'sales', 'partners_mgr', 'payments', 'antifraud', 'tech'];
 
-        assignableRoles.forEach(role => {
-            const option = document.createElement('option');
-            option.value = role;
-            option.textContent = RolesConfig.getName(role);
-            if (role === user.role) option.selected = true;
-            roleSelect.appendChild(option);
-        });
-
-        // Если текущая роль не в списке - добавить disabled
+        let roleHtml = '';
+        // Если текущая роль не в списке - показать disabled
         if (!assignableRoles.includes(user.role)) {
-            const option = document.createElement('option');
-            option.value = user.role;
-            option.textContent = RolesConfig.getName(user.role);
-            option.selected = true;
-            option.disabled = true;
-            roleSelect.insertBefore(option, roleSelect.firstChild);
+            roleHtml += '<div class="dropdown-item dropdown-item--disabled active" data-action="select-form-dropdown" data-value="' + this.escapeHtml(user.role) + '">' + this.escapeHtml(RolesConfig.getName(user.role)) + '</div>';
         }
+        assignableRoles.forEach(role => {
+            const isActive = role === user.role ? ' active' : '';
+            roleHtml += '<div class="dropdown-item' + isActive + '" data-action="select-form-dropdown" data-value="' + this.escapeHtml(role) + '">' + this.escapeHtml(RolesConfig.getName(role)) + '</div>';
+        });
+        if (roleMenu) roleMenu.innerHTML = roleHtml;
+        if (roleInput) roleInput.value = user.role || '';
+        if (roleLabel) roleLabel.textContent = RolesConfig.getName(user.role);
+        if (roleTrigger) roleTrigger.classList.remove('placeholder');
 
         this.setModalStatus(user.status === 'blocked' ? 'blocked' : 'active');
         this.editingUserOriginalStatus = user.status;
@@ -805,8 +891,8 @@ const adminApp = {
     async saveUser() {
         if (!this.editingUser) return;
 
-        const teamId = document.getElementById('modalUserTeam').value;
-        let role = document.getElementById('modalUserRole').value;
+        const teamId = document.getElementById('modalUserTeamValue')?.value || '';
+        let role = document.getElementById('modalUserRoleValue')?.value || '';
         const isBlocked = this.editingStatus === 'blocked';
 
         // Без команды и не admin → guest + waiting_invite
@@ -1221,15 +1307,20 @@ const adminApp = {
         const usersEl = document.getElementById('deleteRoleUsers');
         usersEl.innerHTML = '<div class="delete-role-no-users">Загрузка...</div>';
 
-        // Заполнить select переназначения
-        const select = document.getElementById('reassignRoleSelect');
-        select.innerHTML = '';
-        RolesConfig.ASSIGNABLE_ROLES.filter(r => r !== roleKey).forEach(r => {
-            const opt = document.createElement('option');
-            opt.value = r;
-            opt.textContent = RolesConfig.getName(r);
-            select.appendChild(opt);
+        // Заполнить dropdown переназначения
+        const reassignMenu = document.getElementById('reassignRoleSelectMenu');
+        const reassignInput = document.getElementById('reassignRoleSelectValue');
+        const reassignLabel = document.getElementById('reassignRoleSelectLabel');
+        const reassignTrigger = reassignMenu?.closest('.dropdown-wrap--form')?.querySelector('.dropdown-trigger--form');
+        const otherRoles = RolesConfig.ASSIGNABLE_ROLES.filter(r => r !== roleKey);
+        let reassignHtml = '';
+        otherRoles.forEach((r, i) => {
+            reassignHtml += '<div class="dropdown-item' + (i === 0 ? ' active' : '') + '" data-action="select-form-dropdown" data-value="' + this.escapeHtml(r) + '">' + this.escapeHtml(RolesConfig.getName(r)) + '</div>';
         });
+        if (reassignMenu) reassignMenu.innerHTML = reassignHtml;
+        if (reassignInput) reassignInput.value = otherRoles[0] || '';
+        if (reassignLabel) reassignLabel.textContent = otherRoles[0] ? RolesConfig.getName(otherRoles[0]) : 'Выберите роль';
+        if (reassignTrigger) reassignTrigger.classList.remove('placeholder');
 
         this.openModal('deleteRoleModal');
 
@@ -1275,8 +1366,7 @@ const adminApp = {
         const roleKey = this._pendingDeleteRole;
         if (!roleKey) return;
 
-        const reassignSelect = document.getElementById('reassignRoleSelect');
-        const reassignTo = reassignSelect.value;
+        const reassignTo = document.getElementById('reassignRoleSelectValue')?.value || '';
         const reassignGroupVisible = document.getElementById('reassignGroup').style.display !== 'none';
 
         const btn = document.getElementById('btnConfirmDeleteRole');
@@ -1538,8 +1628,8 @@ const adminApp = {
     // ============ Audit Log ============
 
     populateAuditFilter() {
-        const select = document.getElementById('filterAction');
-        if (!select) return;
+        const menu = document.getElementById('filterActionMenu');
+        if (!menu) return;
 
         const groups = {
             'Пользователи': ['user_approved', 'user_rejected', 'user_blocked', 'user_unblocked', 'user_updated', 'user_deleted', 'role_changed'],
@@ -1552,17 +1642,27 @@ const adminApp = {
             'Прочее': ['storage_init', 'image_uploaded', 'image_deleted']
         };
 
+        // Add scrollable class for long list
+        menu.classList.add('dropdown-menu--scroll');
+
         for (const [label, actions] of Object.entries(groups)) {
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = label;
-            for (const action of actions) {
-                if (!this.actionNames[action]) continue;
-                const option = document.createElement('option');
-                option.value = action;
-                option.textContent = this.actionNames[action];
-                optgroup.appendChild(option);
+            const items = actions.filter(a => this.actionNames[a]);
+            if (items.length === 0) continue;
+
+            const section = document.createElement('div');
+            section.className = 'dropdown-section';
+            section.textContent = label;
+            menu.appendChild(section);
+
+            for (const action of items) {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.dataset.action = 'select-filter';
+                item.dataset.filter = 'filterAction';
+                item.dataset.value = action;
+                item.textContent = this.actionNames[action];
+                menu.appendChild(item);
             }
-            if (optgroup.children.length > 0) select.appendChild(optgroup);
         }
     },
 
@@ -1572,7 +1672,7 @@ const adminApp = {
         const pagination = document.getElementById('auditPagination');
 
         const searchValue = document.getElementById('searchAudit')?.value.toLowerCase() || '';
-        const actionFilter = document.getElementById('filterAction')?.value || '';
+        const actionFilter = this._getFilterValue('filterAction');
 
         // Фильтрация
         let filtered = [...this.auditLog];

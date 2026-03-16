@@ -588,18 +588,18 @@ const OnboardingForm = (() => {
             const buttonLabel = isDefault ? 'Выберите статус' : OnboardingConfig.getOptionLabel(submitField.options || [], currentValue) || currentValue;
             const dropdownOptions = (submitField.options || []).filter(o => o.value !== defaultValue);
 
-            statusWrap.innerHTML = `<div class="status-submit-btn">
-                <button class="btn btn-primary status-submit-main" data-action="onb-toggleStatusDropdown">
-                    <span class="status-submit-label">${Utils.escapeHtml(buttonLabel)}</span>
-                </button>
-                <div class="status-submit-dropdown hidden" id="statusDropdown">
+            statusWrap.innerHTML = `<div class="dropdown-wrap dropdown-wrap--up">
+                <div class="dropdown-menu hidden" id="statusDropdown">
                     ${dropdownOptions.map(o =>
-                        `<div class="status-submit-option ${o.value === currentValue ? 'active' : ''}"
+                        `<div class="dropdown-item ${o.value === currentValue ? 'active' : ''}"
                              data-action="onb-selectLeadStatus" data-value="${Utils.escapeHtml(o.value)}">
                             ${Utils.escapeHtml(o.label)}
                         </div>`
                     ).join('')}
                 </div>
+                <button class="btn btn-primary dropdown-trigger" data-action="onb-toggleStatusDropdown">
+                    <span>${Utils.escapeHtml(buttonLabel)}</span>
+                </button>
             </div>`;
             return;
         }
@@ -616,20 +616,20 @@ const OnboardingForm = (() => {
             const myRole = OnboardingState.get('userRole');
             const btnSysRole = OnboardingState.get('systemRole');
             if (data._handoff_complete) {
-                btn.textContent = step.reviewer ? 'Отправить на проверку' : 'Далее';
+                btn.textContent = step.reviewer ? 'На проверку' : 'Далее';
             } else if (creator === step.dynamicExecutor.reviewerValue && !OnboardingRoles.isReviewerForStep(btnSysRole, step.number) && myRole !== 'admin' && myRole !== 'leader') {
                 if (step.dynamicExecutor.autoHandoff) {
                     btn.classList.add('hidden');
                 } else {
-                    btn.textContent = 'Отправить на создание';
+                    btn.textContent = 'Запросить создание';
                 }
             } else if (creator === step.dynamicExecutor.reviewerValue && (OnboardingRoles.isReviewerForStep(btnSysRole, step.number) || myRole === 'admin' || myRole === 'leader')) {
-                btn.textContent = 'Передать экзекьютору';
+                btn.textContent = 'Создание завершено';
             } else {
-                btn.textContent = step.reviewer ? 'Отправить на проверку' : 'Далее';
+                btn.textContent = step.reviewer ? 'На проверку' : 'Далее';
             }
         } else if (step.reviewer) {
-            btn.textContent = 'Отправить на проверку';
+            btn.textContent = 'На проверку';
         } else {
             btn.textContent = 'Далее';
         }
@@ -640,9 +640,9 @@ const OnboardingForm = (() => {
             const antifraudEl = document.getElementById('field_antifraud_result');
             const currentVal = antifraudEl ? antifraudEl.value : stepData.antifraud_result;
             if (currentVal === 'failed') {
-                btn.textContent = 'Отменить';
+                btn.textContent = 'Антифрод не пройден';
             } else if (currentVal === 'passed') {
-                btn.textContent = 'Одобрить';
+                btn.textContent = 'Антифрод пройден';
             }
         }
     }

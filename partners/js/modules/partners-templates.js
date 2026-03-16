@@ -2,6 +2,7 @@
 var PartnersTemplates = SharedTemplates.create({
     state: PartnersState,
     forms: PartnersForms,
+    dropdownAction: 'partners-selectFormDropdown',
 
     storage: {
         getAll: function() { return PartnersState.cachedTemplates; },
@@ -62,22 +63,28 @@ var PartnersTemplates = SharedTemplates.create({
 
         var subagentInput = document.getElementById('formSubagent');
         var subagentIdInput = document.getElementById('formSubagentId');
-        var methodInput = document.getElementById('formMethod');
+        var methodWrap = document.getElementById('formMethodWrap');
+        var methodLabel = document.getElementById('formMethodLabel');
+        var methodValueInput = document.getElementById('formMethodValue');
         var statusBadge = document.getElementById('formStatusBadge');
         var formAvatar = document.querySelector('.form-avatar');
 
         subagentInput.value = 'Субагент';
         subagentIdInput.value = 'ID Субагента';
-        methodInput.innerHTML = '<option value="" selected>Метод</option>';
+        if (methodLabel) methodLabel.textContent = 'Метод';
+        if (methodValueInput) methodValueInput.value = '';
+        var methodTrigger = document.getElementById('formMethodTrigger');
+        if (methodTrigger) methodTrigger.classList.add('placeholder');
+        var methodMenu = document.getElementById('formMethodMenu');
+        if (methodMenu) methodMenu.innerHTML = '';
 
         subagentInput.classList.add('disabled');
         subagentIdInput.classList.add('disabled');
-        methodInput.classList.add('disabled');
+        if (methodWrap) methodWrap.classList.add('disabled');
         if (statusBadge) statusBadge.classList.add('disabled');
 
         subagentInput.readOnly = true;
         subagentIdInput.readOnly = true;
-        methodInput.disabled = true;
 
         var methodWrapper = document.querySelector('.form-method-wrapper');
         if (methodWrapper) methodWrapper.classList.add('disabled', 'pointer-events-none');
@@ -109,8 +116,8 @@ var PartnersTemplates = SharedTemplates.create({
             if (el) { el.classList.remove('disabled'); el.readOnly = false; }
         });
 
-        var methodInput = document.getElementById('formMethod');
-        if (methodInput) { methodInput.classList.remove('disabled'); methodInput.readOnly = false; }
+        var methodWrap = document.getElementById('formMethodWrap');
+        if (methodWrap) { methodWrap.classList.remove('disabled'); }
 
         var statusBadge = document.getElementById('formStatusBadge');
         if (statusBadge) statusBadge.classList.remove('disabled');

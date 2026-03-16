@@ -98,8 +98,9 @@ const OnboardingReview = (() => {
         const isTerminal = request.status === 'completed' || request.status === 'cancelled';
         const canReview = !isTerminal && isOnReview && isReviewer && step.number === request.currentStep;
 
-        // in_progress current step: reviewer hasn't received submission yet — show empty fields
-        const isCurrentNotSubmitted = request.status === 'in_progress' && step.number === request.currentStep
+        // Work status current step: reviewer hasn't received submission yet — show empty fields
+        const isWorkStatus = OnboardingConfig.isWorkStatus(request.status);
+        const isCurrentNotSubmitted = isWorkStatus && step.number === request.currentStep
             && isReviewer && !OnboardingRoles.isExecutorForStep(sysRole, step.number);
         if (isCurrentNotSubmitted) data = {};
 
@@ -145,13 +146,13 @@ const OnboardingReview = (() => {
                         return `<div class="readonly-field">
                             <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
                             <span class="readonly-value readonly-photos">${urls.map(u => {
-                                const safe = String(u).startsWith('data:') ? u : Utils.escapeHtml(String(u));
+                                const safe = Utils.escapeHtml(String(u));
                                 return `<img class="readonly-photo" src="${safe}" alt="" data-action="onb-openPhoto">`;
                             }).join('')}</span>
                         </div>`;
                     }
                     if (empty) return _field(field.label, '—');
-                    const safeUrl = String(value).startsWith('data:') ? value : Utils.escapeHtml(String(value));
+                    const safeUrl = Utils.escapeHtml(String(value));
                     return `<div class="readonly-field">
                         <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
                         <span class="readonly-value"><img class="readonly-photo" src="${safeUrl}" alt="" data-action="onb-openPhoto"></span>
@@ -264,7 +265,7 @@ const OnboardingReview = (() => {
         if (btnReassign) btnReassign.classList.toggle('hidden', !canManage);
         if (btnRollback) btnRollback.classList.toggle('hidden', !canManage);
 
-        // Executor button: Отозвать
+        // Executor button: Вернуть
         const btnWithdraw = document.getElementById('btnWithdraw');
         if (btnWithdraw) btnWithdraw.classList.toggle('hidden', !canWithdraw);
 

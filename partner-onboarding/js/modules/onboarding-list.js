@@ -107,6 +107,7 @@ const OnboardingList = (() => {
         const assigneeName = _shortenName(request.assigneeName || request.assigneeEmail);
         const title = contactName ? `${sourceLabel} — ${contactName}` : sourceLabel;
         const isTerminal = request.status === 'completed' || request.status === 'cancelled';
+        const isWorkStatus = OnboardingConfig.isWorkStatus(request.status);
         const isAdminLike = myRole === 'admin' || myRole === 'leader';
         const executorDone = OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor' && OnboardingConfig.isExecutorCompleted(request);
 
@@ -134,7 +135,7 @@ const OnboardingList = (() => {
 
         // Checkbox for admin/leader
         const checkboxHtml = isAdminLike
-            ? `<input type="checkbox" class="row-checkbox" data-action="onb-toggleSelect" data-value="${Utils.escapeHtml(request.id)}" onclick="event.stopPropagation()">`
+            ? `<input type="checkbox" class="row-checkbox" data-action="onb-toggleSelect" data-value="${Utils.escapeHtml(request.id)}">`
             : '';
 
         return `<div class="request-row ${isMyTurn ? 'my-turn' : ''} ${isAdminLike ? 'has-checkbox' : ''}" data-action="onb-openRequest" data-value="${Utils.escapeHtml(request.id)}">
@@ -203,8 +204,12 @@ const OnboardingList = (() => {
 
     function setupDefaultFilters() {
         OnboardingState.set('filters.ownership', 'all');
-        const select = document.getElementById('mainFilter');
-        if (select) select.value = 'all';
+        const label = document.getElementById('filterLabel');
+        if (label) label.textContent = 'Все заявки';
+        const dropdown = document.getElementById('filterDropdown');
+        if (dropdown) {
+            dropdown.querySelectorAll('.dropdown-item').forEach(o => o.classList.toggle('active', o.dataset.value === 'all'));
+        }
     }
 
     function _isMyTurn(request, myRole, sysRole, myEmail) {
@@ -229,7 +234,7 @@ const OnboardingList = (() => {
             }
             return false;
         }
-        // in_progress: check effective executor
+        // in_progress / approved / revision_needed: check effective executor
         if (OnboardingRoles.isExecutorForStep(sysRole, request.currentStep)) {
             if (OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor') {
                 return request.assigneeEmail === myEmail || request.createdBy === myEmail;

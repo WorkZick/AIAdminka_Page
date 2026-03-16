@@ -215,20 +215,23 @@ const PartnersMethods = {
     },
 
     populateMethodsSelect(selectedValue = '') {
-        const select = document.getElementById('formMethod');
-        if (!select) return;
+        const menu = document.getElementById('formMethodMenu');
+        const input = document.getElementById('formMethodValue');
+        const label = document.getElementById('formMethodLabel');
+        const trigger = document.getElementById('formMethodTrigger');
+        if (!menu) return;
 
         const methods = PartnersState.getMethods();
-        select.innerHTML = '<option value="">Выберите метод</option>';
+        let html = '<div class="dropdown-item' + (!selectedValue ? ' active' : '') + '" data-action="partners-selectFormDropdown" data-value="">Выберите метод</div>';
 
         methods.forEach(method => {
-            const option = document.createElement('option');
-            option.value = method.name;
-            option.textContent = method.name;
-            if (method.name === selectedValue) {
-                option.selected = true;
-            }
-            select.appendChild(option);
+            const isActive = method.name === selectedValue ? ' active' : '';
+            html += '<div class="dropdown-item' + isActive + '" data-action="partners-selectFormDropdown" data-value="' + Utils.escapeHtml(method.name) + '">' + Utils.escapeHtml(method.name) + '</div>';
         });
+
+        menu.innerHTML = html;
+        if (input) input.value = selectedValue;
+        if (label) label.textContent = selectedValue || 'Выберите метод';
+        if (trigger) trigger.classList.toggle('placeholder', !selectedValue);
     }
 };

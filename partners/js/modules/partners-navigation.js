@@ -124,24 +124,19 @@ const PartnersNavigation = {
         return html;
     },
 
-    _toggleDropdown(dropdownId, badgeId) {
+    _toggleDropdown(dropdownId) {
         const dropdown = document.getElementById(dropdownId);
-        const arrow = document.querySelector('#' + badgeId + ' .status-dropdown-icon');
-        const isOpen = dropdown.classList.contains('hidden');
+        if (!dropdown) return;
+        // Close other status dropdowns
+        document.querySelectorAll('.dropdown-wrap--status .dropdown-menu:not(.hidden)').forEach(m => {
+            if (m !== dropdown) m.classList.add('hidden');
+        });
         dropdown.classList.toggle('hidden');
-        if (arrow) {
-            arrow.classList.toggle('dropdown-arrow-open', isOpen);
-            arrow.classList.toggle('dropdown-arrow-closed', !isOpen);
-        }
     },
 
-    _closeDropdown(dropdownId, badgeId) {
-        document.getElementById(dropdownId).classList.add('hidden');
-        const arrow = document.querySelector('#' + badgeId + ' .status-dropdown-icon');
-        if (arrow) {
-            arrow.classList.add('dropdown-arrow-closed');
-            arrow.classList.remove('dropdown-arrow-open');
-        }
+    _closeDropdown(dropdownId) {
+        const dropdown = document.getElementById(dropdownId);
+        if (dropdown) dropdown.classList.add('hidden');
     },
 
     _updateStatusBadge(textId, status) {
@@ -151,7 +146,7 @@ const PartnersNavigation = {
     },
 
     toggleStatusDropdown() {
-        this._toggleDropdown('cardStatusDropdown', 'cardStatusBadge');
+        this._toggleDropdown('cardStatusDropdown');
     },
 
     async changeStatus(status) {
@@ -171,7 +166,7 @@ const PartnersNavigation = {
             }
 
             this._updateStatusBadge('cardStatusText', status);
-            this._closeDropdown('cardStatusDropdown', 'cardStatusBadge');
+            this._closeDropdown('cardStatusDropdown');
             PartnersRenderer.render();
         } catch (error) {
             PartnersUtils.showError('Ошибка обновления статуса: ' + error.message);
@@ -179,12 +174,12 @@ const PartnersNavigation = {
     },
 
     toggleFormStatusDropdown() {
-        this._toggleDropdown('formStatusDropdown', 'formStatusBadge');
+        this._toggleDropdown('formStatusDropdown');
     },
 
     changeFormStatus(status) {
         PartnersState.formStatus = status;
         this._updateStatusBadge('formStatusText', status);
-        this._closeDropdown('formStatusDropdown', 'formStatusBadge');
+        this._closeDropdown('formStatusDropdown');
     }
 };

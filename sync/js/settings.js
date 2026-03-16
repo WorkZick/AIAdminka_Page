@@ -310,27 +310,15 @@ const settingsApp = {
     },
 
     _populateRoleSelect(selectedRole) {
-        const select = document.getElementById('profilePosition');
-        if (!select) return;
-        select.innerHTML = '';
+        const input = document.getElementById('profilePositionValue');
+        const label = document.getElementById('profilePositionLabel');
+        if (!input) return;
 
-        if (typeof RolesConfig !== 'undefined') {
-            RolesConfig.ALL_ROLES.filter(r => r !== 'guest').forEach(role => {
-                const opt = document.createElement('option');
-                opt.value = role;
-                opt.textContent = RolesConfig.getName(role);
-                if (role === selectedRole) opt.selected = true;
-                select.appendChild(opt);
-            });
-        }
-
-        if (selectedRole && !select.value) {
-            const opt = document.createElement('option');
-            opt.value = selectedRole;
-            opt.textContent = (typeof RolesConfig !== 'undefined') ? RolesConfig.getName(selectedRole) : selectedRole;
-            opt.selected = true;
-            select.insertBefore(opt, select.firstChild);
-        }
+        input.value = selectedRole || '';
+        const roleName = selectedRole && typeof RolesConfig !== 'undefined'
+            ? RolesConfig.getName(selectedRole)
+            : (selectedRole || 'Роль');
+        if (label) label.textContent = roleName;
     },
 
     fillProfileForm() {
@@ -431,7 +419,7 @@ const settingsApp = {
         const profileData = {
             // Основная информация
             name: (formData.get('name') || '').trim(),
-            position: document.getElementById('profilePosition').value || '',
+            position: document.getElementById('profilePositionValue')?.value || '',
 
             // Идентификация (reddyId не редактируется)
             crmLogin: (formData.get('crmLogin') || '').trim(),

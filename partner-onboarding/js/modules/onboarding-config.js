@@ -7,8 +7,10 @@ const OnboardingConfig = (() => {
         new: { label: 'Новая', cssClass: 'status--new' },
         in_progress: { label: 'В работе', cssClass: 'status--in-progress' },
         on_review: { label: 'На проверке', cssClass: 'status--on-review' },
-        completed: { label: 'Завершено', cssClass: 'status--completed' },
-        cancelled: { label: 'Отменено', cssClass: 'status--cancelled' }
+        approved: { label: 'Проверка пройдена', cssClass: 'status--approved' },
+        revision_needed: { label: 'Требуется доработка', cssClass: 'status--revision-needed' },
+        completed: { label: 'Завершена', cssClass: 'status--completed' },
+        cancelled: { label: 'Отменена', cssClass: 'status--cancelled' }
     };
 
     const LEAD_SOURCES = [
@@ -353,6 +355,10 @@ const OnboardingConfig = (() => {
         return request.currentStep >= finalStep.number || request.status === 'completed';
     }
 
+    function isWorkStatus(status) {
+        return status === 'in_progress' || status === 'approved' || status === 'revision_needed';
+    }
+
     return {
         STEPS,
         STATUSES,
@@ -384,6 +390,7 @@ const OnboardingConfig = (() => {
         getStepDisplayName,
         getStepDisplayShortName,
         isExecutorFinalStep,
-        isExecutorCompleted
+        isExecutorCompleted,
+        isWorkStatus
     };
 })();

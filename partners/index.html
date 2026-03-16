@@ -164,14 +164,15 @@
                             <div class="card-info-section">
                                 <div class="card-name" id="cardFullName">Субагент</div>
                                 <div class="card-position" id="cardPosition">ID</div>
-                                <div class="card-status-badge" id="cardStatusBadge" data-action="partners-toggleStatusDropdown">
-                                    <span class="status-badge green" id="cardStatusText">Открыт</span>
-                                    <img class="status-dropdown-icon" src="../shared/icons/arrow.svg" width="12" height="12" alt="Выбрать">
-                                    <div class="status-dropdown hidden" id="cardStatusDropdown">
-                                        <div class="status-option" data-action="partners-changeStatus" data-value="Открыт">
+                                <div class="dropdown-wrap dropdown-wrap--status" id="cardStatusBadge">
+                                    <button class="dropdown-trigger dropdown-trigger--status" type="button" data-action="partners-toggleStatusDropdown">
+                                        <span class="status-badge green" id="cardStatusText">Открыт</span>
+                                    </button>
+                                    <div class="dropdown-menu hidden" id="cardStatusDropdown">
+                                        <div class="dropdown-item dropdown-item--status" data-action="partners-changeStatus" data-value="Открыт">
                                             <span class="status-badge green">Открыт</span>
                                         </div>
-                                        <div class="status-option" data-action="partners-changeStatus" data-value="Закрыт">
+                                        <div class="dropdown-item dropdown-item--status" data-action="partners-changeStatus" data-value="Закрыт">
                                             <span class="status-badge red">Закрыт</span>
                                         </div>
                                     </div>
@@ -204,14 +205,15 @@
                             <div class="form-info-section">
                                 <input type="text" class="form-name-input" id="formSubagent" placeholder="Субагент">
                                 <input type="text" class="form-position-input" id="formSubagentId" placeholder="ID Субагента">
-                                <div class="form-status-badge" id="formStatusBadge" data-action="partners-toggleFormStatusDropdown">
-                                    <span class="status-badge green" id="formStatusText">Открыт</span>
-                                    <img class="status-dropdown-icon" src="../shared/icons/arrow.svg" width="12" height="12" alt="Выбрать">
-                                    <div class="status-dropdown hidden" id="formStatusDropdown">
-                                        <div class="status-option" data-action="partners-changeFormStatus" data-value="Открыт">
+                                <div class="dropdown-wrap dropdown-wrap--status" id="formStatusBadge">
+                                    <button class="dropdown-trigger dropdown-trigger--status" type="button" data-action="partners-toggleFormStatusDropdown">
+                                        <span class="status-badge green" id="formStatusText">Открыт</span>
+                                    </button>
+                                    <div class="dropdown-menu hidden" id="formStatusDropdown">
+                                        <div class="dropdown-item dropdown-item--status" data-action="partners-changeFormStatus" data-value="Открыт">
                                             <span class="status-badge green">Открыт</span>
                                         </div>
-                                        <div class="status-option" data-action="partners-changeFormStatus" data-value="Закрыт">
+                                        <div class="dropdown-item dropdown-item--status" data-action="partners-changeFormStatus" data-value="Закрыт">
                                             <span class="status-badge red">Закрыт</span>
                                         </div>
                                     </div>
@@ -225,9 +227,13 @@
                                     <div class="form-field">
                                         <label>Метод</label>
                                         <div class="form-method-wrapper">
-                                            <select class="form-select" id="formMethod">
-                                                <option value="">Выберите метод</option>
-                                            </select>
+                                            <div class="dropdown-wrap dropdown-wrap--form" id="formMethodWrap">
+                                                <button class="dropdown-trigger dropdown-trigger--form placeholder" type="button" id="formMethodTrigger" data-action="partners-toggleFormDropdown" data-target="formMethodMenu">
+                                                    <span id="formMethodLabel">Выберите метод</span>
+                                                </button>
+                                                <div class="dropdown-menu dropdown-menu--scroll hidden" id="formMethodMenu"></div>
+                                                <input type="hidden" id="formMethodValue" value="">
+                                            </div>
                                             <button class="form-method-settings-btn" data-action="partners-showMethodsDialog" title="Управление методами">
                                                 <img src="../shared/icons/settings.svg" width="14" height="14" alt="Настройки">
                                             </button>
@@ -237,9 +243,13 @@
                                 <div class="form-row" id="formTemplateSelector">
                                     <div class="form-field">
                                         <label>Шаблон полей</label>
-                                        <select class="form-select" id="templateSelect" data-action="partners-handleTemplateChange">
-                                            <option value="">Без шаблона</option>
-                                        </select>
+                                        <div class="dropdown-wrap dropdown-wrap--form" id="templateSelectWrap">
+                                            <button class="dropdown-trigger dropdown-trigger--form placeholder" type="button" id="templateSelectTrigger" data-action="partners-toggleFormDropdown" data-target="templateSelectMenu">
+                                                <span id="templateSelectLabel">Шаблон</span>
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu--scroll hidden" id="templateSelectMenu"></div>
+                                            <input type="hidden" id="templateSelectValue" value="">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -356,9 +366,13 @@
                     </div>
                     <div class="form-group excel-template-select">
                         <label class="form-label">Шаблон колонок</label>
-                        <select class="form-select" id="exportTemplateSelect" data-action="partners-updateExportPreview">
-                            <option value="">Без шаблона (базовые поля)</option>
-                        </select>
+                        <div class="dropdown-wrap dropdown-wrap--form" id="exportTemplateSelectWrap">
+                            <button class="dropdown-trigger dropdown-trigger--form placeholder" type="button" id="exportTemplateSelectTrigger" data-action="partners-toggleFormDropdown" data-target="exportTemplateSelectMenu">
+                                <span id="exportTemplateSelectLabel">Без шаблона (базовые поля)</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu--scroll hidden" id="exportTemplateSelectMenu"></div>
+                            <input type="hidden" id="exportTemplateSelectValue" value="">
+                        </div>
                     </div>
                     <div class="export-columns-preview" id="exportPreviewInfo">
                         <!-- Генерируется JS -->
@@ -422,9 +436,13 @@
                         </div>
                         <div class="form-group">
                             <div class="template-select-row">
-                                <select class="form-select" id="importTemplateSelect" data-action="partners-updateExcelHint">
-                                    <option value="">Без шаблона (базовые поля)</option>
-                                </select>
+                                <div class="dropdown-wrap dropdown-wrap--form" id="importTemplateSelectWrap">
+                                    <button class="dropdown-trigger dropdown-trigger--form placeholder" type="button" id="importTemplateSelectTrigger" data-action="partners-toggleFormDropdown" data-target="importTemplateSelectMenu">
+                                        <span id="importTemplateSelectLabel">Без шаблона (базовые поля)</span>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu--scroll hidden" id="importTemplateSelectMenu"></div>
+                                    <input type="hidden" id="importTemplateSelectValue" value="">
+                                </div>
                                 <button class="btn-add-template-import" data-action="partners-openTemplateFromImport" title="Создать новый шаблон">
                                     +
                                 </button>

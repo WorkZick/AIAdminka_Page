@@ -864,26 +864,29 @@
 
 .form-position-input {
     font-size: var(--font-size-base);
-    appearance: none;
-    -webkit-appearance: none;
     cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0 center;
+    /* Override dropdown-trigger--form defaults for inline style */
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid var(--glass-border);
+    border-radius: 0;
+    padding: var(--spacing-sm) 0;
     padding-right: 16px;
 }
 
-.form-position-input:disabled {
-    color: var(--gray);
-    cursor: not-allowed;
-    border-color: transparent;
-    background-image: none;
-    pointer-events: none;
+.form-position-input::after {
+    display: none;
 }
 
-.form-position-input option {
-    background: var(--gray-darker);
-    color: var(--white);
+#formPositionWrap:has(.dropdown-menu:not(.hidden)) .form-position-input {
+    border-color: var(--accent);
+    color: var(--accent);
+    border-radius: 0;
+    background: transparent;
+}
+
+#formPositionWrap .dropdown-menu {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
 }
 
 .form-name-input:focus,

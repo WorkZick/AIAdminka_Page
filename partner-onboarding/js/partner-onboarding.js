@@ -210,15 +210,15 @@ const PartnerOnboarding = (() => {
         let html = '';
         if (request.status !== 'completed' && request.status !== 'cancelled') {
             if (isAdminLike && view === 'form') {
-                html += `<button class="btn btn-primary" data-action="onb-showReassign">Передать</button>`;
-                html += `<button class="btn btn-primary" data-action="onb-showRollback">Откатить</button>`;
+                html += `<button class="btn btn-secondary" data-action="onb-showReassign">Передать</button>`;
+                html += `<button class="btn btn-secondary" data-action="onb-showRollback">Откатить</button>`;
             }
             if (isAdminLike) {
                 html += `<button class="btn btn-danger btn-sm" data-action="onb-cancelRequest">Отменить</button>`;
             }
         }
         if (request.status === 'cancelled' && isAdminLike) {
-            html += `<button class="btn btn-primary" data-action="onb-reactivateRequest">Восстановить</button>`;
+            html += `<button class="btn btn-secondary" data-action="onb-reactivateRequest">Восстановить</button>`;
         }
         container.innerHTML = html;
     }
@@ -255,11 +255,15 @@ const PartnerOnboarding = (() => {
     function _handleClick(e) {
         // Close dropdowns when clicking outside (cached refs)
         const r = _getViewRefs();
-        if (r.statusDropdown && !r.statusDropdown.classList.contains('hidden') && !e.target.closest('.status-submit-btn')) {
+        if (r.statusDropdown && !r.statusDropdown.classList.contains('hidden') && !e.target.closest('.dropdown-wrap--up')) {
             r.statusDropdown.classList.add('hidden');
         }
-        if (r.settingsDropdown && !r.settingsDropdown.classList.contains('hidden') && !e.target.closest('.settings-dropdown-wrap')) {
+        if (r.settingsDropdown && !r.settingsDropdown.classList.contains('hidden') && !e.target.closest('#settingsWrap')) {
             r.settingsDropdown.classList.add('hidden');
+        }
+        const filterDd = document.getElementById('filterDropdown');
+        if (filterDd && !filterDd.classList.contains('hidden') && !e.target.closest('#filterBox')) {
+            filterDd.classList.add('hidden');
         }
 
         const target = e.target.closest('[data-action]');
@@ -276,7 +280,8 @@ const PartnerOnboarding = (() => {
             case 'onb-goToStep': _goToStep(parseInt(value, 10)); break;
 
             // Filters
-            case 'onb-mainFilter': _mainFilter(); break;
+            case 'onb-toggleFilter': _toggleFilterDropdown(); break;
+            case 'onb-selectFilter': _selectFilter(value, target); break;
 
             // Form actions
             case 'onb-submit': _submitStep(); break;
@@ -312,6 +317,10 @@ const PartnerOnboarding = (() => {
             case 'onb-closeRollback': _closeModal('rollbackModal'); break;
             case 'onb-confirmRollback': _confirmRollback(); break;
 
+            // Form dropdowns
+            case 'onb-toggleFormDropdown': _toggleFormDropdown(target); break;
+            case 'onb-selectFormDropdown': _selectFormDropdown(target); break;
+
             // Confirm modal
             case 'onb-closeConfirm': _closeModal('confirmModal'); break;
             case 'onb-confirmAction': if (_confirmCallback) { _confirmCallback(); _closeModal('confirmModal'); } break;
@@ -342,7 +351,7 @@ const PartnerOnboarding = (() => {
             case 'onb-openPhoto': _openPhotoLightbox(target); break;
 
             // Selection (admin/leader)
-            case 'onb-toggleSelect': OnboardingList.updateSelection(); break;
+            case 'onb-toggleSelect': e.stopPropagation(); OnboardingList.updateSelection(); break;
             case 'onb-goToPage': OnboardingList.goToPage(value); break;
             case 'onb-selectAll': OnboardingList.toggleSelectAll(target.checked); break;
             case 'onb-deleteSelected': _deleteSelectedRequests(); break;
@@ -394,10 +403,6 @@ const PartnerOnboarding = (() => {
 
     function _handleChange(e) {
         const target = e.target;
-        if (target.dataset.action === 'onb-mainFilter') {
-            _mainFilter();
-            return;
-        }
         // Dynamic executor: re-render form when account_creator changes
         if (target.name === 'account_creator') {
             const request = OnboardingState.get('currentRequest');
@@ -583,6 +588,8 @@ const PartnerOnboarding = (() => {
             return;
         }
 
+        const isWorkStatus = OnboardingConfig.isWorkStatus(fresh.status);
+
         // Decide view
         // AutoHandoff in_progress: reviewer fills form, executor sees waiting state (both via form view)
         if (fresh.status === 'in_progress' && step.dynamicExecutor && step.dynamicExecutor.autoHandoff &&
@@ -599,8 +606,8 @@ const PartnerOnboarding = (() => {
         } else if (fresh.status === 'on_review' && step.dynamicExecutor && (effectiveExecutor === myRole || isAdminLike)) {
             OnboardingForm.render(fresh, fresh.currentStep);
             _showView('form');
-        // Standard in_progress: executor fills form
-        } else if (fresh.status === 'in_progress' && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
+        // Standard work statuses: executor fills form
+        } else if (isWorkStatus && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
             OnboardingForm.render(fresh, fresh.currentStep);
             _showView('form');
         // Reviewer-executor step (e.g. antifraud): reviewer fills form
@@ -615,8 +622,8 @@ const PartnerOnboarding = (() => {
         } else if (isAdminLike && fresh.status === 'on_review' && !step.reviewer) {
             OnboardingForm.render(fresh, fresh.currentStep);
             _showView('form');
-        // Admin fallback for in_progress
-        } else if (isAdminLike && fresh.status === 'in_progress') {
+        // Admin fallback for work statuses
+        } else if (isAdminLike && isWorkStatus) {
             OnboardingForm.render(fresh, fresh.currentStep);
             _showView('form');
         } else {
@@ -755,7 +762,7 @@ const PartnerOnboarding = (() => {
         _setActionLock(true);
         _setBtnLoading('#btnFormSubmit', true);
         // Also lock status-submit button if present
-        _setBtnLoading('.status-submit-main', true);
+        _setBtnLoading('.dropdown-wrap--up .dropdown-trigger', true);
         try {
             // Upload pending files (base64) separately to avoid CORS/payload-size issues
             const pendingFiles = OnboardingForm.getPendingFiles();
@@ -799,7 +806,7 @@ const PartnerOnboarding = (() => {
             // Reviewer filling data on dynamicExecutor step → save draft + approve (handoff)
             // AutoHandoff: reviewer submits from in_progress → submitStep + approveStep (handoff)
             // Only when handoff NOT yet complete (first reviewer fill, not executor confirm)
-            if (request.status === 'in_progress' && step && step.dynamicExecutor && step.dynamicExecutor.autoHandoff && !isHandoffComplete) {
+            if (OnboardingConfig.isWorkStatus(request.status) && step && step.dynamicExecutor && step.dynamicExecutor.autoHandoff && !isHandoffComplete) {
                 data[step.dynamicExecutor.field] = step.dynamicExecutor.defaultValue;
                 const submitResult = await CloudStorage.postApi('submitStep', {
                     requestId: request.id, step: stepNumber, data: data
@@ -811,7 +818,7 @@ const PartnerOnboarding = (() => {
                 });
                 if (!approveResult.success) { Toast.error(approveResult.error || 'Ошибка'); return; }
                 _applyApiResult(approveResult);
-                Toast.success('Данные переданы экзекьютору');
+                Toast.success('Создание завершено, передано в работу');
                 _openRequest(request.id);
                 return;
             }
@@ -823,7 +830,7 @@ const PartnerOnboarding = (() => {
                 });
                 if (freshStatus.success && freshStatus.status !== 'on_review') {
                     _stopStatusWatch();
-                    Toast.warning('Заявка была отозвана экзекьютором. Обновляю...');
+                    Toast.warning('Заявка была возвращена с проверки. Обновляю...');
                     const listResult = await CloudStorage.postApi('getOnboardingRequests', {});
                     if (listResult.requests) OnboardingState.set('requests', listResult.requests);
                     _openRequest(request.id);
@@ -839,9 +846,21 @@ const PartnerOnboarding = (() => {
                 if (!approveResult.success) { Toast.error(approveResult.error || 'Ошибка'); return; }
                 _stopStatusWatch();
                 _applyApiResult(approveResult);
-                Toast.success('Данные сохранены, передано экзекьютору');
+                Toast.success('Создание завершено, передано в работу');
                 _openRequest(request.id);
                 return;
+            }
+
+            // Freshness check: re-fetch requests and verify state hasn't changed
+            const freshList = await CloudStorage.postApi('getOnboardingRequests', {});
+            if (freshList.requests) {
+                OnboardingState.set('requests', freshList.requests);
+                const freshReq = freshList.requests.find(r => r.id === request.id);
+                if (freshReq && (freshReq.currentStep !== request.currentStep || freshReq.status !== request.status)) {
+                    Toast.warning('Данные заявки изменились. Обновляю...');
+                    _openRequest(request.id);
+                    return;
+                }
             }
 
             const result = await CloudStorage.postApi('submitStep', {
@@ -864,7 +883,7 @@ const PartnerOnboarding = (() => {
             }
 
             // If next step executor is same user → continue editing
-            if (updated.status === 'in_progress' && OnboardingRoles.isExecutorForStep(sysRole, updated.currentStep)) {
+            if ((updated.status === 'in_progress' || updated.status === 'approved') && OnboardingRoles.isExecutorForStep(sysRole, updated.currentStep)) {
                 OnboardingState.set('currentStep', updated.currentStep);
                 OnboardingForm.render(updated, updated.currentStep);
             } else {
@@ -874,7 +893,7 @@ const PartnerOnboarding = (() => {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'submitStep' });
         } finally {
             _setBtnLoading('#btnFormSubmit', false);
-            _setBtnLoading('.status-submit-main', false);
+            _setBtnLoading('.dropdown-wrap--up .dropdown-trigger', false);
             _setActionLock(false);
         }
     }
@@ -962,7 +981,7 @@ const PartnerOnboarding = (() => {
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
             _applyApiResult(result);
-            if (!result.request) _updateRequestLocal(request.id, { status: 'in_progress', lastComment: comment });
+            if (!result.request) _updateRequestLocal(request.id, { status: 'revision_needed', lastComment: comment });
 
             // Merge reviewer's checklist into stageData: update checkbox state, keep executor comments separate
             if (checklistData) {
@@ -1009,7 +1028,7 @@ const PartnerOnboarding = (() => {
 
             _applyApiResult(result);
             if (!result.request) _updateRequestLocal(request.id, { status: 'in_progress' });
-            Toast.info('Заявка отозвана с проверки');
+            Toast.info('Заявка возвращена с проверки');
             _openRequest(request.id);
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'withdrawStep' });
@@ -1051,9 +1070,9 @@ const PartnerOnboarding = (() => {
         // For "refused" — show reject_reason, update button, don't validate yet
         if (value === 'refused' && prevStatus !== 'refused') {
             request.stageData[stepNumber].lead_status = value;
-            const labelEl = document.querySelector('.status-submit-label');
+            const labelEl = document.querySelector('.dropdown-wrap--up .dropdown-trigger span');
             if (labelEl) labelEl.textContent = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_STATUSES, value);
-            document.querySelectorAll('.status-submit-option').forEach(opt => {
+            document.querySelectorAll('#statusDropdown .dropdown-item').forEach(opt => {
                 opt.classList.toggle('active', opt.dataset.value === value);
             });
             document.querySelectorAll('#formFields [data-visible-when-field="lead_status"]').forEach(el => {
@@ -1075,7 +1094,7 @@ const PartnerOnboarding = (() => {
         }
 
         // Validation passed — update UI and submit
-        const labelEl = document.querySelector('.status-submit-label');
+        const labelEl = document.querySelector('.dropdown-wrap--up .dropdown-trigger span');
         if (labelEl) labelEl.textContent = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_STATUSES, value);
         document.querySelectorAll('.status-submit-option').forEach(opt => {
             opt.classList.toggle('active', opt.dataset.value === value);
@@ -1161,6 +1180,42 @@ const PartnerOnboarding = (() => {
         }
     }
 
+    // ── Form Dropdowns ──
+
+    function _toggleFormDropdown(trigger) {
+        const menuId = trigger.dataset.target;
+        const menu = document.getElementById(menuId);
+        if (!menu) return;
+        document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden)').forEach(m => {
+            if (m !== menu) m.classList.add('hidden');
+        });
+        menu.classList.toggle('hidden');
+    }
+
+    function _selectFormDropdown(target) {
+        const menu = target.closest('.dropdown-menu');
+        const wrap = target.closest('.dropdown-wrap--form');
+        if (!menu || !wrap) return;
+        const value = target.dataset.value ?? '';
+        const label = target.textContent;
+        const input = wrap.querySelector('input[type="hidden"]');
+        if (input) input.value = value;
+        const trigger = wrap.querySelector('.dropdown-trigger--form');
+        const labelEl = trigger?.querySelector('span');
+        if (labelEl) labelEl.textContent = label;
+        trigger?.classList.toggle('placeholder', !value);
+        menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+        target.classList.add('active');
+        menu.classList.add('hidden');
+    }
+
+    // Close form dropdowns on click outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.dropdown-wrap--form')) {
+            document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden)').forEach(m => m.classList.add('hidden'));
+        }
+    });
+
     // ── History Modal ──
 
     function _showHistoryModal() {
@@ -1176,32 +1231,43 @@ const PartnerOnboarding = (() => {
     // ── Reassign ──
 
     async function _showReassignModal() {
-        const targetSelect = document.getElementById('reassignTarget');
-        if (targetSelect) {
-            targetSelect.innerHTML = '<option value="">Загрузка...</option>';
+        const menu = document.getElementById('reassignTargetMenu');
+        const input = document.getElementById('reassignTargetValue');
+        const label = document.getElementById('reassignTargetLabel');
+        const trigger = document.getElementById('reassignTargetTrigger');
+        if (menu) {
+            menu.innerHTML = '<div class="dropdown-item dropdown-item--disabled">Загрузка...</div>';
+            if (input) input.value = '';
+            if (label) label.textContent = 'Выберите менеджера';
+            if (trigger) trigger.classList.add('placeholder');
             try {
                 const employees = await CloudStorage.getEmployees();
-                targetSelect.innerHTML = '<option value="">Выберите менеджера</option>';
+                let html = '<div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите менеджера</div>';
                 employees.forEach(emp => {
-                    const opt = document.createElement('option');
-                    opt.value = emp.email;
-                    opt.textContent = emp.name || emp.email;
-                    targetSelect.appendChild(opt);
+                    html += '<div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="' + Utils.escapeHtml(emp.email) + '" data-label="' + Utils.escapeHtml(emp.name || emp.email) + '">' + Utils.escapeHtml(emp.name || emp.email) + '</div>';
                 });
+                menu.innerHTML = html;
             } catch {
-                targetSelect.innerHTML = '<option value="">Выберите менеджера</option>';
+                menu.innerHTML = '<div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите менеджера</div>';
             }
         }
 
-        const select = document.getElementById('reassignReason');
-        if (select && select.options.length <= 1) {
+        const reasonMenu = document.getElementById('reassignReasonMenu');
+        const reasonInput = document.getElementById('reassignReasonValue');
+        if (reasonMenu && !reasonMenu.dataset.populated) {
+            let html = '<div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите причину</div>';
             OnboardingConfig.REASSIGN_REASONS.forEach(r => {
-                const opt = document.createElement('option');
-                opt.value = r.value;
-                opt.textContent = r.label;
-                select.appendChild(opt);
+                html += '<div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="' + Utils.escapeHtml(r.value) + '">' + Utils.escapeHtml(r.label) + '</div>';
             });
+            reasonMenu.innerHTML = html;
+            reasonMenu.dataset.populated = '1';
         }
+        if (reasonInput) reasonInput.value = '';
+        const reasonLabel = document.getElementById('reassignReasonLabel');
+        const reasonTrigger = document.getElementById('reassignReasonTrigger');
+        if (reasonLabel) reasonLabel.textContent = 'Выберите причину';
+        if (reasonTrigger) reasonTrigger.classList.add('placeholder');
+
         _openModal('reassignModal');
     }
 
@@ -1209,10 +1275,10 @@ const PartnerOnboarding = (() => {
         const request = OnboardingState.get('currentRequest');
         if (!request || _isActionLocked()) return;
 
-        const targetSelect = document.getElementById('reassignTarget');
-        const target = targetSelect.value;
-        const targetName = targetSelect.options[targetSelect.selectedIndex]?.text || target;
-        const reason = document.getElementById('reassignReason').value;
+        const target = document.getElementById('reassignTargetValue')?.value || '';
+        const targetLabel = document.getElementById('reassignTargetLabel')?.textContent || target;
+        const targetName = target ? targetLabel : '';
+        const reason = document.getElementById('reassignReasonValue')?.value || '';
         const comment = document.getElementById('reassignComment').value.trim();
 
         if (!target) { Toast.error('Выберите менеджера'); return; }
@@ -1246,15 +1312,20 @@ const PartnerOnboarding = (() => {
         const request = OnboardingState.get('currentRequest');
         if (!request) return;
 
-        const select = document.getElementById('rollbackTarget');
-        select.innerHTML = '<option value="">Выберите шаг</option>';
+        const menu = document.getElementById('rollbackTargetMenu');
+        const input = document.getElementById('rollbackTargetValue');
+        const label = document.getElementById('rollbackTargetLabel');
+        const trigger = document.getElementById('rollbackTargetTrigger');
+        if (!menu) return;
+
+        let html = '<div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите шаг</div>';
         for (let i = 1; i < request.currentStep; i++) {
-            const step = OnboardingConfig.getStep(i);
-            const opt = document.createElement('option');
-            opt.value = i;
-            opt.textContent = OnboardingConfig.getStepLabel(i);
-            select.appendChild(opt);
+            html += '<div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="' + i + '">' + Utils.escapeHtml(OnboardingConfig.getStepLabel(i)) + '</div>';
         }
+        menu.innerHTML = html;
+        if (input) input.value = '';
+        if (label) label.textContent = 'Выберите шаг';
+        if (trigger) trigger.classList.add('placeholder');
         _openModal('rollbackModal');
     }
 
@@ -1262,7 +1333,7 @@ const PartnerOnboarding = (() => {
         const request = OnboardingState.get('currentRequest');
         if (!request || _isActionLocked()) return;
 
-        const targetStep = parseInt(document.getElementById('rollbackTarget').value, 10);
+        const targetStep = parseInt(document.getElementById('rollbackTargetValue')?.value || '', 10);
         const comment = document.getElementById('rollbackComment').value.trim();
 
         if (!targetStep) { Toast.error('Выберите шаг'); return; }
@@ -1291,11 +1362,31 @@ const PartnerOnboarding = (() => {
 
     // ── Helpers ──
 
-    function _mainFilter() {
-        const select = document.getElementById('mainFilter');
-        const value = select.value;
+    function _toggleFilterDropdown() {
+        const dropdown = document.getElementById('filterDropdown');
+        if (dropdown) dropdown.classList.toggle('hidden');
+    }
+
+    function _closeFilterDropdown() {
+        const dropdown = document.getElementById('filterDropdown');
+        if (dropdown) dropdown.classList.add('hidden');
+    }
+
+    function _selectFilter(value, target) {
+        // Update active state
+        const dropdown = document.getElementById('filterDropdown');
+        if (dropdown) {
+            dropdown.querySelectorAll('.dropdown-item').forEach(o => o.classList.remove('active'));
+            target.classList.add('active');
+        }
+        // Update label
+        const label = document.getElementById('filterLabel');
+        if (label) label.textContent = target.textContent;
+        // Apply filter
         OnboardingState.set('filters.status', value.startsWith('status:') ? value.replace('status:', '') : '');
         OnboardingList.applyFilters();
+        // Close
+        _closeFilterDropdown();
     }
 
     function _setDateNow(fieldId) {

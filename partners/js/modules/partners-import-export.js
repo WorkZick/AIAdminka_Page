@@ -42,28 +42,36 @@ const PartnersImportExport = {
     },
 
     populateExportTemplateSelect() {
-        const select = document.getElementById('exportTemplateSelect');
+        const menu = document.getElementById('exportTemplateSelectMenu');
+        const input = document.getElementById('exportTemplateSelectValue');
+        const label = document.getElementById('exportTemplateSelectLabel');
+        const trigger = document.getElementById('exportTemplateSelectTrigger');
+        if (!menu) return;
 
-        select.innerHTML = '<option value="">Без шаблона (базовые поля)</option>';
+        let html = '<div class="dropdown-item active" data-action="partners-selectFormDropdown" data-value="">Без шаблона (базовые поля)</div>';
 
         Object.values(PartnersState.cachedTemplates).forEach(template => {
-            const option = document.createElement('option');
-            option.value = template.id;
             const isDefault = template.isDefault ? ' (основной)' : '';
-            option.textContent = template.name + isDefault;
-            select.appendChild(option);
+            html += '<div class="dropdown-item" data-action="partners-selectFormDropdown" data-value="' + Utils.escapeHtml(template.id) + '">' + Utils.escapeHtml(template.name) + isDefault + '</div>';
         });
+
+        menu.innerHTML = html;
 
         const defaultTemplate = Object.values(PartnersState.cachedTemplates).find(t => t.isDefault);
         if (defaultTemplate) {
-            select.value = defaultTemplate.id;
+            if (input) input.value = defaultTemplate.id;
+            if (label) label.textContent = defaultTemplate.name + (defaultTemplate.isDefault ? ' (основной)' : '');
+            if (trigger) trigger.classList.remove('placeholder');
             PartnersState.selectedExportTemplateId = defaultTemplate.id;
+            // Update active state
+            menu.querySelectorAll('.dropdown-item').forEach(i => {
+                i.classList.toggle('active', (i.dataset.value || '') === defaultTemplate.id);
+            });
         }
     },
 
     updateExportPreview() {
-        const select = document.getElementById('exportTemplateSelect');
-        const templateId = select.value;
+        const templateId = document.getElementById('exportTemplateSelectValue')?.value || '';
         PartnersState.selectedExportTemplateId = templateId || null;
 
         const previewInfo = document.getElementById('exportPreviewInfo');
@@ -245,28 +253,35 @@ const PartnersImportExport = {
     },
 
     populateImportTemplateSelect() {
-        const select = document.getElementById('importTemplateSelect');
+        const menu = document.getElementById('importTemplateSelectMenu');
+        const input = document.getElementById('importTemplateSelectValue');
+        const label = document.getElementById('importTemplateSelectLabel');
+        const trigger = document.getElementById('importTemplateSelectTrigger');
+        if (!menu) return;
 
-        select.innerHTML = '<option value="">Без шаблона (базовые поля)</option>';
+        let html = '<div class="dropdown-item active" data-action="partners-selectFormDropdown" data-value="">Без шаблона (базовые поля)</div>';
 
         Object.values(PartnersState.cachedTemplates).forEach(template => {
-            const option = document.createElement('option');
-            option.value = template.id;
             const isDefault = template.isDefault ? ' (основной)' : '';
-            option.textContent = template.name + isDefault;
-            select.appendChild(option);
+            html += '<div class="dropdown-item" data-action="partners-selectFormDropdown" data-value="' + Utils.escapeHtml(template.id) + '">' + Utils.escapeHtml(template.name) + isDefault + '</div>';
         });
+
+        menu.innerHTML = html;
 
         const defaultTemplate = Object.values(PartnersState.cachedTemplates).find(t => t.isDefault);
         if (defaultTemplate) {
-            select.value = defaultTemplate.id;
+            if (input) input.value = defaultTemplate.id;
+            if (label) label.textContent = defaultTemplate.name + (defaultTemplate.isDefault ? ' (основной)' : '');
+            if (trigger) trigger.classList.remove('placeholder');
             PartnersState.selectedImportTemplateId = defaultTemplate.id;
+            menu.querySelectorAll('.dropdown-item').forEach(i => {
+                i.classList.toggle('active', (i.dataset.value || '') === defaultTemplate.id);
+            });
         }
     },
 
     updateExcelHint() {
-        const select = document.getElementById('importTemplateSelect');
-        const templateId = select.value;
+        const templateId = document.getElementById('importTemplateSelectValue')?.value || '';
         PartnersState.selectedImportTemplateId = templateId || null;
 
         const hintColumns = document.getElementById('excelHintColumns');

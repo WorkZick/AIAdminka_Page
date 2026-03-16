@@ -160,6 +160,46 @@ const partnersApp = {
     cancelImport: (...args) => PartnersImportExport.cancelImport(...args),
     removeDuplicates: (...args) => PartnersImportExport.removeDuplicates(...args),
 
+    // Form Dropdowns
+    toggleFormDropdown(target) {
+        const menuId = target.dataset?.target || target;
+        const menu = document.getElementById(typeof menuId === 'string' ? menuId : '');
+        if (!menu) return;
+        // Close other form dropdowns
+        document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden)').forEach(m => {
+            if (m !== menu) m.classList.add('hidden');
+        });
+        menu.classList.toggle('hidden');
+    },
+    selectFormDropdown(target) {
+        const menu = target.closest('.dropdown-menu');
+        const wrap = target.closest('.dropdown-wrap--form');
+        if (!menu || !wrap) return;
+        const value = target.dataset.value ?? '';
+        const label = target.textContent;
+        // Update hidden input
+        const input = wrap.querySelector('input[type="hidden"]');
+        if (input) input.value = value;
+        // Update trigger label
+        const trigger = wrap.querySelector('.dropdown-trigger--form');
+        const labelEl = trigger?.querySelector('span');
+        if (labelEl) labelEl.textContent = label;
+        trigger?.classList.toggle('placeholder', !value);
+        // Update active state
+        menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+        target.classList.add('active');
+        menu.classList.add('hidden');
+        // Trigger change callbacks
+        const wrapId = wrap.id;
+        if (wrapId === 'templateSelectWrap') {
+            PartnersTemplates.handleTemplateChange();
+        } else if (wrapId === 'exportTemplateSelectWrap') {
+            PartnersImportExport.updateExportPreview();
+        } else if (wrapId === 'importTemplateSelectWrap') {
+            PartnersImportExport.updateExcelHint();
+        }
+    },
+
     // State accessors (for backward compatibility)
     getPartners: () => PartnersState.getPartners(),
     getMethods: () => PartnersState.getMethods()
@@ -188,26 +228,9 @@ document.getElementById('partnersTableBody').addEventListener('click', (e) => {
 });
 
 // Close dropdowns and menus when clicking outside
-// Cache DOM refs once (elements exist in static HTML)
-const _dropdownRefs = {
-    cardStatusBadge: null,
-    cardStatusDropdown: null,
-    cardStatusArrow: null,
-    formStatusBadge: null,
-    formStatusDropdown: null,
-    formStatusArrow: null,
-    columnsSettings: null,
-    columnsMenu: null,
-    _init: false
-};
+const _dropdownRefs = { columnsSettings: null, columnsMenu: null, _init: false };
 function _ensureDropdownRefs() {
     if (_dropdownRefs._init) return;
-    _dropdownRefs.cardStatusBadge = document.getElementById('cardStatusBadge');
-    _dropdownRefs.cardStatusDropdown = document.getElementById('cardStatusDropdown');
-    _dropdownRefs.cardStatusArrow = _dropdownRefs.cardStatusBadge?.querySelector('.status-dropdown-icon');
-    _dropdownRefs.formStatusBadge = document.getElementById('formStatusBadge');
-    _dropdownRefs.formStatusDropdown = document.getElementById('formStatusDropdown');
-    _dropdownRefs.formStatusArrow = _dropdownRefs.formStatusBadge?.querySelector('.status-dropdown-icon');
     _dropdownRefs.columnsSettings = document.querySelector('.columns-settings');
     _dropdownRefs.columnsMenu = document.getElementById('columnsMenu');
     _dropdownRefs._init = true;
@@ -216,23 +239,16 @@ document.addEventListener('click', (e) => {
     _ensureDropdownRefs();
     const r = _dropdownRefs;
 
-    if (r.cardStatusBadge && r.cardStatusDropdown && !r.cardStatusBadge.contains(e.target)) {
-        r.cardStatusDropdown.classList.add('hidden');
-        if (r.cardStatusArrow) {
-            r.cardStatusArrow.classList.add('dropdown-arrow-closed');
-            r.cardStatusArrow.classList.remove('dropdown-arrow-open');
-        }
-    }
-    if (r.formStatusBadge && r.formStatusDropdown && !r.formStatusBadge.contains(e.target)) {
-        r.formStatusDropdown.classList.add('hidden');
-        if (r.formStatusArrow) {
-            r.formStatusArrow.classList.add('dropdown-arrow-closed');
-            r.formStatusArrow.classList.remove('dropdown-arrow-open');
-        }
-    }
     if (r.columnsSettings && r.columnsMenu && !r.columnsSettings.contains(e.target)) {
         r.columnsMenu.classList.remove('active');
     }
+    // Close all custom dropdowns (form + status) when clicking outside
+    document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden), .dropdown-wrap--status .dropdown-menu:not(.hidden)').forEach(menu => {
+        const wrap = menu.closest('.dropdown-wrap--form, .dropdown-wrap--status');
+        if (wrap && !wrap.contains(e.target)) {
+            menu.classList.add('hidden');
+        }
+    });
 });
 
 // Event delegation для всех data-action="partners-*" атрибутов
@@ -252,6 +268,12 @@ document.addEventListener('click', (e) => {
     // Для status dropdown нужно остановить всплытие
     if (action.includes('changeStatus') || action.includes('changeFormStatus')) {
         e.stopPropagation();
+    }
+
+    // Form dropdowns — передаём DOM-элемент
+    if (action === 'toggleFormDropdown' || action === 'selectFormDropdown') {
+        partnersApp[action](target);
+        return;
     }
 
     // Для toggleColumn нужно получить columnId из data-column-id родителя

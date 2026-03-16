@@ -108,7 +108,7 @@ const TeamForms = {
      */
     async saveFromForm() {
         const fullName = document.getElementById('formFullName').value.trim();
-        const position = document.getElementById('formPosition').value.trim();
+        const position = (document.getElementById('formPositionValue')?.value || '').trim();
         const status = TeamState.currentFormStatus || 'Работает';
 
         // Валидация
@@ -340,7 +340,7 @@ const TeamForms = {
     getFormData() {
         return {
             fullName: document.getElementById('formFullName').value,
-            position: document.getElementById('formPosition').value,
+            position: document.getElementById('formPositionValue')?.value || '',
             status: TeamState.currentFormStatus || 'Работает',
             reddyId: document.getElementById('formReddyId').value,
             corpTelegram: document.getElementById('formCorpTelegram').value,
@@ -363,7 +363,7 @@ const TeamForms = {
      */
     attachFormChangeListeners() {
         const formFields = [
-            'formFullName', 'formPosition', 'formReddyId',
+            'formFullName', 'formPositionValue', 'formReddyId',
             'formCorpTelegram', 'formPersonalTelegram', 'formBirthday',
             'formCorpEmail', 'formPersonalEmail', 'formCorpPhone',
             'formPersonalPhone', 'formOffice', 'formStartDate',
@@ -465,19 +465,28 @@ const TeamForms = {
      * Заполнение выпадающего списка ролей
      * @private
      */
-    _populateRoleDropdown() {
-        const select = document.getElementById('formPosition');
-        if (!select || typeof RolesConfig === 'undefined') return;
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Выберите роль</option>';
+    _populateRoleDropdown(selectedValue) {
+        const menu = document.getElementById('formPositionMenu');
+        const input = document.getElementById('formPositionValue');
+        const label = document.getElementById('formPositionLabel');
+        const trigger = document.getElementById('formPositionTrigger');
+        if (!menu || typeof RolesConfig === 'undefined') return;
+        const currentValue = selectedValue ?? (input ? input.value : '');
+        let html = '<div class="dropdown-item' + (!currentValue ? ' active' : '') + '" data-action="team-selectFormDropdown" data-value="">Выберите роль</div>';
         RolesConfig.ALL_ROLES.forEach(role => {
             if (role === 'guest') return;
-            const option = document.createElement('option');
-            option.value = role;
-            option.textContent = RolesConfig.getName(role);
-            select.appendChild(option);
+            const isActive = role === currentValue ? ' active' : '';
+            html += '<div class="dropdown-item' + isActive + '" data-action="team-selectFormDropdown" data-value="' + Utils.escapeHtml(role) + '">' + Utils.escapeHtml(RolesConfig.getName(role)) + '</div>';
         });
-        if (currentValue) select.value = currentValue;
+        menu.innerHTML = html;
+        if (input) input.value = currentValue || '';
+        if (currentValue && label) {
+            label.textContent = RolesConfig.getName(currentValue);
+            if (trigger) trigger.classList.remove('placeholder');
+        } else {
+            if (label) label.textContent = 'Выберите роль';
+            if (trigger) trigger.classList.add('placeholder');
+        }
     },
 
     /**
@@ -486,9 +495,9 @@ const TeamForms = {
      */
     _clearFormFields() {
         document.getElementById('formFullName').value = '';
-        this._populateRoleDropdown();
-        document.getElementById('formPosition').value = '';
-        document.getElementById('formPosition').disabled = false;
+        this._populateRoleDropdown('');
+        const posWrap = document.getElementById('formPositionWrap');
+        if (posWrap) posWrap.classList.remove('disabled');
         document.getElementById('formReddyId').value = '';
         document.getElementById('formCorpTelegram').value = '';
         document.getElementById('formPersonalTelegram').value = '';
@@ -510,10 +519,8 @@ const TeamForms = {
      */
     _fillFormFields(employee) {
         document.getElementById('formFullName').value = employee.fullName || '';
-        this._populateRoleDropdown();
         const roleKey = (typeof RolesConfig !== 'undefined' && employee.position) ? RolesConfig.resolveRoleKey(employee.position) : (employee.position || '');
-        const positionSelect = document.getElementById('formPosition');
-        positionSelect.value = roleKey;
+        this._populateRoleDropdown(roleKey);
 
         // Запрет редактирования должности в своей карточке
         let isSelf = false;
@@ -523,7 +530,8 @@ const TeamForms = {
             const empEmail = employee.email || employee.id;
             isSelf = !!(currentEmail && empEmail === currentEmail);
         } catch (e) { /* ignore */ }
-        positionSelect.disabled = isSelf;
+        const posWrap = document.getElementById('formPositionWrap');
+        if (posWrap) posWrap.classList.toggle('disabled', isSelf);
 
         // Установка status badge
         TeamState.currentFormStatus = employee.status || 'Работает';

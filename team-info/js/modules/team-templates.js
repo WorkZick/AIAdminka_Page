@@ -2,6 +2,7 @@
 var TeamTemplates = SharedTemplates.create({
     state: TeamState,
     forms: TeamForms,
+    dropdownAction: 'team-selectFormDropdown',
 
     storage: {
         _key: 'teamInfoTemplates',
@@ -48,18 +49,22 @@ var TeamTemplates = SharedTemplates.create({
         document.getElementById('formSaveBtnText').textContent = 'Сохранить шаблон';
 
         var fullNameInput = document.getElementById('formFullName');
-        var positionInput = document.getElementById('formPosition');
+        var positionWrap = document.getElementById('formPositionWrap');
+        var positionInput = document.getElementById('formPositionValue');
+        var positionLabel = document.getElementById('formPositionLabel');
+        var positionTrigger = document.getElementById('formPositionTrigger');
         var statusBadge = document.getElementById('formStatusBadge');
 
         fullNameInput.value = 'Ф.И.О.';
-        positionInput.value = '';
+        if (positionInput) positionInput.value = '';
+        if (positionLabel) positionLabel.textContent = 'Выберите роль';
+        if (positionTrigger) positionTrigger.classList.add('placeholder');
 
         fullNameInput.classList.add('disabled');
-        positionInput.classList.add('disabled');
+        if (positionWrap) positionWrap.classList.add('disabled');
         statusBadge.classList.add('disabled');
 
         fullNameInput.readOnly = true;
-        positionInput.disabled = true;
 
         var formAvatar = document.querySelector('.form-avatar');
         if (formAvatar) {
@@ -96,15 +101,14 @@ var TeamTemplates = SharedTemplates.create({
         }
 
         var fullNameInput = document.getElementById('formFullName');
-        var positionInput = document.getElementById('formPosition');
+        var positionWrap = document.getElementById('formPositionWrap');
         var statusBadge = document.getElementById('formStatusBadge');
 
         fullNameInput.classList.remove('disabled');
-        positionInput.classList.remove('disabled');
+        if (positionWrap) positionWrap.classList.remove('disabled');
         statusBadge.classList.remove('disabled');
 
         fullNameInput.readOnly = false;
-        positionInput.disabled = false;
     },
 
     onApplyTemplate: function(templateId, storage) {

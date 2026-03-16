@@ -22,8 +22,7 @@ const SharedTemplates = {
     create(cfg) {
         const self = {
             handleTemplateChange() {
-                const templateSelect = document.getElementById('templateSelect');
-                const value = templateSelect.value;
+                const value = document.getElementById('templateSelectValue')?.value || '';
 
                 if (!value.includes('_template')) {
                     cfg.state.currentTemplateId = value;
@@ -47,12 +46,33 @@ const SharedTemplates = {
             },
 
             restoreTemplateSelection() {
-                const templateSelect = document.getElementById('templateSelect');
+                var targetId;
                 if (cfg.state.currentTemplateId !== undefined) {
-                    templateSelect.value = cfg.state.currentTemplateId;
+                    targetId = cfg.state.currentTemplateId;
                 } else {
-                    const defaultTemplate = Object.values(cfg.storage.getAll()).find(function(t) { return t.isDefault; });
-                    templateSelect.value = defaultTemplate ? defaultTemplate.id : '';
+                    var defaultTemplate = Object.values(cfg.storage.getAll()).find(function(t) { return t.isDefault; });
+                    targetId = defaultTemplate ? defaultTemplate.id : '';
+                }
+                // Update hidden input
+                var input = document.getElementById('templateSelectValue');
+                if (input) input.value = targetId || '';
+                // Update label and active state
+                var menu = document.getElementById('templateSelectMenu');
+                if (menu) {
+                    menu.querySelectorAll('.dropdown-item').forEach(function(item) {
+                        item.classList.toggle('active', (item.dataset.value || '') === (targetId || ''));
+                    });
+                }
+                var label = document.getElementById('templateSelectLabel');
+                var trigger = document.getElementById('templateSelectTrigger');
+                if (targetId) {
+                    var templates = cfg.storage.getAll();
+                    var tmpl = templates[targetId];
+                    if (label && tmpl) label.textContent = tmpl.name + (tmpl.isDefault ? ' (основной)' : '');
+                    if (trigger) trigger.classList.remove('placeholder');
+                } else {
+                    if (label) label.textContent = 'Шаблон';
+                    if (trigger) trigger.classList.add('placeholder');
                 }
             },
 
@@ -237,56 +257,49 @@ const SharedTemplates = {
             },
 
             updateTemplateList() {
-                var templateSelect = document.getElementById('templateSelect');
+                var menu = document.getElementById('templateSelectMenu');
+                var input = document.getElementById('templateSelectValue');
+                var label = document.getElementById('templateSelectLabel');
+                var trigger = document.getElementById('templateSelectTrigger');
+                if (!menu) return;
+
+                var act = cfg.dropdownAction || 'partners-selectFormDropdown';
                 var templates = cfg.storage.getAll();
-
-                templateSelect.innerHTML = '';
-
                 var defaultTemplate = Object.values(templates).find(function(t) { return t.isDefault; });
+                var html = '';
 
                 if (Object.keys(templates).length === 0 || !defaultTemplate) {
-                    var baseOption = document.createElement('option');
-                    baseOption.value = '';
-                    baseOption.textContent = 'Шаблон';
-                    templateSelect.appendChild(baseOption);
+                    html += '<div class="dropdown-item' + (!defaultTemplate ? ' active' : '') + '" data-action="' + act + '" data-value="">Шаблон</div>';
                 }
 
                 Object.values(templates).forEach(function(template) {
-                    var option = document.createElement('option');
-                    option.value = template.id;
                     var isDefault = template.isDefault ? ' (основной)' : '';
-                    option.textContent = template.name + isDefault;
-                    templateSelect.appendChild(option);
+                    var isActive = defaultTemplate && defaultTemplate.id === template.id ? ' active' : '';
+                    html += '<div class="dropdown-item' + isActive + '" data-action="' + act + '" data-value="' + Utils.escapeHtml(template.id) + '">' + Utils.escapeHtml(template.name) + isDefault + '</div>';
                 });
 
-                if (defaultTemplate) {
-                    templateSelect.value = defaultTemplate.id;
-                    cfg.state.currentTemplateId = defaultTemplate.id;
-                    self.applyTemplate(defaultTemplate.id);
-                } else {
-                    cfg.state.currentTemplateId = '';
-                }
-
-                var addOption = document.createElement('option');
-                addOption.value = 'add_template';
-                addOption.textContent = '+ Добавить шаблон';
-                templateSelect.appendChild(addOption);
+                // Action items
+                html += '<div class="dropdown-item dropdown-item--action" data-action="' + act + '" data-value="add_template">+ Добавить шаблон</div>';
 
                 if (Object.keys(templates).length > 0) {
-                    var editOption = document.createElement('option');
-                    editOption.value = 'edit_template';
-                    editOption.textContent = 'Изменить шаблон';
-                    templateSelect.appendChild(editOption);
+                    html += '<div class="dropdown-item dropdown-item--action" data-action="' + act + '" data-value="edit_template">Изменить шаблон</div>';
+                    html += '<div class="dropdown-item dropdown-item--action" data-action="' + act + '" data-value="rename_template">Переименовать шаблон</div>';
+                    html += '<div class="dropdown-item dropdown-item--danger" data-action="' + act + '" data-value="delete_template">- Удалить шаблон</div>';
+                }
 
-                    var renameOption = document.createElement('option');
-                    renameOption.value = 'rename_template';
-                    renameOption.textContent = 'Переименовать шаблон';
-                    templateSelect.appendChild(renameOption);
+                menu.innerHTML = html;
 
-                    var deleteOption = document.createElement('option');
-                    deleteOption.value = 'delete_template';
-                    deleteOption.textContent = '- Удалить шаблон';
-                    templateSelect.appendChild(deleteOption);
+                if (defaultTemplate) {
+                    if (input) input.value = defaultTemplate.id;
+                    cfg.state.currentTemplateId = defaultTemplate.id;
+                    if (label) label.textContent = defaultTemplate.name + (defaultTemplate.isDefault ? ' (основной)' : '');
+                    if (trigger) trigger.classList.remove('placeholder');
+                    self.applyTemplate(defaultTemplate.id);
+                } else {
+                    if (input) input.value = '';
+                    cfg.state.currentTemplateId = '';
+                    if (label) label.textContent = 'Шаблон';
+                    if (trigger) trigger.classList.add('placeholder');
                 }
             }
         };

@@ -201,9 +201,13 @@
                             </div>
                             <div class="form-info-section">
                                 <input type="text" class="form-name-input" id="formFullName" placeholder="Ф.И.О.">
-                                <select class="form-position-input" id="formPosition">
-                                    <option value="">Выберите роль</option>
-                                </select>
+                                <div class="dropdown-wrap dropdown-wrap--form" id="formPositionWrap">
+                                    <button class="dropdown-trigger dropdown-trigger--form form-position-input placeholder" type="button" id="formPositionTrigger" data-action="team-toggleFormDropdown" data-target="formPositionMenu">
+                                        <span id="formPositionLabel">Выберите роль</span>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu--scroll hidden" id="formPositionMenu"></div>
+                                    <input type="hidden" id="formPositionValue" value="">
+                                </div>
                                 <div class="form-status-badge" id="formStatusBadge" data-action="team-toggleFormStatusDropdown">
                                     <span class="status-badge green" id="formStatusText">Работает</span>
                                     <img class="status-dropdown-icon" src="../shared/icons/arrow.svg" width="12" height="12" alt="Выбрать">
@@ -358,7 +362,13 @@
                                 </div>
                                 <div class="invite-input-group">
                                     <label>Роль</label>
-                                    <select class="form-select" id="inviteManualRole"></select>
+                                    <div class="dropdown-wrap dropdown-wrap--form" id="inviteManualRoleWrap">
+                                        <button class="dropdown-trigger dropdown-trigger--form placeholder" type="button" id="inviteManualRoleTrigger" data-action="team-toggleFormDropdown" data-target="inviteManualRoleMenu">
+                                            <span id="inviteManualRoleLabel">Выберите роль</span>
+                                        </button>
+                                        <div class="dropdown-menu hidden" id="inviteManualRoleMenu"></div>
+                                        <input type="hidden" id="inviteManualRoleValue" value="">
+                                    </div>
                                 </div>
                                 <button class="btn btn-primary" data-action="team-sendInvite">Отправить приглашение</button>
                             </div>

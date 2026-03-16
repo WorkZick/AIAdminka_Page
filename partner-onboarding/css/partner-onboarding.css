@@ -50,13 +50,7 @@
     flex-shrink: 0;
 }
 
-/* Combined filter dropdown */
-.filter-box {
-    position: relative;
-    flex-shrink: 0;
-}
-
-/* Filter select — use DS .form-select .form-select--compact (arrow built-in) */
+/* Filter dropdown — uses shared .dropdown-wrap */
 
 /* Search */
 .search-box {
@@ -103,46 +97,13 @@
     flex-shrink: 0;
 }
 
-/* Settings dropdown */
-.settings-dropdown-wrap {
-    position: relative;
-    flex-shrink: 0;
-}
-
-.settings-dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    min-width: 160px;
-    background: var(--gray-dark);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    z-index: var(--z-dropdown);
-    box-shadow: var(--shadow-md);
-}
-
-.settings-dropdown.hidden {
-    display: none;
-}
-
-.settings-dropdown-item {
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: var(--font-size-sm);
-    font-family: var(--font-family);
-    color: var(--white);
-    cursor: pointer;
-    transition: background var(--transition-fast);
-}
-
-.settings-dropdown-item:hover {
-    background: var(--glass-bg-hover);
-    color: var(--accent);
-}
+/* Settings dropdown — uses shared .dropdown-wrap */
 
 /* ── Role Config Modal ── */
 
-#roleConfigModal .modal-body {
+#roleConfigModal .modal-body,
+#sourceSettingsModal .modal-body,
+#conditionsModal .modal-body {
     overflow-y: auto;
     padding: var(--spacing-sm) var(--spacing-md);
 }
@@ -324,9 +285,9 @@
 
 /* Source list */
 .source-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
 }
 
 .source-empty {
@@ -334,14 +295,15 @@
     color: var(--gray);
     padding: var(--spacing-lg) 0;
     text-align: center;
+    grid-column: 1 / -1;
 }
 
 .source-item {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
     padding: var(--spacing-sm) var(--spacing-md);
-    background: var(--glass-bg);
+    background: var(--glass-bg-light);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     transition: border-color var(--transition-fast);
@@ -408,11 +370,23 @@
     display: none;
 }
 
+.source-add-row {
+    margin-top: var(--spacing-sm);
+}
+
+/* Source edit form — rc-step style card */
+#sourceEditView {
+    background: var(--glass-bg-light);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+}
+
 /* Source columns hint (used in source modal) */
 .source-columns-hint {
     margin-top: var(--spacing-md);
     padding: var(--spacing-md);
-    background: var(--glass-bg);
+    background: var(--glass-bg-light);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
 }
@@ -474,11 +448,19 @@
     color: var(--accent-muted);
 }
 
+/* Conditions edit form — rc-step style card */
+#conditionsEditMode {
+    background: var(--glass-bg-light);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+}
+
 /* Conditions example table */
 .conditions-example {
     margin-top: var(--spacing-md);
     padding: var(--spacing-md);
-    background: var(--glass-bg);
+    background: var(--glass-bg-light);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
 }
@@ -538,8 +520,8 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-md);
-    padding: var(--spacing-md);
-    background: var(--glass-bg);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--glass-bg-light);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
 }
@@ -559,9 +541,9 @@
 }
 
 .conditions-status {
-    margin-top: var(--spacing-md);
-    padding: var(--spacing-md);
-    background: var(--glass-bg);
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--glass-bg-light);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     font-size: var(--font-size-sm);
@@ -853,6 +835,16 @@
 .status--completed {
     background: rgba(81, 207, 102, 0.15);
     color: var(--status-green);
+}
+
+.status--approved {
+    background: rgba(81, 207, 102, 0.15);
+    color: var(--status-green);
+}
+
+.status--revision-needed {
+    background: rgba(255, 146, 43, 0.15);
+    color: var(--status-orange);
 }
 
 .status--cancelled {
@@ -1553,7 +1545,7 @@ label.checklist-item input[type="checkbox"] {
     align-items: center;
 }
 
-/* ── Status Submit Button (step 1 dropdown) ── */
+/* Status submit dropdown — uses shared .dropdown-wrap--up */
 
 .status-submit-wrap {
     position: relative;
@@ -1561,52 +1553,6 @@ label.checklist-item input[type="checkbox"] {
 
 .status-submit-wrap.hidden {
     display: none;
-}
-
-.status-submit-btn {
-    position: relative;
-    display: inline-flex;
-}
-
-.status-submit-main {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.status-submit-dropdown {
-    position: absolute;
-    bottom: calc(100% + 4px);
-    right: 0;
-    min-width: 160px;
-    background: var(--gray-dark);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    z-index: var(--z-dropdown);
-    box-shadow: var(--shadow-md);
-}
-
-.status-submit-dropdown.hidden {
-    display: none;
-}
-
-.status-submit-option {
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: var(--font-size-sm);
-    font-family: var(--font-family);
-    color: var(--white);
-    cursor: pointer;
-    transition: background var(--transition-fast);
-}
-
-.status-submit-option:hover {
-    background: var(--glass-bg-hover);
-}
-
-.status-submit-option.active {
-    color: var(--accent);
-    font-weight: 700;
 }
 
 /* ── Review Header ── */

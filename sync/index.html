@@ -81,7 +81,12 @@
                                         </div>
                                         <div class="form-group form-group--compact">
                                             <label>Роль</label>
-                                            <select class="form-select" id="profilePosition" name="position" disabled></select>
+                                            <div class="dropdown-wrap dropdown-wrap--form disabled" id="profilePositionWrap">
+                                                <button class="dropdown-trigger dropdown-trigger--form placeholder" type="button" disabled>
+                                                    <span id="profilePositionLabel">Роль</span>
+                                                </button>
+                                                <input type="hidden" id="profilePositionValue" value="">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

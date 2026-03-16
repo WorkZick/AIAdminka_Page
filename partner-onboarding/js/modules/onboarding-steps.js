@@ -21,9 +21,9 @@ const OnboardingSteps = (() => {
             if (executorDone) cls += ' completed';
             else if (num < progressStep) cls += ' completed';
             else if (num === progressStep) {
-                const isInProgress = request && request.status === 'in_progress';
+                const isWorkStatus = request && OnboardingConfig.isWorkStatus(request.status);
                 const isViewerExecutor = OnboardingRoles.isExecutorForStep(sysRole, num);
-                if (isInProgress && !isViewerExecutor) {
+                if (isWorkStatus && !isViewerExecutor) {
                     // Reviewer sees gray dot while executor hasn't submitted
                 } else {
                     cls += ' active';

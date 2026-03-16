@@ -130,11 +130,21 @@
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: var(--transition-colors);
+    position: relative;
+    z-index: calc(var(--z-dropdown) + 1);
 }
 
 .columns-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     border-color: var(--glass-border-hover);
+}
+
+.columns-settings:has(.columns-menu.active) .columns-btn {
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-bottom-color: transparent;
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border-hover);
+    border-bottom-color: transparent;
 }
 
 .columns-btn img {
@@ -144,16 +154,15 @@
 
 .columns-menu {
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% - 1px);
     left: 0;
-    background: rgba(30, 30, 30, 0.95);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
     min-width: 200px;
-    z-index: 1000;
+    background: transparent;
+    border: 1px solid var(--glass-border-hover);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-dropdown);
     display: none;
 }
 
@@ -697,66 +706,6 @@
     color: var(--gray-light);
 }
 
-.card-status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    width: fit-content;
-    cursor: pointer;
-    margin-top: 4px;
-    position: relative;
-}
-
-.card-status-badge .status-dropdown-icon {
-    width: 10px;
-    height: 10px;
-    filter: brightness(0) invert(1);
-    opacity: 0.4;
-    transition: opacity var(--transition-fast);
-}
-
-.card-status-badge:hover .status-dropdown-icon {
-    opacity: 0.8;
-}
-
-/* Status dropdown */
-.status-dropdown {
-    position: absolute;
-    top: calc(100% + var(--spacing-sm));
-    left: 0;
-    background: var(--gray-darker);
-    backdrop-filter: blur(var(--glass-blur-strong));
-    -webkit-backdrop-filter: blur(var(--glass-blur-strong));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-sm);
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    z-index: var(--z-dropdown);
-    min-width: 120px;
-    box-shadow: var(--shadow-lg);
-}
-
-.status-option {
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: background var(--transition-fast);
-}
-
-.status-option:hover {
-    background: var(--glass-bg-hover);
-}
-
-.status-option .status-badge {
-    display: inline-block;
-    padding: var(--spacing-xs) var(--spacing-lg);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-}
-
 .card-body {
     flex: 1;
     overflow-y: auto;
@@ -965,23 +914,6 @@
     color: var(--gray);
 }
 
-.form-status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    width: fit-content;
-    cursor: pointer;
-    margin-top: 4px;
-    position: relative;
-}
-
-.form-status-badge .status-dropdown-icon {
-    width: 10px;
-    height: 10px;
-    filter: brightness(0) invert(1);
-    opacity: 0.4;
-}
-
 .form-body {
     flex: 1;
     overflow-y: auto;
@@ -1059,7 +991,7 @@
     gap: var(--spacing-sm);
 }
 
-.form-method-wrapper select {
+.form-method-wrapper .dropdown-wrap--form {
     flex: 1;
 }
 
@@ -1267,10 +1199,7 @@ select.disabled {
     pointer-events: none;
 }
 
-.form-status-badge.disabled {
-    opacity: 0.4;
-    pointer-events: none;
-}
+
 
 #formCounters.disabled {
     opacity: 0.4;
@@ -1902,7 +1831,7 @@ select.disabled {
     gap: var(--spacing-sm);
 }
 
-.template-select-row select {
+.template-select-row .dropdown-wrap--form {
     flex: 1;
 }
 

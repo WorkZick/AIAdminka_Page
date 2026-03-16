@@ -33,27 +33,32 @@
                 <!-- VIEW: List -->
                 <div class="onb-view" id="viewList">
                     <div class="list-toolbar">
-                        <div class="filter-box">
-                            <select class="form-select form-select--compact" id="mainFilter" data-action="onb-mainFilter">
-                                <option value="all">Все заявки</option>
-                                <option value="status:new">Новые</option>
-                                <option value="status:in_progress">В работе</option>
-                                <option value="status:on_review">На проверке</option>
-                                <option value="status:completed">Завершено</option>
-                                <option value="status:cancelled">Отменено</option>
-                            </select>
+                        <div class="dropdown-wrap" id="filterBox">
+                            <button class="btn btn--ghost btn-sm dropdown-trigger" data-action="onb-toggleFilter">
+                                <span id="filterLabel">Все заявки</span>
+                            </button>
+                            <div class="dropdown-menu hidden" id="filterDropdown">
+                                <div class="dropdown-item active" data-action="onb-selectFilter" data-value="all">Все заявки</div>
+                                <div class="dropdown-item" data-action="onb-selectFilter" data-value="status:new">Новые</div>
+                                <div class="dropdown-item" data-action="onb-selectFilter" data-value="status:in_progress">В работе</div>
+                                <div class="dropdown-item" data-action="onb-selectFilter" data-value="status:on_review">На проверке</div>
+                                <div class="dropdown-item" data-action="onb-selectFilter" data-value="status:approved">Проверка пройдена</div>
+                                <div class="dropdown-item" data-action="onb-selectFilter" data-value="status:revision_needed">Требуется доработка</div>
+                                <div class="dropdown-item" data-action="onb-selectFilter" data-value="status:completed">Завершена</div>
+                                <div class="dropdown-item" data-action="onb-selectFilter" data-value="status:cancelled">Отменена</div>
+                            </div>
                         </div>
                         <div class="search-box">
                             <img class="search-icon" src="../shared/icons/search.svg" width="16" height="16" alt="Поиск">
                             <input type="text" class="search-input" id="searchInput" placeholder="Поиск..." data-action="onb-search">
                         </div>
                         <button class="btn btn--ghost btn-sm btn-new-request" id="btnNewRequest" data-action="onb-newRequest">Новая заявка</button>
-                        <div class="settings-dropdown-wrap">
-                            <button class="btn btn--ghost btn-sm btn-settings hidden" id="btnSettings" data-action="onb-toggleSettings">Настройки</button>
-                            <div class="settings-dropdown hidden" id="settingsDropdown">
-                                <div class="settings-dropdown-item" data-action="onb-openSourceSettings">Источники</div>
-                                <div class="settings-dropdown-item" data-action="onb-openConditionsSettings">Условия</div>
-                                <div class="settings-dropdown-item hidden" id="btnRoleConfig" data-action="onb-openRoleConfig">Роли по шагам</div>
+                        <div class="dropdown-wrap" id="settingsWrap">
+                            <button class="btn btn--ghost btn-sm dropdown-trigger hidden" id="btnSettings" data-action="onb-toggleSettings">Настройки</button>
+                            <div class="dropdown-menu hidden" id="settingsDropdown">
+                                <div class="dropdown-item" data-action="onb-openSourceSettings">Источники</div>
+                                <div class="dropdown-item" data-action="onb-openConditionsSettings">Условия</div>
+                                <div class="dropdown-item hidden" id="btnRoleConfig" data-action="onb-openRoleConfig">Роли по шагам</div>
                             </div>
                         </div>
                     </div>
@@ -110,11 +115,11 @@
                     </div>
                     <div class="detail-bottom-bar" id="formActions">
                         <div class="actions-left">
-                            <button class="btn btn-primary" data-action="onb-showHistory">История</button>
+                            <button class="btn btn-secondary" data-action="onb-showHistory">История</button>
                         </div>
                         <div class="actions-right">
                             <div class="admin-actions-inline" id="formAdminActions"></div>
-                            <button class="btn btn-primary" id="btnFormSubmit" data-action="onb-submit">Отправить</button>
+                            <button class="btn btn-primary" id="btnFormSubmit" data-action="onb-submit">На проверку</button>
                             <div class="status-submit-wrap hidden" id="statusSubmitWrap"></div>
                         </div>
                     </div>
@@ -143,14 +148,14 @@
                         </div>
                         <div class="review-buttons">
                             <div class="actions-left">
-                                <button class="btn btn-primary" data-action="onb-showHistory">История</button>
-                                <button class="btn btn-primary hidden" id="btnReassign" data-action="onb-showReassign">Передать</button>
-                                <button class="btn btn-primary hidden" id="btnRollback" data-action="onb-showRollback">Откатить</button>
+                                <button class="btn btn-secondary" data-action="onb-showHistory">История</button>
+                                <button class="btn btn-secondary hidden" id="btnReassign" data-action="onb-showReassign">Передать</button>
+                                <button class="btn btn-secondary hidden" id="btnRollback" data-action="onb-showRollback">Откатить</button>
                             </div>
                             <div class="actions-right">
                                 <div class="admin-actions-inline" id="reviewAdminActions"></div>
-                                <button class="btn btn-primary hidden" id="btnWithdraw" data-action="onb-withdraw">Отозвать</button>
-                                <button class="btn btn-primary hidden" id="btnReject" data-action="onb-reject">Отклонить</button>
+                                <button class="btn btn-secondary hidden" id="btnWithdraw" data-action="onb-withdraw">Вернуть</button>
+                                <button class="btn btn-danger hidden" id="btnReject" data-action="onb-reject">Отклонить</button>
                                 <button class="btn btn-primary hidden" id="btnApprove" data-action="onb-approve">Одобрить</button>
                             </div>
                         </div>
@@ -172,15 +177,23 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label class="form-label">Менеджер</label>
-                    <select class="form-select" id="reassignTarget">
-                        <option value="">Выберите менеджера</option>
-                    </select>
+                    <div class="dropdown-wrap dropdown-wrap--form" id="reassignTargetWrap">
+                        <button class="dropdown-trigger dropdown-trigger--form placeholder" type="button" id="reassignTargetTrigger" data-action="onb-toggleFormDropdown" data-target="reassignTargetMenu">
+                            <span id="reassignTargetLabel">Выберите менеджера</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu--scroll hidden" id="reassignTargetMenu"></div>
+                        <input type="hidden" id="reassignTargetValue" value="">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Причина</label>
-                    <select class="form-select" id="reassignReason">
-                        <option value="">Выберите причину</option>
-                    </select>
+                    <div class="dropdown-wrap dropdown-wrap--form" id="reassignReasonWrap">
+                        <button class="dropdown-trigger dropdown-trigger--form placeholder" type="button" id="reassignReasonTrigger" data-action="onb-toggleFormDropdown" data-target="reassignReasonMenu">
+                            <span id="reassignReasonLabel">Выберите причину</span>
+                        </button>
+                        <div class="dropdown-menu hidden" id="reassignReasonMenu"></div>
+                        <input type="hidden" id="reassignReasonValue" value="">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Комментарий</label>
@@ -188,7 +201,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" data-action="onb-closeReassign">Отмена</button>
+                <button class="btn btn-secondary" data-action="onb-closeReassign">Отмена</button>
                 <button class="btn btn-primary" data-action="onb-confirmReassign">Передать</button>
             </div>
         </div>
@@ -206,9 +219,13 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label class="form-label">Откатить на</label>
-                    <select class="form-select" id="rollbackTarget">
-                        <!-- Generated by JS -->
-                    </select>
+                    <div class="dropdown-wrap dropdown-wrap--form" id="rollbackTargetWrap">
+                        <button class="dropdown-trigger dropdown-trigger--form placeholder" type="button" id="rollbackTargetTrigger" data-action="onb-toggleFormDropdown" data-target="rollbackTargetMenu">
+                            <span id="rollbackTargetLabel">Выберите шаг</span>
+                        </button>
+                        <div class="dropdown-menu hidden" id="rollbackTargetMenu"></div>
+                        <input type="hidden" id="rollbackTargetValue" value="">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Комментарий</label>
@@ -216,7 +233,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" data-action="onb-closeRollback">Отмена</button>
+                <button class="btn btn-secondary" data-action="onb-closeRollback">Отмена</button>
                 <button class="btn btn-primary" data-action="onb-confirmRollback">Откатить</button>
             </div>
         </div>
@@ -235,14 +252,14 @@
                 <!-- Generated by JS -->
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" data-action="onb-closeHistory">Закрыть</button>
+                <button class="btn btn-secondary" data-action="onb-closeHistory">Закрыть</button>
             </div>
         </div>
     </div>
 
     <!-- Source Settings Modal -->
     <div class="modal" id="sourceSettingsModal">
-        <div class="modal-dialog modal-sm">
+        <div class="modal-dialog modal-lg">
             <div class="modal-header">
                 <h2 class="modal-title">Источники лидов</h2>
                 <button class="modal-close" data-action="onb-closeSourceSettings">
@@ -253,7 +270,9 @@
                 <!-- List View -->
                 <div id="sourceListView">
                     <div class="source-list" id="sourceListItems"></div>
-                    <button class="btn btn--ghost btn--dashed btn-sm btn-block" data-action="onb-addSource">+ Добавить источник</button>
+                    <div class="source-add-row">
+                        <button class="btn btn--ghost btn--dashed btn-sm btn-block" data-action="onb-addSource">+ Добавить источник</button>
+                    </div>
                     <div class="source-columns-hint">
                         <div class="source-columns-hint-title">Структура таблицы</div>
                         <div class="source-columns-hint-text">Первая строка — заголовки колонок:</div>
@@ -280,21 +299,27 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Интервал синхронизации</label>
-                        <select class="form-select" id="sourceEditInterval">
-                            <option value="3">Каждые 3 минуты</option>
-                            <option value="5" selected>Каждые 5 минут</option>
-                            <option value="10">Каждые 10 минут</option>
-                            <option value="0">Только вручную</option>
-                        </select>
+                        <div class="dropdown-wrap dropdown-wrap--form" id="sourceEditIntervalWrap">
+                            <button class="dropdown-trigger dropdown-trigger--form" type="button" id="sourceEditIntervalTrigger" data-action="onb-toggleFormDropdown" data-target="sourceEditIntervalMenu">
+                                <span id="sourceEditIntervalLabel">Каждые 5 минут</span>
+                            </button>
+                            <div class="dropdown-menu hidden" id="sourceEditIntervalMenu">
+                                <div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="3">Каждые 3 минуты</div>
+                                <div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="5">Каждые 5 минут</div>
+                                <div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="10">Каждые 10 минут</div>
+                                <div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="0">Только вручную</div>
+                            </div>
+                            <input type="hidden" id="sourceEditIntervalValue" value="5">
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <div id="sourceListFooter">
-                    <button class="btn btn-primary" data-action="onb-closeSourceSettings">Закрыть</button>
+                    <button class="btn btn-secondary" data-action="onb-closeSourceSettings">Закрыть</button>
                 </div>
                 <div id="sourceEditFooter" class="hidden">
-                    <button class="btn btn-primary" data-action="onb-backToSourceList">Назад</button>
+                    <button class="btn btn-secondary" data-action="onb-backToSourceList">Назад</button>
                     <div class="source-edit-actions">
                         <button class="btn btn-danger btn-sm hidden" id="btnDeleteSource" data-action="onb-deleteSource">Удалить</button>
                         <button class="btn btn-primary" data-action="onb-saveSource">Сохранить</button>
@@ -382,7 +407,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" data-action="onb-closeConditions">Закрыть</button>
+                <button class="btn btn-secondary" data-action="onb-closeConditions">Закрыть</button>
                 <button class="btn btn-primary" id="conditionsSaveBtn" data-action="onb-saveConditions">Сохранить</button>
             </div>
         </div>
@@ -418,7 +443,7 @@
                 <p id="confirmMessage"></p>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" data-action="onb-closeConfirm">Отмена</button>
+                <button class="btn btn-secondary" data-action="onb-closeConfirm">Отмена</button>
                 <button class="btn btn-danger" id="confirmOk" data-action="onb-confirmAction">Подтвердить</button>
             </div>
         </div>
