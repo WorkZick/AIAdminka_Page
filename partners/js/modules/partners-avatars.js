@@ -54,15 +54,26 @@ const PartnersAvatars = {
             PartnersState.cropData.startY = e.clientY - PartnersState.cropData.offsetY;
         });
 
-        document.addEventListener('mousemove', (e) => {
+        PartnersAvatars._mouseMoveHandler = (e) => {
             if (!PartnersState.cropData.isDragging) return;
             PartnersState.cropData.offsetX = e.clientX - PartnersState.cropData.startX;
             PartnersState.cropData.offsetY = e.clientY - PartnersState.cropData.startY;
             PartnersAvatars.updateCropTransform();
-        });
-
-        document.addEventListener('mouseup', () => {
+        };
+        PartnersAvatars._mouseUpHandler = () => {
             PartnersState.cropData.isDragging = false;
+        };
+
+        document.addEventListener('mousemove', PartnersAvatars._mouseMoveHandler);
+        document.addEventListener('mouseup', PartnersAvatars._mouseUpHandler);
+
+        PageLifecycle.addCleanup(() => {
+            if (PartnersAvatars._mouseMoveHandler) {
+                document.removeEventListener('mousemove', PartnersAvatars._mouseMoveHandler);
+                document.removeEventListener('mouseup', PartnersAvatars._mouseUpHandler);
+                PartnersAvatars._mouseMoveHandler = null;
+                PartnersAvatars._mouseUpHandler = null;
+            }
         });
     },
 

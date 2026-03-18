@@ -95,7 +95,7 @@ const loginApp = {
     // ============ AUTH CHECK ============
 
     _checkExistingAuth() {
-        const authData = localStorage.getItem('cloud-auth');
+        const authData = sessionStorage.getItem('cloud-auth');
         if (!authData) {
             this._showLoginForm();
             return false;
@@ -104,8 +104,10 @@ const loginApp = {
         try {
             const auth = JSON.parse(authData);
 
-            if (Date.now() - auth.timestamp > 3500000) {
-                localStorage.removeItem('cloud-auth');
+            // TokenManager недоступен на login page (auth-guard.js не подключён)
+            const TOKEN_LIFETIME = (typeof TokenManager !== 'undefined') ? TokenManager.TOKEN_LIFETIME : 3500000;
+            if (Date.now() - auth.timestamp > TOKEN_LIFETIME) {
+                sessionStorage.removeItem('cloud-auth');
                 this._showLoginForm();
                 return false;
             }
@@ -117,7 +119,7 @@ const loginApp = {
                 accessToken: auth.accessToken
             };
         } catch {
-            localStorage.removeItem('cloud-auth');
+            sessionStorage.removeItem('cloud-auth');
             this._showLoginForm();
             return false;
         }
@@ -131,7 +133,7 @@ const loginApp = {
         // currentUser уже проверен в _checkExistingAuth, повторный JSON.parse не нужен
         if (this.currentUser) return;
 
-        const authData = localStorage.getItem('cloud-auth');
+        const authData = sessionStorage.getItem('cloud-auth');
         if (!authData) return;
 
         try {
@@ -149,7 +151,7 @@ const loginApp = {
                 this._checkAccess();
             }
         } catch {
-            localStorage.removeItem('cloud-auth');
+            sessionStorage.removeItem('cloud-auth');
         }
     },
 
@@ -173,7 +175,7 @@ const loginApp = {
 
     _logout() {
         this.destroy();
-        localStorage.removeItem('cloud-auth');
+        sessionStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
         localStorage.removeItem('partners-data');
         localStorage.removeItem('traffic-analytics-temp');
@@ -235,7 +237,7 @@ const loginApp = {
 
             if (result.error) {
                 if (result.error.includes('access token') || result.error.includes('Access denied') || result.error.includes('Invalid')) {
-                    localStorage.removeItem('cloud-auth');
+                    sessionStorage.removeItem('cloud-auth');
                     localStorage.removeItem('roleGuard');
                     sessionStorage.removeItem('auth-redirect');
                     this.currentUser = null;

@@ -7,7 +7,7 @@ const storage = {
     // Кеш данных
     _employees: [],
     _templates: [],
-    _isLoading: false,
+    _loadingPromise: null,
 
     // ============ ОСНОВНЫЕ МЕТОДЫ ============
 
@@ -16,16 +16,20 @@ const storage = {
      * @returns {Promise<Array>} массив сотрудников
      */
     async loadData() {
-        if (this._isLoading) {
-            // Ждём завершения текущей загрузки
-            await new Promise(resolve => setTimeout(resolve, 100));
-            return this._employees;
+        if (this._loadingPromise) {
+            return this._loadingPromise;
         }
 
-        this._isLoading = true;
-
+        this._loadingPromise = this._doLoadData();
         try {
-            // Загружаем из CloudStorage
+            return await this._loadingPromise;
+        } finally {
+            this._loadingPromise = null;
+        }
+    },
+
+    async _doLoadData() {
+        try {
             const employees = await CloudStorage.getEmployees();
             this._employees = employees || [];
             return this._employees;
@@ -33,8 +37,6 @@ const storage = {
             console.error('[Storage] Error loading employees:', error);
             // Fallback на localStorage
             return this._loadFromLocalStorage();
-        } finally {
-            this._isLoading = false;
         }
     },
 

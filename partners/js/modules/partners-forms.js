@@ -140,7 +140,7 @@ const PartnersForms = {
 
         if (partner.customFields) {
             Object.entries(partner.customFields).forEach(([label, value]) => {
-                const fieldId = 'customField_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                const fieldId = 'customField_' + Utils.generateId();
                 const fieldHtml = `
                     <div class="form-group-inline" data-custom-field="true">
                         <label>${PartnersUtils.escapeHtml(label)}:</label>

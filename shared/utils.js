@@ -125,19 +125,14 @@ const Utils = {
      */
     debounce(func, wait) {
         let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
+        function debounced(...args) {
             clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
+            timeout = setTimeout(() => func(...args), wait);
+        }
+        debounced.cancel = () => clearTimeout(timeout);
+        return debounced;
     },
 
-    /**
-     * Инициализация иконок (совместимость с Lucide API)
-     */
     /**
      * Получение инициалов из имени
      * @param {string} name - Полное имя

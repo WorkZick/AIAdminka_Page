@@ -5,6 +5,26 @@ const partnersApp = {
         // AuthGuard.checkWithRole() и CloudStorage.init() уже вызваны в PageLifecycle
         // Полноэкранный спиннер (.page-loading) показывается PageLifecycle на время onInit()
 
+        // Event delegation for table row clicks (перенесено из глобальной области)
+        const tableBody = document.getElementById('partnersTableBody');
+        if (tableBody) {
+            tableBody.addEventListener('click', (e) => {
+                const row = e.target.closest('tr[data-partner-id]');
+                if (row) {
+                    PartnersNavigation.selectPartner(row.dataset.partnerId);
+                }
+            });
+        }
+
+        // Слушаем завершение синхронизации для обновления данных (с cleanup)
+        this._syncHandler = () => { PartnersForms.loadDataFromCloud(); };
+        window.addEventListener('sync-complete', this._syncHandler);
+        PageLifecycle.addCleanup(() => {
+            if (partnersApp._syncHandler) {
+                window.removeEventListener('sync-complete', partnersApp._syncHandler);
+            }
+        });
+
         try {
             // Load data from cloud
             await PartnersForms.loadAllData();
@@ -21,11 +41,6 @@ const partnersApp = {
             console.error('Init error:', error);
             PartnersUtils.showError('Ошибка загрузки данных: ' + error.message);
         }
-
-        // Слушаем завершение синхронизации для обновления данных
-        window.addEventListener('sync-complete', () => {
-            PartnersForms.loadDataFromCloud();
-        });
     },
 
     // ==================== PROXY METHODS (for data-action compatibility) ====================
@@ -218,14 +233,6 @@ PageLifecycle.init({
 });
 
 // ==================== Global Event Listeners ====================
-
-// Event delegation for table row clicks
-document.getElementById('partnersTableBody').addEventListener('click', (e) => {
-    const row = e.target.closest('tr[data-partner-id]');
-    if (row) {
-        PartnersNavigation.selectPartner(row.dataset.partnerId);
-    }
-});
 
 // Close dropdowns and menus when clicking outside
 const _dropdownRefs = { columnsSettings: null, columnsMenu: null, _init: false };

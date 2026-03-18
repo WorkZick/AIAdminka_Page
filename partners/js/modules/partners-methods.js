@@ -146,14 +146,15 @@ const PartnersMethods = {
             await CloudStorage.updateMethod(methodId, { id: methodId, name: newName });
             PartnersState.cachedMethods[methodIndex].name = newName;
 
-            // Update partners with this method
+            // Update partners with this method (parallel — safe for typical batch sizes)
             const partners = PartnersState.getPartners();
-            for (const partner of partners) {
-                if (partner.method === oldName) {
+            const updatePromises = partners
+                .filter(p => p.method === oldName)
+                .map(partner => {
                     partner.method = newName;
-                    await CloudStorage.updatePartner(partner.id, partner);
-                }
-            }
+                    return CloudStorage.updatePartner(partner.id, partner);
+                });
+            await Promise.all(updatePromises);
 
             // Refresh partners cache
             PartnersState.cachedPartners = await CloudStorage.getPartners(false);

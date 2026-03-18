@@ -111,11 +111,11 @@ const TeamRenderer = {
     updateSelection(newId, oldId) {
         const tbody = document.getElementById('employeesTableBody');
         if (oldId) {
-            const oldRow = tbody.querySelector(`tr[data-employee-id="${oldId}"]`);
+            const oldRow = tbody.querySelector(`tr[data-employee-id="${CSS.escape(oldId)}"]`);
             if (oldRow) oldRow.classList.remove('selected');
         }
         if (newId) {
-            const newRow = tbody.querySelector(`tr[data-employee-id="${newId}"]`);
+            const newRow = tbody.querySelector(`tr[data-employee-id="${CSS.escape(newId)}"]`);
             if (newRow) newRow.classList.add('selected');
         }
     },

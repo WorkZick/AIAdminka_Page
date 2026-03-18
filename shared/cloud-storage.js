@@ -100,21 +100,25 @@ const CloudStorage = {
      * Получение данных авторизации
      */
     getAuthData() {
-        const authData = localStorage.getItem('cloud-auth');
+        const authData = sessionStorage.getItem('cloud-auth');
         if (!authData) return null;
 
         try {
             const auth = JSON.parse(authData);
 
             // Проверяем срок токена (~58 минут, Silent Refresh обновляет автоматически)
-            if (Date.now() - auth.timestamp > 3500000) {
-                localStorage.removeItem('cloud-auth');
+            // Используем TokenManager.TOKEN_LIFETIME если доступен, иначе 3500000 (~58 мин)
+            const tokenLifetime = (typeof TokenManager !== 'undefined' && TokenManager.TOKEN_LIFETIME)
+                ? TokenManager.TOKEN_LIFETIME
+                : 3500000;
+            if (Date.now() - auth.timestamp > tokenLifetime) {
+                sessionStorage.removeItem('cloud-auth');
                 return null;
             }
 
             return auth;
         } catch (e) {
-            localStorage.removeItem('cloud-auth');
+            sessionStorage.removeItem('cloud-auth');
             return null;
         }
     },
@@ -235,8 +239,8 @@ const CloudStorage = {
         if (!accessToken) {
             // Токен истёк или отсутствует - редирект на логин
             this.redirectToLogin();
-            // Возвращаем Promise, который не разрешится - предотвращает выполнение кода после редиректа
-            return new Promise(() => {});
+            // Halt execution — page is navigating away
+            throw Object.assign(new Error('auth_redirect'), { _silentRedirect: true });
         }
 
         // Создаём функцию для выполнения запроса
@@ -319,7 +323,8 @@ const CloudStorage = {
             // Токен невалиден — редирект на логин без retry
             if (error._authRedirect) {
                 this.redirectToLogin();
-                return new Promise(() => {});
+                // Halt execution — page is navigating away
+                throw Object.assign(new Error('auth_redirect'), { _silentRedirect: true });
             }
 
             // Retry logic with exponential backoff
@@ -360,7 +365,7 @@ const CloudStorage = {
                     Toast.error('Доступ запрещён. Ваш аккаунт не найден в системе.');
                 }
                 // Очищаем данные и редиректим на login
-                localStorage.removeItem('cloud-auth');
+                sessionStorage.removeItem('cloud-auth');
                 localStorage.removeItem('roleGuard');
                 setTimeout(() => {
                     if (typeof AuthGuard !== 'undefined') {

@@ -81,7 +81,7 @@ const settingsApp = {
     // ============ User Data ============
 
     loadUserData() {
-        const authData = localStorage.getItem('cloud-auth');
+        const authData = sessionStorage.getItem('cloud-auth');
         if (authData) {
             try {
                 const auth = JSON.parse(authData);
@@ -92,7 +92,7 @@ const settingsApp = {
                     timestamp: auth.timestamp
                 };
             } catch (e) {
-                localStorage.removeItem('cloud-auth');
+                sessionStorage.removeItem('cloud-auth');
                 this.currentUser = null;
             }
         }
@@ -377,7 +377,7 @@ const settingsApp = {
         if (!sessionExpiryEl) return;
 
         if (this.currentUser && this.currentUser.timestamp) {
-            const expiryTime = new Date(this.currentUser.timestamp + 3500000);
+            const expiryTime = new Date(this.currentUser.timestamp + TokenManager.TOKEN_LIFETIME);
             sessionExpiryEl.textContent = this.formatDateTime(expiryTime);
         } else {
             sessionExpiryEl.textContent = '-';
@@ -484,7 +484,7 @@ const settingsApp = {
     confirmLogout() {
         this.closeModal('logoutModal');
 
-        localStorage.removeItem('cloud-auth');
+        sessionStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
         localStorage.removeItem('partners-data');
         localStorage.removeItem('traffic-analytics-temp');

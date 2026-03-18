@@ -160,6 +160,9 @@ const ErrorHandler = (() => {
    * @returns {Object} Обработанная информация об ошибке
    */
   function handle(error, context = {}, options = {}) {
+    // Silent redirect — страница уже перенаправляется, не логируем
+    if (error && error._silentRedirect) return;
+
     // Нормализация ошибки
     const normalizedError = error instanceof Error ? error : new Error(String(error));
 

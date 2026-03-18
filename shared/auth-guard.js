@@ -27,13 +27,13 @@ const TokenManager = {
         if (this._authCache && (now - this._authCacheTime) < this._AUTH_CACHE_TTL) {
             return this._authCache;
         }
-        const raw = localStorage.getItem('cloud-auth');
+        const raw = sessionStorage.getItem('cloud-auth');
         if (!raw) { this._authCache = null; return null; }
         try {
             this._authCache = JSON.parse(raw);
             this._authCacheTime = now;
             return this._authCache;
-        } catch (e) { localStorage.removeItem('cloud-auth'); this._authCache = null; this._authCacheTime = 0; return null; }
+        } catch (e) { sessionStorage.removeItem('cloud-auth'); this._authCache = null; this._authCacheTime = 0; return null; }
     },
 
     /**
@@ -277,7 +277,7 @@ const TokenManager = {
      */
     handleExpiredToken() {
         this._invalidateAuthCache();
-        localStorage.removeItem('cloud-auth');
+        sessionStorage.removeItem('cloud-auth');
         const currentPath = window.location.pathname + window.location.search;
         sessionStorage.setItem('auth-redirect', currentPath);
         window.location.href = AuthGuard.LOGIN_URL;
@@ -322,7 +322,7 @@ const AuthGuard = {
         }
 
         if (TokenManager.isExpired()) {
-            localStorage.removeItem('cloud-auth');
+            sessionStorage.removeItem('cloud-auth');
             if (redirect) this.redirectToLogin();
             return false;
         }
@@ -394,7 +394,7 @@ const AuthGuard = {
                         Toast.error('Доступ запрещён. Ваш аккаунт не найден в системе.');
                     }
                     // Очищаем данные и редиректим на login
-                    localStorage.removeItem('cloud-auth');
+                    sessionStorage.removeItem('cloud-auth');
                     localStorage.removeItem('roleGuard');
                     setTimeout(() => this.redirectToLogin(), 1500);
                     return false;
@@ -430,9 +430,15 @@ const AuthGuard = {
                 <button id="auth-blocked-logout">Выйти</button>
             </div>
         `;
-        document.body.innerHTML = '';
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.zIndex = '99999';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.background = 'var(--bg-black, #0d0d0d)';
         document.body.appendChild(overlay);
-        document.getElementById('auth-blocked-logout').addEventListener('click', () => AuthGuard.logout());
+        overlay.querySelector('#auth-blocked-logout').addEventListener('click', () => AuthGuard.logout());
     },
 
     getUser() {
@@ -461,7 +467,7 @@ const AuthGuard = {
 
         TokenManager._invalidateAuthCache();
         TokenManager.stopAutoRefresh();
-        localStorage.removeItem('cloud-auth');
+        sessionStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
         localStorage.removeItem('partners-data');
         localStorage.removeItem('partnersColumnsConfig');
@@ -528,10 +534,12 @@ const AuthGuard = {
             </div>
         `;
 
-        // Добавляем обработчик на кнопку logout
-        const logoutBtn = container.querySelector('.auth-logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => this.logout());
+        // Event delegation на container — работает при повторном вызове renderUserInfo
+        if (!container._logoutHandlerAttached) {
+            container.addEventListener('click', (e) => {
+                if (e.target.closest('.auth-logout-btn')) this.logout();
+            });
+            container._logoutHandlerAttached = true;
         }
     },
 

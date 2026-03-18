@@ -187,20 +187,25 @@ const PartnersColumns = {
 
         columnsList.innerHTML = html;
 
-        // Add drag&drop event listeners
-        const columnItems = columnsList.querySelectorAll('.column-item');
-        columnItems.forEach(item => {
-            item.addEventListener('dragstart', (e) => PartnersColumns.handleColumnDragStart(e));
-            item.addEventListener('dragover', (e) => PartnersColumns.handleColumnDragOver(e));
-            item.addEventListener('drop', (e) => PartnersColumns.handleColumnDrop(e));
-            item.addEventListener('dragend', (e) => PartnersColumns.handleColumnDragEnd(e));
-
-            // Prevent click when dragging
-            const dragHandle = item.querySelector('.column-item-drag');
-            if (dragHandle) {
-                dragHandle.addEventListener('mousedown', (e) => e.stopPropagation());
-            }
-        });
+        // Event delegation for drag&drop (set up once per container)
+        if (!columnsList._dragDelegated) {
+            columnsList.addEventListener('dragstart', (e) => {
+                if (e.target.closest('.column-item')) PartnersColumns.handleColumnDragStart(e);
+            });
+            columnsList.addEventListener('dragover', (e) => {
+                if (e.target.closest('.column-item')) PartnersColumns.handleColumnDragOver(e);
+            });
+            columnsList.addEventListener('drop', (e) => {
+                if (e.target.closest('.column-item')) PartnersColumns.handleColumnDrop(e);
+            });
+            columnsList.addEventListener('dragend', (e) => {
+                if (e.target.closest('.column-item')) PartnersColumns.handleColumnDragEnd(e);
+            });
+            columnsList.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.column-item-drag')) e.stopPropagation();
+            });
+            columnsList._dragDelegated = true;
+        }
     },
 
     renderTableHeader() {

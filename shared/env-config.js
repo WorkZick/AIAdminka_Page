@@ -115,10 +115,21 @@ const EnvConfig = {
 };
 
 // В production подавляем console.log и console.warn (оставляем console.error)
+const _originalConsole = {
+    log: console.log,
+    warn: console.warn
+};
+
 if (EnvConfig.isProduction()) {
     console.log = function() {};
     console.warn = function() {};
 }
+
+// Восстановление console (для отладки в prod)
+EnvConfig.restoreConsole = function() {
+    console.log = _originalConsole.log;
+    console.warn = _originalConsole.warn;
+};
 
 // Экспорт для модулей
 if (typeof module !== 'undefined' && module.exports) {

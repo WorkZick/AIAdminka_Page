@@ -54,6 +54,8 @@ const RoleGuard = {
             this.user = cached.user;
             this.permissions = cached.permissions;
             this.initialized = true;
+            clearTimeout(this._safetyTimer);
+            this._safetyTimer = null;
             this.applyUI();
             this.initDOMObserver();
             if (cached.pendingRequestsCount > 0) {
@@ -68,6 +70,8 @@ const RoleGuard = {
             this.user = stale.user;
             this.permissions = stale.permissions;
             this.initialized = true;
+            clearTimeout(this._safetyTimer);
+            this._safetyTimer = null;
             this.applyUI();
             this.initDOMObserver();
             if (stale.pendingRequestsCount > 0) {
@@ -98,6 +102,8 @@ const RoleGuard = {
             }
         } catch (e) {
             console.error('[RoleGuard] Init error:', e);
+            clearTimeout(this._safetyTimer);
+            this._safetyTimer = null;
 
             // Fallback: базовые данные из AuthGuard с ролью guest
             const authUser = typeof AuthGuard !== 'undefined' ? AuthGuard.getUser() : null;

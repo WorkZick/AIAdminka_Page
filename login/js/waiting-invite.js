@@ -18,7 +18,7 @@ const WaitingInvite = {
     invites: [],
 
     async init() {
-        const authData = localStorage.getItem('cloud-auth');
+        const authData = sessionStorage.getItem('cloud-auth');
         if (!authData) {
             window.location.href = 'index.html';
             return;
@@ -26,8 +26,10 @@ const WaitingInvite = {
 
         try {
             const auth = JSON.parse(authData);
-            if (Date.now() - auth.timestamp > 3500000) {
-                localStorage.removeItem('cloud-auth');
+            // TokenManager недоступен на waiting-invite (auth-guard.js не подключён)
+            const TOKEN_LIFETIME = (typeof TokenManager !== 'undefined') ? TokenManager.TOKEN_LIFETIME : 3500000;
+            if (Date.now() - auth.timestamp > TOKEN_LIFETIME) {
+                sessionStorage.removeItem('cloud-auth');
                 window.location.href = 'index.html';
                 return;
             }
@@ -385,7 +387,7 @@ const WaitingInvite = {
 
     _logout() {
         this.destroy();
-        localStorage.removeItem('cloud-auth');
+        sessionStorage.removeItem('cloud-auth');
         localStorage.removeItem('roleGuard');
         Toast.info('Выход из аккаунта...');
         setTimeout(() => { window.location.href = 'index.html'; }, 500);

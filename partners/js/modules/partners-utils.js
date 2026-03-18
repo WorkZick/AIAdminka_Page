@@ -4,9 +4,13 @@ const PartnersUtils = {
 
     isValidImageUrl(url) {
         if (!url) return false;
-        return url.startsWith('data:image/') ||
-               url.startsWith('http://') ||
-               url.startsWith('https://');
+        if (url.startsWith('data:image/')) return true;
+        try {
+            const parsed = new URL(url);
+            return ['http:', 'https:'].includes(parsed.protocol);
+        } catch {
+            return false;
+        }
     },
 
     showLoading(show) {

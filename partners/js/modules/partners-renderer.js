@@ -88,11 +88,11 @@ const PartnersRenderer = {
     updateSelection(newId, oldId) {
         const tbody = document.getElementById('partnersTableBody');
         if (oldId) {
-            const oldRow = tbody.querySelector(`tr[data-partner-id="${oldId}"]`);
+            const oldRow = tbody.querySelector(`tr[data-partner-id="${CSS.escape(oldId)}"]`);
             if (oldRow) oldRow.classList.remove('selected');
         }
         if (newId) {
-            const newRow = tbody.querySelector(`tr[data-partner-id="${newId}"]`);
+            const newRow = tbody.querySelector(`tr[data-partner-id="${CSS.escape(newId)}"]`);
             if (newRow) newRow.classList.add('selected');
         }
     },

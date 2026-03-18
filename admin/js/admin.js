@@ -257,7 +257,7 @@ const adminApp = {
     },
 
     loadUserData() {
-        const authData = localStorage.getItem('cloud-auth');
+        const authData = sessionStorage.getItem('cloud-auth');
         if (authData) {
             let auth;
             try {

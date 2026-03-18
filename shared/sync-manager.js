@@ -183,7 +183,7 @@ const SyncManager = {
 
     getEmail() {
         try {
-            const auth = localStorage.getItem('cloud-auth');
+            const auth = sessionStorage.getItem('cloud-auth');
             if (auth) {
                 return JSON.parse(auth).email;
             }
@@ -195,7 +195,7 @@ const SyncManager = {
 
     getAccessToken() {
         try {
-            const auth = localStorage.getItem('cloud-auth');
+            const auth = sessionStorage.getItem('cloud-auth');
             if (auth) {
                 return JSON.parse(auth).accessToken;
             }

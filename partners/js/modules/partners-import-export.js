@@ -636,7 +636,7 @@ const PartnersImportExport = {
                 const method = (partner.method || '').trim();
                 if (method && !existingMethodNames.has(method.toLowerCase())) {
                     existingMethodNames.add(method.toLowerCase());
-                    const tempId = 'temp_method_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    const tempId = 'temp_method_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
                     const methodData = { id: tempId, name: method, _synced: false };
                     PartnersState.cachedMethods.push(methodData);
                     newMethodsToSync.push({ tempId, data: { name: method } });
@@ -678,7 +678,7 @@ const PartnersImportExport = {
                     updated++;
                 } else {
                     // Новый партнёр - создаём с временным ID
-                    const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
                     const partnerData = {
                         id: tempId,
                         subagent: partner.subagent,

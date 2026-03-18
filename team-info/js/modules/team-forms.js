@@ -414,7 +414,7 @@ const TeamForms = {
         // Получаем email текущего пользователя
         let currentUserEmail = null;
         try {
-            const authData = localStorage.getItem('cloud-auth');
+            const authData = sessionStorage.getItem('cloud-auth');
             if (authData) {
                 const auth = JSON.parse(authData);
                 currentUserEmail = auth.email;
@@ -525,7 +525,7 @@ const TeamForms = {
         // Запрет редактирования должности в своей карточке
         let isSelf = false;
         try {
-            const authData = localStorage.getItem('cloud-auth');
+            const authData = sessionStorage.getItem('cloud-auth');
             const currentEmail = authData ? JSON.parse(authData).email : null;
             const empEmail = employee.email || employee.id;
             isSelf = !!(currentEmail && empEmail === currentEmail);

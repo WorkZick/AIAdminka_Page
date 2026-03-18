@@ -8,6 +8,7 @@ const PartnerOnboarding = (() => {
     let _statusWatchTimer = null;
     let _statusWatchRequestId = null;
     let _statusWatchExpected = null;
+    let _statusWatchVisHandler = null;
     let _listRefreshTimer = null;
     let _visibilityRefreshHandler = null;
     let _lastKnownModified = null;
@@ -704,12 +705,34 @@ const PartnerOnboarding = (() => {
         _statusWatchRequestId = requestId;
         _statusWatchExpected = expectedStatus;
         _statusWatchTimer = setInterval(() => _pollStatus(), 5000); // every 5s
+
+        // Pause when tab is hidden (same pattern as _listRefreshTimer)
+        if (!_statusWatchVisHandler) {
+            _statusWatchVisHandler = () => {
+                if (document.visibilityState === 'visible') {
+                    if (_statusWatchRequestId && !_statusWatchTimer) {
+                        _statusWatchTimer = setInterval(() => _pollStatus(), 5000);
+                        _pollStatus(); // immediate check on return
+                    }
+                } else {
+                    if (_statusWatchTimer) {
+                        clearInterval(_statusWatchTimer);
+                        _statusWatchTimer = null;
+                    }
+                }
+            };
+            document.addEventListener('visibilitychange', _statusWatchVisHandler);
+        }
     }
 
     function _stopStatusWatch() {
         if (_statusWatchTimer) {
             clearInterval(_statusWatchTimer);
             _statusWatchTimer = null;
+        }
+        if (_statusWatchVisHandler) {
+            document.removeEventListener('visibilitychange', _statusWatchVisHandler);
+            _statusWatchVisHandler = null;
         }
         _statusWatchRequestId = null;
         _statusWatchExpected = null;

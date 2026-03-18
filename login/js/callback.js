@@ -114,7 +114,7 @@
                 picture: userInfo.picture,
                 timestamp: Date.now()
             };
-            localStorage.setItem('cloud-auth', JSON.stringify(authData));
+            sessionStorage.setItem('cloud-auth', JSON.stringify(authData));
 
             // Успешный логин — сбрасываем счётчик ошибок
             sessionStorage.removeItem('oauth_state_errors');
