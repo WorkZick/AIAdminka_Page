@@ -747,14 +747,22 @@ const PartnerOnboarding = (() => {
             });
             if (!result.success) return;
             if (result.status !== _statusWatchExpected) {
+                const reqId = _statusWatchRequestId;
                 _stopStatusWatch();
                 Toast.warning('Статус заявки изменился. Обновляю...');
                 // Reload all requests to get fresh data, then re-open
-                const listResult = await CloudStorage.postApi('getOnboardingRequests', {});
+                const [listResult, tsResult] = await Promise.all([
+                    CloudStorage.postApi('getOnboardingRequests', {}),
+                    CloudStorage.postApi('getOnboardingLastModified', {}).catch(() => null)
+                ]);
                 if (listResult.requests) {
                     OnboardingState.set('requests', listResult.requests);
+                    if (listResult.history) OnboardingState.set('history', listResult.history);
+                    OnboardingList.applyFilters();
                 }
-                _openRequest(_statusWatchRequestId);
+                // Sync timestamp so list poll doesn't trigger redundant refresh
+                if (tsResult && tsResult.ts) _lastKnownModified = tsResult.ts;
+                _openRequest(reqId);
             }
         } catch (_) { /* silent — polling error is not critical */ }
     }
@@ -1568,6 +1576,9 @@ const PartnerOnboarding = (() => {
         if (_pollInFlight) return;
         if (_isActionLocked()) return;
         if (document.visibilityState === 'hidden') return;
+        // Skip list polling when status watch is active (it has its own polling)
+        // to avoid double API calls
+        if (_statusWatchTimer && OnboardingState.get('view') !== 'list') return;
         _pollInFlight = true;
         try {
             const result = await CloudStorage.postApi('getOnboardingLastModified', {});
@@ -1615,22 +1626,39 @@ const PartnerOnboarding = (() => {
 
                 const updated = fresh.find(r => r.id === current.id);
                 if (updated) {
-                    const changed = updated.updatedDate !== current.updatedDate
-                        || updated.status !== current.status
+                    const structural = updated.status !== current.status
                         || updated.currentStep !== current.currentStep
                         || updated.assigneeEmail !== current.assigneeEmail;
-                    if (changed) {
+                    const dataChanged = updated.updatedDate !== current.updatedDate;
+
+                    if (structural || dataChanged) {
                         OnboardingState.set('currentRequest', updated);
                         const stepNumber = OnboardingState.get('currentStep');
+
                         if (view === 'form') {
-                            const structural = current.status !== updated.status
-                                || current.currentStep !== updated.currentStep
-                                || current.assigneeEmail !== updated.assigneeEmail;
                             if (structural) {
-                                OnboardingForm.render(updated, stepNumber);
+                                // Structural change (status/step/assignee) — must re-render.
+                                // Save current form input to stageData before re-render
+                                // so unsaved edits are preserved when possible.
+                                const currentData = OnboardingForm.collectFormData(stepNumber, { excludeFiles: true });
+                                if (currentData && Object.keys(currentData).length > 0) {
+                                    if (!updated.stageData) updated.stageData = {};
+                                    if (!updated.stageData[stepNumber]) updated.stageData[stepNumber] = {};
+                                    // Merge local edits into fresh data (local wins for fields user is editing)
+                                    Object.assign(updated.stageData[stepNumber], currentData);
+                                }
+                                // Re-open request to pick correct view (form vs review)
+                                _openRequest(current.id);
                             }
+                            // Non-structural data change in form view: don't re-render
+                            // (executor is editing, their local data takes precedence).
+                            // Sidebar info will update on next view switch.
                         } else if (view === 'review') {
+                            // Review view: always re-render to show latest data
                             OnboardingReview.render(updated, stepNumber);
+                            // Also update sidebar info
+                            OnboardingSteps.renderVertical('reviewSteps', stepNumber);
+                            OnboardingSteps.renderInfo('reviewInfo', updated);
                         }
                     }
                 }
