@@ -1654,11 +1654,14 @@ const PartnerOnboarding = (() => {
                             // (executor is editing, their local data takes precedence).
                             // Sidebar info will update on next view switch.
                         } else if (view === 'review') {
-                            // Review view: always re-render to show latest data
-                            OnboardingReview.render(updated, stepNumber);
-                            // Also update sidebar info
-                            OnboardingSteps.renderVertical('reviewSteps', stepNumber);
-                            OnboardingSteps.renderInfo('reviewInfo', updated);
+                            // Review view: обновляем только при структурных изменениях
+                            // (статус, шаг, назначение). Черновики executor не показываем —
+                            // reviewer видит данные только после submitStep/approveStep.
+                            if (structural) {
+                                OnboardingReview.render(updated, stepNumber);
+                                OnboardingSteps.renderVertical('reviewSteps', stepNumber);
+                                OnboardingSteps.renderInfo('reviewInfo', updated);
+                            }
                         }
                     }
                 }
