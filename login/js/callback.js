@@ -24,6 +24,13 @@
             window.close();
             return;
         }
+        // При ошибке во время redirect refresh — удаляем устаревший токен,
+        // чтобы login.js не пропустил форму входа и не вернул пользователя
+        // на страницу со старым (near-expiry) токеном.
+        if (isRedirectRefresh) {
+            sessionStorage.removeItem('cloud-auth');
+            sessionStorage.removeItem('oauth_redirect_refresh');
+        }
         // Авторедирект на login (auth-redirect сохраняется в sessionStorage)
         if (stateErrorCount < 3) {
             sessionStorage.setItem('oauth_state_errors', String(stateErrorCount + 1));
@@ -53,7 +60,10 @@
             }
             if (isRedirectRefresh) {
                 // prompt=none не сработал — нужен интерактивный логин
-                // auth-redirect остаётся для возврата после логина
+                // Удаляем устаревший токен: он в warning-range, но всё равно требует обновления.
+                // Без этого login.js найдёт cloud-auth, пропустит форму логина и вернёт
+                // пользователя на страницу со старым токеном — бесконечный цикл предупреждений.
+                sessionStorage.removeItem('cloud-auth');
                 sessionStorage.removeItem('oauth_redirect_refresh');
                 window.location.href = 'index.html';
                 return;
