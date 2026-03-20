@@ -47,6 +47,7 @@ const CloudStorage = {
     },
     cache: {}, // In-memory fallback
     _staleKeys: new Set(), // Ключи, отданные как stale
+    _rateLimitCooldownUntil: 0, // Глобальный cooldown при rate limit
 
     // Pending requests для предотвращения race condition
     pendingRequests: new Map(),
@@ -243,6 +244,13 @@ const CloudStorage = {
             throw Object.assign(new Error('auth_redirect'), { _silentRedirect: true });
         }
 
+        // Global rate-limit cooldown: ждём оставшееся время если были rate-limited
+        const cooldownRemaining = this._rateLimitCooldownUntil - Date.now();
+        if (cooldownRemaining > 0) {
+            console.warn(`CloudStorage: Rate limit cooldown, waiting ${Math.ceil(cooldownRemaining / 1000)}s...`);
+            await this.sleep(cooldownRemaining);
+        }
+
         // Создаём функцию для выполнения запроса
         const executeApiRequest = async () => {
             const url = new URL(this.SCRIPT_URL);
@@ -330,6 +338,12 @@ const CloudStorage = {
             // Retry logic with exponential backoff
             const errorMsg = error.message || '';
             const isRateLimit = errorMsg.includes('Rate limit');
+
+            // Если rate limit — устанавливаем глобальный cooldown на 30 секунд
+            if (isRateLimit) {
+                this._rateLimitCooldownUntil = Date.now() + 30000;
+            }
+
             const isRetryable = isRateLimit ||
                                errorMsg.includes('Failed to fetch') ||
                                errorMsg.includes('NetworkError') ||

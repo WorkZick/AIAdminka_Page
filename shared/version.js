@@ -4,7 +4,7 @@
 const AppVersion = {
     version: null,
     // Fallback версия на случай если changelog.json недоступен
-    FALLBACK_VERSION: '2.24.3',
+    FALLBACK_VERSION: '2.26.0',
 
     async init() {
         await this.loadVersion();

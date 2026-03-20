@@ -19,6 +19,7 @@ const ErrorHandler = (() => {
     NOT_FOUND: 'not_found',       // Ресурс не найден
     SERVER: 'server',             // Серверная ошибка
     QUOTA: 'quota',               // Превышена квота (localStorage и т.д.)
+    RATE_LIMIT: 'rate_limit',     // Превышен лимит запросов (429)
     UNKNOWN: 'unknown'            // Неизвестная ошибка
   };
 
@@ -91,6 +92,13 @@ const ErrorHandler = (() => {
       return ErrorType.QUOTA;
     }
 
+    // Rate limit
+    if (message.includes('rate limit') ||
+        message.includes('too many requests') ||
+        error.status === 429) {
+      return ErrorType.RATE_LIMIT;
+    }
+
     // Серверные ошибки
     if (error.status >= 500 || message.includes('server error')) {
       return ErrorType.SERVER;
@@ -111,6 +119,7 @@ const ErrorHandler = (() => {
       case ErrorType.NETWORK:
       case ErrorType.SERVER:
       case ErrorType.PERMISSION:
+      case ErrorType.RATE_LIMIT:
         return ErrorSeverity.HIGH;
 
       case ErrorType.VALIDATION:
@@ -135,6 +144,7 @@ const ErrorHandler = (() => {
       [ErrorType.NOT_FOUND]: 'Запрашиваемый ресурс не найден',
       [ErrorType.SERVER]: 'Ошибка сервера. Попробуйте позже',
       [ErrorType.QUOTA]: 'Превышен лимит хранилища. Очистите данные',
+      [ErrorType.RATE_LIMIT]: 'Слишком много запросов. Подождите немного',
       [ErrorType.UNKNOWN]: 'Произошла неизвестная ошибка'
     };
 

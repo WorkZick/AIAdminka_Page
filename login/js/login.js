@@ -13,6 +13,8 @@ const loginApp = {
         return EnvConfig.getScriptUrl();
     },
 
+    MAX_RETRIES: 2,
+
     currentUser: null,
     currentRole: null,
     storageReady: false,
@@ -188,7 +190,7 @@ const loginApp = {
 
     // ============ API CALLS ============
 
-    async _secureApiCall(action, params = {}) {
+    async _secureApiCall(action, params = {}, retryCount = 0) {
         if (!this.currentUser?.accessToken) {
             return { error: 'No access token' };
         }
@@ -217,7 +219,17 @@ const loginApp = {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            return await response.json();
+            const result = await response.json();
+
+            // Rate limit retry с exponential backoff
+            if (result.error && result.error.includes('Rate limit') && retryCount < this.MAX_RETRIES) {
+                const delay = 3000 * Math.pow(2, retryCount);
+                console.warn(`Login: Rate limit, retry ${retryCount + 1}/${this.MAX_RETRIES} after ${delay}ms`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return this._secureApiCall(action, params, retryCount + 1);
+            }
+
+            return result;
         } catch (error) {
             if (error.name === 'AbortError') {
                 throw new Error('Сервер не отвечает. Попробуйте позже.');

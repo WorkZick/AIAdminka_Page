@@ -23,18 +23,18 @@ const OnboardingList = (() => {
 
         if (!container) return;
 
-        loading.classList.add('hidden');
+        if (loading) loading.classList.add('hidden');
 
         if (allRequests.length === 0) {
             container.innerHTML = '';
             container.classList.add('hidden');
-            emptyState.classList.remove('hidden');
+            if (emptyState) emptyState.classList.remove('hidden');
             _hideSelectionToolbar();
             _renderPagination(0);
             return;
         }
 
-        emptyState.classList.add('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
         container.classList.remove('hidden');
 
         // Pagination
@@ -98,17 +98,15 @@ const OnboardingList = (() => {
     function _renderRow(request, total) {
         const statusConf = OnboardingConfig.STATUSES[request.status] || {};
         const sourceLabel = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_SOURCES, request.leadSource) || 'Новая заявка';
-        const contactName = (request.stageData && request.stageData[1] || {}).contact_name || '';
-        const myRole = OnboardingState.get('userRole');
-        const sysRole = OnboardingState.get('systemRole');
+        const contactName = (request.stageData?.[1] || {}).contact_name || '';
+        const { myRole, sysRole, isAdmin } = OnboardingUtils.getRoles();
         const myEmail = OnboardingState.get('userEmail');
         const isMyTurn = _isMyTurn(request, myRole, sysRole, myEmail);
-        const dateTime = _formatDateTime(request.createdDate);
+        const dateTime = OnboardingUtils.formatDateTime(request.createdDate);
         const assigneeName = _shortenName(request.assigneeName || request.assigneeEmail);
         const title = contactName ? `${sourceLabel} — ${contactName}` : sourceLabel;
         const isTerminal = request.status === 'completed' || request.status === 'cancelled';
         const isWorkStatus = OnboardingConfig.isWorkStatus(request.status);
-        const isAdminLike = myRole === 'admin' || myRole === 'leader';
         const executorDone = OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor' && OnboardingConfig.isExecutorCompleted(request);
 
         // Progress bar segments
@@ -134,11 +132,11 @@ const OnboardingList = (() => {
         }
 
         // Checkbox for admin/leader
-        const checkboxHtml = isAdminLike
+        const checkboxHtml = isAdmin
             ? `<input type="checkbox" class="row-checkbox" data-action="onb-toggleSelect" data-value="${Utils.escapeHtml(request.id)}">`
             : '';
 
-        return `<div class="request-row ${isMyTurn ? 'my-turn' : ''} ${isAdminLike ? 'has-checkbox' : ''}" data-action="onb-openRequest" data-value="${Utils.escapeHtml(request.id)}">
+        return `<div class="request-row ${isMyTurn ? 'my-turn' : ''} ${isAdmin ? 'has-checkbox' : ''}" data-action="onb-openRequest" data-value="${Utils.escapeHtml(request.id)}">
             ${checkboxHtml}
             <div class="row-progress">
                 <div class="progress-bar">${segments.join('')}</div>
@@ -170,7 +168,7 @@ const OnboardingList = (() => {
         let filtered = requests;
 
         // Ownership filter: executor sees only own + unassigned
-        const myRole = OnboardingState.get('userRole');
+        const { myRole } = OnboardingUtils.getRoles();
         const myEmail = OnboardingState.get('userEmail');
         if (myRole === 'executor' && myEmail) {
             filtered = filtered.filter(r =>
@@ -235,6 +233,13 @@ const OnboardingList = (() => {
             return false;
         }
         // in_progress / approved / revision_needed: check effective executor
+        // AutoHandoff step phase 1: reviewer fills before handoff — reviewer's turn, not executor's
+        if (step.dynamicExecutor && step.dynamicExecutor.autoHandoff) {
+            const stepData = (request.stageData && request.stageData[request.currentStep]) || {};
+            if (!stepData._handoff_complete) {
+                return OnboardingRoles.isReviewerForStep(sysRole, request.currentStep);
+            }
+        }
         if (OnboardingRoles.isExecutorForStep(sysRole, request.currentStep)) {
             if (OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor') {
                 return request.assigneeEmail === myEmail || request.createdBy === myEmail;
@@ -251,17 +256,6 @@ const OnboardingList = (() => {
         return parts[0];
     }
 
-    function _formatDateTime(dateStr) {
-        if (!dateStr) return '';
-        const d = new Date(dateStr);
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yy = String(d.getFullYear()).slice(-2);
-        const hh = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        return `${dd}.${mm}.${yy} ${hh}:${min}`;
-    }
-
     function _toggleLoading(isLoading) {
         const loading = document.getElementById('listLoading');
         const list = document.getElementById('requestsList');
@@ -272,8 +266,8 @@ const OnboardingList = (() => {
     // ── Selection Toolbar ──
 
     function _updateSelectionToolbar() {
-        const myRole = OnboardingState.get('userRole');
-        if (myRole !== 'admin' && myRole !== 'leader') {
+        const { isAdmin } = OnboardingUtils.getRoles();
+        if (!isAdmin) {
             _hideSelectionToolbar();
             return;
         }

@@ -1653,27 +1653,6 @@ label.checklist-item input[type="checkbox"] {
     font-weight: 700;
 }
 
-/* ── Empty / Loading ── */
-
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--spacing-md);
-    padding: var(--spacing-2xl);
-    text-align: center;
-    flex: 1;
-    justify-content: center;
-}
-
-.empty-state.hidden {
-    display: none;
-}
-
-.loading-state.hidden {
-    display: none;
-}
-
 /* ── Responsive ── */
 
 @media (max-width: 768px) {
@@ -1727,74 +1706,14 @@ label.checklist-item input[type="checkbox"] {
     }
 }
 
-/* ── Executor Completed Banner ── */
-
-/* ── Dev stub (step in development) ── */
-
-.dev-stub {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: var(--spacing-2xl) var(--spacing-lg);
-    background: var(--glass-bg-light);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-}
-
-.dev-stub-icon {
-    filter: brightness(0) saturate(100%) invert(80%) sepia(10%) saturate(200%) hue-rotate(180deg);
-    margin-bottom: var(--spacing-md);
-    opacity: 0.6;
-}
-
-.dev-stub-title {
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    color: var(--white);
-    margin: 0 0 var(--spacing-sm);
-}
-
-.dev-stub-text {
-    font-size: var(--font-size-base);
-    color: var(--gray-light);
-    margin: 0;
-    max-width: 320px;
-    line-height: 1.5;
-}
-
-.executor-completed-banner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: var(--spacing-2xl) var(--spacing-lg);
-    margin-bottom: var(--spacing-xl);
-    background: var(--glass-bg-light);
-    border: 1px solid rgba(81, 207, 102, 0.2);
-    border-radius: var(--radius-lg);
-}
-
-.executor-completed-banner .completed-icon {
-    filter: brightness(0) saturate(100%) invert(75%) sepia(30%) saturate(600%) hue-rotate(90deg) brightness(100%);
-    margin-bottom: var(--spacing-md);
-}
-
-.executor-completed-banner .completed-title {
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    color: var(--status-green);
-    margin: 0 0 var(--spacing-xs);
-}
-
-.executor-completed-banner .completed-subtitle {
-    font-size: var(--font-size-md);
-    color: var(--white);
-    margin: 0 0 var(--spacing-sm);
-}
-
-.executor-completed-banner .completed-note {
+/* ── Waiting Note (unified) ── */
+.onb-waiting-note {
     font-size: var(--font-size-sm);
     color: var(--gray-light);
-    margin: 0;
+    margin: 0 0 var(--spacing-lg);
+}
+
+.form-group--waiting .form-input:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }

@@ -306,7 +306,12 @@ const AuthGuard = {
     getBasePath() {
         const path = window.location.pathname;
         const match = path.match(/^\/([^\/]+)\//);
-        return match ? '/' + match[1] : '';
+        if (!match) return '';
+        // Known app modules — if first segment is a module, basePath is empty (root = app)
+        const appModules = ['login', 'admin', 'partners', 'partner-onboarding', 'team-info',
+            'traffic-calculation', 'excel-reports', 'sync', 'documentation', 'shared'];
+        if (appModules.includes(match[1])) return '';
+        return '/' + match[1];
     },
 
     get LOGIN_URL() {

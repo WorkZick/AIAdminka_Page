@@ -5,19 +5,12 @@ const PartnerOnboarding = (() => {
 
     let _confirmCallback = null;
     let _actionInProgress = false;
-    let _statusWatchTimer = null;
-    let _statusWatchRequestId = null;
-    let _statusWatchExpected = null;
-    let _statusWatchVisHandler = null;
-    let _listRefreshTimer = null;
-    let _visibilityRefreshHandler = null;
-    let _lastKnownModified = null;
-    const POLL_INTERVAL = 5000; // 5 секунд — lightweight change detection
-    let _pollErrorCount = 0;
-    const MAX_POLL_ERRORS = 3; // после 3 ошибок подряд — стоп
-    let _pollInFlight = false;
     let _lastSavedDraftKey = null;
     let _lastSavedDraftJson = null;
+    let _pollTimer = null;
+    let _visHandler = null;
+    let _lastModifiedTs = null;
+    const SYNC_INTERVAL = 10000;
     const _debouncedSearch = Utils.debounce(() => OnboardingList.applyFilters(), 150);
     const _debouncedAutosave = Utils.debounce(() => _autosaveDraft(), 5000);
 
@@ -52,18 +45,18 @@ const PartnerOnboarding = (() => {
         _loadUserData();
         _setupDevRoleSwitcher();
 
-        // Параллельная загрузка: заявки + настройки источников + timestamp (все независимы)
+        // Параллельная загрузка: заявки + настройки источников (независимы)
         const [,, tsResult] = await Promise.all([
             _loadRequests(),
             OnboardingSource.init(),
             CloudStorage.postApi('getOnboardingLastModified', {}).catch(() => ({ ts: '0' }))
         ]);
-        _lastKnownModified = tsResult?.ts || '0';
+        _lastModifiedTs = tsResult?.ts || '0';
 
         OnboardingList.setupDefaultFilters();
         OnboardingList.applyFilters();
         _updateToolbarForRole();
-        _startListRefresh();
+        _startSmartSync();
     }
 
     function _loadUserData() {
@@ -115,6 +108,7 @@ const PartnerOnboarding = (() => {
     }
 
     function _applyApiResult(result) {
+        _lastModifiedTs = Date.now().toString();
         if (!result || !result.request) return;
         CloudStorage.clearCache('onboardingRequests');
         const requests = OnboardingState.get('requests') || [];
@@ -182,27 +176,18 @@ const PartnerOnboarding = (() => {
         if (view === 'list') {
             headerTitle.textContent = 'Заведение партнёра';
             headerRequestId.classList.add('hidden');
-            _stopStatusWatch();
         } else {
             const request = OnboardingState.get('currentRequest');
             if (request) {
                 headerRequestId.textContent = request.id;
                 headerRequestId.classList.remove('hidden');
                 _renderAdminActions(request);
-                // Start status watch when request is on_review (reviewer or form view)
-                // Detects if executor withdraws while reviewer is working
-                if (request.status === 'on_review') {
-                    _startStatusWatch(request.id, 'on_review');
-                } else {
-                    _stopStatusWatch();
-                }
             }
         }
     }
 
     function _renderAdminActions(request) {
-        const myRole = OnboardingState.get('userRole');
-        const isAdminLike = myRole === 'admin' || myRole === 'leader';
+        const { isAdmin } = OnboardingUtils.getRoles();
         const view = OnboardingState.get('view');
         const containerId = view === 'form' ? 'formAdminActions' : 'reviewAdminActions';
         const container = document.getElementById(containerId);
@@ -210,15 +195,15 @@ const PartnerOnboarding = (() => {
 
         let html = '';
         if (request.status !== 'completed' && request.status !== 'cancelled') {
-            if (isAdminLike && view === 'form') {
+            if (isAdmin && view === 'form') {
                 html += `<button class="btn btn-secondary" data-action="onb-showReassign">Передать</button>`;
                 html += `<button class="btn btn-secondary" data-action="onb-showRollback">Откатить</button>`;
             }
-            if (isAdminLike) {
-                html += `<button class="btn btn-danger btn-sm" data-action="onb-cancelRequest">Отменить</button>`;
+            if (isAdmin) {
+                html += `<button class="btn btn-danger" data-action="onb-cancelRequest">Отменить</button>`;
             }
         }
-        if (request.status === 'cancelled' && isAdminLike) {
+        if (request.status === 'cancelled' && isAdmin) {
             html += `<button class="btn btn-secondary" data-action="onb-reactivateRequest">Восстановить</button>`;
         }
         container.innerHTML = html;
@@ -227,8 +212,7 @@ const PartnerOnboarding = (() => {
     // ── Toolbar Role Visibility ──
 
     function _updateToolbarForRole() {
-        const myRole = OnboardingState.get('userRole');
-        const systemRole = OnboardingState.get('systemRole');
+        const { myRole, sysRole: systemRole } = OnboardingUtils.getRoles();
         const hideSettings = myRole === 'executor';
         const isReviewer = myRole === 'reviewer';
         const isLeaderOrAdmin = systemRole === 'admin' || systemRole === 'leader';
@@ -367,7 +351,7 @@ const PartnerOnboarding = (() => {
             case 'onb-editSource': OnboardingSource.showEditForm(value); break;
             case 'onb-backToSourceList': OnboardingSource.showList(); break;
             case 'onb-saveSource': OnboardingSource.saveSource(); break;
-            case 'onb-deleteSource': _showConfirm('Удалить источник?', 'Источник будет удалён. Импортированные лиды останутся.', () => OnboardingSource.deleteSource(OnboardingSource._getEditingId())); break;
+            case 'onb-deleteSource': _showConfirm('Удалить источник?', 'Источник будет удалён. Импортированные лиды останутся.', () => OnboardingSource.deleteSource(OnboardingSource.getEditingId())); break;
             case 'onb-syncNow': OnboardingSource.syncNow(); break;
 
             // Conditions settings
@@ -402,86 +386,60 @@ const PartnerOnboarding = (() => {
         }
     }
 
+    function _handleCascadeChange(target) {
+        const cascadeEntry = OnboardingConfig.CASCADE_FIELDS.find(c => c.trigger === target.name);
+        if (!cascadeEntry || !OnboardingSource.hasConditions()) return false;
+
+        const request = OnboardingState.get('currentRequest');
+        const stepNumber = OnboardingState.get('currentStep');
+        const step = OnboardingConfig.getStep(stepNumber);
+        if (!request || !step || !step.hasConditionsCascade) return false;
+
+        const currentData = OnboardingForm.collectFormData(stepNumber);
+        if (!request.stageData) request.stageData = {};
+        request.stageData[stepNumber] = { ...request.stageData[stepNumber], ...currentData };
+        request.stageData[stepNumber][target.name] = target.value;
+
+        if (cascadeEntry.autofill) {
+            const selCountry = request.stageData[stepNumber].condition_country || '';
+            const condition = OnboardingSource.getCondition(
+                selCountry, request.stageData[stepNumber].method_type, target.value
+            );
+            if (condition) {
+                request.stageData[stepNumber].deal_1 = condition.deal_1 || '';
+                request.stageData[stepNumber].deal_2 = condition.deal_2 || '';
+                request.stageData[stepNumber].deal_3 = condition.deal_3 || '';
+                request.stageData[stepNumber].prepayment_method = condition.prepayment_method || '';
+                request.stageData[stepNumber].prepayment_amount = condition.prepayment_amount || '';
+            }
+        } else {
+            for (const fieldId of cascadeEntry.clears) {
+                request.stageData[stepNumber][fieldId] = '';
+            }
+        }
+
+        _debouncedAutosave();
+        OnboardingForm.render(request, stepNumber);
+        return true;
+    }
+
     function _handleChange(e) {
         const target = e.target;
-        // Dynamic executor: re-render form when account_creator changes
-        if (target.name === 'account_creator') {
+        // Dynamic executor: re-render form when executor field changes
+        const _deStep = OnboardingConfig.getStep(OnboardingState.get('currentStep'));
+        if (_deStep && _deStep.dynamicExecutor && target.name === _deStep.dynamicExecutor.field) {
             const request = OnboardingState.get('currentRequest');
             const stepNumber = OnboardingState.get('currentStep');
             if (request) {
                 if (!request.stageData) request.stageData = {};
                 if (!request.stageData[stepNumber]) request.stageData[stepNumber] = {};
-                request.stageData[stepNumber].account_creator = target.value;
+                request.stageData[stepNumber][target.name] = target.value;
                 OnboardingForm.render(request, stepNumber);
             }
             return;
         }
-        // Conditions cascade: condition_country → clear method_type, method_name, conditions
-        if (target.name === 'condition_country' && OnboardingSource.hasConditions()) {
-            const request = OnboardingState.get('currentRequest');
-            const stepNumber = OnboardingState.get('currentStep');
-            if (request && stepNumber === 2) {
-                const currentData = OnboardingForm.collectFormData(2);
-                if (!request.stageData) request.stageData = {};
-                request.stageData[2] = { ...request.stageData[2], ...currentData };
-                request.stageData[2].condition_country = target.value;
-                request.stageData[2].method_type = '';
-                request.stageData[2].method_name = '';
-                request.stageData[2].deal_1 = '';
-                request.stageData[2].deal_2 = '';
-                request.stageData[2].deal_3 = '';
-                request.stageData[2].prepayment_method = '';
-                request.stageData[2].prepayment_amount = '';
-                _debouncedAutosave();
-                OnboardingForm.render(request, 2);
-            }
-            return;
-        }
-        // Conditions cascade: method_type → clear method_name + conditions
-        if (target.name === 'method_type' && OnboardingSource.hasConditions()) {
-            const request = OnboardingState.get('currentRequest');
-            const stepNumber = OnboardingState.get('currentStep');
-            if (request && stepNumber === 2) {
-                const currentData = OnboardingForm.collectFormData(2);
-                if (!request.stageData) request.stageData = {};
-                request.stageData[2] = { ...request.stageData[2], ...currentData };
-                request.stageData[2].method_type = target.value;
-                request.stageData[2].method_name = '';
-                request.stageData[2].deal_1 = '';
-                request.stageData[2].deal_2 = '';
-                request.stageData[2].deal_3 = '';
-                request.stageData[2].prepayment_method = '';
-                request.stageData[2].prepayment_amount = '';
-                _debouncedAutosave();
-                OnboardingForm.render(request, 2);
-            }
-            return;
-        }
-        // Conditions cascade: method_name → apply condition values
-        if (target.name === 'method_name' && OnboardingSource.hasConditions()) {
-            const request = OnboardingState.get('currentRequest');
-            const stepNumber = OnboardingState.get('currentStep');
-            if (request && stepNumber === 2) {
-                const currentData = OnboardingForm.collectFormData(2);
-                if (!request.stageData) request.stageData = {};
-                request.stageData[2] = { ...request.stageData[2], ...currentData };
-                request.stageData[2].method_name = target.value;
-                const selCountry = request.stageData[2].condition_country || '';
-                const condition = OnboardingSource.getCondition(
-                    selCountry, request.stageData[2].method_type, target.value
-                );
-                if (condition) {
-                    request.stageData[2].deal_1 = condition.deal_1 || '';
-                    request.stageData[2].deal_2 = condition.deal_2 || '';
-                    request.stageData[2].deal_3 = condition.deal_3 || '';
-                    request.stageData[2].prepayment_method = condition.prepayment_method || '';
-                    request.stageData[2].prepayment_amount = condition.prepayment_amount || '';
-                }
-                _debouncedAutosave();
-                OnboardingForm.render(request, 2);
-            }
-            return;
-        }
+        // Conditions cascade: single handler for all cascade fields
+        if (_handleCascadeChange(target)) return;
         // Autosave draft on select/checkbox changes
         if (OnboardingState.get('view') === 'form' && target.closest('#formFields')) {
             _debouncedAutosave();
@@ -549,14 +507,13 @@ const PartnerOnboarding = (() => {
         let request = _getRequest(id);
         if (!request) return;
 
-        const myRole = OnboardingState.get('userRole');
-        const sysRole = OnboardingState.get('systemRole');
+        const { myRole, sysRole, isAdmin } = OnboardingUtils.getRoles();
         const step = OnboardingConfig.getStep(request.currentStep);
 
         // Executor takes "new" request → assign via API
         if (request.status === 'new' && step && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
             // Show loading on the clicked row
-            const row = document.querySelector(`.request-row[data-id="${id}"]`);
+            const row = document.querySelector(`.request-row[data-value="${id}"]`);
             if (row) row.classList.add('row-loading');
             try {
                 const result = await CloudStorage.postApi('submitStep', {
@@ -576,55 +533,16 @@ const PartnerOnboarding = (() => {
         OnboardingState.set('currentRequest', fresh);
         OnboardingState.set('currentStep', fresh.currentStep);
 
-        const isAdminLike = myRole === 'admin' || myRole === 'leader';
-        const effectiveExecutor = OnboardingConfig.getStepEffectiveExecutor(fresh.currentStep, fresh.stageData);
+        const decision = OnboardingConfig.getViewDecision(step, fresh, { myRole, sysRole, isAdmin });
 
-        // Executor: executorFinal step → show success view
-        if (OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor' && OnboardingConfig.isExecutorCompleted(fresh)) {
-            const finalStep = OnboardingConfig.STEPS.find(s => s.executorFinal);
-            const finalStepNum = finalStep ? finalStep.number : fresh.currentStep;
-            OnboardingState.set('currentStep', finalStepNum);
-            OnboardingReview.render(fresh, finalStepNum, true);
-            _showView('review');
+        if (decision.stepOverride) {
+            OnboardingState.set('currentStep', decision.stepOverride);
+            OnboardingForm.render(fresh, decision.stepOverride);
+            _showView('form');
             return;
         }
 
-        const isWorkStatus = OnboardingConfig.isWorkStatus(fresh.status);
-
-        // Decide view
-        // AutoHandoff in_progress: reviewer fills form, executor sees waiting state (both via form view)
-        if (fresh.status === 'in_progress' && step.dynamicExecutor && step.dynamicExecutor.autoHandoff &&
-            !(fresh.stageData[fresh.currentStep] || {})._handoff_complete) {
-            OnboardingForm.render(fresh, fresh.currentStep);
-            _showView('form');
-            return;
-        }
-        // Dynamic handoff on_review: executor sees review (readonly + withdraw)
-        if (fresh.status === 'on_review' && step.dynamicExecutor && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
-            OnboardingReview.render(fresh, fresh.currentStep);
-            _showView('review');
-        // Dynamic handoff on_review: reviewer (or admin) fills form
-        } else if (fresh.status === 'on_review' && step.dynamicExecutor && (effectiveExecutor === myRole || isAdminLike)) {
-            OnboardingForm.render(fresh, fresh.currentStep);
-            _showView('form');
-        // Standard work statuses: executor fills form
-        } else if (isWorkStatus && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
-            OnboardingForm.render(fresh, fresh.currentStep);
-            _showView('form');
-        // Reviewer-executor step (e.g. antifraud): reviewer fills form
-        } else if (fresh.status === 'on_review' && OnboardingRoles.isExecutorForStep(sysRole, step.number) && !step.reviewer) {
-            OnboardingForm.render(fresh, fresh.currentStep);
-            _showView('form');
-        // Standard on_review: reviewer sees review
-        } else if (fresh.status === 'on_review' && (OnboardingRoles.isReviewerForStep(sysRole, step.number) || isAdminLike)) {
-            OnboardingReview.render(fresh, fresh.currentStep);
-            _showView('review');
-        // Admin fallback for on_review reviewer-executor steps
-        } else if (isAdminLike && fresh.status === 'on_review' && !step.reviewer) {
-            OnboardingForm.render(fresh, fresh.currentStep);
-            _showView('form');
-        // Admin fallback for work statuses
-        } else if (isAdminLike && isWorkStatus) {
+        if (decision.view === 'form') {
             OnboardingForm.render(fresh, fresh.currentStep);
             _showView('form');
         } else {
@@ -637,15 +555,14 @@ const PartnerOnboarding = (() => {
         const request = OnboardingState.get('currentRequest');
         if (!request) return;
 
-        const myRole = OnboardingState.get('userRole');
-        const sysRole = OnboardingState.get('systemRole');
+        const { myRole, sysRole } = OnboardingUtils.getRoles();
 
-        // Executor clicks executorFinal step → show success view
+        // Executor clicks executorFinal step → show disabled waiting fields
         if (OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor' && OnboardingConfig.isExecutorFinalStep(stepNumber)) {
             if (OnboardingConfig.isExecutorCompleted(request)) {
                 OnboardingState.set('currentStep', stepNumber);
-                OnboardingReview.render(request, stepNumber, true);
-                _showView('review');
+                OnboardingForm.render(request, stepNumber);
+                _showView('form');
             }
             return;
         }
@@ -675,7 +592,8 @@ const PartnerOnboarding = (() => {
         if (!request.stageData) request.stageData = {};
         request.stageData[stepNumber] = { ...request.stageData[stepNumber], ...data };
 
-        if (stepNumber === 1 && data.lead_source) {
+        const autosaveStep = OnboardingConfig.getStep(stepNumber);
+        if (autosaveStep && autosaveStep.isLeadStep && data.lead_source) {
             request.leadSource = data.lead_source;
         }
 
@@ -698,82 +616,13 @@ const PartnerOnboarding = (() => {
         }).catch(() => { /* silent — draft save не критичен */ });
     }
 
-    // ── Status Watch (sync: detect if executor withdraws while reviewer edits) ──
-
-    function _startStatusWatch(requestId, expectedStatus) {
-        _stopStatusWatch();
-        _statusWatchRequestId = requestId;
-        _statusWatchExpected = expectedStatus;
-        _statusWatchTimer = setInterval(() => _pollStatus(), 5000); // every 5s
-
-        // Pause when tab is hidden (same pattern as _listRefreshTimer)
-        if (!_statusWatchVisHandler) {
-            _statusWatchVisHandler = () => {
-                if (document.visibilityState === 'visible') {
-                    if (_statusWatchRequestId && !_statusWatchTimer) {
-                        _statusWatchTimer = setInterval(() => _pollStatus(), 5000);
-                        _pollStatus(); // immediate check on return
-                    }
-                } else {
-                    if (_statusWatchTimer) {
-                        clearInterval(_statusWatchTimer);
-                        _statusWatchTimer = null;
-                    }
-                }
-            };
-            document.addEventListener('visibilitychange', _statusWatchVisHandler);
-        }
-    }
-
-    function _stopStatusWatch() {
-        if (_statusWatchTimer) {
-            clearInterval(_statusWatchTimer);
-            _statusWatchTimer = null;
-        }
-        if (_statusWatchVisHandler) {
-            document.removeEventListener('visibilitychange', _statusWatchVisHandler);
-            _statusWatchVisHandler = null;
-        }
-        _statusWatchRequestId = null;
-        _statusWatchExpected = null;
-    }
-
-    async function _pollStatus() {
-        if (!_statusWatchRequestId || !_statusWatchExpected) return;
-        if (document.visibilityState === 'hidden') return;
-        try {
-            const result = await CloudStorage.postApi('getOnboardingStatus', {
-                requestId: _statusWatchRequestId
-            });
-            if (!result.success) return;
-            if (result.status !== _statusWatchExpected) {
-                const reqId = _statusWatchRequestId;
-                _stopStatusWatch();
-                Toast.warning('Статус заявки изменился. Обновляю...');
-                // Reload all requests to get fresh data, then re-open
-                const [listResult, tsResult] = await Promise.all([
-                    CloudStorage.postApi('getOnboardingRequests', {}),
-                    CloudStorage.postApi('getOnboardingLastModified', {}).catch(() => null)
-                ]);
-                if (listResult.requests) {
-                    OnboardingState.set('requests', listResult.requests);
-                    if (listResult.history) OnboardingState.set('history', listResult.history);
-                    OnboardingList.applyFilters();
-                }
-                // Sync timestamp so list poll doesn't trigger redundant refresh
-                if (tsResult && tsResult.ts) _lastKnownModified = tsResult.ts;
-                _openRequest(reqId);
-            }
-        } catch (_) { /* silent — polling error is not critical */ }
-    }
-
     async function _submitStep() {
         const request = OnboardingState.get('currentRequest');
         const stepNumber = OnboardingState.get('currentStep');
         if (!request || _isActionLocked()) return;
 
         const step = OnboardingConfig.getStep(stepNumber);
-        const sysRole = OnboardingState.get('systemRole');
+        const { sysRole } = OnboardingUtils.getRoles();
 
         // Validate (except handoff-complete confirm phase)
         const isHandoffComplete = step && step.dynamicExecutor && (request.stageData[stepNumber] || {})._handoff_complete;
@@ -860,7 +709,6 @@ const PartnerOnboarding = (() => {
                     requestId: request.id
                 });
                 if (freshStatus.success && freshStatus.status !== 'on_review') {
-                    _stopStatusWatch();
                     Toast.warning('Заявка была возвращена с проверки. Обновляю...');
                     const listResult = await CloudStorage.postApi('getOnboardingRequests', {});
                     if (listResult.requests) OnboardingState.set('requests', listResult.requests);
@@ -875,7 +723,6 @@ const PartnerOnboarding = (() => {
                     requestId: request.id, step: stepNumber, comment: ''
                 });
                 if (!approveResult.success) { Toast.error(approveResult.error || 'Ошибка'); return; }
-                _stopStatusWatch();
                 _applyApiResult(approveResult);
                 Toast.success('Создание завершено, передано в работу');
                 _openRequest(request.id);
@@ -1084,6 +931,17 @@ const PartnerOnboarding = (() => {
         if (dropdown) dropdown.classList.add('hidden');
     }
 
+    function _updateLeadStatusUI(value) {
+        const labelEl = document.querySelector('.dropdown-wrap--up .dropdown-trigger span');
+        if (labelEl) labelEl.textContent = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_STATUSES, value);
+        document.querySelectorAll('#statusDropdown .dropdown-item').forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.value === value);
+        });
+        document.querySelectorAll('#formFields [data-visible-when-field="lead_status"]').forEach(el => {
+            el.classList.toggle('hidden', value !== el.dataset.visibleWhenValue);
+        });
+    }
+
     function _selectLeadStatus(value) {
         const request = OnboardingState.get('currentRequest');
         const stepNumber = OnboardingState.get('currentStep');
@@ -1101,14 +959,7 @@ const PartnerOnboarding = (() => {
         // For "refused" — show reject_reason, update button, don't validate yet
         if (value === 'refused' && prevStatus !== 'refused') {
             request.stageData[stepNumber].lead_status = value;
-            const labelEl = document.querySelector('.dropdown-wrap--up .dropdown-trigger span');
-            if (labelEl) labelEl.textContent = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_STATUSES, value);
-            document.querySelectorAll('#statusDropdown .dropdown-item').forEach(opt => {
-                opt.classList.toggle('active', opt.dataset.value === value);
-            });
-            document.querySelectorAll('#formFields [data-visible-when-field="lead_status"]').forEach(el => {
-                el.classList.toggle('hidden', value !== el.dataset.visibleWhenValue);
-            });
+            _updateLeadStatusUI(value);
             const textarea = document.getElementById('field_reject_reason');
             if (textarea) setTimeout(() => textarea.focus(), 100);
             return;
@@ -1125,14 +976,7 @@ const PartnerOnboarding = (() => {
         }
 
         // Validation passed — update UI and submit
-        const labelEl = document.querySelector('.dropdown-wrap--up .dropdown-trigger span');
-        if (labelEl) labelEl.textContent = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_STATUSES, value);
-        document.querySelectorAll('.status-submit-option').forEach(opt => {
-            opt.classList.toggle('active', opt.dataset.value === value);
-        });
-        document.querySelectorAll('#formFields [data-visible-when-field="lead_status"]').forEach(el => {
-            el.classList.toggle('hidden', value !== el.dataset.visibleWhenValue);
-        });
+        _updateLeadStatusUI(value);
 
         _submitStep();
     }
@@ -1240,13 +1084,6 @@ const PartnerOnboarding = (() => {
         menu.classList.add('hidden');
     }
 
-    // Close form dropdowns on click outside
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.dropdown-wrap--form')) {
-            document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden)').forEach(m => m.classList.add('hidden'));
-        }
-    });
-
     // ── History Modal ──
 
     function _showHistoryModal() {
@@ -1310,7 +1147,7 @@ const PartnerOnboarding = (() => {
         const targetLabel = document.getElementById('reassignTargetLabel')?.textContent || target;
         const targetName = target ? targetLabel : '';
         const reason = document.getElementById('reassignReasonValue')?.value || '';
-        const comment = document.getElementById('reassignComment').value.trim();
+        const comment = (document.getElementById('reassignComment')?.value || '').trim();
 
         if (!target) { Toast.error('Выберите менеджера'); return; }
         if (!reason) { Toast.error('Выберите причину'); return; }
@@ -1490,10 +1327,9 @@ const PartnerOnboarding = (() => {
 
     function _setupDevRoleSwitcher() {
         const isLocal = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
-        const systemRole = OnboardingState.get('systemRole');
-        const isAdminLike = systemRole === 'admin' || systemRole === 'leader';
+        const { isAdmin } = OnboardingUtils.getRoles();
         const switcher = document.getElementById('roleSwitcher');
-        if (isLocal && isAdminLike && switcher) {
+        if (isLocal && isAdmin && switcher) {
             switcher.classList.remove('hidden');
         }
     }
@@ -1535,146 +1371,12 @@ const PartnerOnboarding = (() => {
         }
     }
 
-    // ── Auto-Refresh (list + detail views) ──
-
-    function _startListRefresh() {
-        _stopListRefresh();
-        _listRefreshTimer = setInterval(() => _pollForChanges(), POLL_INTERVAL);
-
-        if (!_visibilityRefreshHandler) {
-            _visibilityRefreshHandler = () => {
-                if (document.visibilityState === 'visible') {
-                    _pollErrorCount = 0;
-                    _stopListRefresh();
-                    _listRefreshTimer = setInterval(() => _pollForChanges(), POLL_INTERVAL);
-                    _pollForChanges();
-                } else {
-                    _stopListRefresh();
-                }
-            };
-            document.addEventListener('visibilitychange', _visibilityRefreshHandler);
-        }
-    }
-
-    function _stopListRefresh() {
-        if (_listRefreshTimer) {
-            clearInterval(_listRefreshTimer);
-            _listRefreshTimer = null;
-        }
-    }
-
-    function _destroyRefresh() {
-        _stopListRefresh();
-        _stopStatusWatch();
-        if (_visibilityRefreshHandler) {
-            document.removeEventListener('visibilitychange', _visibilityRefreshHandler);
-            _visibilityRefreshHandler = null;
-        }
-    }
-
-    async function _pollForChanges() {
-        if (_pollInFlight) return;
-        if (_isActionLocked()) return;
-        if (document.visibilityState === 'hidden') return;
-        // Skip list polling when status watch is active (it has its own polling)
-        // to avoid double API calls
-        if (_statusWatchTimer && OnboardingState.get('view') !== 'list') return;
-        _pollInFlight = true;
-        try {
-            const result = await CloudStorage.postApi('getOnboardingLastModified', {});
-            const serverTs = result.ts || '0';
-            _pollErrorCount = 0;
-            if (serverTs !== _lastKnownModified) {
-                _lastKnownModified = serverTs;
-                await _refreshCurrentView();
-            }
-        } catch (_) {
-            _pollErrorCount++;
-            if (_pollErrorCount >= MAX_POLL_ERRORS) {
-                _stopListRefresh();
-                Toast.warning('Нет связи с сервером. Данные могут быть неактуальны.');
-            }
-        } finally {
-            _pollInFlight = false;
-        }
-    }
-
-    async function _refreshListData() {
-        if (_isActionLocked()) return;
-        try {
-            const data = await CloudStorage.getOnboardingRequests(false);
-            OnboardingState.set('requests', data.requests || []);
-            if (data.history) OnboardingState.set('history', data.history);
-            OnboardingList.applyFilters();
-        } catch (_) { /* silent — фоновое обновление */ }
-    }
-
-    async function _refreshCurrentView() {
-        const view = OnboardingState.get('view');
-        if (view === 'list') {
-            await _refreshListData();
-        } else {
-            // В detail view: обновляем текущую заявку + фоновый список
-            const current = OnboardingState.get('currentRequest');
-            if (!current || _isActionLocked()) return;
-            try {
-                const data = await CloudStorage.getOnboardingRequests(false);
-                const fresh = data.requests || [];
-                OnboardingState.set('requests', fresh);
-                if (data.history) OnboardingState.set('history', data.history);
-                OnboardingList.applyFilters(); // Список актуален при возврате
-
-                const updated = fresh.find(r => r.id === current.id);
-                if (updated) {
-                    const structural = updated.status !== current.status
-                        || updated.currentStep !== current.currentStep
-                        || updated.assigneeEmail !== current.assigneeEmail;
-                    const dataChanged = updated.updatedDate !== current.updatedDate;
-
-                    if (structural || dataChanged) {
-                        OnboardingState.set('currentRequest', updated);
-                        const stepNumber = OnboardingState.get('currentStep');
-
-                        if (view === 'form') {
-                            if (structural) {
-                                // Structural change (status/step/assignee) — must re-render.
-                                // Save current form input to stageData before re-render
-                                // so unsaved edits are preserved when possible.
-                                const currentData = OnboardingForm.collectFormData(stepNumber, { excludeFiles: true });
-                                if (currentData && Object.keys(currentData).length > 0) {
-                                    if (!updated.stageData) updated.stageData = {};
-                                    if (!updated.stageData[stepNumber]) updated.stageData[stepNumber] = {};
-                                    // Merge local edits into fresh data (local wins for fields user is editing)
-                                    Object.assign(updated.stageData[stepNumber], currentData);
-                                }
-                                // Re-open request to pick correct view (form vs review)
-                                _openRequest(current.id);
-                            }
-                            // Non-structural data change in form view: don't re-render
-                            // (executor is editing, their local data takes precedence).
-                            // Sidebar info will update on next view switch.
-                        } else if (view === 'review') {
-                            // Review view: обновляем только при структурных изменениях
-                            // (статус, шаг, назначение). Черновики executor не показываем —
-                            // reviewer видит данные только после submitStep/approveStep.
-                            if (structural) {
-                                OnboardingReview.render(updated, stepNumber);
-                                OnboardingSteps.renderVertical('reviewSteps', stepNumber);
-                                OnboardingSteps.renderInfo('reviewInfo', updated);
-                            }
-                        }
-                    }
-                }
-            } catch (_) { /* silent */ }
-        }
-    }
-
     // ── Destroy ──
 
     function _destroy() {
+        _stopSmartSync();
         // Flush pending draft before cleanup
         _autosaveDraft();
-        _destroyRefresh();
         OnboardingSource.destroy();
         OnboardingRoles.destroy();
         document.removeEventListener('click', _handleClick);
@@ -1682,6 +1384,56 @@ const PartnerOnboarding = (() => {
         document.removeEventListener('change', _handleChange);
         document.removeEventListener('keydown', _handleKeydown);
         document.removeEventListener('keypress', _handleKeypress);
+    }
+
+    // -- Smart Sync (lightweight polling 10s) --
+
+    function _startSmartSync() {
+        _stopSmartSync();
+        _pollTimer = setInterval(_checkForUpdates, SYNC_INTERVAL);
+        _visHandler = () => {
+            if (document.visibilityState === 'visible') {
+                _checkForUpdates();
+                if (!_pollTimer) _pollTimer = setInterval(_checkForUpdates, SYNC_INTERVAL);
+            } else {
+                clearInterval(_pollTimer);
+                _pollTimer = null;
+            }
+        };
+        document.addEventListener('visibilitychange', _visHandler);
+    }
+
+    function _stopSmartSync() {
+        if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+        if (_visHandler) { document.removeEventListener('visibilitychange', _visHandler); _visHandler = null; }
+    }
+
+    async function _checkForUpdates() {
+        if (_isActionLocked()) return;
+        if (document.visibilityState === 'hidden') return;
+        try {
+            const result = await CloudStorage.postApi('getOnboardingLastModified', {});
+            const serverTs = result.ts || '0';
+            if (serverTs === _lastModifiedTs) return;
+            _lastModifiedTs = serverTs;
+            const data = await CloudStorage.getOnboardingRequests(false);
+            OnboardingState.set('requests', data.requests || []);
+            if (data.history) OnboardingState.set('history', data.history);
+            OnboardingList.applyFilters();
+            const view = OnboardingState.get('view');
+            if (view !== 'list') {
+                const current = OnboardingState.get('currentRequest');
+                if (current) {
+                    const updated = (data.requests || []).find(r => r.id === current.id);
+                    if (!updated) {
+                        Toast.info('Заявка была удалена');
+                        _showView('list');
+                    } else if (updated.status !== current.status || updated.currentStep !== current.currentStep) {
+                        _openRequest(current.id);
+                    }
+                }
+            }
+        } catch (_) { /* silent -- background sync */ }
     }
 
     // ── PageLifecycle ──

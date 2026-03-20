@@ -133,7 +133,7 @@ const OnboardingSource = (() => {
             return `<div class="source-item${statusDot}" data-source-id="${Utils.escapeHtml(src.id)}">
                 <div class="source-item-info">
                     <span class="source-item-name">${Utils.escapeHtml(src.name)}</span>
-                    <span class="source-item-meta">${Utils.escapeHtml(syncLabel)} · ${count} ${_pluralLeads(count)}</span>
+                    <span class="source-item-meta">${Utils.escapeHtml(syncLabel)} · ${Utils.pluralRu(count, 'заявка', 'заявки', 'заявок')}</span>
                 </div>
                 <button class="btn btn-primary btn-sm source-item-edit" data-action="onb-editSource" data-value="${Utils.escapeHtml(src.id)}">&#9881;</button>
             </div>`;
@@ -242,7 +242,7 @@ const OnboardingSource = (() => {
             } else {
                 // Add new
                 const source = {
-                    id: 'src_' + Date.now(),
+                    id: 'src_' + Utils.generateId(),
                     name,
                     sheetUrl: url,
                     sheetId,
@@ -307,7 +307,7 @@ const OnboardingSource = (() => {
         const bar = document.getElementById('sourceSyncBar');
         if (!bar) return;
 
-        const myRole = OnboardingState.get('userRole');
+        const { myRole } = OnboardingUtils.getRoles();
         const hasSources = settings.sources.length > 0;
         const hasConds = condData.conditions && condData.conditions.length > 0;
 
@@ -325,32 +325,16 @@ const OnboardingSource = (() => {
         if (hasSources) {
             const count = settings.sources.length;
             const lastTimes = settings.sources.filter(s => s.lastSyncTime).map(s => new Date(s.lastSyncTime).getTime());
-            const lastSync = lastTimes.length > 0 ? _formatDateTime(new Date(Math.max(...lastTimes)).toISOString()) : null;
-            let srcText = `Импорт: ${count} ${_pluralSources(count)}`;
+            const lastSync = lastTimes.length > 0 ? OnboardingUtils.formatDateTime(new Date(Math.max(...lastTimes)).toISOString()) : null;
+            let srcText = `Импорт: ${Utils.pluralRu(count, 'источник', 'источника', 'источников')}`;
             if (lastSync) srcText += ` (${lastSync})`;
             parts.push(srcText);
         }
         if (hasConds) {
             const countries = new Set(condData.conditions.map(c => c.condition_country).filter(Boolean));
-            parts.push(`Условия: ${condData.conditions.length} (${countries.size} ${_pluralCountries(countries.size)})`);
+            parts.push(`Условия: ${condData.conditions.length} (${Utils.pluralRu(countries.size, 'страна', 'страны', 'стран')})`);
         }
         _updateSyncBar('idle', parts.join(' · '));
-    }
-
-    function _pluralSources(n) {
-        const mod10 = n % 10;
-        const mod100 = n % 100;
-        if (mod10 === 1 && mod100 !== 11) return 'источник';
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'источника';
-        return 'источников';
-    }
-
-    function _pluralCountries(n) {
-        const mod10 = n % 10;
-        const mod100 = n % 100;
-        if (mod10 === 1 && mod100 !== 11) return 'страна';
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'страны';
-        return 'стран';
     }
 
     function _updateSyncBar(status, message) {
@@ -458,7 +442,7 @@ const OnboardingSource = (() => {
 
             if (imported > 0) {
                 OnboardingList.applyFilters();
-                Toast.success(`«${source.name}»: +${imported} ${_pluralLeads(imported)}`);
+                Toast.success(`«${source.name}»: +${Utils.pluralRu(imported, 'заявка', 'заявки', 'заявок')}`);
             }
 
             updateSyncBarVisibility();
@@ -596,25 +580,6 @@ const OnboardingSource = (() => {
         return '';
     }
 
-    function _formatDateTime(dateStr) {
-        const d = new Date(dateStr);
-        if (isNaN(d)) return dateStr;
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yy = String(d.getFullYear()).slice(-2);
-        const hh = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        return `${dd}.${mm}.${yy} ${hh}:${min}`;
-    }
-
-    function _pluralLeads(n) {
-        const mod10 = n % 10;
-        const mod100 = n % 100;
-        if (mod10 === 1 && mod100 !== 11) return 'лид';
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'лида';
-        return 'лидов';
-    }
-
     function _getEditingId() {
         return _editingSourceId;
     }
@@ -724,20 +689,12 @@ const OnboardingSource = (() => {
         const count = data.conditions.length;
         const countries = new Set(data.conditions.map(c => c.condition_country).filter(Boolean));
         const types = new Set(data.conditions.map(c => c.method_type).filter(Boolean));
-        const timeStr = data.lastSyncTime ? _formatDateTime(data.lastSyncTime) : '';
-        const parts = [`<span class="conditions-status-count">${count}</span> ${_pluralConditions(count)}`];
+        const timeStr = data.lastSyncTime ? OnboardingUtils.formatDateTime(data.lastSyncTime) : '';
+        const parts = [`<span class="conditions-status-count">${count}</span> ${Utils.pluralRu(count, 'условие', 'условия', 'условий')}`];
         if (countries.size) parts.push(`Стран: ${countries.size}`);
         parts.push(`Типов: ${types.size}`);
         el.innerHTML = `<div class="conditions-status-row"><div>${parts.join(' · ')}</div><button class="conditions-delete-btn" data-action="onb-clearConditions" title="Удалить условия"><img src="../shared/icons/cross.svg" width="14" height="14" alt="Удалить"></button></div>` +
             (timeStr ? `<div class="conditions-status-time">Синхронизация: ${Utils.escapeHtml(timeStr)}</div>` : '');
-    }
-
-    function _pluralConditions(n) {
-        const mod10 = n % 10;
-        const mod100 = n % 100;
-        if (mod10 === 1 && mod100 !== 11) return 'условие';
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'условия';
-        return 'условий';
     }
 
     async function saveConditionsUrl() {
@@ -784,7 +741,7 @@ const OnboardingSource = (() => {
             if (conditions.length === 0) {
                 Toast.warning('Таблица сохранена, но условия пока пусты. Убедитесь что есть колонки: Страна, Тип метода, Название метода, и хотя бы одна заполненная строка');
             } else {
-                Toast.success(`Загружено ${conditions.length} ${_pluralConditions(conditions.length)}`);
+                Toast.success(`Загружено ${Utils.pluralRu(conditions.length, 'условие', 'условия', 'условий')}`);
             }
 
             _toggleConditionsMode('view', data);
@@ -818,7 +775,7 @@ const OnboardingSource = (() => {
             await _saveConditionsToApi(updated);
             _renderConditionsStatus(updated);
             updateSyncBarVisibility();
-            Toast.success(`Обновлено: ${conditions.length} ${_pluralConditions(conditions.length)}`);
+            Toast.success(`Обновлено: ${Utils.pluralRu(conditions.length, 'условие', 'условия', 'условий')}`);
         } catch (err) {
             Toast.error(err.message || 'Ошибка обновления');
         } finally {
@@ -915,10 +872,14 @@ const OnboardingSource = (() => {
         ) || null;
     }
 
+    function getEditingId() {
+        return _getEditingId();
+    }
+
     return {
         init, destroy,
         openSettings, showList, showEditForm, saveSource, deleteSource,
-        syncNow, updateSyncBarVisibility, _getEditingId,
+        syncNow, updateSyncBarVisibility, getEditingId,
         openConditionsSettings, saveConditionsUrl, editConditionsUrl, clearConditions, refreshConditions,
         hasConditions, getConditions, getCountries, getMethodTypes, getMethodNames, getCondition
     };

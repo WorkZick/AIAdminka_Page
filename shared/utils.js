@@ -172,6 +172,24 @@ const Utils = {
         return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
     },
 
+    /**
+     * Склонение существительных по числу (русский язык)
+     * @param {number} n - Число
+     * @param {string} one - Форма для 1 (источник, заявка, страна)
+     * @param {string} few - Форма для 2-4 (источника, заявки, страны)
+     * @param {string} many - Форма для 5+ (источников, заявок, стран)
+     * @returns {string} Число со склонённым существительным
+     */
+    pluralRu(n, one, few, many) {
+        const abs = Math.abs(n);
+        const mod10 = abs % 10;
+        const mod100 = abs % 100;
+        if (mod100 >= 11 && mod100 <= 19) return `${n} ${many}`;
+        if (mod10 === 1) return `${n} ${one}`;
+        if (mod10 >= 2 && mod10 <= 4) return `${n} ${few}`;
+        return `${n} ${many}`;
+    },
+
     initLucideIcons() {
         if (typeof LocalIcons !== 'undefined') {
             LocalIcons.createIcons();
