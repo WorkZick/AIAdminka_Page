@@ -3,8 +3,6 @@
 
 const AppVersion = {
     version: null,
-    // Fallback версия на случай если changelog.json недоступен
-    FALLBACK_VERSION: '2.26.0',
 
     async init() {
         await this.loadVersion();
@@ -19,8 +17,9 @@ const AppVersion = {
             const response = await fetch(path);
             if (response.ok) {
                 const data = await response.json();
-                if (data.version) {
-                    this.version = data.version;
+                // Единый источник правды: первая запись updates[0].version
+                if (data.updates && data.updates[0] && data.updates[0].version) {
+                    this.version = data.updates[0].version;
                     return;
                 }
             }
@@ -28,10 +27,17 @@ const AppVersion = {
             // Failed to load version from changelog.json, will use fallback
         }
 
-        // Используем fallback версию если загрузка не удалась
+        // Fallback: берём версию из ChangelogFallback (определён в changelog.js)
         if (!this.version) {
-            this.version = this.FALLBACK_VERSION;
-            console.info('ℹ️ Используется fallback версия:', this.version);
+            if (typeof ChangelogFallback !== 'undefined' &&
+                ChangelogFallback.updates &&
+                ChangelogFallback.updates[0] &&
+                ChangelogFallback.updates[0].version) {
+                this.version = ChangelogFallback.updates[0].version;
+                console.info('Используется fallback версия из changelog.js:', this.version);
+            } else {
+                this.version = '';
+            }
         }
     },
 

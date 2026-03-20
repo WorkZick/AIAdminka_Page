@@ -17,10 +17,11 @@ const changelog = {
     checkVersionSync() {
         if (!this.data || !this.fallbackData) return;
 
-        const jsonVersion = this.data.version;
-        const fallbackVersion = this.fallbackData.version;
+        // Версия берётся из первого элемента updates (единый источник правды)
+        const jsonVersion = this.data.updates && this.data.updates[0] && this.data.updates[0].version;
+        const fallbackVersion = this.fallbackData.updates && this.fallbackData.updates[0] && this.fallbackData.updates[0].version;
 
-        if (jsonVersion !== fallbackVersion) {
+        if (jsonVersion && fallbackVersion && jsonVersion !== fallbackVersion) {
             // Versions not synchronized - fallbackData in changelog.js needs update
         }
     },
@@ -2643,4 +2644,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 });
+
+// Глобальный экспорт fallback данных для version.js
+// Используется как fallback версии если changelog.json недоступен (file:// протокол)
+const ChangelogFallback = changelog.fallbackData;
 
