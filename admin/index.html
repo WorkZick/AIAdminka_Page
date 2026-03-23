@@ -3,10 +3,13 @@
 <head>
     <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta charset="UTF-8">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- CSP: 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' только для Live Server (dev) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'sha256-hnlVisWd/fn32NbDovWmI6UTBdStgc7fO3K6SKtc9SU='; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com">
     <title>Администрирование - AIAdminka</title>
+    <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Regular.woff2" type="font/woff2" crossorigin>
+    <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Bold.woff2" type="font/woff2" crossorigin>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <link rel="stylesheet" href="css/admin.css">
@@ -112,20 +115,34 @@
                                 </svg>
                                 <input type="text" id="searchUsers" placeholder="Поиск..." data-action="filter-users">
                             </div>
-                            <select id="filterTeam" class="form-select form-select--compact" data-action="filter-users">
-                                <option value="">Все команды</option>
-                            </select>
-                            <select id="filterRole" class="form-select form-select--compact" data-action="filter-users">
-                                <option value="">Все роли</option>
-                                <!-- Заполняется динамически из RolesConfig -->
-                            </select>
-                            <select id="filterStatus" class="form-select form-select--compact" data-action="filter-users">
-                                <option value="">Все статусы</option>
-                                <option value="active">Активные</option>
-                                <option value="blocked">Заблокированные</option>
-                                <option value="approved_no_team">Без команды</option>
-                                <option value="waiting_invite">Ожидают приглашения</option>
-                            </select>
+                            <div class="dropdown-wrap" id="filterTeamWrap">
+                                <button class="btn btn--ghost btn-sm dropdown-trigger" data-action="toggle-dropdown" data-target="filterTeamMenu">
+                                    <span id="filterTeamLabel">Все команды</span>
+                                </button>
+                                <div class="dropdown-menu hidden" id="filterTeamMenu">
+                                    <div class="dropdown-item active" data-action="select-filter" data-filter="filterTeam" data-value="">Все команды</div>
+                                </div>
+                            </div>
+                            <div class="dropdown-wrap" id="filterRoleWrap">
+                                <button class="btn btn--ghost btn-sm dropdown-trigger" data-action="toggle-dropdown" data-target="filterRoleMenu">
+                                    <span id="filterRoleLabel">Все роли</span>
+                                </button>
+                                <div class="dropdown-menu hidden" id="filterRoleMenu">
+                                    <div class="dropdown-item active" data-action="select-filter" data-filter="filterRole" data-value="">Все роли</div>
+                                </div>
+                            </div>
+                            <div class="dropdown-wrap" id="filterStatusWrap">
+                                <button class="btn btn--ghost btn-sm dropdown-trigger" data-action="toggle-dropdown" data-target="filterStatusMenu">
+                                    <span id="filterStatusLabel">Все статусы</span>
+                                </button>
+                                <div class="dropdown-menu hidden" id="filterStatusMenu">
+                                    <div class="dropdown-item active" data-action="select-filter" data-filter="filterStatus" data-value="">Все статусы</div>
+                                    <div class="dropdown-item" data-action="select-filter" data-filter="filterStatus" data-value="active">Активные</div>
+                                    <div class="dropdown-item" data-action="select-filter" data-filter="filterStatus" data-value="blocked">Заблокированные</div>
+                                    <div class="dropdown-item" data-action="select-filter" data-filter="filterStatus" data-value="approved_no_team">Без команды</div>
+                                    <div class="dropdown-item" data-action="select-filter" data-filter="filterStatus" data-value="waiting_invite">Ожидают приглашения</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -259,9 +276,14 @@
                                 </svg>
                                 <input type="text" id="searchAudit" placeholder="Поиск..." data-action="filter-audit">
                             </div>
-                            <select id="filterAction" class="form-select form-select--compact" data-action="filter-audit">
-                                <option value="">Все действия</option>
-                            </select>
+                            <div class="dropdown-wrap" id="filterActionWrap">
+                                <button class="btn btn--ghost btn-sm dropdown-trigger" data-action="toggle-dropdown" data-target="filterActionMenu">
+                                    <span id="filterActionLabel">Все действия</span>
+                                </button>
+                                <div class="dropdown-menu hidden" id="filterActionMenu">
+                                    <div class="dropdown-item active" data-action="select-filter" data-filter="filterAction" data-value="">Все действия</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -334,16 +356,24 @@
 
                 <div class="form-group form-group--compact">
                     <label>Команда</label>
-                    <select id="modalUserTeam" class="form-select">
-                        <option value="">Без команды</option>
-                    </select>
+                    <div class="dropdown-wrap dropdown-wrap--form" id="modalUserTeamWrap">
+                        <button class="dropdown-trigger dropdown-trigger--form placeholder" type="button" data-action="toggle-form-dropdown" data-target="modalUserTeamMenu">
+                            <span id="modalUserTeamLabel">Без команды</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu--scroll hidden" id="modalUserTeamMenu"></div>
+                        <input type="hidden" id="modalUserTeamValue" value="">
+                    </div>
                 </div>
 
                 <div class="form-group form-group--compact">
                     <label>Роль</label>
-                    <select id="modalUserRole" class="form-select">
-                        <!-- Заполняется динамически из RolesConfig -->
-                    </select>
+                    <div class="dropdown-wrap dropdown-wrap--form" id="modalUserRoleWrap">
+                        <button class="dropdown-trigger dropdown-trigger--form" type="button" data-action="toggle-form-dropdown" data-target="modalUserRoleMenu">
+                            <span id="modalUserRoleLabel">Роль</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu--scroll hidden" id="modalUserRoleMenu"></div>
+                        <input type="hidden" id="modalUserRoleValue" value="">
+                    </div>
                 </div>
 
                 <div class="form-group form-group--compact">
@@ -487,7 +517,13 @@
                 <div id="deleteRoleUsers" class="delete-role-users"></div>
                 <div class="form-group form-group--compact" id="reassignGroup">
                     <label>Переназначить пользователей в роль:</label>
-                    <select class="form-select" id="reassignRoleSelect"></select>
+                    <div class="dropdown-wrap dropdown-wrap--form" id="reassignRoleSelectWrap">
+                        <button class="dropdown-trigger dropdown-trigger--form" type="button" data-action="toggle-form-dropdown" data-target="reassignRoleSelectMenu">
+                            <span id="reassignRoleSelectLabel">Выберите роль</span>
+                        </button>
+                        <div class="dropdown-menu hidden" id="reassignRoleSelectMenu"></div>
+                        <input type="hidden" id="reassignRoleSelectValue" value="">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -504,6 +540,7 @@
     <script src="../shared/env-config.js"></script>
     <script src="../shared/cloud-storage.js"></script>
     <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/utils.js"></script>
     <script src="../shared/auth-guard.js"></script>
     <script src="../shared/roles-config.js"></script>
     <script src="../shared/role-guard.js"></script>

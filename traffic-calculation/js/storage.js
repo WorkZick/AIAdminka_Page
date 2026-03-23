@@ -1,19 +1,21 @@
-// Модуль для работы с данными партнёров (read-only из CloudStorage)
+// Модуль для работы с данными партнёров (адаптер над CloudStorage)
 const storage = {
-    ANALYTICS_KEY: 'traffic-analytics-temp', // Временные данные аналитики
-    cachedPartners: [], // Кэш партнёров из облака
+    ANALYTICS_KEY: 'traffic-analytics-temp',
+    METHODS_KEY: 'traffic-custom-methods',
+    cachedPartners: [],
+    _adaptedCache: null,
+    _saveTimer: null,
 
-    // Маппинг статусов из формата "Партнеры" в формат "Расчет трафика"
     mapStatus(status) {
         if (status === 'Закрыт') return 'закрыт';
-        return 'новый'; // 'Открыт' и другие -> 'новый'
+        return 'новый';
     },
 
-    // Загрузить партнёров из облака (вызывать при инициализации)
     async loadPartners() {
         try {
             if (typeof CloudStorage !== 'undefined') {
                 this.cachedPartners = await CloudStorage.getPartners();
+                this._adaptedCache = null;
             }
         } catch (e) {
             ErrorHandler.handle(e, {
@@ -24,13 +26,13 @@ const storage = {
         }
     },
 
-    // Получить всех партнеров (адаптированных под формат расчета трафика)
     getPartners() {
+        if (this._adaptedCache) return this._adaptedCache;
+
         const partners = this.cachedPartners;
         const analyticsData = this.getAnalyticsData();
 
-        // Адаптируем формат данных и объединяем с временными данными аналитики
-        return partners.map(p => {
+        this._adaptedCache = partners.map(p => {
             const analytics = analyticsData[p.id] || {};
             return {
                 id: p.id,
@@ -39,7 +41,6 @@ const storage = {
                 subagentId: p.subagentId || '',
                 status: this.mapStatus(p.status),
                 dateAdded: p.createdAt || new Date().toISOString(),
-                // Данные из аналитики
                 backCount: analytics.backCount || 0,
                 cringeCount: analytics.cringeCount || 0,
                 autoDisableCount: analytics.autoDisableCount || 0,
@@ -61,9 +62,10 @@ const storage = {
                 otherViolationsDescription: analytics.otherViolationsDescription || ''
             };
         });
+
+        return this._adaptedCache;
     },
 
-    // Получить временные данные аналитики
     getAnalyticsData() {
         try {
             const data = localStorage.getItem(this.ANALYTICS_KEY);
@@ -73,7 +75,8 @@ const storage = {
         }
     },
 
-    // Сохранить данные партнёров (сохраняет только данные аналитики во временное хранилище)
+    // Сохранение аналитических данных (не сбрасывает кеш —
+    // вызывающий код модифицирует объекты в _adaptedCache напрямую)
     savePartners(partners) {
         const analyticsData = {};
         partners.forEach(p => {
@@ -103,18 +106,102 @@ const storage = {
         return true;
     },
 
-    // Очистить временные данные аналитики
+    // Debounced save — для частых обновлений (increment/decrement)
+    savePartnersDebounced(partners) {
+        clearTimeout(this._saveTimer);
+        this._saveTimer = setTimeout(() => this.savePartners(partners), 300);
+    },
+
+    // === CRUD операции для партнёров ===
+
+    addPartner(partner) {
+        partner.id = partner.id || Utils.generateId();
+        partner.createdAt = partner.createdAt || new Date().toISOString();
+        partner.status = partner.status || 'Новый';
+        this.cachedPartners.push(partner);
+        this._adaptedCache = null;
+        this._persistPartners();
+        return partner;
+    },
+
+    deletePartner(id) {
+        this.cachedPartners = this.cachedPartners.filter(p => p.id !== id);
+        this._adaptedCache = null;
+        const analyticsData = this.getAnalyticsData();
+        delete analyticsData[id];
+        localStorage.setItem(this.ANALYTICS_KEY, JSON.stringify(analyticsData));
+        this._persistPartners();
+    },
+
+    updatePartner(id, updates) {
+        const ALLOWED_FIELDS = ['method', 'subagent', 'subagentId', 'status', 'createdAt'];
+        const partner = this.cachedPartners.find(p => p.id === id);
+        if (partner) {
+            for (const key of ALLOWED_FIELDS) {
+                if (key in updates) {
+                    partner[key] = updates[key];
+                }
+            }
+            this._adaptedCache = null;
+            this._persistPartners();
+        }
+    },
+
+    replacePartners(partners) {
+        this.cachedPartners = partners;
+        this._adaptedCache = null;
+        this._persistPartners();
+    },
+
+    _persistPartners() {
+        if (typeof CloudStorage !== 'undefined' && CloudStorage.saveData) {
+            CloudStorage.saveData('partners', this.cachedPartners).catch(e => {
+                ErrorHandler.handle(e, {
+                    module: 'traffic-calculation-storage',
+                    action: 'persistPartners'
+                });
+            });
+        }
+    },
+
+    // === Управление методами ===
+
+    getMethods() {
+        const partnerMethods = [...new Set(this.cachedPartners.map(p => p.method).filter(Boolean))];
+        const customMethods = this._getCustomMethods();
+        return [...new Set([...partnerMethods, ...customMethods])].sort();
+    },
+
+    _getCustomMethods() {
+        try {
+            return JSON.parse(localStorage.getItem(this.METHODS_KEY) || '[]');
+        } catch (e) {
+            return [];
+        }
+    },
+
+    addMethod(name) {
+        if (this.getMethods().includes(name)) return false;
+        const custom = this._getCustomMethods();
+        custom.push(name);
+        localStorage.setItem(this.METHODS_KEY, JSON.stringify(custom));
+        return true;
+    },
+
+    deleteMethod(name) {
+        const custom = this._getCustomMethods();
+        const filtered = custom.filter(m => m !== name);
+        localStorage.setItem(this.METHODS_KEY, JSON.stringify(filtered));
+        return filtered.length < custom.length;
+    },
+
+    // === Утилиты ===
+
     clearAnalyticsData() {
         localStorage.removeItem(this.ANALYTICS_KEY);
+        this._adaptedCache = null;
     },
 
-    // Получить методы (уникальные из партнеров)
-    getMethods() {
-        const methods = [...new Set(this.cachedPartners.map(p => p.method).filter(Boolean))];
-        return methods.length > 0 ? methods : [];
-    },
-
-    // Обновить статусы партнеров (read-only - ничего не делает)
     updatePartnerStatuses() {
         return this.getPartners();
     }

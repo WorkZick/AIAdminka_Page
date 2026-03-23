@@ -7,8 +7,10 @@ const OnboardingConfig = (() => {
         new: { label: 'Новая', cssClass: 'status--new' },
         in_progress: { label: 'В работе', cssClass: 'status--in-progress' },
         on_review: { label: 'На проверке', cssClass: 'status--on-review' },
-        completed: { label: 'Завершено', cssClass: 'status--completed' },
-        cancelled: { label: 'Отменено', cssClass: 'status--cancelled' }
+        approved: { label: 'Проверка пройдена', cssClass: 'status--approved' },
+        revision_needed: { label: 'Требуется доработка', cssClass: 'status--revision-needed' },
+        completed: { label: 'Завершена', cssClass: 'status--completed' },
+        cancelled: { label: 'Отменена', cssClass: 'status--cancelled' }
     };
 
     const LEAD_SOURCES = [
@@ -87,6 +89,22 @@ const OnboardingConfig = (() => {
         { value: 'failed', label: 'Не пройдено' }
     ];
 
+    const CASCADE_FIELDS = [
+        {
+            trigger: 'condition_country',
+            clears: ['method_type', 'method_name', 'deal_1', 'deal_2', 'deal_3', 'prepayment_method', 'prepayment_amount']
+        },
+        {
+            trigger: 'method_type',
+            clears: ['method_name', 'deal_1', 'deal_2', 'deal_3', 'prepayment_method', 'prepayment_amount']
+        },
+        {
+            trigger: 'method_name',
+            clears: [],
+            autofill: true
+        }
+    ];
+
     const STEPS = [
         {
             number: 1,
@@ -94,11 +112,13 @@ const OnboardingConfig = (() => {
             shortName: 'Лид',
             executor: 'executor',
             reviewer: null,
+            isLeadStep: true,
+            hasGeoCountry: true,
             fields: [
                 { id: 'lead_source', type: 'select', label: 'Источник лида', required: true, options: LEAD_SOURCES, readonlyForImport: true },
                 { id: 'lead_status', type: 'select', label: 'Статус', required: true, options: LEAD_STATUSES, asSubmitButton: true },
                 { id: 'lead_date', type: 'date', label: 'Дата обращения', required: true, readonlyForImport: true },
-                { id: 'geo_country', type: 'select', label: 'Страна поиска партнера', required: true, readonlyForImport: true },
+                { id: 'geo_country', type: 'select', label: 'Страна поиска партнера', required: true, options: GEO_COUNTRIES, readonlyForImport: true },
                 { id: 'contact_name', type: 'text', label: 'ФИО', placeholder: 'Имя контактного лица' },
                 { id: 'tg_username', type: 'text', label: 'Юзернейм ТГ', placeholder: '@username', oneOf: 'contact_required' },
                 { id: 'phone', type: 'text', label: 'Номер телефона', placeholder: '+7 999 123 45 67', oneOf: 'contact_required' },
@@ -113,6 +133,7 @@ const OnboardingConfig = (() => {
             shortName: 'Инфо',
             executor: 'executor',
             reviewer: 'reviewer',
+            hasConditionsCascade: true,
             fields: [
                 { id: 'condition_country', type: 'select', label: 'Страна', required: true },
                 { id: 'method_type', type: 'select', label: 'Тип метода', required: true },
@@ -158,15 +179,26 @@ const OnboardingConfig = (() => {
             reviewer: 'reviewer',
             fields: [
                 {
-                    id: 'profile_checklist', type: 'checklist', label: 'Чеклист заполнения ЛК', required: true,
+                    id: 'profile_checklist', type: 'checklist', label: 'Обязательные поля', required: true,
                     items: [
                         { label: 'ФИО' },
-                        { label: 'Контактные данные' },
-                        { label: 'Банковские реквизиты' },
-                        { label: 'Документы' },
-                        { label: 'Фото профиля' }
+                        { label: 'Дата рождения' },
+                        { label: 'Номер телефона' },
+                        { label: 'E-mail' },
+                        { label: 'Город' },
+                        { label: 'Тип документа' },
+                        { label: 'Серия и Номер документа' }
                     ]
-                }
+                },
+                {
+                    id: 'profile_checklist_optional', type: 'checklist', label: 'Необязательные поля',
+                    items: [
+                        { label: 'Когда выдан' },
+                        { label: 'Кем выдан' },
+                        { label: 'Адрес регистрации' }
+                    ]
+                },
+                { id: 'profile_screenshots', type: 'file', label: 'Скриншоты заполненного профиля', accept: 'image/*', multiple: true }
             ]
         },
         {
@@ -175,6 +207,7 @@ const OnboardingConfig = (() => {
             shortName: 'Антифрод',
             executor: 'reviewer',
             reviewer: null,
+            isAntifraud: true,
             fields: [
                 { id: 'antifraud_result', type: 'select', label: 'Результат проверки', required: true, options: ANTIFRAUD_RESULTS },
                 { id: 'antifraud_comment', type: 'textarea', label: 'Комментарий', placeholder: 'Детали проверки...' }
@@ -186,7 +219,6 @@ const OnboardingConfig = (() => {
             shortName: 'Депозит',
             executor: 'executor',
             reviewer: 'reviewer',
-            confirmAfterApprove: true,
             fields: [
                 { id: 'deposit_amount', type: 'text', label: 'Сумма пополнения', readonly: true, autofill: { step: 2, field: 'prepayment_amount' } },
                 {
@@ -203,12 +235,12 @@ const OnboardingConfig = (() => {
             shortName: 'Мессенджер',
             executor: 'executor',
             reviewer: 'reviewer',
-            confirmAfterApprove: true,
             dynamicExecutor: {
                 field: 'messenger_creator',
                 executorValue: 'executor',
                 reviewerValue: 'reviewer',
-                defaultValue: 'reviewer'
+                defaultValue: 'reviewer',
+                autoHandoff: true
             },
             fields: [
                 { id: 'messenger_login', type: 'text', label: 'Логин', required: true, placeholder: 'Логин аккаунта', showWhen: { phase: 'fill' } },
@@ -300,15 +332,19 @@ const OnboardingConfig = (() => {
         return opt ? opt.label : value;
     }
 
-    function getVisibleSteps() {
+    function getVisibleSteps(role) {
+        if (role === 'executor') return STEPS.filter(s => !s.executorFinal);
         return STEPS;
     }
 
-    function getVisibleStepCount() {
-        return STEPS.length;
+    function getVisibleStepCount(role) {
+        return getVisibleSteps(role).length;
     }
 
-    function isStepVisibleForRole() {
+    function isStepVisibleForRole(stepNumber, role) {
+        const step = getStep(stepNumber);
+        if (!step) return false;
+        if (role === 'executor' && step.executorFinal) return false;
         return true;
     }
 
@@ -339,8 +375,124 @@ const OnboardingConfig = (() => {
         return request.currentStep >= finalStep.number || request.status === 'completed';
     }
 
+    function isWorkStatus(status) {
+        return status === 'new' || status === 'in_progress' || status === 'approved' || status === 'revision_needed';
+    }
+
+    function getStepByProperty(prop) {
+        return STEPS.find(s => s[prop]);
+    }
+
+    function getViewDecision(step, request, roles) {
+        if (!step || !request) return { view: 'review' };
+
+        const { myRole, sysRole, isAdmin } = roles;
+        const status = request.status;
+        const isWork = isWorkStatus(status);
+        const isExecForStep = OnboardingRoles.isExecutorForStep(sysRole, step.number);
+        const isRevForStep = OnboardingRoles.isReviewerForStep(sysRole, step.number);
+        const globalRole = OnboardingRoles.getGlobalModuleRole(sysRole);
+        const effectiveExecutor = getStepEffectiveExecutor(step.number, request.stageData);
+
+        // 1. Executor completed — show final step form (disabled fields)
+        if (globalRole === 'executor' && isExecutorCompleted(request)) {
+            const finalStep = STEPS.find(s => s.executorFinal);
+            return { view: 'form', stepOverride: finalStep ? finalStep.number : request.currentStep };
+        }
+
+        // 2. AutoHandoff step (work status) — always form for both roles
+        if (isWork && step.dynamicExecutor && step.dynamicExecutor.autoHandoff) {
+            return { view: 'form' };
+        }
+
+        // 3. on_review + dynamicExecutor: executor sees review (withdraw), reviewer/admin fills form
+        if (status === 'on_review' && step.dynamicExecutor) {
+            if (isExecForStep) return { view: 'review' };
+            if (effectiveExecutor === myRole || isAdmin) return { view: 'form' };
+        }
+
+        // 4. Work status + executor → form
+        if (isWork && isExecForStep) return { view: 'form' };
+
+        // 5. on_review + reviewer-executor step (no reviewer, e.g. antifraud) → form
+        if (status === 'on_review' && isExecForStep && !step.reviewer) return { view: 'form' };
+
+        // 6. on_review + reviewer/admin → review
+        if (status === 'on_review' && (isRevForStep || isAdmin)) return { view: 'review' };
+
+        // 7. Admin fallback: on_review + no reviewer → form
+        if (isAdmin && status === 'on_review' && !step.reviewer) return { view: 'form' };
+
+        // 8. Admin fallback: work status → form
+        if (isAdmin && isWork) return { view: 'form' };
+
+        // 9. Default: review (readonly)
+        return { view: 'review' };
+    }
+
+    function getSubmitConfig(step, request, roles) {
+        if (!step || !request) return { label: 'Далее', action: 'onb-submit', visible: true, statusDropdown: false };
+
+        const stepNumber = step.number;
+        const currentStep = request.currentStep;
+
+        // Past step — hidden
+        if (stepNumber < currentStep) {
+            return { label: '', action: 'onb-submit', visible: false, statusDropdown: false };
+        }
+
+        // Future step — "К текущему шагу"
+        if (stepNumber > currentStep) {
+            return { label: 'К текущему шагу', action: 'onb-goToCurrentStep', visible: true, statusDropdown: false };
+        }
+
+        // asSubmitButton field (e.g. lead_status on step 1) → statusDropdown mode
+        const submitField = step.fields.find(f => f.asSubmitButton);
+        if (submitField) {
+            return { label: '', action: 'onb-submit', visible: false, statusDropdown: true, submitField };
+        }
+
+        // executorFinal: only visible for reviewer/admin (executor sees disabled fields, not submit)
+        if (step.executorFinal) {
+            const isReviewerOrAdmin = OnboardingRoles.isReviewerForStep(roles.sysRole, stepNumber) || roles.isAdmin;
+            return { label: 'Завершить', action: 'onb-submit', visible: isReviewerOrAdmin, statusDropdown: false };
+        }
+        // Last step
+        if (stepNumber === STEPS[STEPS.length - 1].number) {
+            return { label: 'Завершить', action: 'onb-submit', visible: true, statusDropdown: false };
+        }
+
+        // Dynamic executor logic
+        if (step.dynamicExecutor) {
+            const data = request.stageData[stepNumber] || {};
+            const creator = data[step.dynamicExecutor.field] || step.dynamicExecutor.defaultValue;
+
+            if (data._handoff_complete) {
+                if (!OnboardingRoles.isExecutorForStep(roles.sysRole, stepNumber) && !roles.isAdmin) {
+                    return { label: '', action: 'onb-submit', visible: false, statusDropdown: false };
+                }
+                return { label: step.reviewer ? 'На проверку' : 'Далее', action: 'onb-submit', visible: true, statusDropdown: false };
+            }
+
+            if (creator === step.dynamicExecutor.reviewerValue) {
+                if (!OnboardingRoles.isReviewerForStep(roles.sysRole, stepNumber) && !roles.isAdmin) {
+                    if (step.dynamicExecutor.autoHandoff) {
+                        return { label: '', action: 'onb-submit', visible: false, statusDropdown: false };
+                    }
+                    return { label: 'Запросить создание', action: 'onb-submit', visible: true, statusDropdown: false };
+                }
+                return { label: 'Создание завершено', action: 'onb-submit', visible: true, statusDropdown: false };
+            }
+        }
+
+        // Default: reviewer step → "На проверку", else "Далее"
+        const label = step.reviewer ? 'На проверку' : 'Далее';
+        return { label, action: 'onb-submit', visible: true, statusDropdown: false };
+    }
+
     return {
         STEPS,
+        CASCADE_FIELDS,
         STATUSES,
         LEAD_SOURCES,
         LEAD_STATUSES,
@@ -370,6 +522,10 @@ const OnboardingConfig = (() => {
         getStepDisplayName,
         getStepDisplayShortName,
         isExecutorFinalStep,
-        isExecutorCompleted
+        isExecutorCompleted,
+        isWorkStatus,
+        getStepByProperty,
+        getViewDecision,
+        getSubmitConfig
     };
 })();

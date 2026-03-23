@@ -110,9 +110,7 @@ const OnboardingRoles = (() => {
         const steps = OnboardingConfig.STEPS;
         const roles = typeof RolesConfig !== 'undefined' ? RolesConfig.ASSIGNABLE_ROLES : [];
 
-        let html = '<table class="role-config-table"><thead><tr>';
-        html += '<th>Шаг</th><th>Исполнитель</th><th>Проверяющий</th>';
-        html += '</tr></thead><tbody>';
+        let html = '<div class="rc-steps">';
 
         for (let i = 0; i < steps.length; i++) {
             const step = steps[i];
@@ -120,24 +118,35 @@ const OnboardingRoles = (() => {
             const origStep = OnboardingConfig.getStep(step.number);
             const hasReview = origStep && origStep.reviewer !== null;
 
-            html += '<tr>';
-            html += `<td><span class="role-config-step-name">${step.number}. ${Utils.escapeHtml(step.shortName)}</span></td>`;
+            html += '<div class="rc-step">';
+            html += `<div class="rc-step-header">`;
+            html += `<span class="rc-step-num">${step.number}</span>`;
+            html += `<span class="rc-step-name">${Utils.escapeHtml(step.shortName)}</span>`;
+            if (!hasReview) html += '<span class="rc-no-review">без проверки</span>';
+            html += '</div>';
 
-            html += '<td><div class="role-config-checkboxes">';
+            html += '<div class="rc-step-body">';
+
+            // Executor pills
+            html += '<div class="rc-section">';
+            html += '<span class="rc-label">Исполнитель</span>';
+            html += '<div class="rc-pills">';
             for (let j = 0; j < roles.length; j++) {
                 const role = roles[j];
-                const checked = sc.executors.indexOf(role) !== -1 ? ' checked' : '';
+                const checked = sc.executors.indexOf(role) !== -1;
                 const roleName = typeof RolesConfig !== 'undefined' ? RolesConfig.getName(role) : role;
-                html += `<label class="role-config-checkbox-label">
-                    <input type="checkbox" name="exec_${step.number}" value="${Utils.escapeHtml(role)}"${checked}>
+                html += `<label class="rc-pill${checked ? ' active' : ''}">
+                    <input type="checkbox" name="exec_${step.number}" value="${Utils.escapeHtml(role)}"${checked ? ' checked' : ''}>
                     <span>${Utils.escapeHtml(roleName)}</span>
                 </label>`;
             }
-            html += '</div></td>';
+            html += '</div></div>';
 
-            html += '<td>';
+            // Reviewer select
             if (hasReview) {
-                html += `<select class="role-config-select" name="rev_${step.number}">`;
+                html += '<div class="rc-section">';
+                html += '<span class="rc-label">Проверяющий</span>';
+                html += `<select class="rc-select" name="rev_${step.number}">`;
                 html += '<option value="">— нет —</option>';
                 for (let j = 0; j < roles.length; j++) {
                     const role = roles[j];
@@ -146,16 +155,21 @@ const OnboardingRoles = (() => {
                     html += `<option value="${Utils.escapeHtml(role)}"${selected}>${Utils.escapeHtml(roleName)}</option>`;
                 }
                 html += '</select>';
-            } else {
-                html += '<span class="role-config-auto">(авто-шаг)</span>';
+                html += '</div>';
             }
-            html += '</td>';
 
-            html += '</tr>';
+            html += '</div></div>';
         }
 
-        html += '</tbody></table>';
+        html += '</div>';
         body.innerHTML = html;
+
+        // Toggle pill active state on checkbox change
+        body.addEventListener('change', function(e) {
+            if (e.target.type === 'checkbox' && e.target.closest('.rc-pill')) {
+                e.target.closest('.rc-pill').classList.toggle('active', e.target.checked);
+            }
+        });
     }
 
     async function saveConfig() {
@@ -183,7 +197,7 @@ const OnboardingRoles = (() => {
 
             let reviewer = null;
             if (hasReview) {
-                const select = body.querySelector(`select[name="rev_${num}"]`);
+                const select = body.querySelector(`select.rc-select[name="rev_${num}"]`);
                 reviewer = select ? (select.value || null) : null;
             }
 

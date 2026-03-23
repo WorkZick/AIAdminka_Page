@@ -4,15 +4,35 @@
  */
 
 const EnvConfig = {
+    // OAuth конфигурация (Single Source of Truth)
+    OAUTH: {
+        CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
+        SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+
+        getRedirectUri() {
+            const host = window.location.hostname;
+            if (host === '127.0.0.1' || host === 'localhost') {
+                return 'http://127.0.0.1:5500/SimpleAIAdminka/login/callback.html';
+            }
+            return 'https://workzick.github.io/AIAdminka_Page/login/callback.html';
+        },
+
+        generateState() {
+            const array = new Uint8Array(32);
+            crypto.getRandomValues(array);
+            return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+        }
+    },
+
     // Доступные окружения
     ENVIRONMENTS: {
         prod: {
             name: 'Production',
-            url: 'https://script.google.com/macros/s/AKfycbyeWmZs028zVkzKTrqNTbzTasKK0Z63eCfV1I4RUV6BJWMH8r62kScLh7U5B45bHRRILA/exec'
+            url: 'https://script.google.com/macros/s/AKfycbzyBCK_pgYgYo2Caz0xutGNLfapnxhpOKplgBPOfjrEr73XDRMgY5FgmIQivHC9rvfy/exec'
         },
         test: {
             name: 'Test',
-            url: 'https://script.google.com/macros/s/AKfycbySiZ7HbLe4H8jSuFEcmdrIDtq9x9GA2THZdg7RXMrruDKv_qjZzMK_vRaDYygU4mQbZA/exec'
+            url: 'https://script.google.com/macros/s/AKfycbxodDVUhGmzK9sOsHcOJF-Qi2d4RdmAXlH3W2PQR8RXzpuKFsFp-Hddlnhs-VyhNYcjmw/exec'
         }
     },
 
@@ -33,13 +53,14 @@ const EnvConfig = {
     /**
      * Получить текущее окружение
      * На localhost автоматически используется test
+     * В production ВСЕГДА используется prod (игнорируем localStorage)
      */
     getCurrentEnv() {
-        // На localhost всегда test (для разработки)
         if (this.isLocalhost()) {
-            return 'test';
+            return localStorage.getItem(this.STORAGE_KEY) || 'test';
         }
-        return localStorage.getItem(this.STORAGE_KEY) || this.DEFAULT_ENV;
+        // В production всегда prod — защита от подмены через localStorage
+        return this.DEFAULT_ENV;
     },
 
     /**
@@ -66,6 +87,10 @@ const EnvConfig = {
      * Установить окружение
      */
     setEnvironment(env) {
+        if (!this.isLocalhost()) {
+            console.error('EnvConfig: Environment switching disabled in production');
+            return false;
+        }
         if (!this.ENVIRONMENTS[env]) {
             console.error('EnvConfig: Invalid environment:', env);
             return false;
@@ -90,10 +115,21 @@ const EnvConfig = {
 };
 
 // В production подавляем console.log и console.warn (оставляем console.error)
+const _originalConsole = {
+    log: console.log,
+    warn: console.warn
+};
+
 if (EnvConfig.isProduction()) {
     console.log = function() {};
     console.warn = function() {};
 }
+
+// Восстановление console (для отладки в prod)
+EnvConfig.restoreConsole = function() {
+    console.log = _originalConsole.log;
+    console.warn = _originalConsole.warn;
+};
 
 // Экспорт для модулей
 if (typeof module !== 'undefined' && module.exports) {

@@ -19,7 +19,7 @@
     font-family: var(--font-family);
     font-size: var(--font-size-sm);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .page-btn:hover:not(:disabled) {

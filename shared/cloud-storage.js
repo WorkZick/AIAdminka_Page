@@ -39,11 +39,15 @@ const CloudStorage = {
     },
 
     // Cache settings
-    CACHE_TTL: 60000, // 1 минута (fresh)
-    STALE_MAX_AGE: 300000, // 5 минут (stale-while-revalidate)
-    CACHE_PREFIX: 'cs-cache-',
+    CACHE_TTL: 300000, // 5 минут (fresh)
+    STALE_MAX_AGE: 1800000, // 30 минут (stale-while-revalidate)
+    get CACHE_PREFIX() {
+        const env = typeof EnvConfig !== 'undefined' ? EnvConfig.getCurrentEnv() : 'default';
+        return 'cs-cache-' + env + '-';
+    },
     cache: {}, // In-memory fallback
     _staleKeys: new Set(), // Ключи, отданные как stale
+    _rateLimitCooldownUntil: 0, // Глобальный cooldown при rate limit
 
     // Pending requests для предотвращения race condition
     pendingRequests: new Map(),
@@ -97,24 +101,27 @@ const CloudStorage = {
      * Получение данных авторизации
      */
     getAuthData() {
-        const authData = localStorage.getItem('cloud-auth');
+        const authData = sessionStorage.getItem('cloud-auth');
         if (!authData) return null;
 
-        let auth;
         try {
-            auth = JSON.parse(authData);
+            const auth = JSON.parse(authData);
+
+            // Проверяем срок токена (~58 минут, Silent Refresh обновляет автоматически)
+            // Используем TokenManager.TOKEN_LIFETIME если доступен, иначе 3500000 (~58 мин)
+            const tokenLifetime = (typeof TokenManager !== 'undefined' && TokenManager.TOKEN_LIFETIME)
+                ? TokenManager.TOKEN_LIFETIME
+                : 3500000;
+            if (Date.now() - auth.timestamp > tokenLifetime) {
+                sessionStorage.removeItem('cloud-auth');
+                return null;
+            }
+
+            return auth;
         } catch (e) {
-            localStorage.removeItem('cloud-auth');
+            sessionStorage.removeItem('cloud-auth');
             return null;
         }
-
-        // Проверяем срок токена (~58 минут, Silent Refresh обновляет автоматически)
-        if (Date.now() - auth.timestamp > 3500000) {
-            localStorage.removeItem('cloud-auth');
-            return null;
-        }
-
-        return auth;
     },
 
     /**
@@ -197,17 +204,6 @@ const CloudStorage = {
             .catch(queuedRequest.reject);
     },
 
-    /**
-     * Получить статистику очереди (для отладки)
-     */
-    getQueueStats() {
-        return {
-            activeRequests: this.activeRequests,
-            queuedRequests: this.requestQueue.length,
-            maxConcurrent: this.MAX_CONCURRENT_REQUESTS
-        };
-    },
-
     // ============ API CALLS ============
 
     // Retry settings
@@ -244,8 +240,15 @@ const CloudStorage = {
         if (!accessToken) {
             // Токен истёк или отсутствует - редирект на логин
             this.redirectToLogin();
-            // Возвращаем Promise, который не разрешится - предотвращает выполнение кода после редиректа
-            return new Promise(() => {});
+            // Halt execution — page is navigating away
+            throw Object.assign(new Error('auth_redirect'), { _silentRedirect: true });
+        }
+
+        // Global rate-limit cooldown: ждём оставшееся время если были rate-limited
+        const cooldownRemaining = this._rateLimitCooldownUntil - Date.now();
+        if (cooldownRemaining > 0) {
+            console.warn(`CloudStorage: Rate limit cooldown, waiting ${Math.ceil(cooldownRemaining / 1000)}s...`);
+            await this.sleep(cooldownRemaining);
         }
 
         // Создаём функцию для выполнения запроса
@@ -308,7 +311,14 @@ const CloudStorage = {
             const result = await response.json();
 
             if (result.error) {
-                throw new Error(result.error);
+                // Токен истёк или невалиден — помечаем для редиректа
+                const errMsg = result.error;
+                if (errMsg.includes('Invalid access token') || errMsg.includes('token expired') || errMsg.includes('Token expired')) {
+                    const err = new Error(errMsg);
+                    err._authRedirect = true;
+                    throw err;
+                }
+                throw new Error(errMsg);
             }
 
             return result;
@@ -318,15 +328,32 @@ const CloudStorage = {
             // Выполняем запрос через очередь
             return await this.enqueueRequest(executeApiRequest);
         } catch (error) {
+            // Токен невалиден — редирект на логин без retry
+            if (error._authRedirect) {
+                this.redirectToLogin();
+                // Halt execution — page is navigating away
+                throw Object.assign(new Error('auth_redirect'), { _silentRedirect: true });
+            }
+
             // Retry logic with exponential backoff
-            const isRetryable = error.message.includes('Failed to fetch') ||
-                               error.message.includes('NetworkError') ||
-                               error.message.includes('timeout') ||
+            const errorMsg = error.message || '';
+            const isRateLimit = errorMsg.includes('Rate limit');
+
+            // Если rate limit — устанавливаем глобальный cooldown на 30 секунд
+            if (isRateLimit) {
+                this._rateLimitCooldownUntil = Date.now() + 30000;
+            }
+
+            const isRetryable = isRateLimit ||
+                               errorMsg.includes('Failed to fetch') ||
+                               errorMsg.includes('NetworkError') ||
+                               errorMsg.includes('timeout') ||
                                error.name === 'TypeError';
 
             if (isRetryable && retryCount < this.MAX_RETRIES) {
-                const delay = this.INITIAL_DELAY * Math.pow(2, retryCount);
-                console.warn(`CloudStorage: Retry ${retryCount + 1}/${this.MAX_RETRIES} after ${delay}ms...`);
+                const baseDelay = isRateLimit ? 2000 : this.INITIAL_DELAY;
+                const delay = baseDelay * Math.pow(2, retryCount);
+                console.warn(`CloudStorage: Retry ${retryCount + 1}/${this.MAX_RETRIES} after ${delay}ms${isRateLimit ? ' (rate limit)' : ''}...`);
                 await this.sleep(delay);
                 return this.callApi(action, params, retryCount + 1, usePost);
             }
@@ -336,9 +363,14 @@ const CloudStorage = {
             const errorMessage = error.message || String(error);
 
             // Permission denied — роль могла смениться, принудительно перепроверяем
-            if (errorMessage.includes('Permission denied') && typeof RoleGuard !== 'undefined' && !this._revalidating) {
-                this._revalidating = true;
-                RoleGuard.revalidateInBackground().finally(() => { this._revalidating = false; });
+            // Ожидаем завершения ревалидации (RoleGuard может сделать редирект)
+            // Деdup: делимся промисом если ревалидация уже запущена
+            if (errorMessage.includes('Permission denied') && typeof RoleGuard !== 'undefined') {
+                if (!this._revalidatingPromise) {
+                    this._revalidatingPromise = RoleGuard.revalidateInBackground()
+                        .finally(() => { this._revalidatingPromise = null; });
+                }
+                await this._revalidatingPromise;
             }
 
             // Если Access denied - пользователь удалён из системы, разлогиниваем
@@ -347,13 +379,16 @@ const CloudStorage = {
                     Toast.error('Доступ запрещён. Ваш аккаунт не найден в системе.');
                 }
                 // Очищаем данные и редиректим на login
-                localStorage.removeItem('cloud-auth');
+                sessionStorage.removeItem('cloud-auth');
                 localStorage.removeItem('roleGuard');
                 setTimeout(() => {
                     if (typeof AuthGuard !== 'undefined') {
                         AuthGuard.redirectToLogin();
                     } else {
-                        window.location.href = '/SimpleAIAdminka/login/';
+                        // Определяем базовый путь динамически (как AuthGuard.getBasePath)
+                        const pathMatch = window.location.pathname.match(/^\/([^\/]+)\//);
+                        const basePath = pathMatch ? '/' + pathMatch[1] : '';
+                        window.location.href = basePath + '/login/index.html';
                     }
                 }, 1500);
             }
@@ -495,6 +530,7 @@ const CloudStorage = {
             try {
                 const result = await this.callApi('getPartners');
                 let partners = result.partners || [];
+                if (result.ts) this._partnersTs = result.ts;
 
                 // Парсим customFields и маппим поля из Google Sheets формата
                 partners.forEach(p => {
@@ -709,6 +745,7 @@ const CloudStorage = {
             try {
                 const result = await this.callApi('getEmployees');
                 let employees = result.employees || [];
+                if (result.ts) this._employeesTs = result.ts;
 
                 // Парсим customFields если они в виде строки
                 employees.forEach(emp => {
@@ -924,25 +961,6 @@ const CloudStorage = {
     },
 
     // ============ HELPERS ============
-
-    /**
-     * Проверка онлайн статуса
-     */
-    checkOnline() {
-        if (!navigator.onLine) {
-            this.showOfflineMessage();
-            return false;
-        }
-        return true;
-    },
-
-    /**
-     * Показать сообщение об отсутствии интернета
-     */
-    showOfflineMessage() {
-        // Можно переопределить в конкретном модуле
-        Toast.error('Нет подключения к интернету. Проверьте соединение и попробуйте снова.');
-    },
 
     /**
      * Редирект на страницу входа

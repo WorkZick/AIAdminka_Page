@@ -68,7 +68,7 @@
     font-family: inherit;
     font-size: 13px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .tab:hover:not(.active) {
@@ -150,7 +150,7 @@
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid var(--glass-border);
     border-radius: 8px;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .search-box:focus-within {
@@ -200,7 +200,7 @@
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     padding: var(--spacing-xl);
-    transition: all 0.2s;
+    transition: var(--transition-colors);
     cursor: pointer;
 }
 
@@ -534,7 +534,7 @@
     font-family: inherit;
     font-size: 11px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .action-btn:hover {
@@ -560,7 +560,7 @@
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     padding: var(--spacing-xl);
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .request-card:hover {
@@ -896,7 +896,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
     font-size: 10px;
     color: var(--gray);
 }
@@ -971,6 +971,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    contain: layout style;
 }
 
 .audit-item {
@@ -1102,7 +1103,7 @@
     font-family: inherit;
     font-size: 12px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .status-btn:hover {

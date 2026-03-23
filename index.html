@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta charset="UTF-8">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- CSP: Разрешён Live Server script для разработки (hash добавлен) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts='; style-src 'self' 'sha256-hnlVisWd/fn32NbDovWmI6UTBdStgc7fO3K6SKtc9SU='; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:* ws://localhost:*; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts='; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com">
     <title>AIAdminka</title>
     <link rel="icon" type="image/svg+xml" href="shared/icons/favicon.svg">
+    <link rel="preload" as="font" href="shared/fonts/TTFirsNeue-Regular.woff2" type="font/woff2" crossorigin>
+    <link rel="preload" as="font" href="shared/fonts/TTFirsNeue-Bold.woff2" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="shared/css/design-system.css">
     <link rel="stylesheet" href="css/home.css">
 </head>
@@ -34,6 +37,8 @@
                 <div class="modules-grid">
                     <!-- Skeleton-заглушки (видны пока роли не загружены) -->
                     <div class="skeleton-modules-placeholder">
+                        <div class="skeleton skeleton-module-card"></div>
+                        <div class="skeleton skeleton-module-card"></div>
                         <div class="skeleton skeleton-module-card"></div>
                         <div class="skeleton skeleton-module-card"></div>
                         <div class="skeleton skeleton-module-card"></div>
@@ -128,6 +133,7 @@
     <script src="shared/js/about-modal.js"></script>
     <script src="shared/js/toast.js"></script>
     <script src="shared/js/error-handler.js"></script>
+    <script src="shared/utils.js"></script>
     <script src="shared/env-config.js"></script>
     <script src="shared/cloud-storage.js"></script>
     <script src="shared/sync-manager.js"></script>

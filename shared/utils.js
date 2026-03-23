@@ -8,9 +8,27 @@ const Utils = {
      * @returns {string} Экранированный текст
      */
     escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    },
+
+    /**
+     * Проверка валидности Google avatar URL
+     * @param {string} url - URL для проверки
+     * @returns {boolean} true если URL — валидный Google avatar
+     */
+    isGoogleAvatar(url) {
+        if (!url) return false;
+        try {
+            const parsed = new URL(url);
+            return parsed.protocol === 'https:' &&
+                   parsed.hostname.endsWith('.googleusercontent.com');
+        } catch { return false; }
     },
 
     /**
@@ -107,19 +125,71 @@ const Utils = {
      */
     debounce(func, wait) {
         let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
+        function debounced(...args) {
             clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
+            timeout = setTimeout(() => func(...args), wait);
+        }
+        debounced.cancel = () => clearTimeout(timeout);
+        return debounced;
     },
 
     /**
-     * Инициализация иконок (совместимость с Lucide API)
+     * Получение инициалов из имени
+     * @param {string} name - Полное имя
+     * @returns {string} Инициалы (1-2 символа)
      */
+    getInitials(name) {
+        if (!name) return '?';
+        const parts = name.trim().split(' ').filter(p => p.length > 0);
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+        if (parts.length === 1 && parts[0].length > 0) return parts[0].substring(0, 2).toUpperCase();
+        return '?';
+    },
+
+    /**
+     * Форматирование даты и времени (dd.mm.yyyy hh:mm)
+     * @param {Date} date - Объект Date
+     * @returns {string} Отформатированная строка
+     */
+    formatDateTime(date) {
+        const d = date.getDate().toString().padStart(2, '0');
+        const m = (date.getMonth() + 1).toString().padStart(2, '0');
+        const y = date.getFullYear();
+        const h = date.getHours().toString().padStart(2, '0');
+        const min = date.getMinutes().toString().padStart(2, '0');
+        return d + '.' + m + '.' + y + ' ' + h + ':' + min;
+    },
+
+    /**
+     * Форматирование размера в байтах
+     * @param {number} bytes - Размер в байтах
+     * @returns {string} Читаемый размер
+     */
+    formatBytes(bytes) {
+        if (bytes === 0) return '0 Б';
+        if (bytes < 1024) return bytes + ' Б';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+    },
+
+    /**
+     * Склонение существительных по числу (русский язык)
+     * @param {number} n - Число
+     * @param {string} one - Форма для 1 (источник, заявка, страна)
+     * @param {string} few - Форма для 2-4 (источника, заявки, страны)
+     * @param {string} many - Форма для 5+ (источников, заявок, стран)
+     * @returns {string} Число со склонённым существительным
+     */
+    pluralRu(n, one, few, many) {
+        const abs = Math.abs(n);
+        const mod10 = abs % 10;
+        const mod100 = abs % 100;
+        if (mod100 >= 11 && mod100 <= 19) return `${n} ${many}`;
+        if (mod10 === 1) return `${n} ${one}`;
+        if (mod10 >= 2 && mod10 <= 4) return `${n} ${few}`;
+        return `${n} ${many}`;
+    },
+
     initLucideIcons() {
         if (typeof LocalIcons !== 'undefined') {
             LocalIcons.createIcons();

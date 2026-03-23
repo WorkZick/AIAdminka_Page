@@ -17,133 +17,36 @@ const RoleGuard = {
 
     // Настройки кеширования
     CACHE_KEY: 'roleGuard',
-    CACHE_TTL: 300000, // 5 минут
-    STALE_MAX_AGE: 600000, // 10 минут — максимальный возраст stale-кеша
+    CACHE_TTL: 1800000, // 30 минут (роли меняются редко)
+    STALE_MAX_AGE: 2100000, // 35 минут — максимальный возраст stale-кеша (TTL=30мин + 5мин stale)
 
-    // Mock режим для тестирования без backend
-    USE_MOCK_API: false,
-
-    /**
-     * Mock данные для тестирования
-     */
-    MOCK_DATA: {
-        // Текущий пользователь (можно менять для тестирования)
-        // Варианты: 'admin', 'leader', 'employee'
-        mockUserType: 'admin',
-
-        users: {
-            admin: {
-                user: {
-                    email: 'admin@example.com',
-                    name: 'Администратор',
-                    reddyId: '12345678901',
-                    role: 'admin',
-                    teamId: '',
-                    status: 'active',
-                    picture: '',
-                    phone: '+7 999 123-45-67',
-                    telegram: 'admin_tg',
-                    position: 'Администратор системы'
-                },
-                team: null,
-                permissions: {
-                    partners: { canView: true, canEdit: true, canDelete: true },
-                    'partner-onboarding': { canView: true, canEdit: true, canDelete: true },
-                    'team-info': { canView: true, canEdit: true, canDelete: true },
-                    traffic: { canView: true, canEdit: true, canDelete: true },
-                    reports: { canView: true, canEdit: true, canDelete: true },
-                    settings: { canView: true, canEdit: true, canDelete: true },
-                    documentation: { canView: true, canEdit: true, canDelete: true },
-                    'team-management': { canView: true, canEdit: true, canDelete: true },
-                    'admin-panel': { canView: true, canEdit: true, canDelete: true }
-                },
-                pendingRequestsCount: 0
-            },
-            leader: {
-                user: {
-                    email: 'leader@example.com',
-                    name: 'Руководитель команды',
-                    reddyId: '98765432101',
-                    role: 'leader',
-                    teamId: 'team-001',
-                    status: 'active',
-                    picture: '',
-                    phone: '+7 999 765-43-21',
-                    telegram: 'leader_tg',
-                    position: 'Руководитель'
-                },
-                team: {
-                    id: 'team-001',
-                    name: 'Команда Alpha',
-                    leaderName: 'Руководитель команды',
-                    membersCount: 5
-                },
-                permissions: {
-                    partners: { canView: true, canEdit: true, canDelete: true },
-                    'partner-onboarding': { canView: true, canEdit: true, canDelete: true },
-                    'team-info': { canView: true, canEdit: true, canDelete: true },
-                    traffic: { canView: true, canEdit: true, canDelete: true },
-                    reports: { canView: true, canEdit: true, canDelete: true },
-                    settings: { canView: true, canEdit: true, canDelete: false },
-                    documentation: { canView: true, canEdit: false, canDelete: false },
-                    'team-management': { canView: true, canEdit: true, canDelete: true },
-                    'admin-panel': { canView: false, canEdit: false, canDelete: false }
-                },
-                pendingRequestsCount: 0
-            },
-            employee: {
-                user: {
-                    email: 'employee@example.com',
-                    name: 'Сотрудник',
-                    reddyId: '11122233344',
-                    role: 'sales',
-                    teamId: 'team-001',
-                    status: 'active',
-                    picture: '',
-                    phone: '+7 999 111-22-33',
-                    telegram: 'employee_tg',
-                    position: 'Менеджер по продажам'
-                },
-                team: {
-                    id: 'team-001',
-                    name: 'Команда Alpha',
-                    leaderName: 'Руководитель команды',
-                    membersCount: 5
-                },
-                permissions: {
-                    partners: { canView: true, canEdit: true, canDelete: false },
-                    'partner-onboarding': { canView: true, canEdit: true, canDelete: false },
-                    'team-info': { canView: true, canEdit: false, canDelete: false },
-                    traffic: { canView: true, canEdit: false, canDelete: false },
-                    reports: { canView: true, canEdit: false, canDelete: false },
-                    settings: { canView: true, canEdit: true, canDelete: false },
-                    documentation: { canView: true, canEdit: false, canDelete: false },
-                    'team-management': { canView: false, canEdit: false, canDelete: false },
-                    'admin-panel': { canView: false, canEdit: false, canDelete: false }
-                },
-                pendingRequestsCount: 0
-            }
-        }
-    },
 
     /**
      * Инициализация RoleGuard
      * Загружает роль и права пользователя с бэкенда
      *
      * Стратегия загрузки (stale-while-revalidate):
-     * 1. Свежий кеш (< 5 мин) → мгновенный показ
-     * 2. Stale кеш (5-30 мин) → мгновенный показ + фоновое обновление
-     * 3. Нет кеша или кеш > 30 мин → ждём API
+     * 1. Свежий кеш (< 30 мин) → мгновенный показ
+     * 2. Stale кеш (30-35 мин) → мгновенный показ + фоновое обновление
+     * 3. Нет кеша или кеш > 35 мин → ждём API
      */
     async init() {
         if (this.initialized) return this;
 
-        // Safety-таймаут: показать UI даже если init зависнет
+        // Safety-таймаут: показать UI через 2с если init зависнет
         this._safetyTimer = setTimeout(() => {
             if (!document.body.classList.contains('role-ready')) {
-                document.body.classList.add('role-ready');
+                // Fallback: применяем guest-права вместо полного доступа
+                if (!this.initialized) {
+                    this.user = { role: 'guest', status: 'unknown' };
+                    this.permissions = this.buildPermissions(false);
+                    this.initialized = true;
+                    this.applyUI();
+                } else {
+                    document.body.classList.add('role-ready');
+                }
             }
-        }, 5000);
+        }, 2000);
 
         // 1. Свежий кеш (в пределах TTL)
         const cached = this.getCache();
@@ -151,6 +54,8 @@ const RoleGuard = {
             this.user = cached.user;
             this.permissions = cached.permissions;
             this.initialized = true;
+            clearTimeout(this._safetyTimer);
+            this._safetyTimer = null;
             this.applyUI();
             this.initDOMObserver();
             if (cached.pendingRequestsCount > 0) {
@@ -165,6 +70,8 @@ const RoleGuard = {
             this.user = stale.user;
             this.permissions = stale.permissions;
             this.initialized = true;
+            clearTimeout(this._safetyTimer);
+            this._safetyTimer = null;
             this.applyUI();
             this.initDOMObserver();
             if (stale.pendingRequestsCount > 0) {
@@ -177,17 +84,11 @@ const RoleGuard = {
 
         // 3. Нет кеша — ждём API
         try {
-            let result;
-
-            if (this.USE_MOCK_API) {
-                result = await this.mockGetCurrentUser();
-            } else {
-                const apiResponse = await CloudStorage.callApi('getUserRole');
-                if (apiResponse.error) {
-                    throw new Error(apiResponse.error);
-                }
-                result = this.convertApiResponse(apiResponse);
+            const apiResponse = await CloudStorage.callApi('getUserRole');
+            if (apiResponse.error) {
+                throw new Error(apiResponse.error);
             }
+            const result = this.convertApiResponse(apiResponse);
 
             this.user = result.user;
             this.permissions = result.permissions;
@@ -201,6 +102,8 @@ const RoleGuard = {
             }
         } catch (e) {
             console.error('[RoleGuard] Init error:', e);
+            clearTimeout(this._safetyTimer);
+            this._safetyTimer = null;
 
             // Fallback: базовые данные из AuthGuard с ролью guest
             const authUser = typeof AuthGuard !== 'undefined' ? AuthGuard.getUser() : null;
@@ -284,33 +187,6 @@ const RoleGuard = {
     },
 
     /**
-     * Mock API: получить текущего пользователя
-     */
-    async mockGetCurrentUser() {
-        await new Promise(r => setTimeout(r, 100)); // Имитация задержки
-
-        // Получаем email из AuthGuard
-        let userEmail = '';
-        if (typeof AuthGuard !== 'undefined') {
-            const authUser = AuthGuard.getUser();
-            if (authUser) {
-                userEmail = authUser.email || '';
-            }
-        }
-
-        // Используем mockUserType из MOCK_DATA
-        const mockType = this.MOCK_DATA.mockUserType;
-        const result = this.MOCK_DATA.users[mockType] || this.MOCK_DATA.users.employee;
-
-        // Подставляем реальный email если есть
-        if (userEmail && result.user) {
-            result.user.email = userEmail;
-        }
-
-        return result;
-    },
-
-    /**
      * Построение permissions на основе роли
      * @param {boolean} isAdmin - является ли пользователь админом
      * @returns {object} - объект permissions
@@ -325,10 +201,10 @@ const RoleGuard = {
                 permissions[module] = { canView: true, canEdit: true, canDelete: true };
             });
         } else {
-            // Временно: все пользователи видят все модули (включая admin-panel)
-            // Права редактирования/удаления только у админа
+            // Все пользователи видят модули кроме admin-panel
             allModules.forEach(module => {
-                permissions[module] = { canView: true, canEdit: false, canDelete: false };
+                const canView = module !== 'admin-panel';
+                permissions[module] = { canView: canView, canEdit: false, canDelete: false };
             });
         }
 
@@ -412,14 +288,9 @@ const RoleGuard = {
      */
     async revalidateInBackground() {
         try {
-            let result;
-            if (this.USE_MOCK_API) {
-                result = await this.mockGetCurrentUser();
-            } else {
-                const apiResponse = await CloudStorage.callApi('getUserRole');
-                if (apiResponse.error) throw new Error(apiResponse.error);
-                result = this.convertApiResponse(apiResponse);
-            }
+            const apiResponse = await CloudStorage.callApi('getUserRole');
+            if (apiResponse.error) throw new Error(apiResponse.error);
+            const result = this.convertApiResponse(apiResponse);
 
             // Обновить кеш
             this.setCache(result);
@@ -446,7 +317,7 @@ const RoleGuard = {
                 }
             }
         } catch (e) {
-            // Фоновая ревалидация провалилась — stale данные остаются
+            console.warn('[RoleGuard] Background revalidation failed:', e.message);
         }
     },
 
@@ -616,9 +487,9 @@ const RoleGuard = {
             }
         });
 
-        // Элементы только для leader
+        // Элементы только для leader (v2.2.0: учитываем isAdmin)
         document.querySelectorAll('[data-leader-only]').forEach(el => {
-            if (this.user?.role !== 'leader' && this.user?.role !== 'admin') {
+            if (this.user?.role !== 'leader' && this.user?.role !== 'admin' && this.user?.isAdmin !== true) {
                 el.style.display = 'none';
             }
         });
@@ -717,7 +588,7 @@ const RoleGuard = {
 
         // Badge для admin
         const adminBadge = document.getElementById('adminRequestsBadge');
-        if (adminBadge && count > 0 && this.user?.role === 'admin') {
+        if (adminBadge && count > 0 && (this.user?.role === 'admin' || this.user?.isAdmin === true)) {
             adminBadge.textContent = count > 99 ? '99+' : count;
             adminBadge.style.display = 'flex';
         }
@@ -757,8 +628,9 @@ const RoleGuard = {
         const roleName = this.getRoleName();
         const role = this.user.role || 'employee';
 
+        const _esc = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         container.innerHTML = `
-            <span class="role-badge role-${role}">${roleName}</span>
+            <span class="role-badge role-${_esc(role)}">${_esc(roleName)}</span>
         `;
 
         // Применить цвет для кастомных ролей (без CSS-класса)
@@ -886,14 +758,13 @@ const RoleGuard = {
     }
 };
 
-// Очистка кеша при загрузке: удаляем только если старше STALE_MAX_AGE (10 мин)
-// Stale кеш (5-10 мин) сохраняется для мгновенного отображения UI
+// Очистка кеша при загрузке: удаляем только если старше STALE_MAX_AGE (7 мин)
 (function() {
     try {
         const data = localStorage.getItem('roleGuard');
         if (data) {
             const parsed = JSON.parse(data);
-            if (Date.now() - parsed.timestamp > 600000) {
+            if (Date.now() - parsed.timestamp > RoleGuard.STALE_MAX_AGE) {
                 localStorage.removeItem('roleGuard');
             }
         }

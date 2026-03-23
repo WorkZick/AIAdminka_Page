@@ -1,8 +1,22 @@
-// FileProcessor - Обработка Excel файлов
+// FileProcessor - Обработка Excel файлов (SheetJS + Web Worker)
 
 class FileProcessor {
     constructor(utils) {
-        this.utils = utils; // Ссылка на Utils для поиска колонок и валидации
+        this.utils = utils;
+        this._worker = null;
+        this._workerBusy = false;
+        this._workerQueue = [];
+    }
+
+    // Получить или создать Worker (ленивая инициализация)
+    _getWorker() {
+        if (!this._worker) {
+            this._worker = new Worker('js/modules/excel-worker.js');
+            this._worker.onerror = (e) => {
+                console.error('Excel Worker error:', e.message);
+            };
+        }
+        return this._worker;
     }
 
     // Универсальная загрузка файлов с валидацией
@@ -13,7 +27,6 @@ class FileProcessor {
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
 
-            // Вызываем callback прогресса
             if (onProgress) {
                 onProgress(i + 1, total, file.name);
             }
@@ -35,19 +48,21 @@ class FileProcessor {
 
     // Загрузка одного файла
     async loadSingleFile(file, config) {
-        // Проверяем расширение
         if (!file.name.match(/\.(xlsx|xls)$/i)) {
             throw new Error('Неверный формат файла. Поддерживаются только .xlsx и .xls');
         }
 
-        // Читаем Excel файл
+        const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
+        if (file.size > MAX_FILE_SIZE) {
+            throw new Error(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимум: 100 МБ`);
+        }
+
         const data = await this.readExcelFile(file);
 
         if (!data || data.length === 0) {
             throw new Error('Файл пуст или не содержит данных');
         }
 
-        // Валидация обязательных колонок (уже проверено в readExcelFile)
         if (config.requiredColumns && config.requiredColumns.length > 0) {
             const headers = data[0] || [];
             const validationResult = this.validateHeaders(headers, config.requiredColumns);
@@ -61,51 +76,100 @@ class FileProcessor {
             success: true,
             fileName: file.name,
             data: data,
-            rowCount: data.length - 1 // Минус заголовок
+            rowCount: data.length - 1
         };
     }
 
-    // Чтение Excel файла через ExcelJS
-    async readExcelFile(file) {
+    // Чтение Excel файла через SheetJS в Web Worker (с очередью для предотвращения race condition)
+    readExcelFile(file) {
         return new Promise((resolve, reject) => {
-            const reader = new FileReader();
+            const task = () => this._processInWorker(file).then(resolve, reject);
 
-            reader.onload = async (e) => {
-                try {
-                    const arrayBuffer = e.target.result;
-                    const workbook = new ExcelJS.Workbook();
+            if (this._workerBusy) {
+                this._workerQueue.push(task);
+            } else {
+                this._workerBusy = true;
+                task().finally(() => this._processNextInQueue());
+            }
+        });
+    }
 
-                    await workbook.xlsx.load(arrayBuffer);
+    // Обработать следующую задачу из очереди
+    _processNextInQueue() {
+        const next = this._workerQueue.shift();
+        if (next) {
+            next().finally(() => this._processNextInQueue());
+        } else {
+            this._workerBusy = false;
+        }
+    }
 
-                    // Берём первый лист
-                    const worksheet = workbook.worksheets[0];
-                    if (!worksheet) {
-                        reject(new Error('Файл не содержит листов'));
-                        return;
-                    }
+    // Отправка файла в Worker и ожидание результата
+    async _processInWorker(file) {
+        const WORKER_TIMEOUT = 120000; // 2 минуты
+        const arrayBuffer = await file.arrayBuffer();
+        const worker = this._getWorker();
 
-                    // Конвертируем в массив массивов
-                    const data = [];
+        return new Promise((resolve, reject) => {
+            let batchedData = null;
 
-                    worksheet.eachRow((row, rowNumber) => {
-                        const rowData = [];
-                        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                            rowData[colNumber - 1] = cell.value;
-                        });
-                        data.push(rowData);
-                    });
+            const timer = setTimeout(() => {
+                cleanup();
+                this._worker.terminate();
+                this._worker = null;
+                reject(new Error('Превышено время обработки файла. Файл слишком большой или повреждён.'));
+            }, WORKER_TIMEOUT);
 
-                    resolve(data);
-                } catch (error) {
-                    reject(new Error(`Ошибка чтения файла: ${error.message}`));
+            const cleanup = () => {
+                clearTimeout(timer);
+                worker.removeEventListener('message', handler);
+                worker.removeEventListener('error', errorHandler);
+            };
+
+            const errorHandler = (e) => {
+                cleanup();
+                reject(new Error('Ошибка Worker: ' + (e.message || 'неизвестная ошибка')));
+            };
+
+            const handler = (e) => {
+                const msg = e.data;
+
+                switch (msg.type) {
+                    case 'done':
+                        cleanup();
+                        resolve(msg.data);
+                        break;
+
+                    case 'start':
+                        batchedData = new Array(msg.totalRows);
+                        break;
+
+                    case 'batch':
+                        for (let i = 0; i < msg.batch.length; i++) {
+                            batchedData[msg.offset + i] = msg.batch[i];
+                        }
+                        break;
+
+                    case 'batch-end':
+                        cleanup();
+                        for (let i = 0; i < msg.batch.length; i++) {
+                            batchedData[msg.offset + i] = msg.batch[i];
+                        }
+                        resolve(batchedData);
+                        break;
+
+                    case 'error':
+                        cleanup();
+                        reject(new Error(msg.error));
+                        break;
                 }
             };
 
-            reader.onerror = () => {
-                reject(new Error('Ошибка чтения файла'));
-            };
+            worker.addEventListener('message', handler);
+            worker.addEventListener('error', errorHandler);
 
-            reader.readAsArrayBuffer(file);
+            // Transferable ArrayBuffer — zero-copy transfer to Worker
+            worker.postMessage({ arrayBuffer, fileIndex: 0 }, [arrayBuffer]);
         });
     }
 
@@ -134,17 +198,15 @@ class FileProcessor {
             return [];
         }
 
-        // Если один файл - возвращаем его данные
         if (successfulResults.length === 1) {
             return successfulResults[0].data;
         }
 
-        // Если несколько файлов - объединяем (заголовок берём из первого)
         const headers = successfulResults[0].data[0];
         const mergedData = [headers];
 
         successfulResults.forEach(result => {
-            const dataRows = result.data.slice(1); // Пропускаем заголовок
+            const dataRows = result.data.slice(1);
             mergedData.push(...dataRows);
         });
 
@@ -190,6 +252,16 @@ class FileProcessor {
     // Проверка валидности всех результатов
     areAllValid(results) {
         return results.length > 0 && results.every(r => r.success);
+    }
+
+    // Завершение Worker при уничтожении
+    destroy() {
+        if (this._worker) {
+            this._worker.terminate();
+            this._worker = null;
+        }
+        this._workerBusy = false;
+        this._workerQueue = [];
     }
 }
 

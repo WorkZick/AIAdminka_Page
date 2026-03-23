@@ -14,22 +14,9 @@ const TrafficRenderer = {
         const selected = allPartners.filter(p => TrafficState.selectedPartners.includes(p.id));
 
         // Элементы UI
-        const loadingSpinner = document.getElementById('loadingSpinner');
         const noPartnersHint = document.getElementById('noPartnersHint');
         const selectionToolbar = document.getElementById('selectionToolbar');
         const partnersPreview = document.querySelector('.partners-preview');
-
-        // Пока данные не загружены - показываем спиннер
-        if (!TrafficState.dataLoaded) {
-            if (loadingSpinner) loadingSpinner.classList.remove('hidden');
-            if (selectionToolbar) selectionToolbar.classList.add('hidden');
-            if (partnersPreview) partnersPreview.classList.add('hidden');
-            if (noPartnersHint) noPartnersHint.classList.add('hidden');
-            return;
-        }
-
-        // Данные загружены - скрываем спиннер
-        if (loadingSpinner) loadingSpinner.classList.add('hidden');
 
         if (allPartners.length === 0) {
             // Нет партнёров вообще - показываем подсказку, скрываем остальное
@@ -212,24 +199,23 @@ const TrafficRenderer = {
             `;
         }).join('');
 
-        // Event delegation для кнопок действий с партнёрами (убираем старый обработчик)
-        if (TrafficRenderer._partnersClickHandler) {
-            tbody.removeEventListener('click', TrafficRenderer._partnersClickHandler);
+        // Event delegation — используем один обработчик (не добавлять повторно)
+        if (!tbody._hasActionListener) {
+            tbody.addEventListener('click', (e) => {
+                const button = e.target.closest('[data-action]');
+                if (!button) return;
+
+                const action = button.dataset.action;
+                const partnerId = button.dataset.partnerId;
+
+                if (action === 'edit') {
+                    TrafficRenderer.editPartner(partnerId);
+                } else if (action === 'delete') {
+                    TrafficImportExport.deletePartner(partnerId);
+                }
+            });
+            tbody._hasActionListener = true;
         }
-        TrafficRenderer._partnersClickHandler = (e) => {
-            const button = e.target.closest('[data-action]');
-            if (!button) return;
-
-            const action = button.dataset.action;
-            const partnerId = button.dataset.partnerId;
-
-            if (action === 'edit') {
-                TrafficRenderer.editPartner(partnerId);
-            } else if (action === 'delete') {
-                TrafficImportExport.deletePartner(partnerId);
-            }
-        };
-        tbody.addEventListener('click', TrafficRenderer._partnersClickHandler);
     },
 
     // Загрузка методов
@@ -300,17 +286,16 @@ const TrafficRenderer = {
             </div>
         `).join('');
 
-        // Event delegation для кнопок удаления методов (убираем старый обработчик)
-        if (TrafficRenderer._methodsClickHandler) {
-            container.removeEventListener('click', TrafficRenderer._methodsClickHandler);
-        }
-        TrafficRenderer._methodsClickHandler = (e) => {
-            const button = e.target.closest('[data-method]');
-            if (!button) return;
+        // Event delegation — используем один обработчик (не добавлять повторно)
+        if (!container._hasMethodListener) {
+            container.addEventListener('click', (e) => {
+                const button = e.target.closest('[data-method]');
+                if (!button) return;
 
-            TrafficImportExport.deleteMethod(button.dataset.method);
-        };
-        container.addEventListener('click', TrafficRenderer._methodsClickHandler);
+                TrafficImportExport.deleteMethod(button.dataset.method);
+            });
+            container._hasMethodListener = true;
+        }
     },
 
     // Генерация отчета
@@ -337,25 +322,25 @@ const TrafficRenderer = {
                     <td>${TrafficRenderer.escapeHtml(partner.subagentId)}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>${date}</td>
-                    <td>${partner.backCount || 0}</td>
-                    <td>${partner.cringeCount || 0}</td>
-                    <td>${partner.autoDisableCount || 0}</td>
-                    <td>${partner.depositTransactionsCount || 0}</td>
-                    <td>${partner.withdrawalTransactionsCount || 0}</td>
-                    <td>${partner.depositAppealsCount || 0}</td>
-                    <td>${partner.delayedAppealsCount || 0}</td>
-                    <td>${partner.depositSuccessPercent || 0}%</td>
-                    <td>${partner.withdrawalSuccessPercent || 0}%</td>
-                    <td>${partner.depositWorkTimePercent || 0}%</td>
-                    <td>${partner.withdrawalWorkTimePercent || 0}%</td>
-                    <td>${partner.chatIgnoring || 0}</td>
-                    <td>${partner.webmanagementIgnore || 0}</td>
-                    <td>${partner.depositQueues || 0}</td>
-                    <td>${partner.withdrawalQueues || 0}</td>
-                    <td>${partner.creditsOutsideLimits || 0}</td>
-                    <td>${partner.wrongAmountApproval || 0}</td>
+                    <td>${Number(partner.backCount) || 0}</td>
+                    <td>${Number(partner.cringeCount) || 0}</td>
+                    <td>${Number(partner.autoDisableCount) || 0}</td>
+                    <td>${Number(partner.depositTransactionsCount) || 0}</td>
+                    <td>${Number(partner.withdrawalTransactionsCount) || 0}</td>
+                    <td>${Number(partner.depositAppealsCount) || 0}</td>
+                    <td>${Number(partner.delayedAppealsCount) || 0}</td>
+                    <td>${Number(partner.depositSuccessPercent) || 0}%</td>
+                    <td>${Number(partner.withdrawalSuccessPercent) || 0}%</td>
+                    <td>${Number(partner.depositWorkTimePercent) || 0}%</td>
+                    <td>${Number(partner.withdrawalWorkTimePercent) || 0}%</td>
+                    <td>${Number(partner.chatIgnoring) || 0}</td>
+                    <td>${Number(partner.webmanagementIgnore) || 0}</td>
+                    <td>${Number(partner.depositQueues) || 0}</td>
+                    <td>${Number(partner.withdrawalQueues) || 0}</td>
+                    <td>${Number(partner.creditsOutsideLimits) || 0}</td>
+                    <td>${Number(partner.wrongAmountApproval) || 0}</td>
                     <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${TrafficRenderer.escapeHtml(partner.otherViolationsDescription)}"` : ''}>
-                        <span>${partner.otherViolations || 0}</span>${partner.otherViolationsDescription ? ' <span class="violation-info-icon"><img src="../shared/icons/filter.svg" alt="info" class="tooltip-icon"></span>' : ''}
+                        <span>${Number(partner.otherViolations) || 0}</span>${partner.otherViolationsDescription ? ' <span class="violation-info-icon"><img src="../shared/icons/filter.svg" alt="info" class="tooltip-icon"></span>' : ''}
                     </td>
                 </tr>
             `;
@@ -370,73 +355,53 @@ const TrafficRenderer = {
 
     },
 
-    // Показать результаты расчета
+    // Общий рендеринг результатов (используется в модалке и на шаге 9)
+    _renderResultsHtml(results) {
+        // Группируем по методу и сортируем
+        const methodGroups = {};
+        results.forEach(result => {
+            if (!methodGroups[result.method]) methodGroups[result.method] = [];
+            methodGroups[result.method].push(result);
+        });
+
+        Object.values(methodGroups).forEach(group => {
+            group.sort((a, b) => b.trafficPercent - a.trafficPercent);
+        });
+
+        const esc = TrafficRenderer.escapeHtml;
+        let html = '';
+
+        Object.keys(methodGroups).sort().forEach(method => {
+            const groupResults = methodGroups[method];
+            const totalPercent = groupResults.reduce((sum, r) => sum + r.trafficPercent, 0);
+
+            html += `<tr class="method-header-row"><td colspan="9"><strong>${esc(method)}</strong> <span class="method-summary">(${groupResults.length} субагентов, всего ${totalPercent}%)</span></td></tr>`;
+
+            groupResults.forEach(result => {
+                html += `<tr>
+                    <td>${esc(result.method)}</td>
+                    <td>${esc(result.subagent)}</td>
+                    <td>${esc(result.subagentId)}</td>
+                    <td class="score-cell score-good">${result.scores.good}</td>
+                    <td class="score-cell score-normal">${result.scores.normal}</td>
+                    <td class="score-cell score-bad">${result.scores.bad}</td>
+                    <td class="score-cell score-terrible">${result.scores.terrible}</td>
+                    <td class="score-cell score-total"><strong>${result.scores.total}</strong></td>
+                    <td class="traffic-percent"><strong>${result.trafficPercent}%</strong></td>
+                </tr>`;
+            });
+        });
+
+        return html;
+    },
+
+    // Показать результаты расчета (модальное окно)
     showTrafficResults() {
         const tbody = document.getElementById('trafficResultsTableBody');
         if (!tbody || !TrafficState.trafficResults) return;
 
-        const getScoreClass = (score) => {
-            if (score > 0) return 'score-positive';
-            if (score < 0) return 'score-negative';
-            return 'score-zero';
-        };
-
-        // Группируем результаты по методу
-        const methodGroups = {};
-        TrafficState.trafficResults.forEach(result => {
-            const method = result.method;
-            if (!methodGroups[method]) {
-                methodGroups[method] = [];
-            }
-            methodGroups[method].push(result);
-        });
-
-        // Сортируем партнеров внутри каждого метода по проценту (убывание)
-        Object.keys(methodGroups).forEach(method => {
-            methodGroups[method].sort((a, b) => b.trafficPercent - a.trafficPercent);
-        });
-
-        // Формируем HTML с группировкой по методам
-        let html = '';
-        const methods = Object.keys(methodGroups).sort();
-
-        methods.forEach(method => {
-            const groupResults = methodGroups[method];
-            const totalPercent = groupResults.reduce((sum, r) => sum + r.trafficPercent, 0);
-
-            // Заголовок метода
-            html += `
-                <tr class="method-header-row">
-                    <td colspan="9">
-                        <strong>${TrafficRenderer.escapeHtml(method)}</strong>
-                        <span class="method-summary">(${groupResults.length} субагентов, всего ${totalPercent}%)</span>
-                    </td>
-                </tr>
-            `;
-
-            // Партнеры внутри метода
-            groupResults.forEach(result => {
-                html += `
-                    <tr>
-                        <td>${TrafficRenderer.escapeHtml(result.method)}</td>
-                        <td>${TrafficRenderer.escapeHtml(result.subagent)}</td>
-                        <td>${TrafficRenderer.escapeHtml(result.subagentId)}</td>
-                        <td class="${getScoreClass(result.scores.good)}">${result.scores.good}</td>
-                        <td class="${getScoreClass(result.scores.normal)}">${result.scores.normal}</td>
-                        <td class="${getScoreClass(result.scores.bad)}">${result.scores.bad}</td>
-                        <td class="${getScoreClass(result.scores.terrible)}">${result.scores.terrible}</td>
-                        <td class="${getScoreClass(result.scores.total)}"><strong>${result.scores.total}</strong></td>
-                        <td class="traffic-percent"><strong>${result.trafficPercent}%</strong></td>
-                    </tr>
-                `;
-            });
-        });
-
-        tbody.innerHTML = html;
-
-        // Открываем модальное окно результатов
+        tbody.innerHTML = TrafficRenderer._renderResultsHtml(TrafficState.trafficResults);
         document.getElementById('trafficResultsModal').classList.add('show');
-
     },
 
     // Показать результаты расчёта на шаге 9
@@ -450,30 +415,9 @@ const TrafficRenderer = {
         document.getElementById('resultsNotCalculated').classList.add('hidden');
         document.getElementById('resultsCalculated').classList.remove('hidden');
 
-        // Сортируем результаты по методу и проценту
-        const sortedResults = [...TrafficState.trafficResults].sort((a, b) => {
-            if (a.method !== b.method) {
-                return a.method.localeCompare(b.method);
-            }
-            return b.trafficPercent - a.trafficPercent;
-        });
-
         const tbody = document.getElementById('trafficResultsTableBody');
-        tbody.innerHTML = sortedResults.map(result => `
-            <tr>
-                <td>${TrafficRenderer.escapeHtml(result.method)}</td>
-                <td>${TrafficRenderer.escapeHtml(result.subagent)}</td>
-                <td>${TrafficRenderer.escapeHtml(result.subagentId)}</td>
-                <td class="score-cell score-good">${result.scores.good}</td>
-                <td class="score-cell score-normal">${result.scores.normal}</td>
-                <td class="score-cell score-bad">${result.scores.bad}</td>
-                <td class="score-cell score-terrible">${result.scores.terrible}</td>
-                <td class="score-cell score-total">${result.scores.total}</td>
-                <td class="traffic-percent">${result.trafficPercent}%</td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = TrafficRenderer._renderResultsHtml(TrafficState.trafficResults);
 
-        // Отмечаем шаг 9 как завершённый
         if (!TrafficState.completedSteps.includes(9)) {
             TrafficState.completedSteps.push(9);
         }
@@ -562,14 +506,9 @@ const TrafficRenderer = {
         TrafficState.editingPartnerId = null;
     },
 
-    // Экранирование HTML (безопасно для использования в атрибутах)
+    // Экранирование HTML (string-based, без создания DOM элементов)
     escapeHtml(text) {
-        if (text == null) return '';
-        return String(text)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#x27;');
+        if (typeof text !== 'string') return String(text ?? '');
+        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 };

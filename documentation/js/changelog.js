@@ -29,10 +29,10 @@ const changelog = {
     // Эти данные используются только если не удалось загрузить JSON
     // ВАЖНО: При обновлении changelog.json нужно также обновить эти данные!
     fallbackData: {
-        "version": "2.23.2",
+        "version": "2.23.0",
         "updates": [
             {
-                "version": "2.23.2",
+                "version": "2.23.0",
                 "date": "2026-02-12",
                 "title": "Модуль «Заведение партнёра» — полный workflow",
                 "changes": [

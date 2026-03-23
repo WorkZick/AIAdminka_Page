@@ -29,9 +29,7 @@
 
 /* Panel styles - Glassmorphism */
 .panel {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
+    background: rgba(25, 25, 25, 0.98);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     overflow: hidden;
@@ -88,6 +86,7 @@
     display: flex;
     flex-direction: column;
     position: relative;
+    contain: layout style;
 }
 
 .panel-actions {
@@ -129,7 +128,7 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
     gap: 16px;
 }
 
@@ -229,7 +228,7 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
     font-size: 13px;
     color: var(--gray-light);
     font-weight: 700;
@@ -351,7 +350,7 @@
     padding: 40px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
     margin-bottom: 20px;
     background: rgba(255, 255, 255, 0.02);
 }
@@ -504,7 +503,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
+    transition: var(--transition-colors);
     z-index: 1000;
 }
 
@@ -570,6 +569,24 @@
     gap: 12px;
 }
 
+.btn-clear {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--gray-light);
+    padding: 4px 12px;
+    font-size: 12px;
+    font-family: var(--font-family);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.btn-clear:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
 .log-drawer-close {
     background: rgba(255, 255, 255, 0.1);
     border: none;
@@ -582,7 +599,7 @@
     align-items: center;
     justify-content: center;
     font-size: 14px;
-    transition: all 0.2s;
+    transition: var(--transition-colors);
 }
 
 .log-drawer-close:hover {
@@ -816,7 +833,7 @@
     border: 1px solid var(--glass-border);
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: var(--transition-colors);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
 }
@@ -905,7 +922,7 @@
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .template-card-featured:hover {
@@ -991,7 +1008,7 @@
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: var(--transition-colors);
     font-family: var(--font-family);
 }
 
@@ -1047,7 +1064,7 @@
 
 .components-list .component-item {
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: var(--transition-colors);
     border-radius: var(--radius-md);
 }
 
@@ -1085,7 +1102,7 @@
     color: var(--accent);
     opacity: 0;
     transform: translateX(-4px);
-    transition: all 0.3s ease;
+    transition: var(--transition-colors);
 }
 
 .components-list .component-item:hover .component-arrow {
@@ -1110,7 +1127,7 @@
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
-    transition: all 0.3s ease;
+    transition: var(--transition-colors);
 }
 
 .sub-file-card:hover {
@@ -1132,7 +1149,7 @@
     border-radius: 10px;
     padding: 20px;
     text-align: center;
-    transition: all 0.3s ease;
+    transition: var(--transition-colors);
     cursor: pointer;
 }
 
@@ -1197,7 +1214,7 @@
     border: 2px dashed var(--glass-border);
     border-radius: 12px;
     text-align: center;
-    transition: all 0.3s ease;
+    transition: var(--transition-colors);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
 }
@@ -1354,7 +1371,7 @@
     border-radius: 8px;
     color: var(--white);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: var(--transition-colors);
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     backdrop-filter: blur(var(--glass-blur));
@@ -1434,7 +1451,7 @@
     color: var(--white);
     font-size: 12px;
     font-weight: 400;
-    transition: all 0.2s ease;
+    transition: var(--transition-colors);
 }
 
 .required-columns-list li:hover {

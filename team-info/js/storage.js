@@ -7,7 +7,7 @@ const storage = {
     // Кеш данных
     _employees: [],
     _templates: [],
-    _isLoading: false,
+    _loadingPromise: null,
 
     // ============ ОСНОВНЫЕ МЕТОДЫ ============
 
@@ -35,6 +35,7 @@ const storage = {
             return this._employees;
         } catch (error) {
             console.error('[Storage] Error loading employees:', error);
+            // Fallback на localStorage
             return this._loadFromLocalStorage();
         }
     },

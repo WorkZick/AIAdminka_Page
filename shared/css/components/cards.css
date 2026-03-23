@@ -10,7 +10,7 @@
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     overflow: hidden;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .card:hover {
@@ -54,7 +54,7 @@
     align-items: center;
     gap: 16px;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors), transform var(--transition-fast);
     text-decoration: none;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -74,7 +74,7 @@
     background: rgba(255, 255, 255, 0.05);
     border-radius: var(--radius-2xl);
     padding: 14px;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .module-card:hover .module-icon {
@@ -87,7 +87,7 @@
     object-fit: contain;
     filter: brightness(0) invert(1);
     opacity: 0.8;
-    transition: all var(--transition-normal);
+    transition: opacity var(--transition-normal), filter var(--transition-normal), color var(--transition-normal);
 }
 
 .module-card:hover .module-icon img {

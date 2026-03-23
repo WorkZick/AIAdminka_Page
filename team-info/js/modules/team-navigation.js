@@ -64,11 +64,12 @@ const TeamNavigation = {
             TeamState.originalFormData = null;
         }
 
+        const oldId = TeamState.currentEmployeeId;
         TeamState.currentEmployeeId = id;
         const employee = TeamState.data.find(e => e.id === id);
         if (!employee) return;
 
-        TeamRenderer.render();
+        TeamRenderer.updateSelection(id, oldId);
 
         const hintPanel = document.getElementById('hintPanel');
         hintPanel.classList.remove('visible-flex');
@@ -81,7 +82,7 @@ const TeamNavigation = {
 
         // Заполнение карточки
         document.getElementById('cardFullName').textContent = employee.fullName || '';
-        document.getElementById('cardPosition').textContent = (typeof RolesConfig !== 'undefined' && employee.position) ? RolesConfig.getName(employee.position) : (employee.position || '');
+        document.getElementById('cardPosition').textContent = (typeof RolesConfig !== 'undefined' && employee.position) ? RolesConfig.getName(RolesConfig.resolveRoleKey(employee.position)) : (employee.position || '');
 
         const currentStatus = employee.status || 'Работает';
         const statusClass = TeamUtils.getStatusClass(currentStatus);
@@ -123,8 +124,9 @@ const TeamNavigation = {
         hintPanel.classList.remove('hidden');
         hintPanel.classList.add('visible-flex');
 
+        const oldId = TeamState.currentEmployeeId;
         TeamState.currentEmployeeId = null;
-        TeamRenderer.render();
+        TeamRenderer.updateSelection(null, oldId);
     },
 
     /**

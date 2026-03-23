@@ -81,7 +81,7 @@ const settingsApp = {
     // ============ User Data ============
 
     loadUserData() {
-        const authData = localStorage.getItem('cloud-auth');
+        const authData = sessionStorage.getItem('cloud-auth');
         if (authData) {
             try {
                 const auth = JSON.parse(authData);
@@ -92,78 +92,49 @@ const settingsApp = {
                     timestamp: auth.timestamp
                 };
             } catch (e) {
-                localStorage.removeItem('cloud-auth');
+                sessionStorage.removeItem('cloud-auth');
+                this.currentUser = null;
             }
         }
     },
 
     async loadProfile() {
         try {
-            // Инициализируем RoleGuard если ещё не инициализирован
-            if (typeof RoleGuard !== 'undefined' && !RoleGuard.initialized) {
-                await RoleGuard.init();
-            }
-
-            // Получаем данные пользователя из RoleGuard
+            // RoleGuard уже инициализирован через PageLifecycle → AuthGuard.checkWithRole()
             const roleGuardUser = typeof RoleGuard !== 'undefined' ? RoleGuard.user : null;
 
-            // Автоинициализация хранилища для leader/admin
-            if (roleGuardUser && (roleGuardUser.role === 'leader' || roleGuardUser.role === 'admin')) {
-                try {
-                    const storageResult = await CloudStorage.initStorage();
-                    // Storage initialized successfully
-                } catch (e) {
-                    // Storage init failed, continue without it
-                }
-            }
-
-            // Ищем данные сотрудника из облака
-            let teamInfoEmployee = null;
-            const currentEmail = this.currentUser?.email;
-
-            // Пытаемся загрузить из CloudStorage
-            if (currentEmail && typeof CloudStorage !== 'undefined' && CloudStorage.isAuthenticated()) {
-                try {
-                    const employees = await CloudStorage.getEmployees();
-                    if (Array.isArray(employees)) {
-                        teamInfoEmployee = employees.find(emp =>
-                            emp.email === currentEmail || emp.corpEmail === currentEmail || emp.id === currentEmail
-                        );
-                    }
-                } catch (e) {
-                    // Cloud load failed, continue with local data
-                }
-            }
-
-            // Формируем профиль из доступных данных (приоритет: cloud > RoleGuard > currentUser)
+            // 1. Мгновенно формируем профиль из RoleGuard (без API-вызовов)
             this.userProfile = {
                 email: this.currentUser?.email || '',
-                name: teamInfoEmployee?.fullName || roleGuardUser?.name || this.currentUser?.name || '',
-                picture: teamInfoEmployee?.avatar || this.currentUser?.picture || '',
+                name: roleGuardUser?.name || this.currentUser?.name || '',
+                picture: this.currentUser?.picture || '',
                 role: roleGuardUser?.role || 'user',
-                reddyId: teamInfoEmployee?.reddyId || roleGuardUser?.reddyId || '',
+                reddyId: roleGuardUser?.reddyId || '',
                 teamId: roleGuardUser?.teamId || '',
                 teamName: roleGuardUser?.teamName || 'Команда',
                 teamLeader: roleGuardUser?.teamLeader || null,
-                status: teamInfoEmployee?.status || roleGuardUser?.status || 'active',
-                position: teamInfoEmployee?.position || roleGuardUser?.position || '',
-                // Контактные данные из карточки сотрудника
-                crmLogin: teamInfoEmployee?.crmLogin || '',
-                corpTelegram: teamInfoEmployee?.corpTelegram || '',
-                personalTelegram: teamInfoEmployee?.personalTelegram || '',
+                status: roleGuardUser?.status || 'active',
+                position: roleGuardUser?.position || '',
+                crmLogin: '',
+                corpTelegram: '',
+                personalTelegram: '',
                 corpEmail: this.currentUser?.email || '',
-                personalEmail: teamInfoEmployee?.personalEmail || '',
-                corpPhone: teamInfoEmployee?.corpPhone || '',
-                personalPhone: teamInfoEmployee?.personalPhone || '',
-                birthday: teamInfoEmployee?.birthday || '',
-                startDate: teamInfoEmployee?.startDate || '',
-                office: teamInfoEmployee?.office || '',
-                company: teamInfoEmployee?.company || '',
-                comment: teamInfoEmployee?.comment || ''
+                personalEmail: '',
+                corpPhone: '',
+                personalPhone: '',
+                birthday: '',
+                startDate: '',
+                office: '',
+                company: '',
+                comment: ''
             };
 
+            // 2. Показываем UI сразу с базовыми данными
             this.updateUI();
             this.fillProfileForm();
+
+            // 3. Детальные данные (контакты) — фоновая загрузка, не блокирует UI
+            this._detailedLoading = this._loadDetailedProfile(roleGuardUser).catch(() => {});
 
         } catch (error) {
             ErrorHandler.handle(error, {
@@ -171,6 +142,75 @@ const settingsApp = {
                 action: 'loadProfile'
             });
             this.updateUI();
+        }
+    },
+
+    /**
+     * Фоновая загрузка детальных данных профиля (контакты из Employees)
+     * initStorage и getEmployees запускаются параллельно
+     */
+    async _loadDetailedProfile(roleGuardUser) {
+        const currentEmail = this.currentUser?.email;
+        if (!currentEmail) return;
+
+        // initStorage — только при первом входе leader/admin
+        const storageInitKey = 'storage-initialized-' + (roleGuardUser?.teamId || 'personal');
+        const needsInit = roleGuardUser && !localStorage.getItem(storageInitKey) &&
+            (roleGuardUser.role === 'leader' || roleGuardUser.role === 'admin' || roleGuardUser.isAdmin === true);
+
+        // getEmployees — для ролей с доступом к сотрудникам
+        const canViewEmployees = roleGuardUser && (
+            roleGuardUser.role === 'leader' || roleGuardUser.role === 'admin' ||
+            roleGuardUser.role === 'assistant' || roleGuardUser.isAdmin === true
+        );
+        const needsEmployees = canViewEmployees &&
+            typeof CloudStorage !== 'undefined' && CloudStorage.isAuthenticated();
+
+        if (!needsInit && !needsEmployees) return;
+
+        try {
+            // Запускаем параллельно
+            const [, employees] = await Promise.all([
+                needsInit
+                    ? CloudStorage.initStorage()
+                        .then(() => localStorage.setItem(storageInitKey, '1'))
+                        .catch(() => {})
+                    : Promise.resolve(),
+                needsEmployees
+                    ? CloudStorage.getEmployees().catch(() => null)
+                    : Promise.resolve(null)
+            ]);
+
+            // Обновляем профиль из данных сотрудника
+            if (Array.isArray(employees)) {
+                const emp = employees.find(e =>
+                    e.email === currentEmail || e.corpEmail === currentEmail || e.id === currentEmail
+                );
+                if (emp) {
+                    Object.assign(this.userProfile, {
+                        name: emp.fullName || this.userProfile.name,
+                        picture: emp.avatar || this.userProfile.picture,
+                        reddyId: emp.reddyId || this.userProfile.reddyId,
+                        status: emp.status || this.userProfile.status,
+                        position: emp.position || this.userProfile.position,
+                        crmLogin: emp.crmLogin || '',
+                        corpTelegram: emp.corpTelegram || '',
+                        personalTelegram: emp.personalTelegram || '',
+                        personalEmail: emp.personalEmail || '',
+                        corpPhone: emp.corpPhone || '',
+                        personalPhone: emp.personalPhone || '',
+                        birthday: emp.birthday || '',
+                        startDate: emp.startDate || '',
+                        office: emp.office || '',
+                        company: emp.company || '',
+                        comment: emp.comment || ''
+                    });
+                    this.updateUI();
+                    this.fillProfileForm();
+                }
+            }
+        } catch (e) {
+            // Детальные данные не загрузились — продолжаем с базовыми
         }
     },
 
@@ -199,7 +239,7 @@ const settingsApp = {
             if (pictureUrl) {
                 avatarEl.innerHTML = '';
                 const img = document.createElement('img');
-                if (pictureUrl.startsWith('https://lh')) {
+                if (Utils.isGoogleAvatar(pictureUrl)) {
                     img.src = pictureUrl;
                     img.alt = '';
                     img.onerror = () => { avatarEl.textContent = this.getInitials(profile.name); };
@@ -244,7 +284,7 @@ const settingsApp = {
                 const teamName = savedTeamName || this.userProfile.teamName || 'Команда';
                 teamNameText.textContent = teamName;
 
-                if (this.userProfile.role === 'leader' || this.userProfile.role === 'admin') {
+                if (this.userProfile.role === 'leader' || this.userProfile.role === 'admin' || this.userProfile.isAdmin === true) {
                     teamNameDisplay.classList.remove('hidden');
                 } else {
                     teamNameDisplay.classList.add('hidden');
@@ -253,7 +293,7 @@ const settingsApp = {
 
             // Секция команды (показываем если не руководитель и не админ)
             if (teamInfoSection) {
-                if (this.userProfile.teamLeader && this.userProfile.role !== 'leader' && this.userProfile.role !== 'admin') {
+                if (this.userProfile.teamLeader && this.userProfile.role !== 'leader' && this.userProfile.role !== 'admin' && this.userProfile.isAdmin !== true) {
                     teamInfoSection.classList.remove('hidden');
                     leaderEl.textContent = this.userProfile.teamLeader;
                     descEl.textContent = RolesConfig.getDescription(this.userProfile.role);
@@ -270,27 +310,15 @@ const settingsApp = {
     },
 
     _populateRoleSelect(selectedRole) {
-        const select = document.getElementById('profilePosition');
-        if (!select) return;
-        select.innerHTML = '';
+        const input = document.getElementById('profilePositionValue');
+        const label = document.getElementById('profilePositionLabel');
+        if (!input) return;
 
-        if (typeof RolesConfig !== 'undefined') {
-            RolesConfig.ALL_ROLES.filter(r => r !== 'guest').forEach(role => {
-                const opt = document.createElement('option');
-                opt.value = role;
-                opt.textContent = RolesConfig.getName(role);
-                if (role === selectedRole) opt.selected = true;
-                select.appendChild(opt);
-            });
-        }
-
-        if (selectedRole && !select.value) {
-            const opt = document.createElement('option');
-            opt.value = selectedRole;
-            opt.textContent = (typeof RolesConfig !== 'undefined') ? RolesConfig.getName(selectedRole) : selectedRole;
-            opt.selected = true;
-            select.insertBefore(opt, select.firstChild);
-        }
+        input.value = selectedRole || '';
+        const roleName = selectedRole && typeof RolesConfig !== 'undefined'
+            ? RolesConfig.getName(selectedRole)
+            : (selectedRole || 'Роль');
+        if (label) label.textContent = roleName;
     },
 
     fillProfileForm() {
@@ -349,7 +377,7 @@ const settingsApp = {
         if (!sessionExpiryEl) return;
 
         if (this.currentUser && this.currentUser.timestamp) {
-            const expiryTime = new Date(this.currentUser.timestamp + 3500000);
+            const expiryTime = new Date(this.currentUser.timestamp + TokenManager.TOKEN_LIFETIME);
             sessionExpiryEl.textContent = this.formatDateTime(expiryTime);
         } else {
             sessionExpiryEl.textContent = '-';
@@ -381,6 +409,9 @@ const settingsApp = {
     async saveProfile(event) {
         event.preventDefault();
 
+        // Дождаться фоновой загрузки, чтобы не затереть контакты пустыми значениями
+        if (this._detailedLoading) await this._detailedLoading;
+
         const form = document.getElementById('profileForm');
         const btn = document.getElementById('btnSaveProfile');
         const formData = new FormData(form);
@@ -388,7 +419,7 @@ const settingsApp = {
         const profileData = {
             // Основная информация
             name: (formData.get('name') || '').trim(),
-            position: document.getElementById('profilePosition').value || '',
+            position: document.getElementById('profilePositionValue')?.value || '',
 
             // Идентификация (reddyId не редактируется)
             crmLogin: (formData.get('crmLogin') || '').trim(),
@@ -453,7 +484,7 @@ const settingsApp = {
     confirmLogout() {
         this.closeModal('logoutModal');
 
-        localStorage.removeItem('cloud-auth');
+        sessionStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
         localStorage.removeItem('partners-data');
         localStorage.removeItem('traffic-analytics-temp');
@@ -472,7 +503,7 @@ const settingsApp = {
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key.includes('cache') || key === 'partners' || key === 'templates' || key === 'methods') {
+            if (key.includes('cache') || key === 'partners' || key === 'templates' || key === 'methods' || key.startsWith('storage-initialized-')) {
                 keysToRemove.push(key);
             }
         }
@@ -486,39 +517,20 @@ const settingsApp = {
     // ============ Modals ============
 
     openModal(modalId) {
-        document.getElementById(modalId).classList.add('active');
+        const el = document.getElementById(modalId);
+        if (el) el.classList.add('active');
     },
 
     closeModal(modalId) {
-        document.getElementById(modalId).classList.remove('active');
+        const el = document.getElementById(modalId);
+        if (el) el.classList.remove('active');
     },
 
     // ============ Helpers ============
 
-    getInitials(name) {
-        if (!name) return '?';
-        const parts = name.trim().split(' ');
-        if (parts.length >= 2) {
-            return (parts[0][0] + parts[1][0]).toUpperCase();
-        }
-        return name.substring(0, 2).toUpperCase();
-    },
-
-    formatDateTime(date) {
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return day + '.' + month + '.' + year + ' ' + hours + ':' + minutes;
-    },
-
-    formatBytes(bytes) {
-        if (bytes === 0) return '0 Б';
-        if (bytes < 1024) return bytes + ' Б';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
-    },
+    getInitials(name) { return Utils.getInitials(name); },
+    formatDateTime(date) { return Utils.formatDateTime(date); },
+    formatBytes(bytes) { return Utils.formatBytes(bytes); },
 
     // ============ Team Settings ============
 

@@ -8,20 +8,6 @@ const PartnersAvatars = {
         const file = event.target.files[0];
         if (!file) return;
 
-        const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-
-        if (!ALLOWED_TYPES.includes(file.type)) {
-            Toast.error('Допустимые форматы: JPEG, PNG, WebP, GIF');
-            event.target.value = '';
-            return;
-        }
-        if (file.size > MAX_SIZE) {
-            Toast.error('Максимальный размер файла: 10 МБ');
-            event.target.value = '';
-            return;
-        }
-
         const reader = new FileReader();
         reader.onload = (e) => {
             PartnersState.cropData.originalSrc = e.target.result;
@@ -51,12 +37,7 @@ const PartnersAvatars = {
         document.getElementById('formAvatarInput').value = '';
     },
 
-    _docHandlers: null,
-
     setupCropHandlers() {
-        // Remove previous handlers to prevent memory leak on repeated calls
-        this.removeCropHandlers();
-
         const cropPreview = document.getElementById('cropPreview');
         if (!cropPreview) return;
 
@@ -73,28 +54,27 @@ const PartnersAvatars = {
             PartnersState.cropData.startY = e.clientY - PartnersState.cropData.offsetY;
         });
 
-        this._docHandlers = {
-            mousemove: (e) => {
-                if (!PartnersState.cropData.isDragging) return;
-                PartnersState.cropData.offsetX = e.clientX - PartnersState.cropData.startX;
-                PartnersState.cropData.offsetY = e.clientY - PartnersState.cropData.startY;
-                PartnersAvatars.updateCropTransform();
-            },
-            mouseup: () => {
-                PartnersState.cropData.isDragging = false;
-            }
+        PartnersAvatars._mouseMoveHandler = (e) => {
+            if (!PartnersState.cropData.isDragging) return;
+            PartnersState.cropData.offsetX = e.clientX - PartnersState.cropData.startX;
+            PartnersState.cropData.offsetY = e.clientY - PartnersState.cropData.startY;
+            PartnersAvatars.updateCropTransform();
+        };
+        PartnersAvatars._mouseUpHandler = () => {
+            PartnersState.cropData.isDragging = false;
         };
 
-        document.addEventListener('mousemove', this._docHandlers.mousemove);
-        document.addEventListener('mouseup', this._docHandlers.mouseup);
-    },
+        document.addEventListener('mousemove', PartnersAvatars._mouseMoveHandler);
+        document.addEventListener('mouseup', PartnersAvatars._mouseUpHandler);
 
-    removeCropHandlers() {
-        if (this._docHandlers) {
-            document.removeEventListener('mousemove', this._docHandlers.mousemove);
-            document.removeEventListener('mouseup', this._docHandlers.mouseup);
-            this._docHandlers = null;
-        }
+        PageLifecycle.addCleanup(() => {
+            if (PartnersAvatars._mouseMoveHandler) {
+                document.removeEventListener('mousemove', PartnersAvatars._mouseMoveHandler);
+                document.removeEventListener('mouseup', PartnersAvatars._mouseUpHandler);
+                PartnersAvatars._mouseMoveHandler = null;
+                PartnersAvatars._mouseUpHandler = null;
+            }
+        });
     },
 
     updateCropTransform() {

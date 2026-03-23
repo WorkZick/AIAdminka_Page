@@ -3,66 +3,22 @@
 const OnboardingReview = (() => {
     'use strict';
 
-    let _reviewChecklistField = null;
+    let _reviewChecklistFields = [];
 
-    function render(request, stepNumber, executorCompleted) {
+    function render(request, stepNumber) {
         const step = OnboardingConfig.getStep(stepNumber);
         if (!step) return;
 
-        _reviewChecklistField = null;
+        _reviewChecklistFields = [];
 
         // Sidebar: vertical steps + info
         OnboardingSteps.renderVertical('reviewSteps', stepNumber);
         OnboardingSteps.renderInfo('reviewInfo', request);
 
         // Main: header + current step data + actions
-        if (executorCompleted) {
-            _renderExecutorCompleted(request);
-        } else {
-            _renderHeader(request, step);
-            _renderCurrentStep(step, request.stageData[stepNumber] || {}, request);
-            _updateActions(request);
-        }
-    }
-
-    function _renderExecutorCompleted(request) {
-        const header = document.getElementById('reviewHeader');
-        if (header) {
-            header.innerHTML = `<div class="review-step-name">Партнёр заведён</div>
-                <span class="status-badge status--completed">Успешно</span>`;
-        }
-
-        const container = document.getElementById('reviewFields');
-        if (container) {
-            const contactName = (request.stageData && request.stageData[1] || {}).contact_name || '';
-            const sourceLabel = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_SOURCES, request.leadSource);
-            const geoValue = (request.stageData && request.stageData[1] || {}).geo_country || '';
-            const geoLabel = OnboardingConfig.getOptionLabel(OnboardingConfig.GEO_COUNTRIES, geoValue);
-            const methodValue = (request.stageData && request.stageData[2] || {}).method_name || '';
-            const methodLabel = OnboardingConfig.getOptionLabel(OnboardingConfig.METHOD_NAMES, methodValue);
-
-            container.innerHTML = `<div class="executor-completed-banner">
-                <img src="../shared/icons/check.svg" width="48" height="48" alt="" class="completed-icon">
-                <h3 class="completed-title">Партнёр успешно заведён!</h3>
-                <p class="completed-subtitle">${Utils.escapeHtml(contactName || sourceLabel || request.id)}</p>
-                <p class="completed-note">Карточка передана на финализацию</p>
-            </div>
-            <div class="review-fields-list">
-                ${contactName ? _field('Контакт', Utils.escapeHtml(contactName)) : ''}
-                ${geoLabel ? _field('Страна', Utils.escapeHtml(geoLabel)) : ''}
-                ${methodLabel ? _field('Метод', Utils.escapeHtml(methodLabel)) : ''}
-                ${_field('Источник', Utils.escapeHtml(sourceLabel || '—'))}
-                ${_field('ID заявки', Utils.escapeHtml(request.id))}
-            </div>`;
-        }
-
-        // Hide all action buttons
-        ['btnReject', 'btnApprove', 'reviewCommentRow', 'btnWithdraw', 'btnReviewAdvance', 'btnReassign', 'btnRollback'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.classList.add('hidden');
-        });
-        const reviewActions = document.getElementById('reviewActions');
-        if (reviewActions) reviewActions.classList.remove('hidden');
+        _renderHeader(request, step);
+        _renderCurrentStep(step, request.stageData[stepNumber] || {}, request);
+        _updateActions(request);
     }
 
     function _renderHeader(request, step) {
@@ -70,11 +26,7 @@ const OnboardingReview = (() => {
         if (!header) return;
 
         let badgeLabel, badgeClass;
-        const stepData = (request.stageData && request.stageData[step.number]) || {};
-        if (step.confirmAfterApprove && stepData._approved && step.number === request.currentStep) {
-            badgeLabel = 'Одобрено';
-            badgeClass = 'status--completed';
-        } else if (step.number < request.currentStep) {
+        if (step.number < request.currentStep) {
             badgeLabel = 'Пройден';
             badgeClass = 'status--completed';
         } else if (request.status === 'completed') {
@@ -93,142 +45,47 @@ const OnboardingReview = (() => {
         const container = document.getElementById('reviewFields');
         if (!container) return;
 
-        const myRole = OnboardingState.get('userRole');
-        const sysRole = OnboardingState.get('systemRole');
-        const isAdminLike = myRole === 'admin' || myRole === 'leader';
+        const { sysRole, isAdmin } = OnboardingUtils.getRoles();
         const isOnReview = request.status === 'on_review';
-        const isReviewer = step && (OnboardingRoles.isReviewerForStep(sysRole, step.number) || isAdminLike);
+        const isReviewer = step && (OnboardingRoles.isReviewerForStep(sysRole, step.number) || isAdmin);
         const isTerminal = request.status === 'completed' || request.status === 'cancelled';
         const canReview = !isTerminal && isOnReview && isReviewer && step.number === request.currentStep;
 
-        // confirmAfterApprove: executor/admin can interact with confirm-phase checklist
-        const stageData = (request.stageData && request.stageData[step.number]) || {};
-        const isExecutor = OnboardingRoles.isExecutorForStep(sysRole, step.number);
-        const canConfirm = !isTerminal && step.confirmAfterApprove && stageData._approved &&
-            step.number === request.currentStep && (isExecutor || isAdminLike);
+        // Work status current step: reviewer hasn't received submission yet — show empty fields
+        const isWorkStatus = OnboardingConfig.isWorkStatus(request.status);
+        const isCurrentNotSubmitted = isWorkStatus && step.number === request.currentStep
+            && isReviewer && !OnboardingRoles.isExecutorForStep(sysRole, step.number);
+        if (isCurrentNotSubmitted) data = {};
 
-        container.innerHTML = `<div class="review-fields-list">${_renderReadonly(step, data, request, canReview, canConfirm)}</div>`;
+        const bannerHtml = request.lastComment ? `<div class="banner-warning">
+                <img src="../shared/icons/alert-triangle.svg" width="16" height="16" alt="">
+                <div class="banner-text">
+                    <strong>${request.status === 'cancelled' ? 'Причина отмены:' : 'Замечание:'}</strong> ${Utils.escapeHtml(request.lastComment)}
+                </div>
+            </div>` : '';
+        container.innerHTML = `${bannerHtml}<div class="review-fields-list">${_renderReadonly(step, data, request, canReview)}</div>`;
     }
 
-    function _renderReadonly(step, data, request, canReview, canConfirm) {
+    function _renderReadonly(step, data, request, canReview) {
         return step.fields.map(field => {
-            // Hide showWhen fields that have no data (e.g. login/password not yet filled)
-            if (field.showWhen && field.showWhen.phase === 'fill') {
-                const value = data[field.id];
-                if (value === undefined || value === '' || value === null) return '';
-            }
-
             // visibleWhen: hide if controlling field doesn't match
-            if (field.visibleWhen) {
-                const depValue = data[field.visibleWhen.field];
-                if (depValue !== field.visibleWhen.value) return '';
-            }
-
-            let value = data[field.id];
-            // Autofill from another step if value is empty
-            if ((value === undefined || value === '' || value === null) && field.autofill) {
-                const sourceData = (request.stageData[field.autofill.step]) || {};
-                value = sourceData[field.autofill.field] || '';
-            }
-            const empty = value === undefined || value === '' || value === null;
-
-            switch (field.type) {
-                case 'select':
-                    return _field(field.label, empty ? '—' : Utils.escapeHtml(OnboardingConfig.getOptionLabel(field.options || [], value) || value));
-
-                case 'file':
-                    if (empty) return _field(field.label, '—');
-                    // Always escape URL — even data: URLs must be escaped in HTML attributes
-                    const safeUrl = Utils.escapeHtml(String(value));
-                    return `<div class="readonly-field">
-                        <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
-                        <span class="readonly-value"><img class="readonly-photo" src="${safeUrl}" alt="" data-action="onb-openPhoto"></span>
-                    </div>`;
-
-                case 'list':
-                    if (!Array.isArray(value) || !value.length) return _field(field.label, '—');
-                    return _field(field.label, value.map(v => Utils.escapeHtml(v)).join(', '));
-
-                case 'checklist':
-                    // Interactive checklist for reviewer
-                    if (canReview) {
-                        _reviewChecklistField = field.id;
-                        return _renderReviewChecklist(field, value);
-                    }
-                    // Interactive checklist for executor in confirm phase
-                    if (canConfirm && field.showWhen && field.showWhen.phase === 'confirm') {
-                        _reviewChecklistField = field.id;
-                        return _renderReviewChecklist(field, value);
-                    }
-                    // Readonly checklist
-                    if (typeof value !== 'object' || value === null) {
-                        const emptyItems = (field.items || []).map(item =>
-                            `<span class="checklist-readonly-item">&#10007; ${Utils.escapeHtml(item.label)}</span>`
-                        ).join('');
-                        return `<div class="readonly-field">
-                            <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
-                            <div class="readonly-checklist">${emptyItems}</div>
-                        </div>`;
-                    }
-                    const checkComments = (typeof value.comments === 'object') ? value.comments : {};
-                    const items = (field.items || []).map((item, idx) => {
-                        const commentText = checkComments[idx] ? checkComments[idx].trim() : '';
-                        return `<span class="checklist-readonly-item ${value[idx] ? 'checked' : ''}">${value[idx] ? '&#10003;' : '&#10007;'} ${Utils.escapeHtml(item.label)}</span>${commentText ? `<span class="checklist-readonly-comment">${Utils.escapeHtml(commentText)}</span>` : ''}`;
-                    }).join('');
-                    return `<div class="readonly-field">
-                        <span class="readonly-label">${Utils.escapeHtml(field.label)}</span>
-                        <div class="readonly-checklist">${items}</div>
-                    </div>`;
-
-                default:
-                    return _field(field.label, empty ? '—' : Utils.escapeHtml(String(value)));
-            }
+            if (!FieldRenderer.isFieldVisible(field, data)) return '';
+            // Resolve value with autofill
+            const value = FieldRenderer.resolveValue(field.id, data, field, request);
+            // Render readonly (with interactive checklist for reviewer)
+            return FieldRenderer.renderReadonly(field, value, {
+                canReview,
+                reviewChecklistFields: _reviewChecklistFields,
+                allowDataUrls: false
+            });
         }).join('');
     }
 
-    function _renderReviewChecklist(field, value) {
-        const checks = (typeof value === 'object' && value !== null) ? value : {};
-        const comments = (checks && typeof checks.comments === 'object') ? checks.comments : {};
-
-        return `<div class="form-group" data-field="${field.id}">
-            <label class="form-label">${Utils.escapeHtml(field.label)}</label>
-            <div class="checklist-field" id="checklist_${field.id}">
-                ${(field.items || []).map((item, idx) => {
-                    const hasComment = comments[idx] && comments[idx].trim();
-                    return `<div class="checklist-item-wrap">
-                        <label class="checklist-item">
-                            <input type="checkbox" name="${field.id}_${idx}" ${checks[idx] ? 'checked' : ''}>
-                            <span>${Utils.escapeHtml(item.label)}</span>
-                            <button type="button" class="checklist-comment-toggle ${hasComment ? 'has-comment' : ''}"
-                                data-action="onb-toggleChecklistComment" data-value="${field.id}:${idx}"
-                                title="Комментарий">
-                                <img src="../shared/icons/edit.svg" width="14" height="14" alt="">
-                            </button>
-                        </label>
-                        <div class="checklist-comment ${hasComment ? '' : 'hidden'}" id="checkComment_${field.id}_${idx}">
-                            <textarea class="form-textarea checklist-comment-input" name="${field.id}_comment_${idx}"
-                                rows="2" placeholder="Опишите ошибку...">${Utils.escapeHtml(String(comments[idx] || ''))}</textarea>
-                        </div>
-                    </div>`;
-                }).join('')}
-            </div>
-        </div>`;
-    }
-
-    function _field(label, value) {
-        return `<div class="readonly-field">
-            <span class="readonly-label">${Utils.escapeHtml(label)}</span>
-            <span class="readonly-value">${value}</span>
-        </div>`;
-    }
-
     function _updateActions(request) {
-        const myRole = OnboardingState.get('userRole');
-        const sysRole = OnboardingState.get('systemRole');
+        const { sysRole, isAdmin } = OnboardingUtils.getRoles();
         const myEmail = OnboardingState.get('userEmail');
         const step = OnboardingConfig.getStep(request.currentStep);
-        const isAdminLike = myRole === 'admin' || myRole === 'leader';
-        const isReviewer = step && (OnboardingRoles.isReviewerForStep(sysRole, step.number) || isAdminLike);
+        const isReviewer = step && (OnboardingRoles.isReviewerForStep(sysRole, step.number) || isAdmin);
         const isExecutor = step && OnboardingRoles.isExecutorForStep(sysRole, step.number);
         const isTerminal = request.status === 'completed' || request.status === 'cancelled';
         const isOnReview = request.status === 'on_review';
@@ -237,7 +94,7 @@ const OnboardingReview = (() => {
         const effectiveExecutor = OnboardingConfig.getStepEffectiveExecutor(request.currentStep, request.stageData);
         const isDynamicHandoff = step && step.dynamicExecutor && effectiveExecutor !== step.executor && OnboardingRoles.isExecutorForStep(sysRole, step.number);
 
-        const canReview = !isTerminal && isOnReview && isReviewer;
+        const canReview = !isTerminal && isOnReview && isReviewer && step.number === request.currentStep;
         const canWithdraw = !isTerminal && isOnReview && (
             (isExecutor && (request.assigneeEmail === myEmail || request.createdBy === myEmail)) ||
             isDynamicHandoff
@@ -250,26 +107,20 @@ const OnboardingReview = (() => {
         if (btnReject) btnReject.classList.toggle('hidden', !canReview);
         if (btnApprove) btnApprove.classList.toggle('hidden', !canReview);
         // Hide general comment when step has interactive checklist
-        const showGeneralComment = canReview && !_reviewChecklistField;
+        const showGeneralComment = canReview && !_reviewChecklistFields.length;
         if (commentRow) commentRow.classList.toggle('hidden', !showGeneralComment);
 
         // Reviewer buttons (left): Передать, Откатить
-        const canManage = !isTerminal && (isAdminLike || (isReviewer && isOnReview));
+        const canManage = !isTerminal && (isAdmin || (isReviewer && isOnReview));
         const btnReassign = document.getElementById('btnReassign');
         const btnRollback = document.getElementById('btnRollback');
         if (btnReassign) btnReassign.classList.toggle('hidden', !canManage);
         if (btnRollback) btnRollback.classList.toggle('hidden', !canManage);
 
-        // Executor button: Отозвать
+        // Executor button: Вернуть
         const btnWithdraw = document.getElementById('btnWithdraw');
         if (btnWithdraw) btnWithdraw.classList.toggle('hidden', !canWithdraw);
 
-        // Executor button: Далее (after confirmAfterApprove)
-        const stageData = (request.stageData && request.stageData[request.currentStep]) || {};
-        const canAdvance = !isTerminal && step && step.confirmAfterApprove && stageData._approved &&
-            (isExecutor || isAdminLike);
-        const btnAdvance = document.getElementById('btnReviewAdvance');
-        if (btnAdvance) btnAdvance.classList.toggle('hidden', !canAdvance);
 
         // Actions bar: always visible (История + Назад are always needed)
         const reviewActions = document.getElementById('reviewActions');
@@ -278,26 +129,29 @@ const OnboardingReview = (() => {
         }
     }
 
-    function collectReviewChecklist() {
-        if (!_reviewChecklistField) return null;
-        const checkEl = document.getElementById(`checklist_${_reviewChecklistField}`);
-        if (!checkEl) return null;
-
-        const checks = {};
-        const comments = {};
-        checkEl.querySelectorAll('input[type="checkbox"]').forEach((cb, idx) => {
-            checks[idx] = cb.checked;
-        });
-        checkEl.querySelectorAll('.checklist-comment-input').forEach((ta, idx) => {
-            if (ta.value.trim()) comments[idx] = ta.value.trim();
-        });
-        if (Object.keys(comments).length) checks.comments = comments;
-        return { fieldId: _reviewChecklistField, data: checks };
+    function collectReviewChecklists() {
+        if (!_reviewChecklistFields.length) return null;
+        const results = [];
+        for (const fieldId of _reviewChecklistFields) {
+            const checkEl = document.getElementById(`checklist_${fieldId}`);
+            if (!checkEl) continue;
+            const checks = {};
+            const comments = {};
+            checkEl.querySelectorAll('input[type="checkbox"]').forEach((cb, idx) => {
+                checks[idx] = cb.checked;
+            });
+            checkEl.querySelectorAll('.checklist-comment-input').forEach((ta, idx) => {
+                if (ta.value.trim()) comments[idx] = ta.value.trim();
+            });
+            if (Object.keys(comments).length) checks.comments = comments;
+            results.push({ fieldId, data: checks });
+        }
+        return results.length ? results : null;
     }
 
     function hasReviewChecklist() {
-        return !!_reviewChecklistField;
+        return _reviewChecklistFields.length > 0;
     }
 
-    return { render, collectReviewChecklist, hasReviewChecklist };
+    return { render, collectReviewChecklists, hasReviewChecklist };
 })();

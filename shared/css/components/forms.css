@@ -33,7 +33,7 @@
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     color: var(--white);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     box-sizing: border-box;
 }
 
@@ -62,7 +62,7 @@
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     color: var(--white);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     box-sizing: border-box;
     resize: vertical;
     min-height: 100px;
@@ -88,7 +88,7 @@
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     color: var(--white);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     box-sizing: border-box;
     cursor: pointer;
     appearance: none;
@@ -130,7 +130,7 @@
     border: 1.5px solid var(--glass-border);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     position: relative;
 }
 
@@ -179,7 +179,7 @@
     border: 1.5px solid var(--glass-border);
     border-radius: 50%;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     position: relative;
 }
 
@@ -305,7 +305,7 @@ input[type="checkbox"] {
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     color: var(--white);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .search-input::placeholder {

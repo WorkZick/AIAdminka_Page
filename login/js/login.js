@@ -2,37 +2,25 @@
  * Login Module - AIAdminka Authorization
  * Использует стандартный OAuth для логина
  * Поддерживает систему ролей и регистрацию в команды
+ *
+ * Два режима отображения:
+ * - Simple card (single column): login form + initial loading
+ * - Wide card (two columns): all logged-in states
  */
 
 const loginApp = {
-    CLIENT_ID: '552590459404-muqkuq0qa461763qfdt3ec62mfua49c6.apps.googleusercontent.com',
-    SCOPES: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-
-    get REDIRECT_URI() {
-        const host = window.location.hostname;
-        if (host === '127.0.0.1' || host === 'localhost') {
-            return 'http://127.0.0.1:5500/SimpleAIAdminka/login/callback.html';
-        }
-        return 'https://workzick.github.io/AIAdminka_Page/login/callback.html';
-    },
-
     get SCRIPT_URL() {
         return EnvConfig.getScriptUrl();
     },
 
+    MAX_RETRIES: 2,
+
     currentUser: null,
     currentRole: null,
     storageReady: false,
+    _userInfoPopulated: false,
     _clickHandler: null,
     _submitHandler: null,
-
-    // ============ SECURITY ============
-
-    _generateState() {
-        const array = new Uint8Array(32);
-        crypto.getRandomValues(array);
-        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-    },
 
     // ============ INITIALIZATION ============
 
@@ -102,12 +90,14 @@ const loginApp = {
             if (cb) cb.removeEventListener('change', this._leaderToggleHandler);
             this._leaderToggleHandler = null;
         }
+        this._hideableElements = null;
+        this._userInfoPopulated = false;
     },
 
     // ============ AUTH CHECK ============
 
     _checkExistingAuth() {
-        const authData = localStorage.getItem('cloud-auth');
+        const authData = sessionStorage.getItem('cloud-auth');
         if (!authData) {
             this._showLoginForm();
             return false;
@@ -116,8 +106,10 @@ const loginApp = {
         try {
             const auth = JSON.parse(authData);
 
-            if (Date.now() - auth.timestamp > 3500000) {
-                localStorage.removeItem('cloud-auth');
+            // TokenManager недоступен на login page (auth-guard.js не подключён)
+            const TOKEN_LIFETIME = (typeof TokenManager !== 'undefined') ? TokenManager.TOKEN_LIFETIME : 3500000;
+            if (Date.now() - auth.timestamp > TOKEN_LIFETIME) {
+                sessionStorage.removeItem('cloud-auth');
                 this._showLoginForm();
                 return false;
             }
@@ -129,7 +121,7 @@ const loginApp = {
                 accessToken: auth.accessToken
             };
         } catch {
-            localStorage.removeItem('cloud-auth');
+            sessionStorage.removeItem('cloud-auth');
             this._showLoginForm();
             return false;
         }
@@ -140,14 +132,17 @@ const loginApp = {
     },
 
     _checkAuthCallback() {
-        const authData = localStorage.getItem('cloud-auth');
+        // currentUser уже проверен в _checkExistingAuth, повторный JSON.parse не нужен
+        if (this.currentUser) return;
+
+        const authData = sessionStorage.getItem('cloud-auth');
         if (!authData) return;
 
         try {
             const auth = JSON.parse(authData);
             const isRecent = Date.now() - auth.timestamp < 10000;
 
-            if (isRecent && !this.currentUser) {
+            if (isRecent) {
                 this.currentUser = {
                     email: auth.email,
                     name: auth.name,
@@ -158,21 +153,22 @@ const loginApp = {
                 this._checkAccess();
             }
         } catch {
-            localStorage.removeItem('cloud-auth');
+            sessionStorage.removeItem('cloud-auth');
         }
     },
 
     // ============ OAUTH ============
 
     _login() {
-        const state = this._generateState();
-        sessionStorage.setItem('oauth_state', JSON.stringify({ value: state, created: Date.now() }));
+        const oauth = EnvConfig.OAUTH;
+        const state = oauth.generateState();
+        sessionStorage.setItem('oauth_state', state);
 
         const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
-            '?client_id=' + encodeURIComponent(this.CLIENT_ID) +
-            '&redirect_uri=' + encodeURIComponent(this.REDIRECT_URI) +
+            '?client_id=' + encodeURIComponent(oauth.CLIENT_ID) +
+            '&redirect_uri=' + encodeURIComponent(oauth.getRedirectUri()) +
             '&response_type=token' +
-            '&scope=' + encodeURIComponent(this.SCOPES) +
+            '&scope=' + encodeURIComponent(oauth.SCOPES) +
             '&state=' + encodeURIComponent(state) +
             '&prompt=consent';
 
@@ -181,7 +177,7 @@ const loginApp = {
 
     _logout() {
         this.destroy();
-        localStorage.removeItem('cloud-auth');
+        sessionStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
         localStorage.removeItem('partners-data');
         localStorage.removeItem('traffic-analytics-temp');
@@ -194,7 +190,7 @@ const loginApp = {
 
     // ============ API CALLS ============
 
-    async _secureApiCall(action, params = {}) {
+    async _secureApiCall(action, params = {}, retryCount = 0) {
         if (!this.currentUser?.accessToken) {
             return { error: 'No access token' };
         }
@@ -210,14 +206,34 @@ const loginApp = {
                 }
             }
 
-            const response = await fetch(url.toString(), { method: 'GET' });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            return await response.json();
+            const result = await response.json();
+
+            // Rate limit retry с exponential backoff
+            if (result.error && result.error.includes('Rate limit') && retryCount < this.MAX_RETRIES) {
+                const delay = 3000 * Math.pow(2, retryCount);
+                console.warn(`Login: Rate limit, retry ${retryCount + 1}/${this.MAX_RETRIES} after ${delay}ms`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return this._secureApiCall(action, params, retryCount + 1);
+            }
+
+            return result;
         } catch (error) {
+            if (error.name === 'AbortError') {
+                throw new Error('Сервер не отвечает. Попробуйте позже.');
+            }
             if (error.name === 'TypeError' && error.message.includes('fetch')) {
                 throw new Error('Ошибка сети. Проверьте подключение к интернету.');
             }
@@ -233,7 +249,7 @@ const loginApp = {
 
             if (result.error) {
                 if (result.error.includes('access token') || result.error.includes('Access denied') || result.error.includes('Invalid')) {
-                    localStorage.removeItem('cloud-auth');
+                    sessionStorage.removeItem('cloud-auth');
                     localStorage.removeItem('roleGuard');
                     sessionStorage.removeItem('auth-redirect');
                     this.currentUser = null;
@@ -256,11 +272,13 @@ const loginApp = {
                 } else if (result.hasAccess === true) {
                     status = 'approved';
                 } else if (!result.email && !result.role) {
-                    status = 'new';
+                    // Проверяем sessionStorage — возможно пользователь только что зарегистрировался,
+                    // но бэкенд ещё не возвращает pending статус из checkAccess
+                    status = sessionStorage.getItem('registration-pending') ? 'pending' : 'new';
                 } else {
                     switch (result.status) {
                         case 'active':
-                            if (result.role === 'admin' || result.teamId) {
+                            if (result.role === 'admin' || result.isAdmin === true || result.teamId) {
                                 status = 'approved';
                             } else {
                                 status = 'approved_no_team';
@@ -286,6 +304,11 @@ const loginApp = {
             }
 
             this.currentRole = result.role || null;
+
+            // Очищаем флаг pending при одобрении
+            if (status !== 'new' && status !== 'pending') {
+                sessionStorage.removeItem('registration-pending');
+            }
 
             if (result.role === 'guest' && status !== 'approved_no_team') {
                 window.location.href = 'waiting-invite.html';
@@ -341,8 +364,8 @@ const loginApp = {
         const teamDesc = document.getElementById('regTeamDesc');
         if (teamDesc) teamDesc.value = '';
 
-        this._hideAll();
-        this._showUserInfo();
+        this._switchToWideCard();
+        this._hideAllRight();
         document.getElementById('loginRegistration').classList.remove('hidden');
         this._updateStatus('Регистрация', '');
     },
@@ -355,8 +378,8 @@ const loginApp = {
         const formData = new FormData(form);
         const reddyId = formData.get('reddyId').trim();
 
-        if (!reddyId) {
-            Toast.warning('Введите Reddy ID');
+        if (!reddyId || !/^\d{4,10}$/.test(reddyId)) {
+            Toast.warning('Введите корректный Reddy ID (4-10 цифр)');
             return;
         }
 
@@ -388,8 +411,19 @@ const loginApp = {
 
             const result = await this._secureApiCall('register', params);
 
-            if (result.error) throw new Error(result.error);
-            if (result.success) this._showAccessPending();
+            if (result.error) {
+                // Запрос уже существует — показываем экран ожидания
+                if (result.status === 'pending') {
+                    sessionStorage.setItem('registration-pending', 'true');
+                    this._showAccessPending();
+                    return;
+                }
+                throw new Error(result.error);
+            }
+            if (result.success) {
+                sessionStorage.setItem('registration-pending', 'true');
+                this._showAccessPending();
+            }
         } catch (error) {
             btn.disabled = false;
             btn.textContent = 'Отправить запрос';
@@ -401,8 +435,8 @@ const loginApp = {
 
     _showChooseRole() {
         sessionStorage.removeItem('auth-redirect');
-        this._hideAll();
-        this._showUserInfo();
+        this._switchToWideCard();
+        this._hideAllRight();
         document.getElementById('loginChooseRole').classList.remove('hidden');
         this._updateStatus('Выберите роль', 'success');
     },
@@ -420,19 +454,16 @@ const loginApp = {
     },
 
     _waitForInvite() {
-        this._hideAll();
-        this._showUserInfo();
+        this._switchToWideCard();
+        this._hideAllRight();
 
         const pendingEl = document.getElementById('loginAccessPending');
         if (pendingEl) {
             pendingEl.classList.remove('hidden');
-            const titleEl = pendingEl.querySelector('.access-title');
+            const titleEl = pendingEl.querySelector('.waiting-title');
             if (titleEl) titleEl.textContent = 'Ожидайте приглашение';
-            const descEl = pendingEl.querySelector('.access-description');
-            if (descEl) {
-                descEl.textContent = '';
-                descEl.append('Ваш аккаунт активен.', document.createElement('br'), 'Руководитель пригласит вас в команду по Reddy ID.');
-            }
+            const descEl = pendingEl.querySelector('.waiting-description');
+            if (descEl) descEl.innerHTML = 'Ваш аккаунт активен.<br>Руководитель пригласит вас в команду по Reddy ID.';
         }
 
         this._updateStatus('Ожидание приглашения', 'pending');
@@ -452,6 +483,8 @@ const loginApp = {
             const result = await this._secureApiCall('checkStorage');
 
             if (result.error) {
+                // Бэкенд без checkStorage endpoint возвращает "Unknown action" —
+                // это значит хранилище не нуждается в проверке, считаем готовым
                 if (result.error.includes('Unknown action')) {
                     this.storageReady = true;
                     this._showSuccess();
@@ -509,32 +542,62 @@ const loginApp = {
 
     // ============ UI STATES ============
 
+    /**
+     * Switch to the simple single-column card (login form)
+     */
     _showLoginForm() {
-        this._hideAll();
+        // Show simple card, hide wide card
+        document.getElementById('loginCardSimple').classList.remove('hidden');
+        document.getElementById('loginFooterSimple').classList.remove('hidden');
+        document.getElementById('loginCardWide').classList.add('hidden');
+
+        // Show login form, hide loading
         document.getElementById('loginContent').classList.remove('hidden');
-        this._updateStatus('Требуется авторизация', '');
+        document.getElementById('loginLoadingSimple').classList.add('hidden');
+        document.getElementById('loginStatus').classList.add('hidden');
     },
 
+    /**
+     * Switch to the two-column wide card and populate user info
+     */
+    _switchToWideCard() {
+        document.getElementById('loginCardSimple').classList.add('hidden');
+        document.getElementById('loginFooterSimple').classList.add('hidden');
+        document.getElementById('loginCardWide').classList.remove('hidden');
+        this._populateUserInfo();
+    },
+
+    /**
+     * Show loading state (auto-detects which card to use)
+     */
     _showLoading(text) {
-        this._hideAll();
-        document.getElementById('loginLoading').classList.remove('hidden');
-        document.querySelector('#loginLoading p').textContent = text || 'Загрузка...';
+        if (this.currentUser) {
+            // Wide card mode
+            this._switchToWideCard();
+            this._hideAllRight();
+            const loadingEl = document.getElementById('loginLoading');
+            loadingEl.classList.remove('hidden');
+            loadingEl.querySelector('p').textContent = text || 'Загрузка...';
+        } else {
+            // Simple card mode (initial auth check)
+            document.getElementById('loginContent').classList.add('hidden');
+            const loadingEl = document.getElementById('loginLoadingSimple');
+            loadingEl.classList.remove('hidden');
+            loadingEl.querySelector('p').textContent = text || 'Загрузка...';
+        }
     },
 
     _showAccessPending() {
         sessionStorage.removeItem('auth-redirect');
-        this._hideAll();
-        this._showUserInfo();
+        this._switchToWideCard();
+        this._hideAllRight();
 
         const pendingEl = document.getElementById('loginAccessPending');
         if (pendingEl) {
-            const titleEl = pendingEl.querySelector('.access-title');
+            const titleEl = pendingEl.querySelector('.waiting-title');
             if (titleEl) titleEl.textContent = 'Запрос отправлен';
-            const descEl = pendingEl.querySelector('.access-description');
-            if (descEl) {
-                descEl.textContent = '';
-                descEl.append('Ваш запрос отправлен администратору.', document.createElement('br'), 'Ожидайте одобрения.');
-            }
+            const descEl = pendingEl.querySelector('.waiting-description');
+            if (descEl) descEl.innerHTML = 'Ваш запрос отправлен администратору.<br>Ожидайте одобрения.';
             pendingEl.classList.remove('hidden');
         }
 
@@ -543,30 +606,30 @@ const loginApp = {
 
     _showAccessRejected() {
         sessionStorage.removeItem('auth-redirect');
-        this._hideAll();
-        this._showUserInfo();
+        this._switchToWideCard();
+        this._hideAllRight();
         document.getElementById('loginAccessRejected').classList.remove('hidden');
         this._updateStatus('Запрос отклонён', 'error');
     },
 
     _showAccessBlocked() {
         sessionStorage.removeItem('auth-redirect');
-        this._hideAll();
-        this._showUserInfo();
+        this._switchToWideCard();
+        this._hideAllRight();
         document.getElementById('loginAccessBlocked').classList.remove('hidden');
         this._updateStatus('Доступ заблокирован', 'error');
     },
 
     _showInitStorage() {
-        this._hideAll();
-        this._showUserInfo();
+        this._switchToWideCard();
+        this._hideAllRight();
         document.getElementById('loginActions').classList.remove('hidden');
         this._updateStatus('Хранилище не найдено', '');
     },
 
     _showSuccess() {
-        this._hideAll();
-        this._showUserInfo();
+        this._switchToWideCard();
+        this._hideAllRight();
         document.getElementById('loginContinue').classList.remove('hidden');
         this._updateStatus('Авторизация успешна', 'success');
 
@@ -586,16 +649,25 @@ const loginApp = {
     },
 
     _showError(message) {
-        this._hideAll();
-        document.getElementById('loginError').classList.remove('hidden');
-        document.getElementById('errorText').textContent = message;
-        this._updateStatus('Ошибка', 'error');
+        if (this.currentUser) {
+            this._switchToWideCard();
+            this._hideAllRight();
+            document.getElementById('loginError').classList.remove('hidden');
+            document.getElementById('errorText').textContent = message;
+            this._updateStatus('Ошибка', 'error');
+        } else {
+            // Fallback for errors before login (shouldn't normally happen)
+            this._showLoginForm();
+        }
     },
 
-    _showUserInfo() {
-        if (!this.currentUser) return;
+    /**
+     * Populate user info in the left panel of the wide card
+     */
+    _populateUserInfo() {
+        if (!this.currentUser || this._userInfoPopulated) return;
+        this._userInfoPopulated = true;
 
-        const userEl = document.getElementById('loginUser');
         const avatarEl = document.getElementById('userAvatar');
         const nameEl = document.getElementById('userName');
         const emailEl = document.getElementById('userEmail');
@@ -603,7 +675,7 @@ const loginApp = {
         if (this.currentUser.picture) {
             avatarEl.innerHTML = '';
             const pictureUrl = this.currentUser.picture;
-            if (pictureUrl && pictureUrl.startsWith('https://lh')) {
+            if (Utils.isGoogleAvatar(pictureUrl)) {
                 const img = document.createElement('img');
                 img.src = pictureUrl;
                 img.alt = '';
@@ -618,29 +690,31 @@ const loginApp = {
 
         nameEl.textContent = this.currentUser.name || 'Пользователь';
         emailEl.textContent = this.currentUser.email;
-        userEl.classList.remove('hidden');
     },
 
-    _hideAll() {
-        const ids = [
-            'loginContent', 'loginLoading', 'loginUser', 'loginActions',
-            'loginContinue', 'loginError', 'loginRegistration',
-            'loginAccessPending', 'loginAccessRejected', 'loginAccessBlocked',
-            'loginChooseRole'
-        ];
+    /**
+     * Hide all content sections in the right panel of the wide card
+     */
+    _hideAllRight() {
+        if (!this._hideableElements) {
+            const ids = [
+                'loginLoading', 'loginRegistration', 'loginAccessPending',
+                'loginChooseRole', 'loginActions', 'loginContinue',
+                'loginError', 'loginAccessRejected', 'loginAccessBlocked'
+            ];
+            this._hideableElements = ids.map(id => document.getElementById(id)).filter(Boolean);
+        }
 
-        ids.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.classList.add('hidden');
+        this._hideableElements.forEach(el => {
+            el.classList.add('hidden');
         });
     },
 
     _updateStatus(text, type) {
         const statusEl = document.getElementById('loginStatus');
-        if (!statusEl) return;
         statusEl.className = 'login-status' + (type ? ' ' + type : '');
-        const statusText = statusEl.querySelector('.status-text');
-        if (statusText) statusText.textContent = text;
+        statusEl.querySelector('.status-text').textContent = text;
+        statusEl.classList.remove('hidden');
     },
 
     _retry() {
@@ -654,14 +728,7 @@ const loginApp = {
 
     // ============ HELPERS ============
 
-    _getInitials(name) {
-        if (!name) return '?';
-        const parts = name.trim().split(' ');
-        if (parts.length >= 2) {
-            return (parts[0][0] + parts[1][0]).toUpperCase();
-        }
-        return name.substring(0, 2).toUpperCase();
-    }
+    _getInitials(name) { return Utils.getInitials(name); }
 };
 
 document.addEventListener('DOMContentLoaded', () => loginApp.init());

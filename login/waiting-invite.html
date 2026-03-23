@@ -2,11 +2,14 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ожидание приглашения - AIAdminka</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:* ws://localhost:*">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com">
+    <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Regular.woff2" type="font/woff2" crossorigin>
+    <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Bold.woff2" type="font/woff2" crossorigin>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
-    <link rel="stylesheet" href="../shared/css/design-system.css">
+    <link rel="stylesheet" href="../shared/css/design-system-login.css">
     <link rel="stylesheet" href="css/login.css">
     <link rel="stylesheet" href="css/waiting-invite.css">
 </head>
@@ -120,12 +123,12 @@
         </div>
     </div>
 
-    <script src="../shared/js/toast.js"></script>
-    <script src="../shared/js/error-handler.js"></script>
-    <script src="../shared/utils.js"></script>
-    <script src="../shared/version.js"></script>
-    <script src="../shared/env-config.js"></script>
-    <script src="../shared/cloud-storage.js"></script>
-    <script src="js/waiting-invite.js"></script>
+    <script defer src="../shared/js/toast.js"></script>
+    <script defer src="../shared/js/error-handler.js"></script>
+    <script defer src="../shared/utils.js"></script>
+    <script defer src="../shared/version.js"></script>
+    <script defer src="../shared/env-config.js"></script>
+    <script defer src="../shared/cloud-storage.js"></script>
+    <script defer src="js/waiting-invite.js"></script>
 </body>
 </html>

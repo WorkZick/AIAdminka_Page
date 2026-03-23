@@ -14,7 +14,7 @@
     color: var(--gray-light);
     cursor: pointer;
     border-bottom: 2px solid transparent;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     background: none;
     border-top: none;
     border-left: none;

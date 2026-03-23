@@ -10,27 +10,13 @@ const TeamAvatars = {
      */
     handleAvatarUpload(event) {
         const file = event.target.files[0];
-        if (!file) return;
-
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            Toast.warning('Допустимые форматы: JPEG, PNG, GIF, WebP');
-            event.target.value = '';
-            return;
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.showCropModal(e.target.result);
+            };
+            reader.readAsDataURL(file);
         }
-
-        const maxSize = 5 * 1024 * 1024; // 5 MB
-        if (file.size > maxSize) {
-            Toast.warning('Максимальный размер файла: 5 МБ');
-            event.target.value = '';
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            this.showCropModal(e.target.result);
-        };
-        reader.readAsDataURL(file);
     },
 
     /**

@@ -2,12 +2,7 @@
 const logger = {
     element: null,
 
-    // Экранирование HTML для предотвращения XSS
-    escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    },
+    escapeHtml(str) { return Utils.escapeHtml(str); },
 
     init() {
         this.element = document.getElementById('logs');

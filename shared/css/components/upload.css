@@ -8,7 +8,7 @@
     padding: var(--spacing-2xl);
     text-align: center;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     background: var(--glass-bg);
 }
 

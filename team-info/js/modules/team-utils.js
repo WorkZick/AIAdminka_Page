@@ -4,16 +4,7 @@
  */
 
 const TeamUtils = {
-    /**
-     * Экранирование HTML для предотвращения XSS
-     * @param {string} text - Текст для экранирования
-     * @returns {string} Безопасная строка
-     */
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text || '';
-        return div.innerHTML;
-    },
+    escapeHtml(text) { return Utils.escapeHtml(text); },
 
     /**
      * Проверка валидности URL изображения

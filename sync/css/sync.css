@@ -150,7 +150,7 @@
     font-size: var(--font-size-sm);
     color: var(--gray-light);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .team-name-editable:hover {
@@ -180,7 +180,7 @@
     color: var(--status-red);
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     flex-shrink: 0;
 }
 
@@ -245,7 +245,7 @@
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .input-with-prefix:focus-within {
@@ -392,7 +392,7 @@
     font-family: var(--font-family);
     font-size: var(--font-size-sm);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
     margin-top: var(--spacing-sm);
 }
 

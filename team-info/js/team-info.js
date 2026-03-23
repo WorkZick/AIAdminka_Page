@@ -20,12 +20,13 @@ const teamInfo = {
      */
     async init() {
         try {
-            // Загружаем данные
-            TeamState.data = await storage.loadData();
+            // Параллельная загрузка: данные + шаблоны
+            const [data] = await Promise.all([
+                storage.loadData(),
+                storage.loadTemplates()
+            ]);
+            TeamState.data = data;
             TeamState.loadTeamName();
-
-            // Загружаем шаблоны
-            await storage.loadTemplates();
 
             this.setupTextareaAutoResize();
             TeamRenderer.render();
@@ -46,8 +47,9 @@ const teamInfo = {
     get currentEmployeeId() { return TeamState.currentEmployeeId; },
     set currentEmployeeId(value) { TeamState.currentEmployeeId = value; },
     loadTeamName: () => TeamState.loadTeamName(),
-    sortBy: (field) => { TeamState.sortBy(field); TeamRenderer.render(); },
+    sortBy: (field) => { TeamState.sortBy(field); TeamState.currentPage = 1; TeamRenderer.render(); },
     filterTable: () => TeamState.filterTable(),
+    goToPage: (page) => TeamRenderer.goToPage(page),
 
     // TeamRenderer
     render: () => TeamRenderer.render(),
@@ -124,6 +126,40 @@ const teamInfo = {
     loadGuestUsers: () => TeamInvites.loadGuestUsers(),
     inviteGuest: (email) => TeamInvites.inviteGuest(email),
 
+    // Form Dropdowns
+    toggleFormDropdown(target) {
+        const menuId = target.dataset?.target || target;
+        const menu = document.getElementById(typeof menuId === 'string' ? menuId : '');
+        if (!menu) return;
+        document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden)').forEach(m => {
+            if (m !== menu) m.classList.add('hidden');
+        });
+        menu.classList.toggle('hidden');
+    },
+    selectFormDropdown(target) {
+        const menu = target.closest('.dropdown-menu');
+        const wrap = target.closest('.dropdown-wrap--form');
+        if (!menu || !wrap) return;
+        const value = target.dataset.value ?? '';
+        const label = target.textContent;
+        const input = wrap.querySelector('input[type="hidden"]');
+        if (input) {
+            input.value = value;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const trigger = wrap.querySelector('.dropdown-trigger--form');
+        const labelEl = trigger?.querySelector('span');
+        if (labelEl) labelEl.textContent = label;
+        trigger?.classList.toggle('placeholder', !value);
+        menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+        target.classList.add('active');
+        menu.classList.add('hidden');
+        // Trigger template change callback
+        if (wrap.id === 'templateSelectWrap') {
+            TeamTemplates.handleTemplateChange();
+        }
+    },
+
     // TeamUtils (редко используются напрямую, но для полноты)
     escapeHtml: (text) => TeamUtils.escapeHtml(text),
     isValidImageUrl: (url) => TeamUtils.isValidImageUrl(url),
@@ -148,27 +184,39 @@ PageLifecycle.init({
 
 // ========== Глобальные event listeners ==========
 
-// Закрытие status dropdowns при клике вне
+// Закрытие status dropdowns при клике вне (DOM refs cached)
+const _teamDropdownRefs = { _init: false };
+function _ensureTeamDropdownRefs() {
+    if (_teamDropdownRefs._init) return;
+    _teamDropdownRefs.cardDropdown = document.getElementById('cardStatusDropdown');
+    _teamDropdownRefs.cardBadge = document.getElementById('cardStatusBadge');
+    _teamDropdownRefs.formDropdown = document.getElementById('formStatusDropdown');
+    _teamDropdownRefs.formBadge = document.getElementById('formStatusBadge');
+    _teamDropdownRefs._init = true;
+}
 document.addEventListener('click', (e) => {
-    // Card status dropdown
-    const cardDropdown = document.getElementById('cardStatusDropdown');
-    const cardStatusBadge = document.getElementById('cardStatusBadge');
-    if (cardDropdown && cardDropdown.classList.contains('visible')) {
-        if (!cardDropdown.contains(e.target) && !cardStatusBadge.contains(e.target)) {
-            cardDropdown.classList.remove('visible');
-            cardDropdown.classList.add('hidden');
+    _ensureTeamDropdownRefs();
+    const r = _teamDropdownRefs;
+
+    if (r.cardDropdown && r.cardDropdown.classList.contains('visible')) {
+        if (!r.cardDropdown.contains(e.target) && !r.cardBadge.contains(e.target)) {
+            r.cardDropdown.classList.remove('visible');
+            r.cardDropdown.classList.add('hidden');
         }
     }
 
-    // Form status dropdown
-    const formDropdown = document.getElementById('formStatusDropdown');
-    const formStatusBadge = document.getElementById('formStatusBadge');
-    if (formDropdown && formDropdown.classList.contains('visible')) {
-        if (!formDropdown.contains(e.target) && !formStatusBadge.contains(e.target)) {
-            formDropdown.classList.remove('visible');
-            formDropdown.classList.add('hidden');
+    if (r.formDropdown && r.formDropdown.classList.contains('visible')) {
+        if (!r.formDropdown.contains(e.target) && !r.formBadge.contains(e.target)) {
+            r.formDropdown.classList.remove('visible');
+            r.formDropdown.classList.add('hidden');
         }
     }
+    // Close form dropdowns
+    document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden)').forEach(menu => {
+        if (!e.target.closest('.dropdown-wrap--form') || e.target.closest('.dropdown-wrap--form') !== menu.closest('.dropdown-wrap--form')) {
+            menu.classList.add('hidden');
+        }
+    });
 });
 
 // Event delegation для всех data-action атрибутов
@@ -185,6 +233,12 @@ document.addEventListener('click', (e) => {
     // Для status dropdown нужно остановить всплытие
     if (action.includes('changeStatus') || action.includes('changeFormStatus')) {
         e.stopPropagation();
+    }
+
+    // Form dropdowns — передаём DOM-элемент
+    if (action === 'toggleFormDropdown' || action === 'selectFormDropdown') {
+        teamInfo[action](target);
+        return;
     }
 
     // Вызов соответствующего метода

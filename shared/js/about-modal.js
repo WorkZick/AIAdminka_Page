@@ -29,71 +29,38 @@ const AboutModal = {
      * Инициализация обработчиков событий
      * Вызывается автоматически при загрузке компонента
      */
-    _handlers: null,
-
     init() {
-        // Prevent duplicate listeners on repeated init()
-        if (this._handlers) this.destroy();
-        this._handlers = {};
-
         // Close button handler
         const closeBtn = document.querySelector('#aboutModal .modal-close');
         if (closeBtn) {
-            this._handlers.closeBtn = () => this.close();
-            closeBtn.addEventListener('click', this._handlers.closeBtn);
+            closeBtn.addEventListener('click', () => this.close());
         }
 
         // Close by clicking overlay
         const modal = document.getElementById('aboutModal');
         if (modal) {
-            this._handlers.overlay = (e) => {
-                if (e.target === modal) this.close();
-            };
-            modal.addEventListener('click', this._handlers.overlay);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.close();
+                }
+            });
         }
 
         // Close by Escape key
-        this._handlers.keydown = (e) => {
+        document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 const modal = document.getElementById('aboutModal');
                 if (modal && modal.classList.contains('active')) {
                     this.close();
                 }
             }
-        };
-        document.addEventListener('keydown', this._handlers.keydown);
+        });
 
         // Version info click handler
         const versionInfo = document.querySelector('.version-info');
         if (versionInfo) {
-            this._handlers.versionInfo = () => this.show();
-            versionInfo.addEventListener('click', this._handlers.versionInfo);
+            versionInfo.addEventListener('click', () => this.show());
         }
-    },
-
-    destroy() {
-        if (!this._handlers) return;
-
-        const closeBtn = document.querySelector('#aboutModal .modal-close');
-        if (closeBtn && this._handlers.closeBtn) {
-            closeBtn.removeEventListener('click', this._handlers.closeBtn);
-        }
-
-        const modal = document.getElementById('aboutModal');
-        if (modal && this._handlers.overlay) {
-            modal.removeEventListener('click', this._handlers.overlay);
-        }
-
-        if (this._handlers.keydown) {
-            document.removeEventListener('keydown', this._handlers.keydown);
-        }
-
-        const versionInfo = document.querySelector('.version-info');
-        if (versionInfo && this._handlers.versionInfo) {
-            versionInfo.removeEventListener('click', this._handlers.versionInfo);
-        }
-
-        this._handlers = null;
     }
 };
 

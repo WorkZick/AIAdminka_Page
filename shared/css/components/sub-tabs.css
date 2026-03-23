@@ -24,7 +24,7 @@
     font-family: inherit;
     font-size: var(--font-size-base);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: var(--transition-colors);
 }
 
 .sub-tab:hover:not(.active) {

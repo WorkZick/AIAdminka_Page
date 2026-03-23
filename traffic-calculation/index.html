@@ -3,16 +3,20 @@
 <head>
     <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta charset="UTF-8">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'sha256-hnlVisWd/fn32NbDovWmI6UTBdStgc7fO3K6SKtc9SU='; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com">
     <title>Расчет трафика - AIAdminka</title>
+    <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Regular.woff2" type="font/woff2" crossorigin>
+    <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Bold.woff2" type="font/woff2" crossorigin>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <link rel="stylesheet" href="css/traffic-calculation.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
             integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
             crossorigin="anonymous"
-            referrerpolicy="no-referrer"></script>
+            referrerpolicy="no-referrer"
+            defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -114,12 +118,6 @@
                                             Очистить
                                         </button>
                                     </div>
-                                </div>
-
-                                <!-- Спиннер загрузки -->
-                                <div id="loadingSpinner" class="loading-spinner">
-                                    <div class="spinner"></div>
-                                    <div class="loading-text">Загрузка партнёров...</div>
                                 </div>
 
                                 <!-- Подсказка: нет партнёров -->
@@ -680,10 +678,10 @@
     <div id="about-modal-container"></div>
 
     <script src="../shared/version.js"></script>
-    <script src="../shared/storage.js"></script>
     <script src="../shared/env-config.js"></script>
     <script src="../shared/cloud-storage.js"></script>
     <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/utils.js"></script>
     <script src="../shared/auth-guard.js"></script>
     <script src="../shared/roles-config.js"></script>
     <script src="../shared/role-guard.js"></script>

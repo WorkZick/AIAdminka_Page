@@ -42,6 +42,7 @@ const OnboardingSource = (() => {
             _updateSyncBar('syncing', 'Загрузка настроек...');
         }
         try {
+            // Настройки с кешем (stale-while-revalidate обновит фоново)
             const result = await CloudStorage.getOnboardingSettings();
             _settingsCache = result.sources || { sources: [] };
             if (!_settingsCache.sources) _settingsCache.sources = [];
@@ -132,7 +133,7 @@ const OnboardingSource = (() => {
             return `<div class="source-item${statusDot}" data-source-id="${Utils.escapeHtml(src.id)}">
                 <div class="source-item-info">
                     <span class="source-item-name">${Utils.escapeHtml(src.name)}</span>
-                    <span class="source-item-meta">${Utils.escapeHtml(syncLabel)} · ${count} ${_pluralLeads(count)}</span>
+                    <span class="source-item-meta">${Utils.escapeHtml(syncLabel)} · ${Utils.pluralRu(count, 'заявка', 'заявки', 'заявок')}</span>
                 </div>
                 <button class="btn btn-primary btn-sm source-item-edit" data-action="onb-editSource" data-value="${Utils.escapeHtml(src.id)}">&#9881;</button>
             </div>`;
@@ -168,23 +169,36 @@ const OnboardingSource = (() => {
 
         const nameInput = document.getElementById('sourceEditName');
         const urlInput = document.getElementById('sourceEditUrl');
-        const intervalSelect = document.getElementById('sourceEditInterval');
+        const intervalInput = document.getElementById('sourceEditIntervalValue');
+        const intervalLabel = document.getElementById('sourceEditIntervalLabel');
+        const intervalTrigger = document.getElementById('sourceEditIntervalTrigger');
+        const intervalMenu = document.getElementById('sourceEditIntervalMenu');
         const deleteBtn = document.getElementById('btnDeleteSource');
 
         if (nameInput) nameInput.value = source ? source.name : '';
         if (urlInput) urlInput.value = source ? (source.sheetUrl || '') : '';
-        if (intervalSelect) intervalSelect.value = source ? String(source.syncIntervalMinutes ?? 5) : '5';
+        const intervalVal = source ? String(source.syncIntervalMinutes ?? 5) : '5';
+        if (intervalInput) intervalInput.value = intervalVal;
+        // Update label and active state
+        if (intervalMenu) {
+            intervalMenu.querySelectorAll('.dropdown-item').forEach(item => {
+                const isActive = (item.dataset.value || '') === intervalVal;
+                item.classList.toggle('active', isActive);
+                if (isActive && intervalLabel) intervalLabel.textContent = item.textContent;
+            });
+        }
+        if (intervalTrigger) intervalTrigger.classList.remove('placeholder');
         if (deleteBtn) deleteBtn.classList.toggle('hidden', !source);
     }
 
     async function saveSource() {
         const nameInput = document.getElementById('sourceEditName');
         const urlInput = document.getElementById('sourceEditUrl');
-        const intervalSelect = document.getElementById('sourceEditInterval');
+        const intervalInput = document.getElementById('sourceEditIntervalValue');
 
         const name = (nameInput ? nameInput.value : '').trim();
         const url = (urlInput ? urlInput.value : '').trim();
-        const interval = parseInt(intervalSelect ? intervalSelect.value : '5', 10);
+        const interval = parseInt(intervalInput ? intervalInput.value : '5', 10);
 
         if (!name) {
             Toast.error('Укажите название источника');
@@ -228,7 +242,7 @@ const OnboardingSource = (() => {
             } else {
                 // Add new
                 const source = {
-                    id: 'src_' + Date.now(),
+                    id: 'src_' + Utils.generateId(),
                     name,
                     sheetUrl: url,
                     sheetId,
@@ -293,7 +307,7 @@ const OnboardingSource = (() => {
         const bar = document.getElementById('sourceSyncBar');
         if (!bar) return;
 
-        const myRole = OnboardingState.get('userRole');
+        const { myRole } = OnboardingUtils.getRoles();
         const hasSources = settings.sources.length > 0;
         const hasConds = condData.conditions && condData.conditions.length > 0;
 
@@ -304,17 +318,21 @@ const OnboardingSource = (() => {
 
         bar.classList.remove('hidden');
 
+        const syncBtn = document.getElementById('btnSyncNow');
+        if (syncBtn) syncBtn.classList.toggle('hidden', !hasSources);
+
         const parts = [];
         if (hasSources) {
             const count = settings.sources.length;
             const lastTimes = settings.sources.filter(s => s.lastSyncTime).map(s => new Date(s.lastSyncTime).getTime());
-            const lastSync = lastTimes.length > 0 ? _formatDateTime(new Date(Math.max(...lastTimes)).toISOString()) : null;
-            let srcText = `Источников: ${count}`;
-            if (lastSync) srcText += ` (синхр.: ${lastSync})`;
+            const lastSync = lastTimes.length > 0 ? OnboardingUtils.formatDateTime(new Date(Math.max(...lastTimes)).toISOString()) : null;
+            let srcText = `Импорт: ${Utils.pluralRu(count, 'источник', 'источника', 'источников')}`;
+            if (lastSync) srcText += ` (${lastSync})`;
             parts.push(srcText);
         }
         if (hasConds) {
-            parts.push(`Условий: ${condData.conditions.length}`);
+            const countries = new Set(condData.conditions.map(c => c.condition_country).filter(Boolean));
+            parts.push(`Условия: ${condData.conditions.length} (${Utils.pluralRu(countries.size, 'страна', 'страны', 'стран')})`);
         }
         _updateSyncBar('idle', parts.join(' · '));
     }
@@ -419,12 +437,12 @@ const OnboardingSource = (() => {
                 src.importedCount = (src.importedCount || 0) + imported;
                 src.lastSyncTime = new Date().toISOString();
                 src.lastSyncStatus = 'success';
-                await _saveSettingsToApi(settings);
+                _saveSettingsToApi(settings);
             }
 
             if (imported > 0) {
                 OnboardingList.applyFilters();
-                Toast.success(`«${source.name}»: +${imported} ${_pluralLeads(imported)}`);
+                Toast.success(`«${source.name}»: +${Utils.pluralRu(imported, 'заявка', 'заявки', 'заявок')}`);
             }
 
             updateSyncBarVisibility();
@@ -562,25 +580,6 @@ const OnboardingSource = (() => {
         return '';
     }
 
-    function _formatDateTime(dateStr) {
-        const d = new Date(dateStr);
-        if (isNaN(d)) return dateStr;
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yy = String(d.getFullYear()).slice(-2);
-        const hh = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        return `${dd}.${mm}.${yy} ${hh}:${min}`;
-    }
-
-    function _pluralLeads(n) {
-        const mod10 = n % 10;
-        const mod100 = n % 100;
-        if (mod10 === 1 && mod100 !== 11) return 'лид';
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'лида';
-        return 'лидов';
-    }
-
     function _getEditingId() {
         return _editingSourceId;
     }
@@ -621,16 +620,62 @@ const OnboardingSource = (() => {
             CloudStorage.clearCache('onboardingSettings');
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'saveConditions' });
+            throw e;
         }
     }
 
     function openConditionsSettings() {
         const data = _getConditionsData();
-        const urlInput = document.getElementById('conditionsUrl');
-        if (urlInput) urlInput.value = data.sheetUrl || '';
+        const hasUrl = !!data.sheetUrl;
+
+        _toggleConditionsMode(hasUrl ? 'view' : 'edit', data);
         _renderConditionsStatus(data);
+
         const modal = document.getElementById('conditionsModal');
         if (modal) modal.classList.add('active');
+    }
+
+    function editConditionsUrl() {
+        const data = _getConditionsData();
+        _toggleConditionsMode('edit', data);
+    }
+
+    function _toggleConditionsMode(mode, data) {
+        const viewMode = document.getElementById('conditionsViewMode');
+        const editMode = document.getElementById('conditionsEditMode');
+        const saveBtn = document.getElementById('conditionsSaveBtn');
+        if (!viewMode || !editMode) return;
+
+        if (mode === 'view') {
+            viewMode.classList.remove('hidden');
+            editMode.classList.add('hidden');
+            if (saveBtn) saveBtn.classList.add('hidden');
+
+            const link = document.getElementById('conditionsLink');
+            if (link && data && data.sheetUrl) {
+                link.href = data.sheetUrl;
+                link.textContent = 'Открыть таблицу условий';
+            }
+        } else {
+            viewMode.classList.add('hidden');
+            editMode.classList.remove('hidden');
+            if (saveBtn) saveBtn.classList.remove('hidden');
+
+            const urlInput = document.getElementById('conditionsUrl');
+            if (urlInput) urlInput.value = (data && data.sheetUrl) || '';
+        }
+    }
+
+    async function clearConditions() {
+        try {
+            await _saveConditionsToApi({ sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' });
+            _renderConditionsStatus({ conditions: [] });
+            updateSyncBarVisibility();
+            _toggleConditionsMode('edit', { sheetUrl: '' });
+            Toast.success('Условия удалены');
+        } catch (e) {
+            // error already handled in _saveConditionsToApi
+        }
     }
 
     function _renderConditionsStatus(data) {
@@ -644,20 +689,12 @@ const OnboardingSource = (() => {
         const count = data.conditions.length;
         const countries = new Set(data.conditions.map(c => c.condition_country).filter(Boolean));
         const types = new Set(data.conditions.map(c => c.method_type).filter(Boolean));
-        const timeStr = data.lastSyncTime ? _formatDateTime(data.lastSyncTime) : '';
-        const parts = [`<span class="conditions-status-count">${count}</span> ${_pluralConditions(count)}`];
+        const timeStr = data.lastSyncTime ? OnboardingUtils.formatDateTime(data.lastSyncTime) : '';
+        const parts = [`<span class="conditions-status-count">${count}</span> ${Utils.pluralRu(count, 'условие', 'условия', 'условий')}`];
         if (countries.size) parts.push(`Стран: ${countries.size}`);
         parts.push(`Типов: ${types.size}`);
-        el.innerHTML = `<div>${parts.join(' · ')}</div>` +
+        el.innerHTML = `<div class="conditions-status-row"><div>${parts.join(' · ')}</div><button class="conditions-delete-btn" data-action="onb-clearConditions" title="Удалить условия"><img src="../shared/icons/cross.svg" width="14" height="14" alt="Удалить"></button></div>` +
             (timeStr ? `<div class="conditions-status-time">Синхронизация: ${Utils.escapeHtml(timeStr)}</div>` : '');
-    }
-
-    function _pluralConditions(n) {
-        const mod10 = n % 10;
-        const mod100 = n % 100;
-        if (mod10 === 1 && mod100 !== 11) return 'условие';
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'условия';
-        return 'условий';
     }
 
     async function saveConditionsUrl() {
@@ -665,11 +702,14 @@ const OnboardingSource = (() => {
         const url = (urlInput ? urlInput.value : '').trim();
 
         if (!url) {
-            // Clear conditions
-            _saveConditionsToApi({ sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' });
-            _renderConditionsStatus({ conditions: [] });
-            updateSyncBarVisibility();
-            Toast.success('Условия очищены');
+            try {
+                await _saveConditionsToApi({ sheetUrl: '', sheetId: '', conditions: [], lastSyncTime: '', lastSyncStatus: '' });
+                _renderConditionsStatus({ conditions: [] });
+                updateSyncBarVisibility();
+                Toast.success('Условия очищены');
+            } catch (e) {
+                // error already handled in _saveConditionsToApi
+            }
             return;
         }
 
@@ -686,11 +726,6 @@ const OnboardingSource = (() => {
             const table = await _fetchSheet(sheetId);
             const conditions = _parseConditionsTable(table);
 
-            if (conditions.length === 0) {
-                Toast.error('Не найдены условия в таблице. Проверьте заголовки колонок');
-                return;
-            }
-
             const data = {
                 sheetUrl: url,
                 sheetId: sheetId,
@@ -702,10 +737,47 @@ const OnboardingSource = (() => {
             await _saveConditionsToApi(data);
             _renderConditionsStatus(data);
             updateSyncBarVisibility();
-            Toast.success(`Загружено ${conditions.length} ${_pluralConditions(conditions.length)}`);
+
+            if (conditions.length === 0) {
+                Toast.warning('Таблица сохранена, но условия пока пусты. Убедитесь что есть колонки: Страна, Тип метода, Название метода, и хотя бы одна заполненная строка');
+            } else {
+                Toast.success(`Загружено ${Utils.pluralRu(conditions.length, 'условие', 'условия', 'условий')}`);
+            }
+
+            _toggleConditionsMode('view', data);
 
         } catch (err) {
             Toast.error(err.message || 'Ошибка загрузки');
+        } finally {
+            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
+        }
+    }
+
+    async function refreshConditions() {
+        const data = _getConditionsData();
+        if (!data.sheetId) return;
+
+        const btn = document.getElementById('btnRefreshConditions');
+        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+
+        try {
+            const table = await _fetchSheet(data.sheetId);
+            const conditions = _parseConditionsTable(table);
+
+            const updated = {
+                sheetUrl: data.sheetUrl,
+                sheetId: data.sheetId,
+                conditions: conditions,
+                lastSyncTime: new Date().toISOString(),
+                lastSyncStatus: 'success'
+            };
+
+            await _saveConditionsToApi(updated);
+            _renderConditionsStatus(updated);
+            updateSyncBarVisibility();
+            Toast.success(`Обновлено: ${Utils.pluralRu(conditions.length, 'условие', 'условия', 'условий')}`);
+        } catch (err) {
+            Toast.error(err.message || 'Ошибка обновления');
         } finally {
             if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
@@ -719,8 +791,7 @@ const OnboardingSource = (() => {
             return CONDITIONS_COLUMN_MAP[label] || null;
         });
 
-        // Must have at least method_type and method_name
-        if (!headers.includes('method_type') || !headers.includes('method_name')) return [];
+        if (!headers.includes('condition_country') || !headers.includes('method_type') || !headers.includes('method_name')) return [];
 
         const conditions = [];
         for (const row of table.rows) {
@@ -732,7 +803,7 @@ const OnboardingSource = (() => {
                 const raw = cell ? (cell.f && cell.f !== '' ? cell.f : (cell.v != null ? cell.v : '')) : '';
                 entry[fieldId] = String(raw).trim();
             });
-            if (entry.method_type && entry.method_name) {
+            if (entry.condition_country && entry.method_type && entry.method_name) {
                 conditions.push(entry);
             }
         }
@@ -801,11 +872,15 @@ const OnboardingSource = (() => {
         ) || null;
     }
 
+    function getEditingId() {
+        return _getEditingId();
+    }
+
     return {
         init, destroy,
         openSettings, showList, showEditForm, saveSource, deleteSource,
-        syncNow, updateSyncBarVisibility, _getEditingId,
-        openConditionsSettings, saveConditionsUrl,
+        syncNow, updateSyncBarVisibility, getEditingId,
+        openConditionsSettings, saveConditionsUrl, editConditionsUrl, clearConditions, refreshConditions,
         hasConditions, getConditions, getCountries, getMethodTypes, getMethodNames, getCondition
     };
 })();

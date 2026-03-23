@@ -1,7 +1,5 @@
 // Partners Methods - methods management
 const PartnersMethods = {
-    _actionInProgress: false,
-
     async loadMethods() {
         PartnersState.cachedMethods = await CloudStorage.getMethods();
         return PartnersState.cachedMethods;
@@ -122,8 +120,6 @@ const PartnersMethods = {
     },
 
     async saveEditMethod(methodId) {
-        if (this._actionInProgress) return;
-
         const input = document.getElementById(`editMethodInput_${methodId}`);
         const newName = input.value.trim();
 
@@ -144,21 +140,21 @@ const PartnersMethods = {
         const btn = document.querySelector(`[data-action="partners-saveEditMethod"][data-method-id="${methodId}"]`);
         if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
         PartnersUtils.showLoading(true);
-        this._actionInProgress = true;
 
         try {
             const oldName = methods[methodIndex].name;
             await CloudStorage.updateMethod(methodId, { id: methodId, name: newName });
             PartnersState.cachedMethods[methodIndex].name = newName;
 
-            // Update partners with this method
+            // Update partners with this method (parallel — safe for typical batch sizes)
             const partners = PartnersState.getPartners();
-            for (const partner of partners) {
-                if (partner.method === oldName) {
+            const updatePromises = partners
+                .filter(p => p.method === oldName)
+                .map(partner => {
                     partner.method = newName;
-                    await CloudStorage.updatePartner(partner.id, partner);
-                }
-            }
+                    return CloudStorage.updatePartner(partner.id, partner);
+                });
+            await Promise.all(updatePromises);
 
             // Refresh partners cache
             PartnersState.cachedPartners = await CloudStorage.getPartners(false);
@@ -180,7 +176,6 @@ const PartnersMethods = {
                 PartnersUtils.showError('Ошибка сохранения метода: ' + error.message);
             }
         } finally {
-            this._actionInProgress = false;
             if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
             PartnersUtils.showLoading(false);
         }
@@ -221,20 +216,23 @@ const PartnersMethods = {
     },
 
     populateMethodsSelect(selectedValue = '') {
-        const select = document.getElementById('formMethod');
-        if (!select) return;
+        const menu = document.getElementById('formMethodMenu');
+        const input = document.getElementById('formMethodValue');
+        const label = document.getElementById('formMethodLabel');
+        const trigger = document.getElementById('formMethodTrigger');
+        if (!menu) return;
 
         const methods = PartnersState.getMethods();
-        select.innerHTML = '<option value="">Выберите метод</option>';
+        let html = '<div class="dropdown-item' + (!selectedValue ? ' active' : '') + '" data-action="partners-selectFormDropdown" data-value="">Выберите метод</div>';
 
         methods.forEach(method => {
-            const option = document.createElement('option');
-            option.value = method.name;
-            option.textContent = method.name;
-            if (method.name === selectedValue) {
-                option.selected = true;
-            }
-            select.appendChild(option);
+            const isActive = method.name === selectedValue ? ' active' : '';
+            html += '<div class="dropdown-item' + isActive + '" data-action="partners-selectFormDropdown" data-value="' + Utils.escapeHtml(method.name) + '">' + Utils.escapeHtml(method.name) + '</div>';
         });
+
+        menu.innerHTML = html;
+        if (input) input.value = selectedValue;
+        if (label) label.textContent = selectedValue || 'Выберите метод';
+        if (trigger) trigger.classList.toggle('placeholder', !selectedValue);
     }
 };

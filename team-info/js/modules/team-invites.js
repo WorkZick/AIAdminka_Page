@@ -74,18 +74,23 @@ const TeamInvites = {
      * Заполнить select роли в ручном приглашении из RolesConfig
      */
     populateManualRoleSelect() {
-        const select = document.getElementById('inviteManualRole');
-        if (!select || select.options.length > 1) return; // уже заполнен
+        const menu = document.getElementById('inviteManualRoleMenu');
+        const input = document.getElementById('inviteManualRoleValue');
+        const label = document.getElementById('inviteManualRoleLabel');
+        const trigger = document.getElementById('inviteManualRoleTrigger');
+        if (!menu || menu.dataset.populated) return;
 
-        select.innerHTML = '';
         const firstRole = RolesConfig.ASSIGNABLE_ROLES[0] || 'sales';
+        let html = '';
         RolesConfig.ASSIGNABLE_ROLES.forEach(role => {
-            const opt = document.createElement('option');
-            opt.value = role;
-            opt.textContent = RolesConfig.getName(role);
-            if (role === firstRole) opt.selected = true;
-            select.appendChild(opt);
+            const isActive = role === firstRole ? ' active' : '';
+            html += '<div class="dropdown-item' + isActive + '" data-action="team-selectFormDropdown" data-value="' + Utils.escapeHtml(role) + '">' + Utils.escapeHtml(RolesConfig.getName(role)) + '</div>';
         });
+        menu.innerHTML = html;
+        menu.dataset.populated = '1';
+        if (input) input.value = firstRole;
+        if (label) label.textContent = RolesConfig.getName(firstRole);
+        if (trigger) trigger.classList.remove('placeholder');
     },
 
     /**
@@ -112,7 +117,7 @@ const TeamInvites = {
             // Если пользователь - Admin без команды, загружаем список команд
             const currentRole = RoleGuard.getCurrentRole();
             const currentTeamId = RoleGuard.getTeamId();
-            const isAdminUser = currentRole === 'admin';
+            const isAdminUser = currentRole === 'admin' || (RoleGuard.isAdmin && RoleGuard.isAdmin());
             const hasTeamAssigned = !!currentTeamId;
 
             if (isAdminUser && !hasTeamAssigned) {
@@ -148,7 +153,7 @@ const TeamInvites = {
         // Проверяем, нужен ли селектор команд (для Admin без команды)
         const currentRole = RoleGuard.getCurrentRole();
         const teamId = RoleGuard.getTeamId();
-        const isAdmin = currentRole === 'admin';
+        const isAdmin = currentRole === 'admin' || (RoleGuard.isAdmin && RoleGuard.isAdmin());
         const hasTeam = !!teamId;
         const needsTeamSelector = isAdmin && !hasTeam && TeamState.availableTeams.length > 0;
 
@@ -187,7 +192,7 @@ const TeamInvites = {
         }
 
         const roleOptions = Object.entries(TeamState.assignableRoles)
-            .map(([value, label]) => `<option value="${value}">${label}</option>`)
+            .map(([value, label]) => `<option value="${TeamUtils.escapeHtml(value)}">${TeamUtils.escapeHtml(label)}</option>`)
             .join('');
 
         const guestsHtml = TeamState.availableGuests.map(guest => `
@@ -350,8 +355,8 @@ const TeamInvites = {
      */
     async sendInviteByEmail(email) {
         // Получить роль из селектора
-        const roleSelect = document.getElementById('inviteManualRole');
-        const assignedRole = roleSelect ? roleSelect.value : (RolesConfig.ASSIGNABLE_ROLES[0] || 'sales');
+        const roleInput = document.getElementById('inviteManualRoleValue');
+        const assignedRole = roleInput ? roleInput.value : (RolesConfig.ASSIGNABLE_ROLES[0] || 'sales');
 
         // Получить teamId
         let teamId = RoleGuard.getTeamId();

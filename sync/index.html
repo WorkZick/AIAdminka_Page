@@ -3,9 +3,12 @@
 <head>
     <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta charset="UTF-8">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'sha256-hnlVisWd/fn32NbDovWmI6UTBdStgc7fO3K6SKtc9SU='; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com ws://127.0.0.1:5500 ws://localhost:5500; frame-ancestors 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com">
     <title>Настройки - AIAdminka</title>
+    <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Regular.woff2" type="font/woff2" crossorigin>
+    <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Bold.woff2" type="font/woff2" crossorigin>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
     <!-- Design System (base styles) -->
     <link rel="stylesheet" href="../shared/css/design-system.css">
@@ -79,7 +82,12 @@
                                         </div>
                                         <div class="form-group form-group--compact">
                                             <label>Роль</label>
-                                            <select class="form-select" id="profilePosition" name="position" disabled></select>
+                                            <div class="dropdown-wrap dropdown-wrap--form disabled" id="profilePositionWrap">
+                                                <button class="dropdown-trigger dropdown-trigger--form placeholder" type="button" disabled>
+                                                    <span id="profilePositionLabel">Роль</span>
+                                                </button>
+                                                <input type="hidden" id="profilePositionValue" value="">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -322,8 +330,8 @@
     <script src="../shared/js/about-modal.js"></script>
     <script src="../shared/js/toast.js"></script>
     <script src="../shared/js/error-handler.js"></script>
+    <script src="../shared/utils.js"></script>
     <script src="../shared/version.js"></script>
-    <script src="../shared/storage.js"></script>
     <script src="../shared/env-config.js"></script>
     <script src="../shared/cloud-storage.js"></script>
     <script src="../shared/sync-manager.js"></script>

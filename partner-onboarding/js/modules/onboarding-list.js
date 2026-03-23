@@ -3,7 +3,12 @@
 const OnboardingList = (() => {
     'use strict';
 
-    const TOTAL_STEPS = OnboardingConfig.STEPS.length;
+    let _currentPage = 1;
+    const _perPage = 30;
+
+    function _totalSteps() {
+        return OnboardingConfig.getVisibleStepCount(OnboardingState.get('userRole'));
+    }
 
     function init() {
         OnboardingState.subscribe('filteredRequests', render);
@@ -11,47 +16,102 @@ const OnboardingList = (() => {
     }
 
     function render() {
-        const requests = OnboardingState.get('filteredRequests') || [];
+        const allRequests = OnboardingState.get('filteredRequests') || [];
         const container = document.getElementById('requestsList');
         const emptyState = document.getElementById('listEmpty');
         const loading = document.getElementById('listLoading');
 
         if (!container) return;
 
-        loading.classList.add('hidden');
+        if (loading) loading.classList.add('hidden');
 
-        if (requests.length === 0) {
+        if (allRequests.length === 0) {
             container.innerHTML = '';
             container.classList.add('hidden');
-            emptyState.classList.remove('hidden');
+            if (emptyState) emptyState.classList.remove('hidden');
             _hideSelectionToolbar();
+            _renderPagination(0);
             return;
         }
 
-        emptyState.classList.add('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
         container.classList.remove('hidden');
-        container.innerHTML = requests.map(_renderRow).join('');
+
+        // Pagination
+        const totalPages = Math.max(1, Math.ceil(allRequests.length / _perPage));
+        if (_currentPage > totalPages) _currentPage = totalPages;
+        const start = (_currentPage - 1) * _perPage;
+        const pagedRequests = allRequests.slice(start, start + _perPage);
+
+        const total = _totalSteps();
+        container.innerHTML = pagedRequests.map(r => _renderRow(r, total)).join('');
         _updateSelectionToolbar();
+        _renderPagination(totalPages);
     }
 
-    function _renderRow(request) {
+    function _renderPagination(totalPages) {
+        const container = document.getElementById('onboardingPagination');
+        if (!container) return;
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'page-btn';
+        prevBtn.textContent = '\u2190';
+        prevBtn.disabled = _currentPage === 1;
+        prevBtn.dataset.action = 'onb-goToPage';
+        prevBtn.dataset.value = _currentPage - 1;
+        container.appendChild(prevBtn);
+
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= _currentPage - 1 && i <= _currentPage + 1)) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = 'page-btn' + (i === _currentPage ? ' active' : '');
+                pageBtn.textContent = i;
+                pageBtn.dataset.action = 'onb-goToPage';
+                pageBtn.dataset.value = i;
+                container.appendChild(pageBtn);
+            } else if (i === _currentPage - 2 || i === _currentPage + 2) {
+                const dots = document.createElement('span');
+                dots.className = 'pagination-dots';
+                dots.textContent = '...';
+                container.appendChild(dots);
+            }
+        }
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'page-btn';
+        nextBtn.textContent = '\u2192';
+        nextBtn.disabled = _currentPage === totalPages;
+        nextBtn.dataset.action = 'onb-goToPage';
+        nextBtn.dataset.value = _currentPage + 1;
+        container.appendChild(nextBtn);
+    }
+
+    function goToPage(page) {
+        const p = parseInt(page);
+        if (isNaN(p) || p < 1) return;
+        _currentPage = p;
+        render();
+    }
+
+    function _renderRow(request, total) {
         const statusConf = OnboardingConfig.STATUSES[request.status] || {};
         const sourceLabel = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_SOURCES, request.leadSource) || 'Новая заявка';
-        const contactName = (request.stageData && request.stageData[1] || {}).contact_name || '';
-        const myRole = OnboardingState.get('userRole');
-        const sysRole = OnboardingState.get('systemRole');
+        const contactName = (request.stageData?.[1] || {}).contact_name || '';
+        const { myRole, sysRole, isAdmin } = OnboardingUtils.getRoles();
         const myEmail = OnboardingState.get('userEmail');
         const isMyTurn = _isMyTurn(request, myRole, sysRole, myEmail);
-        const dateTime = _formatDateTime(request.createdDate);
+        const dateTime = OnboardingUtils.formatDateTime(request.createdDate);
         const assigneeName = _shortenName(request.assigneeName || request.assigneeEmail);
         const title = contactName ? `${sourceLabel} — ${contactName}` : sourceLabel;
         const isTerminal = request.status === 'completed' || request.status === 'cancelled';
-        const isAdminLike = myRole === 'admin' || myRole === 'leader';
+        const isWorkStatus = OnboardingConfig.isWorkStatus(request.status);
         const executorDone = OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor' && OnboardingConfig.isExecutorCompleted(request);
 
         // Progress bar segments
         const segments = [];
-        for (let i = 1; i <= TOTAL_STEPS; i++) {
+        for (let i = 1; i <= total; i++) {
             let cls = 'progress-segment';
             if (executorDone) { cls += ' done'; }
             else if (i < request.currentStep) cls += ' done';
@@ -72,15 +132,15 @@ const OnboardingList = (() => {
         }
 
         // Checkbox for admin/leader
-        const checkboxHtml = isAdminLike
-            ? `<input type="checkbox" class="row-checkbox" data-action="onb-toggleSelect" data-value="${Utils.escapeHtml(request.id)}" onclick="event.stopPropagation()">`
+        const checkboxHtml = isAdmin
+            ? `<input type="checkbox" class="row-checkbox" data-action="onb-toggleSelect" data-value="${Utils.escapeHtml(request.id)}">`
             : '';
 
-        return `<div class="request-row ${isMyTurn ? 'my-turn' : ''} ${isAdminLike ? 'has-checkbox' : ''}" data-action="onb-openRequest" data-value="${Utils.escapeHtml(request.id)}">
+        return `<div class="request-row ${isMyTurn ? 'my-turn' : ''} ${isAdmin ? 'has-checkbox' : ''}" data-action="onb-openRequest" data-value="${Utils.escapeHtml(request.id)}">
             ${checkboxHtml}
             <div class="row-progress">
                 <div class="progress-bar">${segments.join('')}</div>
-                <span class="row-step-num">${executorDone ? TOTAL_STEPS : request.currentStep}/${TOTAL_STEPS}</span>
+                <span class="row-step-num">${executorDone ? total : request.currentStep}/${total}</span>
             </div>
             <div class="row-main">
                 <span class="row-title">${Utils.escapeHtml(title)}</span>
@@ -100,11 +160,23 @@ const OnboardingList = (() => {
     }
 
     function applyFilters() {
+        _currentPage = 1;
         const requests = OnboardingState.get('requests') || [];
         const status = OnboardingState.get('filters.status');
         const search = (OnboardingState.get('filters.search') || '').toLowerCase();
 
         let filtered = requests;
+
+        // Ownership filter: executor sees only own + unassigned
+        const { myRole } = OnboardingUtils.getRoles();
+        const myEmail = OnboardingState.get('userEmail');
+        if (myRole === 'executor' && myEmail) {
+            filtered = filtered.filter(r =>
+                r.assigneeEmail === myEmail ||
+                r.createdBy === myEmail ||
+                !r.assigneeEmail
+            );
+        }
 
         // Status filter
         if (status) {
@@ -130,8 +202,12 @@ const OnboardingList = (() => {
 
     function setupDefaultFilters() {
         OnboardingState.set('filters.ownership', 'all');
-        const select = document.getElementById('mainFilter');
-        if (select) select.value = 'all';
+        const label = document.getElementById('filterLabel');
+        if (label) label.textContent = 'Все заявки';
+        const dropdown = document.getElementById('filterDropdown');
+        if (dropdown) {
+            dropdown.querySelectorAll('.dropdown-item').forEach(o => o.classList.toggle('active', o.dataset.value === 'all'));
+        }
     }
 
     function _isMyTurn(request, myRole, sysRole, myEmail) {
@@ -147,13 +223,23 @@ const OnboardingList = (() => {
             if (OnboardingRoles.isExecutorForStep(sysRole, request.currentStep) && !step.reviewer) return true;
             // Dynamic handoff: effective executor's turn
             if (step.dynamicExecutor) {
+                const stepData = (request.stageData && request.stageData[request.currentStep]) || {};
+                // After executor confirmed (handoff complete + on_review) → reviewer's turn
+                if (stepData._handoff_complete) return OnboardingRoles.isReviewerForStep(sysRole, request.currentStep);
                 const eff = OnboardingConfig.getStepEffectiveExecutor(request.currentStep, request.stageData);
                 if (eff === 'reviewer') return OnboardingRoles.isReviewerForStep(sysRole, request.currentStep);
                 return OnboardingRoles.isExecutorForStep(sysRole, request.currentStep);
             }
             return false;
         }
-        // in_progress: check effective executor
+        // in_progress / approved / revision_needed: check effective executor
+        // AutoHandoff step phase 1: reviewer fills before handoff — reviewer's turn, not executor's
+        if (step.dynamicExecutor && step.dynamicExecutor.autoHandoff) {
+            const stepData = (request.stageData && request.stageData[request.currentStep]) || {};
+            if (!stepData._handoff_complete) {
+                return OnboardingRoles.isReviewerForStep(sysRole, request.currentStep);
+            }
+        }
         if (OnboardingRoles.isExecutorForStep(sysRole, request.currentStep)) {
             if (OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor') {
                 return request.assigneeEmail === myEmail || request.createdBy === myEmail;
@@ -170,17 +256,6 @@ const OnboardingList = (() => {
         return parts[0];
     }
 
-    function _formatDateTime(dateStr) {
-        if (!dateStr) return '';
-        const d = new Date(dateStr);
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yy = String(d.getFullYear()).slice(-2);
-        const hh = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        return `${dd}.${mm}.${yy} ${hh}:${min}`;
-    }
-
     function _toggleLoading(isLoading) {
         const loading = document.getElementById('listLoading');
         const list = document.getElementById('requestsList');
@@ -191,8 +266,8 @@ const OnboardingList = (() => {
     // ── Selection Toolbar ──
 
     function _updateSelectionToolbar() {
-        const myRole = OnboardingState.get('userRole');
-        if (myRole !== 'admin' && myRole !== 'leader') {
+        const { isAdmin } = OnboardingUtils.getRoles();
+        if (!isAdmin) {
             _hideSelectionToolbar();
             return;
         }
@@ -233,5 +308,5 @@ const OnboardingList = (() => {
         _updateSelectionToolbar();
     }
 
-    return { init, render, applyFilters, setupDefaultFilters, getSelectedIds, toggleSelectAll, updateSelection: _updateSelectionToolbar };
+    return { init, render, applyFilters, setupDefaultFilters, getSelectedIds, toggleSelectAll, updateSelection: _updateSelectionToolbar, goToPage };
 })();

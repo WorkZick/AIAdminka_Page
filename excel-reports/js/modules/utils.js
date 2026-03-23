@@ -70,7 +70,7 @@ class ExcelReportsUtils {
 
     // Генерация уникального ID
     generateId(prefix = 'id') {
-        return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+        return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
 
     // Debounce функция для оптимизации
@@ -187,8 +187,7 @@ class ExcelReportsUtils {
             '"': '&quot;',
             "'": '&#039;'
         };
-        if (text == null) return '';
-        return String(text).replace(/[&<>"']/g, m => map[m]);
+        return text.replace(/[&<>"']/g, m => map[m]);
     }
 
     // Получить расширение файла

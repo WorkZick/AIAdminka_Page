@@ -30,9 +30,9 @@ const PageLifecycle = {
         const basePath = config.basePath || '..';
         const sharedPath = basePath === '.' ? 'shared' : '../shared';
 
-        // Загружаем shell-компоненты параллельно
+        // Параллельно: компоненты UI + CloudStorage (независимы)
         ComponentLoader.init(sharedPath);
-        await ComponentLoader.loadAll([
+        const componentsPromise = ComponentLoader.loadAll([
             {
                 name: 'sidebar',
                 target: '#sidebar-container',
@@ -45,21 +45,28 @@ const PageLifecycle = {
             }
         ]);
 
-        // Auth check
-        if (config.needsAuth !== false) {
-            if (!await AuthGuard.checkWithRole()) return;
-        }
-
-        // CloudStorage
+        // CloudStorage init — лёгкий (localStorage), запускаем параллельно
+        let csReady = false;
         if (config.needsCloudStorage !== false && typeof CloudStorage !== 'undefined') {
             try {
-                await CloudStorage.init();
+                csReady = await CloudStorage.init();
             } catch (e) {
                 if (typeof ErrorHandler !== 'undefined') {
                     ErrorHandler.handle(e, { module: config.module, action: 'cloudStorageInit' });
                 }
             }
         }
+
+        // Ждём компоненты (sidebar нужен для UI)
+        await componentsPromise;
+
+        // Auth check
+        if (config.needsAuth !== false) {
+            if (!await AuthGuard.checkWithRole()) return;
+        }
+
+        // Авто-синхронизация профиля — фоновая, не блокирует UI
+        this._autoSyncProfile();
 
         // Инициализация модуля (page-loading виден до завершения)
         try {
@@ -77,14 +84,59 @@ const PageLifecycle = {
 
         // onReady callback
         if (config.onReady) {
-            try { config.onReady(); } catch (e) {
-                console.error('[PageLifecycle] onReady error:', e);
-            }
+            try { config.onReady(); } catch (e) { /* silent */ }
         }
 
         // Централизованные обработчики
         this._setupModalHandlers(config.modals);
         this._setupCleanup(config.onDestroy);
+    },
+
+    /**
+     * Авто-синхронизация профиля в Employees при первом входе после одобрения
+     * Использует syncMyProfile — не требует прав на team-info, работает для всех ролей
+     */
+    async _autoSyncProfile() {
+        try {
+            if (typeof RoleGuard === 'undefined' || !RoleGuard.initialized) return;
+            if (typeof CloudStorage === 'undefined' || !CloudStorage.isAuthenticated()) return;
+
+            const user = RoleGuard.user;
+            if (!user || !user.email) return;
+
+            // Только для активных пользователей с командой (или админов)
+            if (user.status !== 'active') return;
+            if (!user.teamId && user.role !== 'admin') return;
+
+            // Проверяем флаг: синхронизация уже выполнена?
+            const syncKey = 'profile-synced-' + user.email;
+            if (localStorage.getItem(syncKey)) return;
+
+            // Собираем данные профиля
+            const authUser = typeof AuthGuard !== 'undefined' ? AuthGuard.getUser() : null;
+
+            const profileData = {
+                fullName: user.name || authUser?.name || '',
+                position: user.position || '',
+                avatar: user.picture || authUser?.picture || '',
+                reddyId: user.reddyId || '',
+                corpTelegram: user.telegram || '',
+                corpPhone: user.phone || '',
+                predefinedFields: {},
+                customFields: {}
+            };
+
+            if (profileData.reddyId) {
+                profileData.predefinedFields['Reddy'] = profileData.reddyId;
+            }
+            profileData.predefinedFields['Корп. e-mail'] = user.email;
+
+            // syncMyProfile — безопасный эндпоинт, email привязан к токену на бэкенде
+            await CloudStorage.callApi('syncMyProfile', { data: profileData });
+            localStorage.setItem(syncKey, Date.now().toString());
+        } catch (e) {
+            console.warn('[PageLifecycle] Auto-sync profile failed:', e.message);
+        }
     },
 
     /**
@@ -147,16 +199,12 @@ const PageLifecycle = {
         const cleanup = () => {
             // Модульная очистка
             if (onDestroy) {
-                try { onDestroy(); } catch (e) {
-                    console.error('[PageLifecycle] onDestroy error:', e);
-                }
+                try { onDestroy(); } catch (e) { /* silent */ }
             }
 
             // Кастомные cleanup функции
             this._cleanupFns.forEach(fn => {
-                try { fn(); } catch (e) {
-                    console.error('[PageLifecycle] cleanup error:', e);
-                }
+                try { fn(); } catch (e) { /* silent */ }
             });
 
             // Очистка shared-модулей

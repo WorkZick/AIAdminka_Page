@@ -1,19 +1,40 @@
 // Partners Navigation - partner selection, card display, status management
 const PartnersNavigation = {
+    // Cached DOM refs for card panel (initialized lazily)
+    _cardRefs: null,
+    _getCardRefs() {
+        if (!this._cardRefs) {
+            this._cardRefs = {
+                hintPanel: document.getElementById('hintPanel'),
+                partnerCard: document.getElementById('partnerCard'),
+                partnerForm: document.getElementById('partnerForm'),
+                cardAvatar: document.getElementById('cardAvatar'),
+                cardAvatarPlaceholder: document.getElementById('cardAvatarPlaceholder'),
+                cardFullName: document.getElementById('cardFullName'),
+                cardPosition: document.getElementById('cardPosition'),
+                cardStatusText: document.getElementById('cardStatusText'),
+                cardBody: document.getElementById('cardBody')
+            };
+        }
+        return this._cardRefs;
+    },
+
     selectPartner(id) {
         if (PartnersState.selectedPartnerId === id) {
             PartnersNavigation.deselectPartner();
             return;
         }
 
+        const oldId = PartnersState.selectedPartnerId;
         PartnersState.selectedPartnerId = id;
-        PartnersRenderer.render();
+        PartnersRenderer.updateSelection(id, oldId);
         PartnersNavigation.showPartnerCard(id);
     },
 
     deselectPartner() {
+        const oldId = PartnersState.selectedPartnerId;
         PartnersState.selectedPartnerId = null;
-        PartnersRenderer.render();
+        PartnersRenderer.updateSelection(null, oldId);
         PartnersNavigation.showHintPanel();
     },
 
@@ -22,9 +43,10 @@ const PartnersNavigation = {
     },
 
     showHintPanel() {
-        document.getElementById('hintPanel').classList.remove('hidden');
-        document.getElementById('partnerCard').classList.add('hidden');
-        document.getElementById('partnerForm').classList.add('hidden');
+        const r = this._getCardRefs();
+        r.hintPanel.classList.remove('hidden');
+        r.partnerCard.classList.add('hidden');
+        r.partnerForm.classList.add('hidden');
     },
 
     showPartnerCard(id) {
@@ -32,34 +54,31 @@ const PartnersNavigation = {
         const partner = partners.find(p => p.id === id);
         if (!partner) return;
 
-        document.getElementById('hintPanel').classList.add('hidden');
-        document.getElementById('partnerCard').classList.remove('hidden');
-        document.getElementById('partnerForm').classList.add('hidden');
+        const r = this._getCardRefs();
+        r.hintPanel.classList.add('hidden');
+        r.partnerCard.classList.remove('hidden');
+        r.partnerForm.classList.add('hidden');
 
-        const cardAvatar = document.getElementById('cardAvatar');
-        const cardAvatarPlaceholder = document.getElementById('cardAvatarPlaceholder');
         // Используем avatarFileId для получения URL из Google Drive
         const avatarUrl = partner.avatarFileId ? CloudStorage.getImageUrl(partner.avatarFileId) : '';
         if (avatarUrl) {
-            cardAvatar.src = avatarUrl;
-            cardAvatar.classList.remove('hidden');
-            if (cardAvatarPlaceholder) cardAvatarPlaceholder.classList.add('hidden');
+            r.cardAvatar.src = avatarUrl;
+            r.cardAvatar.classList.remove('hidden');
+            if (r.cardAvatarPlaceholder) r.cardAvatarPlaceholder.classList.add('hidden');
         } else {
-            cardAvatar.src = '';
-            cardAvatar.classList.add('hidden');
-            if (cardAvatarPlaceholder) cardAvatarPlaceholder.classList.remove('hidden');
+            r.cardAvatar.src = '';
+            r.cardAvatar.classList.add('hidden');
+            if (r.cardAvatarPlaceholder) r.cardAvatarPlaceholder.classList.remove('hidden');
         }
 
-        document.getElementById('cardFullName').textContent = partner.subagent || '-';
-        document.getElementById('cardPosition').textContent = partner.subagentId || '-';
+        r.cardFullName.textContent = partner.subagent || '-';
+        r.cardPosition.textContent = partner.subagentId || '-';
 
         const status = partner.status || 'Открыт';
-        const statusText = document.getElementById('cardStatusText');
-        statusText.textContent = status;
-        statusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
+        r.cardStatusText.textContent = status;
+        r.cardStatusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
 
-        const cardBody = document.getElementById('cardBody');
-        cardBody.innerHTML = PartnersNavigation.generateCardInfo(partner);
+        r.cardBody.innerHTML = PartnersNavigation.generateCardInfo(partner);
     },
 
     generateCardInfo(partner) {
@@ -105,20 +124,29 @@ const PartnersNavigation = {
         return html;
     },
 
-    toggleStatusDropdown() {
-        const dropdown = document.getElementById('cardStatusDropdown');
-        const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
-        const isOpen = dropdown.classList.contains('hidden');
+    _toggleDropdown(dropdownId) {
+        const dropdown = document.getElementById(dropdownId);
+        if (!dropdown) return;
+        // Close other status dropdowns
+        document.querySelectorAll('.dropdown-wrap--status .dropdown-menu:not(.hidden)').forEach(m => {
+            if (m !== dropdown) m.classList.add('hidden');
+        });
         dropdown.classList.toggle('hidden');
-        if (arrow) {
-            if (isOpen) {
-                arrow.classList.add('dropdown-arrow-open');
-                arrow.classList.remove('dropdown-arrow-closed');
-            } else {
-                arrow.classList.add('dropdown-arrow-closed');
-                arrow.classList.remove('dropdown-arrow-open');
-            }
-        }
+    },
+
+    _closeDropdown(dropdownId) {
+        const dropdown = document.getElementById(dropdownId);
+        if (dropdown) dropdown.classList.add('hidden');
+    },
+
+    _updateStatusBadge(textId, status) {
+        const statusText = document.getElementById(textId);
+        statusText.textContent = status;
+        statusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
+    },
+
+    toggleStatusDropdown() {
+        this._toggleDropdown('cardStatusDropdown');
     },
 
     async changeStatus(status) {
@@ -132,23 +160,13 @@ const PartnersNavigation = {
             partner.status = status;
             await CloudStorage.updatePartner(PartnersState.selectedPartnerId, partner);
 
-            // Update cache
             const index = PartnersState.cachedPartners.findIndex(p => p.id === PartnersState.selectedPartnerId);
             if (index !== -1) {
                 PartnersState.cachedPartners[index].status = status;
             }
 
-            const statusText = document.getElementById('cardStatusText');
-            statusText.textContent = status;
-            statusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
-
-            document.getElementById('cardStatusDropdown').classList.add('hidden');
-            const arrow = document.querySelector('#cardStatusBadge .status-dropdown-icon');
-            if (arrow) {
-                arrow.classList.add('dropdown-arrow-closed');
-                arrow.classList.remove('dropdown-arrow-open');
-            }
-
+            this._updateStatusBadge('cardStatusText', status);
+            this._closeDropdown('cardStatusDropdown');
             PartnersRenderer.render();
         } catch (error) {
             PartnersUtils.showError('Ошибка обновления статуса: ' + error.message);
@@ -156,32 +174,12 @@ const PartnersNavigation = {
     },
 
     toggleFormStatusDropdown() {
-        const dropdown = document.getElementById('formStatusDropdown');
-        const arrow = document.querySelector('#formStatusBadge .status-dropdown-icon');
-        const isOpen = dropdown.classList.contains('hidden');
-        dropdown.classList.toggle('hidden');
-        if (arrow) {
-            if (isOpen) {
-                arrow.classList.add('dropdown-arrow-open');
-                arrow.classList.remove('dropdown-arrow-closed');
-            } else {
-                arrow.classList.add('dropdown-arrow-closed');
-                arrow.classList.remove('dropdown-arrow-open');
-            }
-        }
+        this._toggleDropdown('formStatusDropdown');
     },
 
     changeFormStatus(status) {
         PartnersState.formStatus = status;
-        const statusText = document.getElementById('formStatusText');
-        statusText.textContent = status;
-        statusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
-
-        document.getElementById('formStatusDropdown').classList.add('hidden');
-        const arrow = document.querySelector('#formStatusBadge .status-dropdown-icon');
-        if (arrow) {
-            arrow.classList.add('dropdown-arrow-closed');
-            arrow.classList.remove('dropdown-arrow-open');
-        }
+        this._updateStatusBadge('formStatusText', status);
+        this._closeDropdown('formStatusDropdown');
     }
 };

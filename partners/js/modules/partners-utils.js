@@ -1,16 +1,16 @@
 // Partners Utils - utility functions
 const PartnersUtils = {
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    },
+    escapeHtml(text) { return Utils.escapeHtml(text); },
 
     isValidImageUrl(url) {
         if (!url) return false;
-        return url.startsWith('data:image/') ||
-               url.startsWith('http://') ||
-               url.startsWith('https://');
+        if (url.startsWith('data:image/')) return true;
+        try {
+            const parsed = new URL(url);
+            return ['http:', 'https:'].includes(parsed.protocol);
+        } catch {
+            return false;
+        }
     },
 
     showLoading(show) {

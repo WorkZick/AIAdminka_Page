@@ -108,7 +108,7 @@ const TeamForms = {
      */
     async saveFromForm() {
         const fullName = document.getElementById('formFullName').value.trim();
-        const position = document.getElementById('formPosition').value.trim();
+        const position = (document.getElementById('formPositionValue')?.value || '').trim();
         const status = TeamState.currentFormStatus || 'Работает';
 
         // Валидация
@@ -340,7 +340,7 @@ const TeamForms = {
     getFormData() {
         return {
             fullName: document.getElementById('formFullName').value,
-            position: document.getElementById('formPosition').value,
+            position: document.getElementById('formPositionValue')?.value || '',
             status: TeamState.currentFormStatus || 'Работает',
             reddyId: document.getElementById('formReddyId').value,
             corpTelegram: document.getElementById('formCorpTelegram').value,
@@ -363,23 +363,19 @@ const TeamForms = {
      */
     attachFormChangeListeners() {
         const formFields = [
-            'formFullName', 'formPosition', 'formReddyId',
+            'formFullName', 'formPositionValue', 'formReddyId',
             'formCorpTelegram', 'formPersonalTelegram', 'formBirthday',
             'formCorpEmail', 'formPersonalEmail', 'formCorpPhone',
             'formPersonalPhone', 'formOffice', 'formStartDate',
             'formCompany', 'formCrmLogin', 'formComment'
         ];
 
-        if (!this._boundOnFormChange) {
-            this._boundOnFormChange = this.onFormChange.bind(this);
-        }
-
         formFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field) {
                 const event = field.tagName === 'SELECT' ? 'change' : 'input';
-                field.removeEventListener(event, this._boundOnFormChange);
-                field.addEventListener(event, this._boundOnFormChange);
+                field.removeEventListener(event, this.onFormChange.bind(this));
+                field.addEventListener(event, this.onFormChange.bind(this));
             }
         });
     },
@@ -418,7 +414,7 @@ const TeamForms = {
         // Получаем email текущего пользователя
         let currentUserEmail = null;
         try {
-            const authData = localStorage.getItem('cloud-auth');
+            const authData = sessionStorage.getItem('cloud-auth');
             if (authData) {
                 const auth = JSON.parse(authData);
                 currentUserEmail = auth.email;
@@ -469,19 +465,28 @@ const TeamForms = {
      * Заполнение выпадающего списка ролей
      * @private
      */
-    _populateRoleDropdown() {
-        const select = document.getElementById('formPosition');
-        if (!select || typeof RolesConfig === 'undefined') return;
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Выберите роль</option>';
+    _populateRoleDropdown(selectedValue) {
+        const menu = document.getElementById('formPositionMenu');
+        const input = document.getElementById('formPositionValue');
+        const label = document.getElementById('formPositionLabel');
+        const trigger = document.getElementById('formPositionTrigger');
+        if (!menu || typeof RolesConfig === 'undefined') return;
+        const currentValue = selectedValue ?? (input ? input.value : '');
+        let html = '<div class="dropdown-item' + (!currentValue ? ' active' : '') + '" data-action="team-selectFormDropdown" data-value="">Выберите роль</div>';
         RolesConfig.ALL_ROLES.forEach(role => {
             if (role === 'guest') return;
-            const option = document.createElement('option');
-            option.value = role;
-            option.textContent = RolesConfig.getName(role);
-            select.appendChild(option);
+            const isActive = role === currentValue ? ' active' : '';
+            html += '<div class="dropdown-item' + isActive + '" data-action="team-selectFormDropdown" data-value="' + Utils.escapeHtml(role) + '">' + Utils.escapeHtml(RolesConfig.getName(role)) + '</div>';
         });
-        if (currentValue) select.value = currentValue;
+        menu.innerHTML = html;
+        if (input) input.value = currentValue || '';
+        if (currentValue && label) {
+            label.textContent = RolesConfig.getName(currentValue);
+            if (trigger) trigger.classList.remove('placeholder');
+        } else {
+            if (label) label.textContent = 'Выберите роль';
+            if (trigger) trigger.classList.add('placeholder');
+        }
     },
 
     /**
@@ -490,8 +495,9 @@ const TeamForms = {
      */
     _clearFormFields() {
         document.getElementById('formFullName').value = '';
-        this._populateRoleDropdown();
-        document.getElementById('formPosition').value = '';
+        this._populateRoleDropdown('');
+        const posWrap = document.getElementById('formPositionWrap');
+        if (posWrap) posWrap.classList.remove('disabled');
         document.getElementById('formReddyId').value = '';
         document.getElementById('formCorpTelegram').value = '';
         document.getElementById('formPersonalTelegram').value = '';
@@ -513,8 +519,19 @@ const TeamForms = {
      */
     _fillFormFields(employee) {
         document.getElementById('formFullName').value = employee.fullName || '';
-        this._populateRoleDropdown();
-        document.getElementById('formPosition').value = employee.position || '';
+        const roleKey = (typeof RolesConfig !== 'undefined' && employee.position) ? RolesConfig.resolveRoleKey(employee.position) : (employee.position || '');
+        this._populateRoleDropdown(roleKey);
+
+        // Запрет редактирования должности в своей карточке
+        let isSelf = false;
+        try {
+            const authData = sessionStorage.getItem('cloud-auth');
+            const currentEmail = authData ? JSON.parse(authData).email : null;
+            const empEmail = employee.email || employee.id;
+            isSelf = !!(currentEmail && empEmail === currentEmail);
+        } catch (e) { /* ignore */ }
+        const posWrap = document.getElementById('formPositionWrap');
+        if (posWrap) posWrap.classList.toggle('disabled', isSelf);
 
         // Установка status badge
         TeamState.currentFormStatus = employee.status || 'Работает';
@@ -615,7 +632,7 @@ const TeamForms = {
             employeeCard.classList.add('visible-flex');
 
             document.getElementById('cardFullName').textContent = employee.fullName || '';
-            document.getElementById('cardPosition').textContent = (typeof RolesConfig !== 'undefined' && employee.position) ? RolesConfig.getName(employee.position) : (employee.position || '');
+            document.getElementById('cardPosition').textContent = (typeof RolesConfig !== 'undefined' && employee.position) ? RolesConfig.getName(RolesConfig.resolveRoleKey(employee.position)) : (employee.position || '');
 
             const currentStatus = employee.status || 'Работает';
             const statusClass = TeamUtils.getStatusClass(currentStatus);

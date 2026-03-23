@@ -10,6 +10,7 @@ const WaitingInvite = {
     _clickHandler: null,
     _beforeUnloadHandler: null,
     _keydownHandler: null,
+    _visibilityHandler: null,
     _confirmResolve: null,
     isLoading: false,
     isRedirecting: false,
@@ -17,17 +18,19 @@ const WaitingInvite = {
     invites: [],
 
     async init() {
-        const authData = localStorage.getItem('cloud-auth');
+        const authData = sessionStorage.getItem('cloud-auth');
         if (!authData) {
-            window.location.href = '/SimpleAIAdminka/login/';
+            window.location.href = 'index.html';
             return;
         }
 
         try {
             const auth = JSON.parse(authData);
-            if (Date.now() - auth.timestamp > 3500000) {
-                localStorage.removeItem('cloud-auth');
-                window.location.href = '/SimpleAIAdminka/login/';
+            // TokenManager недоступен на waiting-invite (auth-guard.js не подключён)
+            const TOKEN_LIFETIME = (typeof TokenManager !== 'undefined') ? TokenManager.TOKEN_LIFETIME : 3500000;
+            if (Date.now() - auth.timestamp > TOKEN_LIFETIME) {
+                sessionStorage.removeItem('cloud-auth');
+                window.location.href = 'index.html';
                 return;
             }
 
@@ -37,7 +40,7 @@ const WaitingInvite = {
                 picture: auth.picture || ''
             };
         } catch {
-            window.location.href = '/SimpleAIAdminka/login/';
+            window.location.href = 'index.html';
             return;
         }
 
@@ -47,15 +50,7 @@ const WaitingInvite = {
         this._startAutoRefresh();
     },
 
-    _escapeHtml(text) {
-        if (text === null || text === undefined) return '';
-        return String(text)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    },
+    _escapeHtml(text) { return Utils.escapeHtml(text); },
 
     _bindEvents() {
         this._clickHandler = (e) => {
@@ -89,6 +84,17 @@ const WaitingInvite = {
 
         this._beforeUnloadHandler = () => this.destroy();
         window.addEventListener('beforeunload', this._beforeUnloadHandler);
+
+        // Pause auto-refresh when tab is hidden (saves network requests)
+        this._visibilityHandler = () => {
+            if (document.hidden) {
+                this._stopAutoRefresh();
+            } else if (!this.isRedirecting) {
+                this.loadInvites();
+                this._startAutoRefresh();
+            }
+        };
+        document.addEventListener('visibilitychange', this._visibilityHandler);
     },
 
     destroy() {
@@ -104,6 +110,10 @@ const WaitingInvite = {
         if (this._beforeUnloadHandler) {
             window.removeEventListener('beforeunload', this._beforeUnloadHandler);
             this._beforeUnloadHandler = null;
+        }
+        if (this._visibilityHandler) {
+            document.removeEventListener('visibilitychange', this._visibilityHandler);
+            this._visibilityHandler = null;
         }
     },
 
@@ -128,7 +138,7 @@ const WaitingInvite = {
         if (email) email.textContent = this.user.email;
 
         if (avatar) {
-            if (this.user.picture && this.user.picture.startsWith('https://lh')) {
+            if (Utils.isGoogleAvatar(this.user.picture)) {
                 const img = document.createElement('img');
                 img.src = this.user.picture;
                 img.alt = '';
@@ -161,7 +171,7 @@ const WaitingInvite = {
                 this._stopAutoRefresh();
                 localStorage.removeItem('roleGuard');
                 Toast.success('Вы уже в команде!');
-                setTimeout(() => { window.location.href = '/SimpleAIAdminka/'; }, 1500);
+                setTimeout(() => { window.location.href = '../index.html'; }, 1500);
                 return;
             }
 
@@ -169,7 +179,7 @@ const WaitingInvite = {
                 this.isRedirecting = true;
                 this._stopAutoRefresh();
                 Toast.error('Сессия истекла. Войдите снова.');
-                setTimeout(() => { window.location.href = '/SimpleAIAdminka/login/'; }, 1500);
+                setTimeout(() => { window.location.href = 'index.html'; }, 1500);
                 return;
             }
 
@@ -224,17 +234,18 @@ const WaitingInvite = {
     _renderInviteCard(invite) {
         const expiresDate = new Date(invite.expiresDate);
         const daysLeft = Math.ceil((expiresDate - new Date()) / (1000 * 60 * 60 * 24));
+        const isExpired = daysLeft <= 0;
         const isExpiringSoon = daysLeft <= 2;
         const id = this._escapeHtml(invite.inviteId);
 
-        const expiresText = daysLeft <= 0
-            ? 'Истекает сегодня'
+        const expiresText = isExpired
+            ? 'Срок истёк'
             : daysLeft === 1
                 ? 'Истекает завтра'
                 : `Истекает через ${daysLeft} дн.`;
 
         return `
-            <div class="invite-card" data-invite-id="${id}">
+            <div class="invite-card${isExpired ? ' expired' : ''}" data-invite-id="${id}">
                 <div class="invite-header">
                     <div class="invite-team-name">${this._escapeHtml(invite.teamName)}</div>
                     <div class="invite-role">${this._escapeHtml(invite.assignedRoleName || invite.assignedRole)}</div>
@@ -246,15 +257,15 @@ const WaitingInvite = {
                     </div>
                     <div class="invite-info-row">
                         <span class="label">Дата:</span>
-                        <span class="value">${Utils.formatDate(invite.createdDate)}</span>
+                        <span class="value">${this._escapeHtml(Utils.formatDate(invite.createdDate))}</span>
                     </div>
-                    <div class="invite-expires ${isExpiringSoon ? 'expiring-soon' : ''}">
+                    <div class="invite-expires ${isExpired ? 'expired' : isExpiringSoon ? 'expiring-soon' : ''}">
                         ${expiresText}
                     </div>
                 </div>
                 <div class="invite-actions">
-                    <button class="btn btn-primary" data-action="accept" data-invite-id="${id}">
-                        Принять
+                    <button class="btn btn-primary" data-action="accept" data-invite-id="${id}"${isExpired ? ' disabled' : ''}>
+                        ${isExpired ? 'Истекло' : 'Принять'}
                     </button>
                     <button class="btn btn-danger" data-action="reject" data-invite-id="${id}">
                         Отклонить
@@ -323,7 +334,7 @@ const WaitingInvite = {
                 localStorage.removeItem('roleGuard');
                 this.isRedirecting = true;
                 this._stopAutoRefresh();
-                setTimeout(() => { window.location.href = '/SimpleAIAdminka/'; }, 1500);
+                setTimeout(() => { window.location.href = '../index.html'; }, 1500);
             } else {
                 throw new Error(result.error || 'Ошибка принятия приглашения');
             }
@@ -354,32 +365,32 @@ const WaitingInvite = {
         try {
             const result = await CloudStorage.callApi('rejectInvite', { inviteId });
 
-            if (result.success) {
-                Toast.success('Приглашение отклонено');
-                this.isLoading = false;
-                await this.loadInvites();
-            } else {
+            if (!result.success) {
                 throw new Error(result.error || 'Ошибка отклонения приглашения');
             }
+            Toast.success('Приглашение отклонено');
         } catch (error) {
             Toast.error('Ошибка: ' + error.message);
             this._setInviteButtonsDisabled(inviteId, false);
+        } finally {
             this.isLoading = false;
         }
+        // Перезагружаем список после полного сброса isLoading
+        await this.loadInvites();
     },
 
     _setInviteButtonsDisabled(inviteId, disabled) {
-        const card = document.querySelector(`[data-invite-id="${inviteId}"]`);
+        const card = document.querySelector(`[data-invite-id="${CSS.escape(inviteId)}"]`);
         if (!card) return;
         card.querySelectorAll('button').forEach(btn => { btn.disabled = disabled; });
     },
 
     _logout() {
         this.destroy();
-        localStorage.removeItem('cloud-auth');
+        sessionStorage.removeItem('cloud-auth');
         localStorage.removeItem('roleGuard');
         Toast.info('Выход из аккаунта...');
-        setTimeout(() => { window.location.href = '/SimpleAIAdminka/login/'; }, 500);
+        setTimeout(() => { window.location.href = 'index.html'; }, 500);
     }
 };
 

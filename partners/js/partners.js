@@ -2,18 +2,30 @@
 const partnersApp = {
     // ==================== INITIALIZATION ====================
     async init() {
-        // Check authentication and role status (waiting_invite/blocked check)
-        if (!await AuthGuard.checkWithRole()) {
-            return; // Will redirect to login or waiting-invite
+        // AuthGuard.checkWithRole() и CloudStorage.init() уже вызваны в PageLifecycle
+        // Полноэкранный спиннер (.page-loading) показывается PageLifecycle на время onInit()
+
+        // Event delegation for table row clicks (перенесено из глобальной области)
+        const tableBody = document.getElementById('partnersTableBody');
+        if (tableBody) {
+            tableBody.addEventListener('click', (e) => {
+                const row = e.target.closest('tr[data-partner-id]');
+                if (row) {
+                    PartnersNavigation.selectPartner(row.dataset.partnerId);
+                }
+            });
         }
 
-        // Show loading
-        PartnersUtils.showLoading(true);
+        // Слушаем завершение синхронизации для обновления данных (с cleanup)
+        this._syncHandler = () => { PartnersForms.loadDataFromCloud(); };
+        window.addEventListener('sync-complete', this._syncHandler);
+        PageLifecycle.addCleanup(() => {
+            if (partnersApp._syncHandler) {
+                window.removeEventListener('sync-complete', partnersApp._syncHandler);
+            }
+        });
 
         try {
-            // Initialize CloudStorage
-            await CloudStorage.init();
-
             // Load data from cloud
             await PartnersForms.loadAllData();
 
@@ -28,14 +40,7 @@ const partnersApp = {
         } catch (error) {
             console.error('Init error:', error);
             PartnersUtils.showError('Ошибка загрузки данных: ' + error.message);
-        } finally {
-            PartnersUtils.showLoading(false);
         }
-
-        // Слушаем завершение синхронизации для обновления данных
-        window.addEventListener('sync-complete', () => {
-            PartnersForms.loadDataFromCloud();
-        });
     },
 
     // ==================== PROXY METHODS (for data-action compatibility) ====================
@@ -88,6 +93,7 @@ const partnersApp = {
     updateStats: (...args) => PartnersRenderer.updateStats(...args),
     sortBy: (...args) => PartnersRenderer.sortBy(...args),
     filterTable: (...args) => PartnersRenderer.filterTable(...args),
+    goToPage: (page) => PartnersRenderer.goToPage(page),
     toggleSidebar: (...args) => PartnersRenderer.toggleSidebar(...args),
 
     // Navigation
@@ -169,6 +175,46 @@ const partnersApp = {
     cancelImport: (...args) => PartnersImportExport.cancelImport(...args),
     removeDuplicates: (...args) => PartnersImportExport.removeDuplicates(...args),
 
+    // Form Dropdowns
+    toggleFormDropdown(target) {
+        const menuId = target.dataset?.target || target;
+        const menu = document.getElementById(typeof menuId === 'string' ? menuId : '');
+        if (!menu) return;
+        // Close other form dropdowns
+        document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden)').forEach(m => {
+            if (m !== menu) m.classList.add('hidden');
+        });
+        menu.classList.toggle('hidden');
+    },
+    selectFormDropdown(target) {
+        const menu = target.closest('.dropdown-menu');
+        const wrap = target.closest('.dropdown-wrap--form');
+        if (!menu || !wrap) return;
+        const value = target.dataset.value ?? '';
+        const label = target.textContent;
+        // Update hidden input
+        const input = wrap.querySelector('input[type="hidden"]');
+        if (input) input.value = value;
+        // Update trigger label
+        const trigger = wrap.querySelector('.dropdown-trigger--form');
+        const labelEl = trigger?.querySelector('span');
+        if (labelEl) labelEl.textContent = label;
+        trigger?.classList.toggle('placeholder', !value);
+        // Update active state
+        menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+        target.classList.add('active');
+        menu.classList.add('hidden');
+        // Trigger change callbacks
+        const wrapId = wrap.id;
+        if (wrapId === 'templateSelectWrap') {
+            PartnersTemplates.handleTemplateChange();
+        } else if (wrapId === 'exportTemplateSelectWrap') {
+            PartnersImportExport.updateExportPreview();
+        } else if (wrapId === 'importTemplateSelectWrap') {
+            PartnersImportExport.updateExcelHint();
+        }
+    },
+
     // State accessors (for backward compatibility)
     getPartners: () => PartnersState.getPartners(),
     getMethods: () => PartnersState.getMethods()
@@ -178,7 +224,7 @@ const partnersApp = {
 PageLifecycle.init({
     module: 'partners',
     async onInit() {
-        partnersApp.init();
+        await partnersApp.init();
     },
     modals: {
         '#importModal': () => partnersApp.closeImportDialog(),
@@ -189,33 +235,27 @@ PageLifecycle.init({
 // ==================== Global Event Listeners ====================
 
 // Close dropdowns and menus when clicking outside
+const _dropdownRefs = { columnsSettings: null, columnsMenu: null, _init: false };
+function _ensureDropdownRefs() {
+    if (_dropdownRefs._init) return;
+    _dropdownRefs.columnsSettings = document.querySelector('.columns-settings');
+    _dropdownRefs.columnsMenu = document.getElementById('columnsMenu');
+    _dropdownRefs._init = true;
+}
 document.addEventListener('click', (e) => {
-    const cardStatusBadge = document.getElementById('cardStatusBadge');
-    const cardStatusDropdown = document.getElementById('cardStatusDropdown');
-    const formStatusBadge = document.getElementById('formStatusBadge');
-    const formStatusDropdown = document.getElementById('formStatusDropdown');
-    const columnsSettings = document.querySelector('.columns-settings');
-    const columnsMenu = document.getElementById('columnsMenu');
+    _ensureDropdownRefs();
+    const r = _dropdownRefs;
 
-    if (cardStatusBadge && cardStatusDropdown && !cardStatusBadge.contains(e.target)) {
-        cardStatusDropdown.classList.add('hidden');
-        const arrow = cardStatusBadge.querySelector('.status-dropdown-icon');
-        if (arrow) {
-            arrow.classList.add('dropdown-arrow-closed');
-            arrow.classList.remove('dropdown-arrow-open');
+    if (r.columnsSettings && r.columnsMenu && !r.columnsSettings.contains(e.target)) {
+        r.columnsMenu.classList.remove('active');
+    }
+    // Close all custom dropdowns (form + status) when clicking outside
+    document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden), .dropdown-wrap--status .dropdown-menu:not(.hidden)').forEach(menu => {
+        const wrap = menu.closest('.dropdown-wrap--form, .dropdown-wrap--status');
+        if (wrap && !wrap.contains(e.target)) {
+            menu.classList.add('hidden');
         }
-    }
-    if (formStatusBadge && formStatusDropdown && !formStatusBadge.contains(e.target)) {
-        formStatusDropdown.classList.add('hidden');
-        const arrow = formStatusBadge.querySelector('.status-dropdown-icon');
-        if (arrow) {
-            arrow.classList.add('dropdown-arrow-closed');
-            arrow.classList.remove('dropdown-arrow-open');
-        }
-    }
-    if (columnsSettings && columnsMenu && !columnsSettings.contains(e.target)) {
-        columnsMenu.classList.remove('active');
-    }
+    });
 });
 
 // Event delegation для всех data-action="partners-*" атрибутов
@@ -235,6 +275,12 @@ document.addEventListener('click', (e) => {
     // Для status dropdown нужно остановить всплытие
     if (action.includes('changeStatus') || action.includes('changeFormStatus')) {
         e.stopPropagation();
+    }
+
+    // Form dropdowns — передаём DOM-элемент
+    if (action === 'toggleFormDropdown' || action === 'selectFormDropdown') {
+        partnersApp[action](target);
+        return;
     }
 
     // Для toggleColumn нужно получить columnId из data-column-id родителя

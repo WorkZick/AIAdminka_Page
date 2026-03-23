@@ -24,16 +24,15 @@ const PartnersForms = {
 
         const subagentInput = document.getElementById('formSubagent');
         const subagentIdInput = document.getElementById('formSubagentId');
-        const methodInput = document.getElementById('formMethod');
+        const methodWrap = document.getElementById('formMethodWrap');
         const methodWrapper = document.querySelector('.form-method-wrapper');
         const formAvatar = document.querySelector('.form-avatar');
 
         subagentInput.classList.remove('disabled');
         subagentIdInput.classList.remove('disabled');
-        methodInput.classList.remove('disabled');
+        if (methodWrap) methodWrap.classList.remove('disabled');
         subagentInput.readOnly = false;
         subagentIdInput.readOnly = false;
-        methodInput.disabled = false;
 
         if (methodWrapper) {
             methodWrapper.classList.remove('disabled', 'pointer-events-none');
@@ -93,16 +92,15 @@ const PartnersForms = {
 
         const subagentInput = document.getElementById('formSubagent');
         const subagentIdInput = document.getElementById('formSubagentId');
-        const methodInput = document.getElementById('formMethod');
+        const methodWrap = document.getElementById('formMethodWrap');
         const methodWrapper = document.querySelector('.form-method-wrapper');
         const formAvatarWrapper = document.querySelector('.form-avatar');
 
         subagentInput.classList.remove('disabled');
         subagentIdInput.classList.remove('disabled');
-        methodInput.classList.remove('disabled');
+        if (methodWrap) methodWrap.classList.remove('disabled');
         subagentInput.readOnly = false;
         subagentIdInput.readOnly = false;
-        methodInput.disabled = false;
 
         if (methodWrapper) {
             methodWrapper.classList.remove('disabled', 'pointer-events-none');
@@ -142,7 +140,7 @@ const PartnersForms = {
 
         if (partner.customFields) {
             Object.entries(partner.customFields).forEach(([label, value]) => {
-                const fieldId = 'customField_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                const fieldId = 'customField_' + Utils.generateId();
                 const fieldHtml = `
                     <div class="form-group-inline" data-custom-field="true">
                         <label>${PartnersUtils.escapeHtml(label)}:</label>
@@ -174,7 +172,7 @@ const PartnersForms = {
         const formAvatar = document.querySelector('.form-avatar');
         const subagentInput = document.getElementById('formSubagent');
         const subagentIdInput = document.getElementById('formSubagentId');
-        const methodInput = document.getElementById('formMethod');
+        const methodWrap = document.getElementById('formMethodWrap');
         const formStatusBadge = document.getElementById('formStatusBadge');
 
         if (formAvatar) {
@@ -189,9 +187,8 @@ const PartnersForms = {
             subagentIdInput.classList.remove('disabled');
             subagentIdInput.readOnly = false;
         }
-        if (methodInput) {
-            methodInput.classList.remove('disabled');
-            methodInput.readOnly = false;
+        if (methodWrap) {
+            methodWrap.classList.remove('disabled');
         }
         if (formStatusBadge) {
             formStatusBadge.classList.remove('hidden');
@@ -232,7 +229,7 @@ const PartnersForms = {
 
         const subagent = document.getElementById('formSubagent').value.trim();
         const subagentId = document.getElementById('formSubagentId').value.trim();
-        const method = document.getElementById('formMethod').value.trim();
+        const method = (document.getElementById('formMethodValue')?.value || '').trim();
 
         // Берём оригинал из dataset (для отправки в Drive), или сжатый предпросмотр
         const formAvatarEl = document.getElementById('formAvatar');
@@ -530,8 +527,10 @@ const PartnersForms = {
     // Перезагрузить данные с сервера (после фоновой синхронизации)
     async loadDataFromCloud() {
         try {
-            // Очищаем кэш и загружаем свежие данные
-            CloudStorage.clearCache();
+            // Очищаем только кэш данных партнёров (не трогаем employees, onboarding и т.д.)
+            CloudStorage.clearCache('partners');
+            CloudStorage.clearCache('methods');
+            CloudStorage.clearCache('templates');
             await PartnersForms.loadAllData();
             PartnersColumns.renderColumnsMenu();
             PartnersColumns.renderTableHeader();
