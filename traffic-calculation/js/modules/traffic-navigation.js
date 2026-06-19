@@ -12,15 +12,15 @@ const TrafficNavigation = {
         TrafficState.currentTab = tabName;
 
         // Обновляем кнопки вкладок
-        document.querySelectorAll('.tab-btn').forEach(btn => {
+        document.querySelectorAll('.tab').forEach(btn => {
             btn.classList.remove('active');
         });
         if (event) {
-            event.target.closest('.tab-btn').classList.add('active');
+            event.target.closest('.tab').classList.add('active');
         }
 
         // Показываем нужный контент
-        document.querySelectorAll('.tab-content').forEach(content => {
+        document.querySelectorAll('.tc-tab-content').forEach(content => {
             content.classList.remove('active');
         });
 
@@ -151,13 +151,13 @@ const TrafficNavigation = {
         TrafficState.currentTab = 'report';
 
         // Обновляем кнопки вкладок
-        document.querySelectorAll('.tab-btn').forEach(btn => {
+        document.querySelectorAll('.tab').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelectorAll('.tab-btn')[1].classList.add('active'); // Вторая кнопка - "Отчет"
+        document.querySelectorAll('.tab')[1].classList.add('active'); // Вторая кнопка - "Отчет"
 
         // Показываем вкладку отчета
-        document.querySelectorAll('.tab-content').forEach(content => {
+        document.querySelectorAll('.tc-tab-content').forEach(content => {
             content.classList.remove('active');
         });
         document.getElementById('reportTab').classList.add('active');

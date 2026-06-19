@@ -71,6 +71,10 @@ const storage = {
             const data = localStorage.getItem(this.ANALYTICS_KEY);
             return data ? JSON.parse(data) : {};
         } catch (e) {
+            ErrorHandler.handle(e, {
+                module: 'traffic-calculation-storage',
+                action: 'getAnalyticsData'
+            }, { silent: true });
             return {};
         }
     },
@@ -176,6 +180,10 @@ const storage = {
         try {
             return JSON.parse(localStorage.getItem(this.METHODS_KEY) || '[]');
         } catch (e) {
+            ErrorHandler.handle(e, {
+                module: 'traffic-calculation-storage',
+                action: 'getCustomMethods'
+            }, { silent: true });
             return [];
         }
     },

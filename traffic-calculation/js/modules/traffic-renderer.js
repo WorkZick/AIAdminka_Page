@@ -47,14 +47,14 @@ const TrafficRenderer = {
         }
 
         tbody.innerHTML = selected.map(partner => {
-            const statusClass = partner.status === 'новый' ? 'new' : partner.status === 'старый' ? 'old' : 'closed';
+            const statusClass = partner.status === 'новый' ? 'status-active' : partner.status === 'старый' ? 'status-pending' : 'status-inactive';
             const statusText = partner.status === 'новый' ? 'Новый' : partner.status === 'старый' ? 'Старый' : 'Закрыт';
 
             return `
                 <tr>
-                    <td>${TrafficRenderer.escapeHtml(partner.method)}</td>
-                    <td>${TrafficRenderer.escapeHtml(partner.subagent)}</td>
-                    <td>${TrafficRenderer.escapeHtml(partner.subagentId)}</td>
+                    <td>${Utils.escapeHtml(partner.method)}</td>
+                    <td>${Utils.escapeHtml(partner.subagent)}</td>
+                    <td>${Utils.escapeHtml(partner.subagentId)}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                 </tr>
             `;
@@ -96,7 +96,7 @@ const TrafficRenderer = {
         container.innerHTML = TrafficState.availableMethods.map((method, index) => `
             <label>
                 <input type="checkbox" value="${index}" class="method-checkbox">
-                ${TrafficRenderer.escapeHtml(method)}
+                ${Utils.escapeHtml(method)}
             </label>
         `).join('');
     },
@@ -134,7 +134,7 @@ const TrafficRenderer = {
             <label>
                 <input type="checkbox" value="${partner.id}" class="partner-checkbox"
                     ${TrafficState.selectedPartners.includes(partner.id) ? 'checked' : ''}>
-                ${TrafficRenderer.escapeHtml(partner.subagent)} (${TrafficRenderer.escapeHtml(partner.method)})
+                ${Utils.escapeHtml(partner.subagent)} (${Utils.escapeHtml(partner.method)})
             </label>
         `).join('');
     },
@@ -179,20 +179,20 @@ const TrafficRenderer = {
 
         tbody.innerHTML = filteredPartners.map(partner => {
             const date = new Date(partner.dateAdded).toLocaleDateString('ru-RU');
-            const statusClass = partner.status === 'новый' ? 'new' : partner.status === 'старый' ? 'old' : 'closed';
+            const statusClass = partner.status === 'новый' ? 'status-active' : partner.status === 'старый' ? 'status-pending' : 'status-inactive';
             const statusText = partner.status === 'новый' ? 'Новый' : partner.status === 'старый' ? 'Старый' : 'Закрыт';
 
             return `
                 <tr>
-                    <td>${TrafficRenderer.escapeHtml(partner.method)}</td>
-                    <td>${TrafficRenderer.escapeHtml(partner.subagent)}</td>
-                    <td>${TrafficRenderer.escapeHtml(partner.subagentId)}</td>
+                    <td>${Utils.escapeHtml(partner.method)}</td>
+                    <td>${Utils.escapeHtml(partner.subagent)}</td>
+                    <td>${Utils.escapeHtml(partner.subagentId)}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>${date}</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="action-btn" data-action="edit" data-partner-id="${partner.id}" title="Редактировать">Изменить</button>
-                            <button class="action-btn delete" data-action="delete" data-partner-id="${partner.id}" title="Удалить">Удалить</button>
+                            <button class="btn btn-sm btn--ghost" data-action="edit" data-partner-id="${partner.id}" title="Редактировать">Изменить</button>
+                            <button class="btn btn-sm btn-danger" data-action="delete" data-partner-id="${partner.id}" title="Удалить">Удалить</button>
                         </div>
                     </td>
                 </tr>
@@ -281,8 +281,8 @@ const TrafficRenderer = {
 
         container.innerHTML = methods.map(method => `
             <div class="method-item">
-                <span>${TrafficRenderer.escapeHtml(method)}</span>
-                <button data-method="${TrafficRenderer.escapeHtml(method)}">Удалить</button>
+                <span>${Utils.escapeHtml(method)}</span>
+                <button data-method="${Utils.escapeHtml(method)}">Удалить</button>
             </div>
         `).join('');
 
@@ -312,14 +312,14 @@ const TrafficRenderer = {
         const tbody = document.getElementById('reportTableBody');
         tbody.innerHTML = reportData.map(partner => {
             const date = new Date(partner.dateAdded).toLocaleDateString('ru-RU');
-            const statusClass = partner.status === 'новый' ? 'new' : partner.status === 'старый' ? 'old' : 'closed';
+            const statusClass = partner.status === 'новый' ? 'status-active' : partner.status === 'старый' ? 'status-pending' : 'status-inactive';
             const statusText = partner.status === 'новый' ? 'Новый' : partner.status === 'старый' ? 'Старый' : 'Закрыт';
 
             return `
                 <tr>
-                    <td>${TrafficRenderer.escapeHtml(partner.method)}</td>
-                    <td>${TrafficRenderer.escapeHtml(partner.subagent)}</td>
-                    <td>${TrafficRenderer.escapeHtml(partner.subagentId)}</td>
+                    <td>${Utils.escapeHtml(partner.method)}</td>
+                    <td>${Utils.escapeHtml(partner.subagent)}</td>
+                    <td>${Utils.escapeHtml(partner.subagentId)}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>${date}</td>
                     <td>${Number(partner.backCount) || 0}</td>
@@ -339,7 +339,7 @@ const TrafficRenderer = {
                     <td>${Number(partner.withdrawalQueues) || 0}</td>
                     <td>${Number(partner.creditsOutsideLimits) || 0}</td>
                     <td>${Number(partner.wrongAmountApproval) || 0}</td>
-                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${TrafficRenderer.escapeHtml(partner.otherViolationsDescription)}"` : ''}>
+                    <td class="violations-cell" ${partner.otherViolationsDescription ? `data-tooltip="${Utils.escapeHtml(partner.otherViolationsDescription)}"` : ''}>
                         <span>${Number(partner.otherViolations) || 0}</span>${partner.otherViolationsDescription ? ' <span class="violation-info-icon"><img src="../shared/icons/filter.svg" alt="info" class="tooltip-icon"></span>' : ''}
                     </td>
                 </tr>
@@ -368,7 +368,7 @@ const TrafficRenderer = {
             group.sort((a, b) => b.trafficPercent - a.trafficPercent);
         });
 
-        const esc = TrafficRenderer.escapeHtml;
+        const esc = (t) => Utils.escapeHtml(t);
         let html = '';
 
         Object.keys(methodGroups).sort().forEach(method => {
@@ -504,11 +504,5 @@ const TrafficRenderer = {
     closeEditModal() {
         document.getElementById('editModal').classList.remove('show');
         TrafficState.editingPartnerId = null;
-    },
-
-    // Экранирование HTML (string-based, без создания DOM элементов)
-    escapeHtml(text) {
-        if (typeof text !== 'string') return String(text ?? '');
-        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 };

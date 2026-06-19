@@ -105,7 +105,7 @@ const _MODULE_MAP = {
 
 // Вызов метода по имени action через маппинг
 function _callAction(action, ...args) {
-    var mod = _MODULE_MAP[action];
+    const mod = _MODULE_MAP[action];
     if (mod && typeof mod[action] === 'function') {
         return mod[action](...args);
     }
@@ -125,15 +125,15 @@ PageLifecycle.init({
 
 // Event delegation для всех data-action="traffic-*" атрибутов
 document.addEventListener('click', function(e) {
-    var target = e.target.closest('[data-action^="traffic-"]');
+    const target = e.target.closest('[data-action^="traffic-"]');
     if (!target) return;
 
-    var action = target.dataset.action.replace('traffic-', '');
+    const action = target.dataset.action.replace('traffic-', '');
 
     // fileZoneClick — специальная обработка (не в маппинге)
     if (action === 'fileZoneClick') {
-        var fileInputId = target.dataset.fileInputId;
-        var allowedInputs = ['depositsFileInput', 'qualityFileInput', 'percentFileInput'];
+        const fileInputId = target.dataset.fileInputId;
+        const allowedInputs = ['depositsFileInput', 'qualityFileInput', 'percentFileInput'];
         if (fileInputId && allowedInputs.indexOf(fileInputId) !== -1) {
             document.getElementById(fileInputId).click();
         }
@@ -144,14 +144,14 @@ document.addEventListener('click', function(e) {
 
     // Действия с data-step
     if (action === 'navigateToStep' || action === 'goToStep') {
-        var step = parseInt(target.dataset.step, 10);
+        const step = parseInt(target.dataset.step, 10);
         if (!isNaN(step)) _callAction(action, step);
         return;
     }
 
     // increment/decrement с data-field
     if (action === 'incrementManualValue' || action === 'decrementManualValue') {
-        var fieldId = target.dataset.field;
+        const fieldId = target.dataset.field;
         if (fieldId) _callAction(action, fieldId);
         return;
     }
@@ -160,12 +160,12 @@ document.addEventListener('click', function(e) {
 });
 
 // Event delegation для input событий (с debounce 150мс)
-var _inputDebounceTimer = null;
+let _inputDebounceTimer = null;
 document.addEventListener('input', function(e) {
-    var target = e.target.closest('[data-action^="traffic-"]');
+    const target = e.target.closest('[data-action^="traffic-"]');
     if (!target) return;
 
-    var action = target.dataset.action.replace('traffic-', '');
+    const action = target.dataset.action.replace('traffic-', '');
     if (_MODULE_MAP[action]) {
         clearTimeout(_inputDebounceTimer);
         _inputDebounceTimer = setTimeout(function() { _callAction(action); }, 150);
@@ -182,9 +182,9 @@ document.addEventListener('change', function(e) {
         return;
     }
 
-    var target = e.target.closest('[data-action^="traffic-"]');
+    const target = e.target.closest('[data-action^="traffic-"]');
     if (!target) return;
 
-    var action = target.dataset.action.replace('traffic-', '');
+    const action = target.dataset.action.replace('traffic-', '');
     if (_MODULE_MAP[action]) _callAction(action);
 });

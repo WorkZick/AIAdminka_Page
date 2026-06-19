@@ -478,7 +478,7 @@ const TrafficCalculator = {
             const totalInverse = inverseData.reduce((sum, item) => sum + item.inverseScore, 0);
 
             // Рассчитываем процент для каждого и округляем вниз
-            let results = inverseData.map(item => {
+            const results = inverseData.map(item => {
                 const exactPercent = (item.inverseScore / totalInverse) * 100;
                 const floorPercent = Math.floor(exactPercent);
                 return {
@@ -496,7 +496,7 @@ const TrafficCalculator = {
 
             // Вычисляем остаток до 100%
             const currentTotal = results.reduce((sum, item) => sum + item.floorPercent, 0);
-            let deficit = 100 - currentTotal;
+            const deficit = 100 - currentTotal;
 
             // Распределяем остаток между субагентами с наибольшими остатками
             // При равных остатках приоритет партнёру с меньшими баллами (лучше работает)

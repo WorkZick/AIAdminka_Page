@@ -5,18 +5,28 @@
     <meta charset="UTF-8">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.sheetjs.com https://cdn.jsdelivr.net https://accounts.google.com 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' 'sha384-QjwLundxB4NaHWOfxQoy8G+BY7T7kjRSxeKIjdPAUQ76EitE8bUlehJxnQEJquiL' 'sha384-cdYhdOlBc0MtESQfAGUIQ6Mf8mJZZ9E9VOP6SAR7sOvPVvRwQlwQ8UR6AjsGDSW3' 'sha384-/YOimVOt6Bq+nJVuTUHWt8a0+2GkUKsKQKq9P9jNkKqsupthdkM6WWQaaVIlnig/' 'sha384-wgqcWx+Dzs2/x1d1yYLKO34rUT5WhUT+OSqnt51rzc/Hi6CBs3tTpstly4/Hwv2y' 'sha384-sChJXbOWDzAc/w2cKkZyzzTmyVLtLgALn0PCewYcW4Nv4WHOMwANhSAqDFQyu3Iq' 'sha384-WO+CQNc5o8u/05JkylStFXt6f895hAovGF97PqyaWgflx6csiESfjnPzUJUrNAfk'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://cdn.jsdelivr.net">
     <title>Расчет трафика - AIAdminka</title>
     <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Regular.woff2" type="font/woff2" crossorigin>
     <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Bold.woff2" type="font/woff2" crossorigin>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
+    <!-- Phase 26-02: cascade order declaration FIRST (BEFORE design-system/components/module) -->
+    <link rel="stylesheet" href="../shared/css/_layers.css">
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <link rel="stylesheet" href="css/traffic-calculation.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
-            integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
+    <!-- Phase 24 CSS-02: utilities (highest priority @layer utility, loaded LAST per cascade order) -->
+    <link rel="stylesheet" href="../shared/css/utilities.css">
+    <!-- Phase 27-05 HTML-04: xlsx CDN унифицирован на cdn.sheetjs.com v0.19.3 (с 0.18.5 cdnjs) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"
+            integrity="sha384-QOLV4jDrHYFU/0mHkVIR8QkZgRISiTcaqHqMGcW7LZ5/DGKTJWGwVFCh5knANMvj"
             crossorigin="anonymous"
             referrerpolicy="no-referrer"
             defer></script>
+    <!-- Phase 27-05 HTML-04: modulepreload для signals-core (оптимизация загрузки cdn-deps.js) -->
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@preact/signals-core@1.14.1/+esm" integrity="sha384-QjwLundxB4NaHWOfxQoy8G+BY7T7kjRSxeKIjdPAUQ76EitE8bUlehJxnQEJquiL" crossorigin="anonymous">
+    <!-- Phase 32 ROLLOUT-01: cdn-deps (signals + Lit) + components aggregator (4 Lit custom elements) -->
+    <script type="module" src="../shared/js/cdn-deps.js"></script>
+    <script type="module" src="../shared/components/index.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -103,18 +113,18 @@
                                 <div id="selectionToolbar" class="selection-toolbar hidden">
                                     <div class="toolbar-group">
                                         <span class="toolbar-label">Выбрать:</span>
-                                        <button class="toolbar-btn" data-action="traffic-selectAll" title="Выбрать всех партнёров">
+                                        <button class="btn btn-sm btn-secondary" data-action="traffic-selectAll" title="Выбрать всех партнёров">
                                             Всех
                                         </button>
-                                        <button class="toolbar-btn" data-action="traffic-showMethodSelection" title="Выбрать по методу работы">
+                                        <button class="btn btn-sm btn-secondary" data-action="traffic-showMethodSelection" title="Выбрать по методу работы">
                                             По методу
                                         </button>
-                                        <button class="toolbar-btn" data-action="traffic-showManualSelection" title="Выбрать вручную">
+                                        <button class="btn btn-sm btn-secondary" data-action="traffic-showManualSelection" title="Выбрать вручную">
                                             Вручную
                                         </button>
                                     </div>
                                     <div class="toolbar-group">
-                                        <button class="toolbar-btn toolbar-btn-clear" data-action="traffic-clearSelection" title="Очистить выбор">
+                                        <button class="btn btn-sm" data-action="traffic-clearSelection" title="Очистить выбор">
                                             Очистить
                                         </button>
                                     </div>
@@ -135,7 +145,7 @@
                                 <div id="methodSelectionPanel" class="selection-panel-modern hidden">
                                     <div class="panel-header">
                                         <h3>Выберите методы</h3>
-                                        <button class="panel-close" data-action="traffic-hideAllPanels">
+                                        <button class="btn btn--ghost panel-close" data-action="traffic-hideAllPanels">
                                             <img src="../shared/icons/cross.svg" alt="Закрыть">
                                         </button>
                                     </div>
@@ -150,7 +160,7 @@
                                 <div id="manualSelectionPanel" class="selection-panel-modern hidden">
                                     <div class="panel-header">
                                         <h3>Выберите партнеров</h3>
-                                        <button class="panel-close" data-action="traffic-hideAllPanels">
+                                        <button class="btn btn--ghost panel-close" data-action="traffic-hideAllPanels">
                                             <img src="../shared/icons/cross.svg" alt="Закрыть">
                                         </button>
                                     </div>
@@ -167,7 +177,7 @@
                                         <span class="preview-title">Выбранные партнёры</span>
                                         <span class="partner-count-badge" id="selectedCount">0</span>
                                     </div>
-                                    <div class="table-container flex-1">
+                                    <div class="tc-table-container flex-1">
                                         <table class="data-table">
                                             <thead>
                                                 <tr>
@@ -289,11 +299,11 @@
                                     <div class="worktime-selector">
                                         <div class="form-group">
                                             <label for="partnerSearchInput">Поиск</label>
-                                            <input type="text" id="partnerSearchInput" placeholder="Поиск..." data-action="traffic-filterPartnersList">
+                                            <input type="text" class="form-input" id="partnerSearchInput" placeholder="Поиск..." data-action="traffic-filterPartnersList">
                                         </div>
                                         <div class="form-group">
                                             <label for="partnerSelectList">Субагент</label>
-                                            <select id="partnerSelectList" size="8" data-action="traffic-loadPartnerManualData">
+                                            <select class="form-select" id="partnerSelectList" size="8" data-action="traffic-loadPartnerManualData">
                                                 <option value="">Выберите на шаге 1</option>
                                             </select>
                                         </div>
@@ -400,11 +410,11 @@
                                     <div class="violations-selector">
                                         <div class="form-group">
                                             <label for="partnerSearchInput6">Поиск</label>
-                                            <input type="text" id="partnerSearchInput6" placeholder="Поиск..." data-action="traffic-filterPartnersListStep6">
+                                            <input type="text" class="form-input" id="partnerSearchInput6" placeholder="Поиск..." data-action="traffic-filterPartnersListStep6">
                                         </div>
                                         <div class="form-group">
                                             <label for="partnerSelectList6">Субагент</label>
-                                            <select id="partnerSelectList6" size="8" data-action="traffic-loadPartnerManualDataStep6">
+                                            <select class="form-select" id="partnerSelectList6" size="8" data-action="traffic-loadPartnerManualDataStep6">
                                                 <option value="">Выберите на шаге 1</option>
                                             </select>
                                         </div>
@@ -644,7 +654,7 @@
                             </div>
 
                             <div id="resultsCalculated" class="report-generated hidden">
-                                <div class="table-container flex-1">
+                                <div class="tc-table-container flex-1">
                                     <table class="data-table traffic-results-table">
                                         <thead>
                                             <tr>

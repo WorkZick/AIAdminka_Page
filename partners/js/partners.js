@@ -11,6 +11,7 @@ const partnersApp = {
     // ==================== ModuleFactory + Lit bridge state ====================
     mod: null,
     _disposers: [],
+    _partnersTablePendingMount: false,
 
     // ==================== INITIALIZATION ====================
     async init() {
@@ -42,48 +43,8 @@ const partnersApp = {
             this.mod = null;
         }
 
-        // Phase 25 LIT-06: <app-table> mount + effect-based prop assignment (Option A)
-        const tableEl = document.getElementById('partners-table');
-        if (tableEl && this.mod && typeof window.effect === 'function') {
-            // Configure columns once (Lit html cell renderers с auto-escape)
-            try {
-                const html = window.litHtml;
-                tableEl.columns = [
-                    { key: 'method',     label: 'Метод',       sortable: true,
-                      render: (item) => html`<span class="method-badge">${item.method ?? ''}</span>` },
-                    { key: 'subagent',   label: 'Субагент',    sortable: true,
-                      render: (item) => html`${item.subagent ?? ''}` },
-                    { key: 'subagentId', label: 'ID Субагента', sortable: true,
-                      render: (item) => html`${item.subagentId ?? ''}` },
-                    { key: 'status',     label: 'Статус',      sortable: true,
-                      render: (item) => {
-                          const s = item.status || 'Открыт';
-                          const cls = s === 'Открыт' ? 'status-open' : 'status-closed';
-                          return html`<span class="${cls}">${s}</span>`;
-                      } }
-                ];
-                tableEl.emptyMessage = 'Нет партнёров';
-
-                // Reactive prop assignment via effect (Option A — direct prop)
-                this._disposers.push(this.mod.effect(() => {
-                    tableEl.items = this.mod.items.value || [];
-                }));
-
-                // Component event subscriptions
-                tableEl.addEventListener('row-click', (e) => {
-                    if (e.detail && e.detail.id) {
-                        PartnersNavigation.selectPartner(e.detail.id);
-                    }
-                });
-                tableEl.addEventListener('sort-change', (e) => {
-                    if (e.detail && e.detail.field) {
-                        PartnersRenderer.sortBy(e.detail.field);
-                    }
-                });
-            } catch (e) {
-                console.warn('[partners] <app-table> bridge setup failed (non-fatal):', e?.message);
-            }
-        }
+        // Phase 25 LIT-06: <app-table> mount + effect bind (quick 260619-q8h: Lit-readiness guarded)
+        this._setupPartnersTable();
 
         // Event delegation for table row clicks (legacy table — preserved)
         const tableBody = document.getElementById('partnersTableBody');
@@ -133,6 +94,66 @@ const partnersApp = {
         } catch (error) {
             console.error('Init error:', error);
             PartnersUtils.showError('Ошибка загрузки данных: ' + error.message);
+        }
+    },
+
+    // Phase 25 LIT-06: <app-table> columns/effect setup (quick 260619-q8h: Lit-readiness guarded)
+    _setupPartnersTable() {
+        // Phase 25 LIT-06: <app-table> mount + effect-based prop assignment (Option A)
+        const tableEl = document.getElementById('partners-table');
+        if (!tableEl || !this.mod || typeof window.effect !== 'function') return;
+
+        // Lit-readiness guard (quick 260619-q8h): litHtml может быть ещё не готов на медленном
+        // прод-CDN (safety-timeout init() мог сработать раньше lit-ready). Откладываем настройку
+        // колонок до lit-ready, иначе render-коллбэки (item) => html... упадут с html=undefined.
+        if (!window.litHtml) {
+            if (!this._partnersTablePendingMount) {
+                this._partnersTablePendingMount = true;
+                window.addEventListener('lit-ready', () => {
+                    this._partnersTablePendingMount = false;
+                    partnersApp._setupPartnersTable();
+                }, { once: true });
+            }
+            return;
+        }
+
+        // Configure columns once (Lit html cell renderers с auto-escape)
+        try {
+            const html = window.litHtml;
+            tableEl.columns = [
+                { key: 'method',     label: 'Метод',       sortable: true,
+                  render: (item) => html`<span class="method-badge">${item.method ?? ''}</span>` },
+                { key: 'subagent',   label: 'Субагент',    sortable: true,
+                  render: (item) => html`${item.subagent ?? ''}` },
+                { key: 'subagentId', label: 'ID Субагента', sortable: true,
+                  render: (item) => html`${item.subagentId ?? ''}` },
+                { key: 'status',     label: 'Статус',      sortable: true,
+                  render: (item) => {
+                      const s = item.status || 'Открыт';
+                      const cls = s === 'Открыт' ? 'status-open' : 'status-closed';
+                      return html`<span class="${cls}">${s}</span>`;
+                  } }
+            ];
+            tableEl.emptyMessage = 'Нет партнёров';
+
+            // Reactive prop assignment via effect (Option A — direct prop)
+            this._disposers.push(this.mod.effect(() => {
+                tableEl.items = this.mod.items.value || [];
+            }));
+
+            // Component event subscriptions
+            tableEl.addEventListener('row-click', (e) => {
+                if (e.detail && e.detail.id) {
+                    PartnersNavigation.selectPartner(e.detail.id);
+                }
+            });
+            tableEl.addEventListener('sort-change', (e) => {
+                if (e.detail && e.detail.field) {
+                    PartnersRenderer.sortBy(e.detail.field);
+                }
+            });
+        } catch (e) {
+            console.warn('[partners] <app-table> bridge setup failed (non-fatal):', e?.message);
         }
     },
 
