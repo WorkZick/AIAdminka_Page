@@ -1584,7 +1584,7 @@ const PartnerOnboarding = (() => {
                     const remaining = requests.filter(r => !ids.includes(r.id));
                     // Replace array content in-place to preserve reference for OptimisticManager
                     requests.length = 0;
-                    requests.push(...remaining);
+                    for (const _r of remaining) requests.push(_r);
                     OnboardingState.set('requests', requests);
                     OnboardingList.applyFilters();
                     // Use first deleted item as representative for OptimisticManager

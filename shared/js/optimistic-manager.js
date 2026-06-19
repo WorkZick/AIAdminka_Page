@@ -170,7 +170,7 @@ const OptimisticManager = (() => {
 
             // Restore stateRef contents from snapshot (in-place, preserving reference)
             op.stateRef.length = 0;
-            op.stateRef.push(...op.snapshot);
+            for (const _item of op.snapshot) op.stateRef.push(_item);
 
             // Notify caller so it can re-render and show error UI
             if (typeof op.onRollback === 'function') {

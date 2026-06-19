@@ -2296,7 +2296,7 @@ const adminApp = {
                 dateTo: this.auditFilters.dateTo || undefined,
                 action: this.auditFilters.action || undefined
             });
-            this.auditItems.push(...(result.data || []));
+            for (const _it of (result.data || [])) this.auditItems.push(_it);
             this.auditCursor = result.nextCursor || null;
             this.auditTotalCount = result.totalCount || this.auditItems.length;
             this._appendAuditItems(result.data || []);
@@ -2434,7 +2434,7 @@ const adminApp = {
                 action: this.auditFilters.action || undefined
             });
             const newItems = result.data || [];
-            this.auditItems.push(...newItems);
+            for (const _it of newItems) this.auditItems.push(_it);
             this.auditCursor = result.nextCursor || null;
             this.auditTotalCount = result.totalCount || this.auditItems.length;
 
