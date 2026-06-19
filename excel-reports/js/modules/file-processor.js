@@ -203,11 +203,11 @@ class FileProcessor {
         }
 
         const headers = successfulResults[0].data[0];
-        const mergedData = [headers];
+        let mergedData = [headers];
 
         successfulResults.forEach(result => {
             const dataRows = result.data.slice(1);
-            mergedData.push(...dataRows);
+            mergedData = mergedData.concat(dataRows);
         });
 
         return mergedData;
