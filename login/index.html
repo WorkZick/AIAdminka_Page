@@ -5,14 +5,21 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход - AIAdminka</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' 'sha384-QjwLundxB4NaHWOfxQoy8G+BY7T7kjRSxeKIjdPAUQ76EitE8bUlehJxnQEJquiL' 'sha384-cdYhdOlBc0MtESQfAGUIQ6Mf8mJZZ9E9VOP6SAR7sOvPVvRwQlwQ8UR6AjsGDSW3' 'sha384-/YOimVOt6Bq+nJVuTUHWt8a0+2GkUKsKQKq9P9jNkKqsupthdkM6WWQaaVIlnig/' 'sha384-wgqcWx+Dzs2/x1d1yYLKO34rUT5WhUT+OSqnt51rzc/Hi6CBs3tTpstly4/Hwv2y' 'sha384-sChJXbOWDzAc/w2cKkZyzzTmyVLtLgALn0PCewYcW4Nv4WHOMwANhSAqDFQyu3Iq' 'sha384-WO+CQNc5o8u/05JkylStFXt6f895hAovGF97PqyaWgflx6csiESfjnPzUJUrNAfk'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com https://cdn.jsdelivr.net">
     <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Regular.woff2" type="font/woff2" crossorigin>
     <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Bold.woff2" type="font/woff2" crossorigin>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
+    <!-- Phase 32 ROLLOUT-01: cascade order declaration FIRST (Phase 25 CSS-01) -->
+    <link rel="stylesheet" href="../shared/css/_layers.css">
     <!-- Design System (login-only lightweight bundle) -->
     <link rel="stylesheet" href="../shared/css/design-system-login.css">
     <!-- Module-specific styles -->
     <link rel="stylesheet" href="css/login.css">
+    <!-- Phase 24 CSS-02: utilities (highest priority @layer utility, loaded LAST per cascade order) -->
+    <link rel="stylesheet" href="../shared/css/utilities.css">
+    <!-- Phase 32 ROLLOUT-01: cdn-deps (signals + Lit) + components aggregator (4 Lit custom elements) -->
+    <script type="module" src="../shared/js/cdn-deps.js"></script>
+    <script type="module" src="../shared/components/index.js"></script>
 </head>
 <body>
     <div class="login-container">
@@ -31,7 +38,7 @@
                     Войдите через Google для доступа к системе
                 </p>
 
-                <button class="login-button" id="btnLogin" data-action="login">
+                <button class="btn login-button" id="btnLogin" data-action="login">
                     <svg class="google-icon" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -60,10 +67,6 @@
                     <h1>AIAdminka</h1>
                 </div>
 
-                <div class="login-status hidden" id="loginStatus">
-                    <span class="status-text"></span>
-                </div>
-
                 <div class="login-user" id="loginUser">
                     <div class="user-avatar" id="userAvatar"></div>
                     <div class="user-info">
@@ -73,7 +76,7 @@
                 </div>
 
                 <div class="login-card-actions">
-                    <button class="refresh-button" id="btnRefresh" data-action="check-status">
+                    <button class="btn btn--ghost btn-sm" id="btnRefresh" data-action="check-status">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M23 4v6h-6"/>
                             <path d="M1 20v-6h6"/>
@@ -81,7 +84,7 @@
                         </svg>
                         <span>Обновить</span>
                     </button>
-                    <button class="logout-button-full" id="btnLogout" data-action="logout">
+                    <button class="btn btn-danger" id="btnLogout" data-action="logout">
                         Выйти из аккаунта
                     </button>
                 </div>
@@ -118,16 +121,14 @@
                     <form class="registration-form" id="registrationForm">
                         <div class="form-group">
                             <label for="regReddyId">Ваш Reddy ID <span class="required">*</span></label>
-                            <input type="text" id="regReddyId" name="reddyId" placeholder="123456" required
-                                   pattern="[0-9]+" title="Только цифры">
+                            <input type="text" id="regReddyId" name="reddyId" class="form-input" placeholder="Введите Reddy ID" maxlength="15">
                         </div>
 
                         <!-- Leader Toggle -->
-                        <div class="leader-toggle">
-                            <label class="toggle-label" for="regIsLeader">
+                        <div class="form-group">
+                            <label class="form-check" for="regIsLeader">
                                 <input type="checkbox" id="regIsLeader" name="isLeader">
-                                <span class="toggle-switch"></span>
-                                <span class="toggle-text">Я руководитель</span>
+                                <span class="form-check-label">Я руководитель</span>
                             </label>
                         </div>
 
@@ -144,13 +145,13 @@
 
                             <div class="form-group">
                                 <label for="regTeamName">Название команды <span class="required">*</span></label>
-                                <input type="text" id="regTeamName" name="teamName" placeholder="Моя команда"
+                                <input type="text" id="regTeamName" name="teamName" class="form-input" placeholder="Моя команда"
                                        minlength="2" maxlength="50">
                             </div>
 
                             <div class="form-group">
                                 <label for="regTeamDesc">Краткое описание</label>
-                                <textarea id="regTeamDesc" name="teamDescription" placeholder="Чем занимается команда..."
+                                <textarea id="regTeamDesc" name="teamDescription" class="form-textarea" placeholder="Чем занимается команда..."
                                           rows="3" maxlength="200"></textarea>
                             </div>
                         </div>
@@ -259,7 +260,8 @@
                             <line x1="9" y1="9" x2="15" y2="15"/>
                         </svg>
                     </div>
-                    <p class="waiting-title error-title" id="errorText"></p>
+                    <p class="waiting-title">Ошибка</p>
+                    <p class="waiting-description error-title" id="errorText"></p>
                     <button class="retry-button" id="btnRetry" data-action="retry">Попробовать снова</button>
                 </div>
 

@@ -1,5 +1,7 @@
+@layer shared {
 /* ============================================================
    AIAdminka Design System - Buttons
+   Phase 26-06 (CSS-02): refactored to native CSS Nesting Level 1.
    ============================================================ */
 
 /* ==================== BASE BUTTON ==================== */
@@ -18,16 +20,21 @@
     transition: var(--transition-colors);
     text-decoration: none;
     white-space: nowrap;
+
+    & img {
+        width: 16px;
+        height: 16px;
+    }
 }
 
-.btn:disabled {
+.btn:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled,
+.btn-success:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-}
-
-.btn img {
-    width: 16px;
-    height: 16px;
+    pointer-events: none;
 }
 
 /* ==================== PRIMARY BUTTON (glassmorphism) ==================== */
@@ -46,24 +53,21 @@
     font-weight: 700;
     cursor: pointer;
     transition: var(--transition-colors);
-}
 
-.btn-primary:hover {
-    background: rgba(255, 255, 255, 0.16);
-    border-color: rgba(255, 255, 255, 0.35);
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
-}
+    &:hover {
+        background: rgba(255, 255, 255, 0.16);
+        border-color: rgba(255, 255, 255, 0.35);
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
+    }
 
-.btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
+    /* disabled handled by shared rule above */
 
-.btn-primary img {
-    width: 16px;
-    height: 16px;
-    filter: brightness(0) invert(1);
-    opacity: 0.9;
+    & img {
+        width: 16px;
+        height: 16px;
+        filter: brightness(0) invert(1);
+        opacity: 0.9;
+    }
 }
 
 /* ==================== SECONDARY BUTTON ==================== */
@@ -82,18 +86,18 @@
     font-weight: 400;
     cursor: pointer;
     transition: var(--transition-colors);
-}
 
-.btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.10);
-    border-color: rgba(255, 255, 255, 0.20);
-}
+    &:hover {
+        background: rgba(255, 255, 255, 0.10);
+        border-color: rgba(255, 255, 255, 0.20);
+    }
 
-.btn-secondary img {
-    width: 16px;
-    height: 16px;
-    filter: brightness(0) invert(1);
-    opacity: 0.7;
+    & img {
+        width: 16px;
+        height: 16px;
+        filter: brightness(0) invert(1);
+        opacity: 0.7;
+    }
 }
 
 /* ==================== DANGER BUTTON ==================== */
@@ -112,16 +116,16 @@
     font-weight: 700;
     cursor: pointer;
     transition: var(--transition-colors);
-}
 
-.btn-danger:hover {
-    background: rgba(255, 107, 107, 0.25);
-}
+    &:hover {
+        background: rgba(255, 107, 107, 0.25);
+    }
 
-.btn-danger img {
-    width: 14px;
-    height: 14px;
-    filter: brightness(0) saturate(100%) invert(50%) sepia(80%) saturate(800%) hue-rotate(320deg);
+    & img {
+        width: 14px;
+        height: 14px;
+        filter: brightness(0) saturate(100%) invert(50%) sepia(80%) saturate(800%) hue-rotate(320deg);
+    }
 }
 
 /* ==================== SUCCESS BUTTON ==================== */
@@ -140,10 +144,10 @@
     font-weight: 700;
     cursor: pointer;
     transition: var(--transition-colors);
-}
 
-.btn-success:hover {
-    background: rgba(81, 207, 102, 0.25);
+    &:hover {
+        background: rgba(81, 207, 102, 0.25);
+    }
 }
 
 /* ==================== ICON BUTTONS ==================== */
@@ -159,71 +163,71 @@
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: var(--transition-colors);
-}
 
-.btn-icon:hover {
-    background: var(--glass-bg-hover);
-}
+    &:hover {
+        background: var(--glass-bg-hover);
 
-.btn-icon img {
-    width: 16px;
-    height: 16px;
-    filter: brightness(0) invert(1);
-    opacity: 0.7;
-}
+        & img {
+            opacity: 1;
+        }
+    }
 
-.btn-icon:hover img {
-    opacity: 1;
-}
+    & img {
+        width: 16px;
+        height: 16px;
+        filter: brightness(0) invert(1);
+        opacity: 0.7;
+    }
 
-/* Icon button variants */
-.btn-icon.btn-accept {
-    background: rgba(81, 207, 102, 0.2);
-    border: none;
-}
+    /* Icon button variants */
+    &.btn-accept {
+        background: rgba(81, 207, 102, 0.2);
+        border: none;
 
-.btn-icon.btn-accept:hover {
-    background: rgba(81, 207, 102, 0.3);
-}
+        &:hover {
+            background: rgba(81, 207, 102, 0.3);
+        }
 
-.btn-icon.btn-accept img {
-    filter: brightness(0) saturate(100%) invert(70%) sepia(50%) saturate(500%) hue-rotate(80deg);
-    opacity: 1;
-}
+        & img {
+            filter: brightness(0) saturate(100%) invert(70%) sepia(50%) saturate(500%) hue-rotate(80deg);
+            opacity: 1;
+        }
+    }
 
-.btn-icon.btn-reject {
-    background: rgba(255, 107, 107, 0.2);
-    border: none;
-}
+    &.btn-reject {
+        background: rgba(255, 107, 107, 0.2);
+        border: none;
 
-.btn-icon.btn-reject:hover {
-    background: rgba(255, 107, 107, 0.3);
-}
+        &:hover {
+            background: rgba(255, 107, 107, 0.3);
+        }
 
-.btn-icon.btn-reject img {
-    filter: brightness(0) saturate(100%) invert(60%) sepia(50%) saturate(700%) hue-rotate(320deg);
-    opacity: 1;
+        & img {
+            filter: brightness(0) saturate(100%) invert(60%) sepia(50%) saturate(700%) hue-rotate(320deg);
+            opacity: 1;
+        }
+    }
 }
 
 /* ==================== SIZE VARIANTS ==================== */
 .btn-sm {
     padding: 8px 12px;
     font-size: var(--font-size-sm);
-}
 
-.btn-sm img {
-    width: 14px;
-    height: 14px;
+    & img {
+        width: 14px;
+        height: 14px;
+    }
 }
 
 .btn-lg {
     padding: 14px 24px;
     font-size: var(--font-size-md);
-}
 
-.btn-lg img {
-    width: 18px;
-    height: 18px;
+    & img {
+        width: 18px;
+        height: 18px;
+    }
 }
 
 /* ==================== FULL WIDTH ==================== */
@@ -239,28 +243,12 @@
     border: 1px solid var(--glass-border);
     color: var(--white);
     font-weight: 500;
-}
 
-.btn--ghost:hover {
-    background: var(--glass-bg-hover);
-    border-color: var(--glass-border-hover);
-    color: var(--accent);
-}
-
-/* Dashed border */
-.btn--dashed {
-    border-style: dashed;
-}
-
-/* Text-only (no bg, no border) */
-.btn--text {
-    background: none;
-    border: none;
-    padding: var(--spacing-xs) var(--spacing-sm);
-}
-
-.btn--text:hover {
-    background: rgba(255, 255, 255, 0.06);
+    &:hover {
+        background: var(--glass-bg-hover);
+        border-color: var(--glass-border-hover);
+        color: var(--accent);
+    }
 }
 
 /* ==================== LAYOUT HELPERS ==================== */
@@ -282,35 +270,36 @@
     cursor: pointer;
     transition: var(--transition-colors);
     text-align: left;
-}
 
-.btn-action:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: var(--glass-border-hover);
-}
+    &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--glass-border-hover);
+    }
 
-.btn-action img {
-    width: 20px;
-    height: 20px;
-    filter: brightness(0) invert(1);
-    opacity: 0.6;
+    & img {
+        width: 20px;
+        height: 20px;
+        filter: brightness(0) invert(1);
+        opacity: 0.6;
+    }
 }
 
 .btn-action-text {
     flex: 1;
-}
 
-.btn-action-text span {
-    display: block;
-    font-family: var(--font-family);
-    font-size: var(--font-size-md);
-    font-weight: 600;
-    color: var(--white);
-}
+    & span {
+        display: block;
+        font-family: var(--font-family);
+        font-size: var(--font-size-md);
+        font-weight: 600;
+        color: var(--white);
+    }
 
-.btn-action-text small {
-    display: block;
-    font-size: var(--font-size-sm);
-    color: var(--gray);
-    margin-top: 2px;
+    & small {
+        display: block;
+        font-size: var(--font-size-sm);
+        color: var(--gray);
+        margin-top: 2px;
+    }
+}
 }

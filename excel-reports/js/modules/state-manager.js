@@ -1,182 +1,115 @@
-// StateManager - Централизованное управление состоянием
+// excel-reports/js/modules/state-manager.js
+//
+// Phase 24 SIG-02: ExcelReportsState — signals-based state management.
+// Заменяет legacy Pub/Sub StateManager (atomic per-module Pitfall #6).
+//
+// Discrete signals (НЕ single blob): currentStep, selectedTemplate, steps.
+// Computed (auto-tracked, lazy): isTemplateCompleted, allFileStepsCompleted.
+// Mutators (NEVER inside effect — Pitfall A; ALWAYS REASSIGN — Pitfall B):
+//   initializeSteps/markStepCompleted/reset/setStepData/setStepFiles.
+// Read helpers заменяют legacy state.get(...) patterns в consumers.
 
-class StateManager {
-    constructor() {
-        this.state = {
-            currentStep: 'template',
-            selectedTemplate: null,
-            steps: {
-                'template': { completed: false }
-                // Динамические шаги добавляются при выборе шаблона
-            }
-        };
-        this.listeners = new Map();
+const ExcelReportsState = (() => {
+    'use strict';
+
+    if (typeof window.signal !== 'function') {
+        throw new Error('ExcelReportsState: window.signal not available — cdn-deps.js not loaded');
     }
 
-    // Получить значение по пути с dot notation
-    // Примеры: 'currentStep', 'steps.step1.completed', 'selectedTemplate.name'
-    get(path) {
-        if (!path) return this.state;
+    // Discrete signals
+    const currentStep = window.signal('template');
+    const selectedTemplate = window.signal(null);
+    const steps = window.signal({ 'template': { completed: false } });
 
-        const keys = path.split('.');
-        let result = this.state;
+    // Computed (auto-tracked)
+    const isTemplateCompleted = window.computed(() =>
+        steps.value['template']?.completed === true
+    );
 
-        for (const key of keys) {
-            if (result === null || result === undefined) {
-                return undefined;
-            }
-            result = result[key];
-        }
+    const allFileStepsCompleted = window.computed(() => {
+        const tmpl = selectedTemplate.value;
+        if (!tmpl || !tmpl.filesConfig) return false;
+        const stepsValue = steps.value;
+        return Object.keys(tmpl.filesConfig).every(stepId =>
+            stepsValue[stepId]?.completed === true
+        );
+    });
 
-        return result;
-    }
-
-    // Установить значение по пути с dot notation
-    // Примеры: set('currentStep', 'step1'), set('steps.step1.completed', true)
-    set(path, value) {
-        const keys = path.split('.');
-        const lastKey = keys.pop();
-
-        let target = this.state;
-        for (const key of keys) {
-            if (!(key in target)) {
-                target[key] = {};
-            }
-            target = target[key];
-        }
-
-        target[lastKey] = value;
-
-        // Уведомляем подписчиков
-        this.notify(path, value);
-    }
-
-    // Подписаться на изменение состояния
-    // Пример: subscribe('currentStep', (newStep) => { console.log(newStep); })
-    subscribe(path, callback) {
-        if (!this.listeners.has(path)) {
-            this.listeners.set(path, []);
-        }
-        this.listeners.get(path).push(callback);
-
-        // Возвращаем функцию отписки
-        return () => {
-            const callbacks = this.listeners.get(path);
-            if (callbacks) {
-                const index = callbacks.indexOf(callback);
-                if (index > -1) {
-                    callbacks.splice(index, 1);
-                }
-            }
-        };
-    }
-
-    // Уведомить подписчиков об изменении
-    notify(path, value) {
-        // Уведомляем точных подписчиков на этот путь
-        const callbacks = this.listeners.get(path);
-        if (callbacks) {
-            callbacks.forEach(callback => callback(value));
-        }
-
-        // Уведомляем подписчиков на '*' (все изменения)
-        const allCallbacks = this.listeners.get('*');
-        if (allCallbacks) {
-            allCallbacks.forEach(callback => callback({ path, value }));
-        }
-    }
-
-    // Сброс состояния в начальное
-    reset() {
-        this.state = {
-            currentStep: 'template',
-            selectedTemplate: null,
-            steps: {
-                'template': { completed: false }
-            }
-        };
-
-        this.notify('reset', null);
-        this.notify('*', { path: 'reset', value: null });
-    }
-
-    // Инициализация шагов на основе выбранного шаблона
-    initializeSteps(template) {
-        const steps = {
-            'template': { completed: true, data: template }
-        };
-
-        // Добавляем файловые шаги из конфигурации шаблона
+    // Mutators
+    function initializeSteps(template) {
+        const newSteps = { 'template': { completed: true, data: template } };
         if (template && template.filesConfig) {
             Object.keys(template.filesConfig).forEach(stepId => {
-                steps[stepId] = {
-                    completed: false,
-                    files: [],
-                    data: []
-                };
+                newSteps[stepId] = { completed: false, files: [], data: [] };
             });
         }
-
-        // Добавляем финальный шаг обработки
-        steps['process'] = {
-            completed: false,
-            result: null
-        };
-
-        this.set('steps', steps);
-        this.set('selectedTemplate', template);
-        this.notify('stepsInitialized', template);
+        newSteps['process'] = { completed: false, result: null };
+        // batch — multi-signal write coalescing (Pitfall B prevention)
+        window.batch(() => {
+            steps.value = newSteps;            // REASSIGN, не in-place
+            selectedTemplate.value = template;
+        });
     }
 
-    // Проверка завершённости шага
-    isStepCompleted(stepId) {
-        const step = this.get(`steps.${stepId}`);
-        if (!step) return false;
-
-        return step.completed === true;
-    }
-
-    // Отметить шаг как завершённый
-    markStepCompleted(stepId, data = null) {
-        this.set(`steps.${stepId}.completed`, true);
+    function markStepCompleted(stepId, data = null) {
+        const cur = steps.value;
+        const updated = { ...cur, [stepId]: { ...cur[stepId], completed: true } };
         if (data !== null) {
-            this.set(`steps.${stepId}.data`, data);
+            updated[stepId].data = data;
         }
+        steps.value = updated; // REASSIGN
     }
 
-    // Проверка, все ли файловые шаги завершены
-    areAllFileStepsCompleted() {
-        const template = this.get('selectedTemplate');
-        if (!template || !template.filesConfig) return false;
-
-        const fileSteps = Object.keys(template.filesConfig);
-        return fileSteps.every(stepId => this.isStepCompleted(stepId));
+    function reset() {
+        window.batch(() => {
+            currentStep.value = 'template';
+            selectedTemplate.value = null;
+            steps.value = { 'template': { completed: false } };
+        });
     }
 
-    // Получить данные шага
-    getStepData(stepId) {
-        return this.get(`steps.${stepId}.data`);
+    function setStepData(stepId, data) {
+        const cur = steps.value;
+        steps.value = {
+            ...cur,
+            [stepId]: { ...(cur[stepId] || {}), data }
+        };
     }
 
-    // Установить данные шага
-    setStepData(stepId, data) {
-        this.set(`steps.${stepId}.data`, data);
+    function setStepFiles(stepId, files) {
+        const cur = steps.value;
+        steps.value = {
+            ...cur,
+            [stepId]: { ...(cur[stepId] || {}), files }
+        };
     }
 
-    // Получить файлы шага
-    getStepFiles(stepId) {
-        return this.get(`steps.${stepId}.files`) || [];
-    }
+    return {
+        // Signals (raw refs — для effect/computed чтения)
+        currentStep,
+        selectedTemplate,
+        steps,
+        // Computed
+        isTemplateCompleted,
+        allFileStepsCompleted,
+        // Mutators
+        initializeSteps,
+        markStepCompleted,
+        reset,
+        setStepData,
+        setStepFiles,
+        // Read-helpers (replace Pub/Sub get patterns в consumers)
+        isStepCompleted: (stepId) => steps.value[stepId]?.completed === true,
+        areAllFileStepsCompleted: () => allFileStepsCompleted.value,
+        getStepData: (stepId) => steps.value[stepId]?.data,
+        getStepFiles: (stepId) => steps.value[stepId]?.files || []
+    };
+})();
 
-    // Установить файлы шага
-    setStepFiles(stepId, files) {
-        this.set(`steps.${stepId}.files`, files);
-    }
-
-    // Вывод состояния в консоль для отладки
-    debug() {
-    }
+// Экспорт для использования в других модулях (sourceType:'script' pattern)
+if (typeof window !== 'undefined') {
+    window.ExcelReportsState = ExcelReportsState;
 }
-
-// Экспорт для использования в других модулях
-window.StateManager = StateManager;
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ExcelReportsState;
+}

@@ -21,16 +21,16 @@ const PromptModal = {
      * @returns {Promise<string|null>} Введённый текст или null при отмене
      */
     show(message, options) {
-        var opts = options || {};
-        var defaultValue = opts.defaultValue || '';
-        var placeholder = opts.placeholder || '';
-        var confirmText = opts.confirmText || 'OK';
-        var cancelText = opts.cancelText || 'Отмена';
+        const opts = options || {};
+        const defaultValue = opts.defaultValue || '';
+        const placeholder = opts.placeholder || '';
+        const confirmText = opts.confirmText || 'OK';
+        const cancelText = opts.cancelText || 'Отмена';
 
         return new Promise(function(resolve) {
             PromptModal._remove();
 
-            var overlay = document.createElement('div');
+            const overlay = document.createElement('div');
             overlay.className = 'modal active';
             overlay.id = 'promptModalOverlay';
 
@@ -52,7 +52,7 @@ const PromptModal = {
             PromptModal._overlay = overlay;
             document.body.appendChild(overlay);
 
-            var input = overlay.querySelector('.prompt-modal-input');
+            const input = overlay.querySelector('.prompt-modal-input');
             input.focus();
             input.select();
 
@@ -61,7 +61,7 @@ const PromptModal = {
             }
 
             function handleClick(e) {
-                var action = e.target.getAttribute('data-prompt');
+                const action = e.target.getAttribute('data-prompt');
                 if (action === 'ok') {
                     cleanup();
                     resolve(getValue());
@@ -103,7 +103,7 @@ const PromptModal = {
 
     _escape: function(text) {
         if (!text) return '';
-        var div = document.createElement('div');
+        const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     },

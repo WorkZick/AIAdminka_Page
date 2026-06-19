@@ -1,30 +1,66 @@
-// Partners Renderer - render, updateStats, sortBy, filterTable, toggleSidebar, renderPagination
+// Partners Renderer - render, updateStats, sortBy, filterTable, toggleSidebar
+//
+// Phase 25 LIT-06 (Plan 25-07) bridge:
+// — после render() / updateSelection() / updateStats() — sync PartnersState.cachedPartners → mod.items signal
+// — <app-table> consumes mod.items.value через window.effect() в partners.js (Option A)
+// — Lit auto-escape применяется в cell renderers (partners.js columns config)
+// Reference: 25-RESEARCH.md §"Pattern 2: ModuleFactory + Lit binding (Option A)" + 25-07-PLAN.md.
 const PartnersRenderer = {
     _filterTimer: null,
 
+    // Phase 25 LIT-06: bridge — sync existing PartnersState → ModuleFactory items signal
+    _syncToModuleFactory() {
+        const mod = window.partnersModule;
+        if (!mod || typeof window.batch !== 'function') return;
+        try {
+            window.batch(() => {
+                mod.items.value = (PartnersState.cachedPartners || []).slice();
+                if (mod.totalCount) {
+                    mod.totalCount.value = PartnersState.totalCount || PartnersState.cachedPartners.length;
+                }
+            });
+        } catch (_) { /* non-fatal */ }
+    },
+
+    renderSkeletonRows() {
+        const table = document.querySelector('.partners-table');
+        if (table) table.classList.add('hidden');
+        const emptyState = document.getElementById('emptyState');
+        if (emptyState) emptyState.classList.add('hidden');
+        const loading = document.getElementById('loadingState');
+        if (loading) loading.classList.remove('hidden');
+    },
+
     render() {
-        PartnersState._invalidateFiltered();
         const allPartners = PartnersState.getPartners();
         const tbody = document.getElementById('partnersTableBody');
         const emptyState = document.getElementById('emptyState');
         const table = document.querySelector('.partners-table');
+        const loading = document.getElementById('loadingState');
+        if (loading) loading.classList.add('hidden');
 
         if (allPartners.length === 0) {
             if (emptyState) emptyState.classList.remove('hidden');
             if (table) table.classList.add('hidden');
+            // Phase 25 LIT-06: sync empty state to ModuleFactory
+            PartnersRenderer._syncToModuleFactory();
             PartnersRenderer.updateStats();
-            PartnersRenderer.renderPagination();
+            const paginationContainer = document.getElementById('partnersPagination');
+            if (paginationContainer) {
+                PaginationHelper.render(paginationContainer, {
+                    page: PartnersState.currentPage,
+                    pageSize: PartnersState.pageSize,
+                    totalCount: PartnersState.totalCount,
+                    onPageChange: (newPage) => PartnersForms.goToPage(newPage)
+                });
+            }
             return;
         }
 
         if (emptyState) emptyState.classList.add('hidden');
         if (table) table.classList.remove('hidden');
 
-        // Clamp page
-        const totalPages = PartnersState.getTotalPages();
-        if (PartnersState.currentPage > totalPages) PartnersState.currentPage = totalPages;
-
-        const pagedData = PartnersState.getPagedPartners();
+        const pagedData = PartnersState.cachedPartners;
         const columns = PartnersColumns.getColumnsConfig();
         const visibleColumns = columns.filter(c => c.visible);
         const selectedId = PartnersState.selectedPartnerId;
@@ -36,7 +72,11 @@ const PartnersRenderer = {
             const isValidAvatar = !!avatar;
 
             const tr = document.createElement('tr');
-            tr.className = selectedId === partner.id ? 'selected' : '';
+            const classes = [];
+            if (selectedId === partner.id) classes.push('selected');
+            if (partner._pending) classes.push('item--pending');
+            if (partner._error) classes.push('item--error');
+            tr.className = classes.join(' ');
             tr.dataset.partnerId = partner.id;
 
             let rowHtml = `
@@ -80,8 +120,19 @@ const PartnersRenderer = {
         tbody.innerHTML = '';
         tbody.appendChild(fragment);
 
+        // Phase 25 LIT-06: sync to ModuleFactory.items signal → <app-table> re-renders via effect
+        PartnersRenderer._syncToModuleFactory();
+
         PartnersRenderer.updateStats();
-        PartnersRenderer.renderPagination();
+        const paginationContainer = document.getElementById('partnersPagination');
+        if (paginationContainer) {
+            PaginationHelper.render(paginationContainer, {
+                page: PartnersState.currentPage,
+                pageSize: PartnersState.pageSize,
+                totalCount: PartnersState.totalCount,
+                onPageChange: (newPage) => PartnersForms.goToPage(newPage)
+            });
+        }
     },
 
     // Обновить только выделение строк без полной перерисовки
@@ -98,7 +149,7 @@ const PartnersRenderer = {
     },
 
     updateStats() {
-        const partners = PartnersState.getPartners();
+        const partners = PartnersState.cachedPartners;
         let openCount = 0;
         let closedCount = 0;
         const methods = new Set();
@@ -111,7 +162,7 @@ const PartnersRenderer = {
             if (p.method) methods.add(p.method);
         }
 
-        document.getElementById('totalCount').textContent = partners.length;
+        document.getElementById('totalCount').textContent = PartnersState.totalCount || partners.length;
         document.getElementById('methodsCount').textContent = methods.size;
         document.getElementById('openCount').textContent = openCount;
         document.getElementById('closedCount').textContent = closedCount;
@@ -125,69 +176,18 @@ const PartnersRenderer = {
             PartnersState.sortDirection = 'asc';
         }
         PartnersState.currentPage = 1;
-        PartnersRenderer.render();
+        PartnersForms.goToPage(1);
     },
 
     filterTable() {
         clearTimeout(PartnersRenderer._filterTimer);
         PartnersRenderer._filterTimer = setTimeout(() => {
-            PartnersState.searchQuery = document.getElementById('searchInput').value;
+            const query = document.getElementById('searchInput').value.trim();
+            PartnersState.serverFilter = query;
+            PartnersState.searchQuery = query;
             PartnersState.currentPage = 1;
-            PartnersRenderer.render();
-        }, 150);
-    },
-
-    renderPagination() {
-        const container = document.getElementById('partnersPagination');
-        if (!container) return;
-
-        const totalPages = PartnersState.getTotalPages();
-        const currentPage = PartnersState.currentPage;
-
-        container.innerHTML = '';
-        if (totalPages <= 1) return;
-
-        // Prev
-        const prevBtn = document.createElement('button');
-        prevBtn.className = 'page-btn';
-        prevBtn.textContent = '\u2190';
-        prevBtn.disabled = currentPage === 1;
-        prevBtn.dataset.action = 'partners-goToPage';
-        prevBtn.dataset.value = currentPage - 1;
-        container.appendChild(prevBtn);
-
-        // Page numbers
-        for (let i = 1; i <= totalPages; i++) {
-            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                const pageBtn = document.createElement('button');
-                pageBtn.className = 'page-btn' + (i === currentPage ? ' active' : '');
-                pageBtn.textContent = i;
-                pageBtn.dataset.action = 'partners-goToPage';
-                pageBtn.dataset.value = i;
-                container.appendChild(pageBtn);
-            } else if (i === currentPage - 2 || i === currentPage + 2) {
-                const dots = document.createElement('span');
-                dots.className = 'pagination-dots';
-                dots.textContent = '...';
-                container.appendChild(dots);
-            }
-        }
-
-        // Next
-        const nextBtn = document.createElement('button');
-        nextBtn.className = 'page-btn';
-        nextBtn.textContent = '\u2192';
-        nextBtn.disabled = currentPage === totalPages;
-        nextBtn.dataset.action = 'partners-goToPage';
-        nextBtn.dataset.value = currentPage + 1;
-        container.appendChild(nextBtn);
-    },
-
-    goToPage(page) {
-        const p = parseInt(page);
-        if (isNaN(p) || p < 1) return;
-        PartnersState.currentPage = p;
-        PartnersRenderer.render();
+            PartnersForms.goToPage(1);
+        }, 300);
     },
 
     toggleSidebar() {

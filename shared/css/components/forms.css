@@ -1,26 +1,48 @@
+@layer shared {
 /* ============================================================
    AIAdminka Design System - Forms
+   Phase 26-06 (CSS-02): refactored to native CSS Nesting Level 1.
    ============================================================ */
 
 /* ==================== FORM GROUP ==================== */
 .form-group {
     margin-bottom: 20px;
-}
 
-.form-group:last-child {
-    margin-bottom: 0;
-}
+    &:last-child {
+        margin-bottom: 0;
+    }
 
-.form-group label {
-    display: block;
-    font-size: var(--font-size-base);
-    color: var(--white);
-    margin-bottom: 8px;
-    opacity: 0.9;
-}
+    & label {
+        display: block;
+        font-size: var(--font-size-base);
+        color: var(--white);
+        margin-bottom: 8px;
+        opacity: 0.9;
+    }
 
-.form-group .required {
-    color: var(--status-red);
+    & label.form-check {
+        display: inline-flex;
+        margin-bottom: 0;
+        opacity: 1;
+    }
+
+    & .required {
+        color: var(--status-red);
+    }
+
+    /* ==================== Phase 26-05 CSS-06 :has() bounded subtree ==================== */
+    /* parent-state highlight: form-group получает red border когда child имеет .form-error.
+       Bounded subtree (form-group ≤10 children) — Safari iOS scroll jank avoidance.
+       JS class-toggle (.has-error) остаётся для backward compat — Phase 27 cleanup scope. */
+    &:has(.form-error) {
+        border-color: var(--status-red);
+
+        & .form-input,
+        & .form-select,
+        & .form-textarea {
+            border-color: var(--status-red);
+        }
+    }
 }
 
 /* ==================== TEXT INPUT ==================== */
@@ -35,21 +57,21 @@
     color: var(--white);
     transition: var(--transition-colors);
     box-sizing: border-box;
-}
 
-.form-input::placeholder {
-    color: var(--gray);
-}
+    &::placeholder {
+        color: var(--gray);
+    }
 
-.form-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: rgba(255, 255, 255, 0.08);
-}
+    &:focus {
+        outline: none;
+        border-color: var(--accent);
+        background: rgba(255, 255, 255, 0.08);
+    }
 
-.form-input:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
 }
 
 /* ==================== TEXTAREA ==================== */
@@ -66,16 +88,16 @@
     box-sizing: border-box;
     resize: vertical;
     min-height: 100px;
-}
 
-.form-textarea::placeholder {
-    color: var(--gray);
-}
+    &::placeholder {
+        color: var(--gray);
+    }
 
-.form-textarea:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: rgba(255, 255, 255, 0.08);
+    &:focus {
+        outline: none;
+        border-color: var(--accent);
+        background: rgba(255, 255, 255, 0.08);
+    }
 }
 
 /* ==================== SELECT ==================== */
@@ -96,122 +118,138 @@
     background-repeat: no-repeat;
     background-position: right 14px center;
     padding-right: 36px;
-}
 
-.form-select:focus {
-    outline: none;
-    border-color: var(--accent);
-    background-color: rgba(255, 255, 255, 0.08);
-}
+    &:focus {
+        outline: none;
+        border-color: var(--accent);
+        background-color: rgba(255, 255, 255, 0.08);
+    }
 
-.form-select option {
-    background: var(--gray-dark);
-    color: var(--white);
-    padding: 8px;
+    & option {
+        background: var(--gray-dark);
+        color: var(--white);
+        padding: 8px;
+    }
 }
 
 /* ==================== CHECKBOX ==================== */
 .form-check {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     cursor: pointer;
-}
+    line-height: 1;
 
-.form-check input[type="checkbox"] {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    min-width: 18px;
-    margin: 0;
-    background: var(--gray-dark);
-    border: 1.5px solid var(--glass-border);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: var(--transition-colors);
-    position: relative;
-}
+    & input[type="checkbox"] {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+        margin: 0;
+        background: var(--gray-dark);
+        border: 1.5px solid var(--glass-border);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: var(--transition-colors);
+        position: relative;
 
-.form-check input[type="checkbox"]:hover {
-    border-color: var(--accent-muted);
-    background: var(--gray-medium);
-}
+        &:hover {
+            border-color: var(--accent-muted);
+            background: var(--gray-medium);
+        }
 
-.form-check input[type="checkbox"]:checked {
-    background: var(--accent);
-    border-color: var(--accent);
-}
+        &:checked {
+            background: var(--accent);
+            border-color: var(--accent);
 
-.form-check input[type="checkbox"]:checked::after {
-    content: '';
-    position: absolute;
-    left: 5px;
-    top: 2px;
-    width: 5px;
-    height: 9px;
-    border: solid var(--black);
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-}
+            &::after {
+                content: '';
+                position: absolute;
+                left: 5px;
+                top: 2px;
+                width: 5px;
+                height: 9px;
+                border: solid var(--black);
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+        }
 
-.form-check input[type="checkbox"]:focus-visible {
-    outline: 2px solid var(--accent-muted);
-    outline-offset: 2px;
-}
+        &:focus-visible {
+            outline: 2px solid var(--accent-muted);
+            outline-offset: 2px;
+        }
 
-.form-check input[type="checkbox"]:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
 
-/* ==================== RADIO ==================== */
-.form-check input[type="radio"] {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    min-width: 18px;
-    margin: 0;
-    background: var(--gray-dark);
-    border: 1.5px solid var(--glass-border);
-    border-radius: 50%;
-    cursor: pointer;
-    transition: var(--transition-colors);
-    position: relative;
-}
+            &:hover {
+                border-color: var(--glass-border);
+                background: var(--gray-dark);
+            }
+        }
+    }
 
-.form-check input[type="radio"]:hover {
-    border-color: var(--accent-muted);
-    background: var(--gray-medium);
-}
+    /* ==================== RADIO ==================== */
+    & input[type="radio"] {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+        margin: 0;
+        background: var(--gray-dark);
+        border: 1.5px solid var(--glass-border);
+        border-radius: 50%;
+        cursor: pointer;
+        transition: var(--transition-colors);
+        position: relative;
 
-.form-check input[type="radio"]:checked {
-    border-color: var(--accent);
-    background: var(--gray-dark);
-}
+        &:hover {
+            border-color: var(--accent-muted);
+            background: var(--gray-medium);
+        }
 
-.form-check input[type="radio"]:checked::after {
-    content: '';
-    position: absolute;
-    left: 4px;
-    top: 4px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-}
+        &:checked {
+            border-color: var(--accent);
+            background: var(--gray-dark);
 
-.form-check input[type="radio"]:focus-visible {
-    outline: 2px solid var(--accent-muted);
-    outline-offset: 2px;
-}
+            &::after {
+                content: '';
+                position: absolute;
+                left: 4px;
+                top: 4px;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--accent);
+            }
+        }
 
-.form-check input[type="radio"]:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+        &:focus-visible {
+            outline: 2px solid var(--accent-muted);
+            outline-offset: 2px;
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+
+            &:hover {
+                border-color: var(--glass-border);
+                background: var(--gray-dark);
+            }
+        }
+    }
+
+    &:has(input:disabled) {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
 }
 
 /* Standalone checkboxes (without .form-check wrapper) */
@@ -221,6 +259,7 @@ input[type="checkbox"] {
 
 .form-check-label {
     font-size: var(--font-size-base);
+    line-height: 1;
     color: var(--white);
     cursor: pointer;
 }
@@ -250,11 +289,11 @@ input[type="checkbox"] {
     display: flex;
     gap: 12px;
     align-items: flex-end;
-}
 
-.form-inline .form-group {
-    margin-bottom: 0;
-    flex: 1;
+    & .form-group {
+        margin-bottom: 0;
+        flex: 1;
+    }
 }
 
 /* ==================== FORM ROW ==================== */
@@ -267,33 +306,45 @@ input[type="checkbox"] {
 /* ==================== INPUT WITH ICON ==================== */
 .input-with-icon {
     position: relative;
-}
 
-.input-with-icon .form-input {
-    padding-left: 40px;
-}
+    & .form-input {
+        padding-left: 40px;
+    }
 
-.input-with-icon .input-icon {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
-    filter: brightness(0) invert(1);
-    opacity: 0.5;
-    pointer-events: none;
-}
+    & .input-icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        filter: brightness(0) invert(1);
+        opacity: 0.5;
+        pointer-events: none;
+    }
 
-.input-with-icon .form-input:focus + .input-icon,
-.input-with-icon .form-input:focus ~ .input-icon {
-    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
-    opacity: 1;
+    & .form-input:focus + .input-icon,
+    & .form-input:focus ~ .input-icon {
+        filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
+        opacity: 1;
+    }
 }
 
 /* ==================== SEARCH INPUT ==================== */
 .search-input-wrapper {
     position: relative;
+
+    & .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        filter: brightness(0) invert(1);
+        opacity: 0.5;
+        pointer-events: none;
+    }
 }
 
 .search-input {
@@ -306,28 +357,28 @@ input[type="checkbox"] {
     border-radius: var(--radius-md);
     color: var(--white);
     transition: var(--transition-colors);
+
+    &::placeholder {
+        color: var(--gray);
+    }
+
+    &:focus {
+        outline: none;
+        border-color: var(--accent-muted);
+        background: rgba(0, 0, 0, 0.4);
+    }
 }
 
-.search-input::placeholder {
-    color: var(--gray);
+/* Small search — matches .btn-sm height */
+.search-input--sm {
+    padding: 8px 12px 8px 32px;
+    font-size: var(--font-size-sm);
 }
 
-.search-input:focus {
-    outline: none;
-    border-color: var(--accent-muted);
-    background: rgba(0, 0, 0, 0.4);
-}
-
-.search-input-wrapper .search-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
-    filter: brightness(0) invert(1);
-    opacity: 0.5;
-    pointer-events: none;
+.search-input-wrapper--sm .search-icon {
+    left: 10px;
+    width: 14px;
+    height: 14px;
 }
 
 /* ==================== DATE / DATETIME INPUTS ==================== */
@@ -379,4 +430,5 @@ input[type="checkbox"] {
 .form-input--compact {
     padding: 8px 12px;
     font-size: var(--font-size-sm);
+}
 }

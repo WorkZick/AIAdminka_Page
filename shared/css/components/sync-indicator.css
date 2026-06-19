@@ -1,22 +1,89 @@
+@layer shared {
 /* ==================== SYNC INDICATOR ==================== */
 #sync-indicator {
     position: fixed;
     top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    background: #2e2e2e;
-    color: #f2f2f2;
+    background: var(--input-focus-bg);
+    color: var(--white);
     padding: 6px 14px;
     z-index: 10000;
     display: flex;
     align-items: center;
     gap: 10px;
-    font-family: 'TT Firs Neue', 'Segoe UI', sans-serif;
-    font-size: 12px;
-    animation: syncSlideDown 0.3s ease;
+    font-family: var(--font-family);
+    font-size: var(--font-size-caption);
+    animation: syncSlideDown var(--transition-normal);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
 }
+
+
+
+
+
+.sync-indicator-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sync-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--white);
+    border-radius: 50%;
+    animation: syncSpin 1s linear infinite;
+}
+
+
+
+.sync-count {
+    color: var(--gray-light);
+    font-size: var(--font-size-sm);
+}
+
+.sync-cancel-btn {
+    background: transparent;
+    border: 1px solid var(--gray-light);
+    color: var(--gray-light);
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+}
+
+.sync-cancel-btn:hover {
+    border-color: var(--white);
+    color: var(--white);
+}
+
+#sync-indicator.sync-complete .sync-spinner {
+    display: none;
+}
+
+#sync-indicator.sync-complete .sync-text {
+    color: var(--status-green);
+}
+
+#sync-indicator.sync-complete .sync-cancel-btn {
+    display: none;
+}
+
+#sync-indicator.sync-cancelled .sync-text {
+    color: var(--white);
+}
+}
+
+/* @keyframes ВНЕ @layer — Phase 44 fix: keyframes lookup may fail across layers */
+}
+
+/* @keyframes ВНЕ @layer — Phase 44 fix: keyframes lookup may fail across layers */
+}
+
+/* @keyframes ВНЕ @layer — Phase 44 fix: keyframes lookup may fail across layers */
 
 @keyframes syncSlideDown {
     from {
@@ -40,59 +107,8 @@
     }
 }
 
-.sync-indicator-content {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.sync-spinner {
-    width: 12px;
-    height: 12px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-top-color: var(--white);
-    border-radius: 50%;
-    animation: syncSpin 1s linear infinite;
-}
-
 @keyframes syncSpin {
     to {
         transform: rotate(360deg);
     }
-}
-
-.sync-count {
-    color: #8d8d8d;
-    font-size: 11px;
-}
-
-.sync-cancel-btn {
-    background: transparent;
-    border: 1px solid #8d8d8d;
-    color: #8d8d8d;
-    font-size: 10px;
-    cursor: pointer;
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-
-.sync-cancel-btn:hover {
-    border-color: #f2f2f2;
-    color: #f2f2f2;
-}
-
-#sync-indicator.sync-complete .sync-spinner {
-    display: none;
-}
-
-#sync-indicator.sync-complete .sync-text {
-    color: #b8e994;
-}
-
-#sync-indicator.sync-complete .sync-cancel-btn {
-    display: none;
-}
-
-#sync-indicator.sync-cancelled .sync-text {
-    color: var(--white);
 }

@@ -17,12 +17,59 @@ const adminApp = {
     editingTeam: null,
     editingStatus: 'active',
     editingTeamActive: true,
+    _optimistic: null,
+    _optimisticTeams: null,
 
-    // Пагинация
+    // Пагинация пользователей (серверная)
     usersPage: 1,
-    usersPerPage: 10,
-    auditPage: 1,
-    auditPerPage: 15,
+    usersPageSize: 20,
+    usersTotalCount: 0,
+    usersServerFilter: {},
+    _usersRequestId: 0,
+
+    // Пагинация аудита (cursor)
+    auditItems: [],
+    auditCursor: null,
+    auditTotalCount: 0,
+    auditPageSize: 50,
+    auditFilters: { dateFrom: '', dateTo: '', action: '' },
+    _auditLoading: false,
+    vsEnabled: true,
+    _auditVS: null,
+
+    // Phase 40 LIT-MIG-01 admin pilot — signal-driven <app-table> для ролей.
+    // Атомарная per-table миграция (renderUsers/renderTeams/renderAuditLog мигрированы Phase 46/48/49).
+    // Pattern: Phase 25-07 partners pilot bridge approach (mod.effect signal binding).
+    _rolesSignal: null,        // window.signal([{id, role, name, color, isSystem}, ...])
+    _rolesDisposers: [],       // dispose handles для effect() — cleanup в destroy()
+    _rolesTableMounted: false, // flag — columns + effect bound only once
+
+    // Phase 46 LIT-CONT-01 — signal-driven <app-card> grid для команд (continuation Phase 40 pattern).
+    // renderTeams() пишет в _teamsSignal → effect() пересобирает <app-card> children внутри #teamsGrid.
+    // Cleanup: _teamsDisposers диспозятся в destroy() (Pitfall C — no memory leak).
+    // Атомарная per-render миграция (renderUsers/renderAuditLog отложены к Phase 48/49 — Pitfall #12).
+    _teamsSignal: null,        // window.signal([{id, name, isActive, leaderName, members, ...}, ...])
+    _teamsDisposers: [],       // dispose handles для effect() — cleanup в destroy()
+    _teamsGridMounted: false,  // flag — effect bound only once
+
+    // Phase 48 LIT-CONT-02 — signal-driven <app-table> для пользователей (continuation Phase 40 pattern).
+    // renderUsers() пишет в _usersSignal → effect() обновляет tableEl.items (Lit диффинг строк).
+    // Server-pagination preserved (usersPageSize: 20 — фильтрация/поиск/пагинация на сервере).
+    // Cleanup: _usersDisposers диспозятся в destroy() (Pitfall C — no memory leak).
+    // Атомарная per-render миграция (renderAuditLog отложен к Phase 49 — Pitfall #12).
+    _usersSignal: null,        // window.signal([{id, name, email, picture, role, roleName, teamName, status, ...}, ...])
+    _usersDisposers: [],       // dispose handles для effect() — cleanup в destroy()
+    _usersTableMounted: false, // flag — columns + effect bound only once
+
+    // Phase 49 LIT-CONT-03 — signal-driven <app-table id="auditLogTable"> для аудит-лога (continuation Phase 40/46/48 pattern).
+    // VirtualScroller integration (Phase 19 v2.29, this._auditVS) preserved as-is — VS owns legacy
+    // <table id="auditTable"> + <tbody id="auditTbody"> через spacer-TR pattern когда vsEnabled=true.
+    // <app-table id="auditLogTable"> — signal-driven mount для non-VS fallback path (vsEnabled=false):
+    // _appendAuditItems / resetAndLoadAudit пишут в _auditSignal → Lit cell renderers (XSS-proof через автоэскейп).
+    // Cleanup: _auditDisposers диспозятся в destroy() (Pitfall C — no memory leak).
+    _auditSignal: null,        // window.signal([{id, action, actionName, iconClass, iconSvg, message, actor, time}, ...])
+    _auditDisposers: [],       // dispose handles для effect() — cleanup в destroy()
+    _auditTableMounted: false, // flag — columns + effect bound only once
 
     // Модули
     modules: ['partners', 'partner-onboarding', 'team-info', 'traffic', 'reports', 'settings', 'documentation', 'team-management'],
@@ -90,9 +137,72 @@ const adminApp = {
         } finally {
             if (loadingState) loadingState.classList.add('hidden');
             const tabs = document.getElementById('adminTabsContainer');
-            const activeTab = document.querySelector('.tab-content.active');
             if (tabs) tabs.classList.remove('hidden');
-            if (activeTab) activeTab.classList.remove('hidden');
+            if (typeof DatePicker !== 'undefined') DatePicker.initAll();
+            // Phase 67 SYNC-FIX-05: cross-USER polling — admin видит новые
+            // registration requests / изменения users/teams без manual refresh.
+            // 30s интервал (heavier endpoint, чем team-info getEmployees),
+            // visibility-aware pause + immediate refresh при возврате на вкладку.
+            this._startCrossUserPoll();
+        }
+    },
+
+    // Phase 67 SYNC-FIX-05: cross-user polling state + helpers
+    _crossUserPollIntervalId: null,
+    _crossUserPollVisibilityHandler: null,
+    _crossUserPollInProgress: false,
+    CROSS_USER_POLL_INTERVAL: 30000, // 30s — admin endpoint heavier (full getAdminData)
+
+    _startCrossUserPoll() {
+        this._stopCrossUserPoll();
+        const tick = () => this._crossUserPollTick();
+        this._crossUserPollIntervalId = setInterval(tick, this.CROSS_USER_POLL_INTERVAL);
+
+        this._crossUserPollVisibilityHandler = () => {
+            if (document.hidden) {
+                this._stopCrossUserPollInterval();
+            } else {
+                tick(); // immediate refresh on return-to-tab
+                if (!this._crossUserPollIntervalId) {
+                    this._crossUserPollIntervalId = setInterval(tick, this.CROSS_USER_POLL_INTERVAL);
+                }
+            }
+        };
+        document.addEventListener('visibilitychange', this._crossUserPollVisibilityHandler);
+    },
+
+    _stopCrossUserPollInterval() {
+        if (this._crossUserPollIntervalId) {
+            clearInterval(this._crossUserPollIntervalId);
+            this._crossUserPollIntervalId = null;
+        }
+    },
+
+    _stopCrossUserPoll() {
+        this._stopCrossUserPollInterval();
+        if (this._crossUserPollVisibilityHandler) {
+            document.removeEventListener('visibilitychange', this._crossUserPollVisibilityHandler);
+            this._crossUserPollVisibilityHandler = null;
+        }
+    },
+
+    async _crossUserPollTick() {
+        // Reentrance guard: пропустить tick если предыдущий запрос ещё идёт
+        if (this._crossUserPollInProgress) return;
+        // Skip если есть pending optimistic ops (parity с team-info SYNC-FIX-05)
+        if (this._optimistic && this._optimistic.getPendingCount && this._optimistic.getPendingCount() > 0) return;
+        if (this._optimisticTeams && this._optimisticTeams.getPendingCount && this._optimisticTeams.getPendingCount() > 0) return;
+        // Skip если открыта любая модалка (admin может редактировать team/user/role — re-render
+        // во время редактирования сломает form state). Возобновится при закрытии модалки + след tick.
+        if (document.querySelector('.modal-overlay.active, .modal.active, app-modal[open]')) return;
+
+        this._crossUserPollInProgress = true;
+        try {
+            await this.loadAllData();
+        } catch (err) {
+            console.warn('[admin] cross-user poll failed:', err && err.message);
+        } finally {
+            this._crossUserPollInProgress = false;
         }
     },
 
@@ -244,6 +354,17 @@ const adminApp = {
         };
         document.addEventListener('click', this._clickHandler);
 
+        // EXP-03: клавиатурный toggle для permission-cb (role=checkbox + tabindex=0)
+        // Space/Enter активируют чекбокс — по паттерну ARIA checkbox widget
+        this._permKeyHandler = (e) => {
+            if (e.key !== ' ' && e.key !== 'Enter') return;
+            const target = e.target.closest('.permission-cb:not(.disabled)');
+            if (!target) return;
+            e.preventDefault();
+            this.togglePermission(target);
+        };
+        document.addEventListener('keydown', this._permKeyHandler);
+
         // Form submissions
         const createTeamForm = document.getElementById('createTeamForm');
         if (createTeamForm) {
@@ -254,6 +375,21 @@ const adminApp = {
         if (editTeamForm) {
             editTeamForm.addEventListener('submit', (e) => this.saveTeam(e));
         }
+
+        // Аудит-лог: фильтры по дате
+        document.getElementById('auditDateFrom')?.addEventListener('change', (e) => {
+            this.auditFilters.dateFrom = e.target.value || '';
+            this.resetAndLoadAudit();
+        });
+        document.getElementById('auditDateTo')?.addEventListener('change', (e) => {
+            this.auditFilters.dateTo = e.target.value || '';
+            this.resetAndLoadAudit();
+        });
+
+        // Аудит-лог: кнопка "Загрузить ещё"
+        document.getElementById('loadMoreAuditBtn')?.addEventListener('click', () => {
+            this.loadMoreAudit();
+        });
     },
 
     loadUserData() {
@@ -276,13 +412,18 @@ const adminApp = {
     },
 
     async loadAllData() {
+        // EXP-05/06: показать loading-state перед сетевым запросом
+        const reqLoading = document.getElementById('requestsLoadingState');
+        if (reqLoading) reqLoading.classList.remove('hidden');
+        const permLoading = document.getElementById('permissionsLoadingState');
+        if (permLoading) permLoading.classList.remove('hidden');
+
         try {
-            const result = await this.apiCall('getAdminData');
+            const result = await CloudStorage.getAdminData({});
 
             if (result.error) {
                 console.error('Error loading admin data:', result.error);
 
-                // Показать ошибку пользователю
                 if (result.error.includes('токен') || result.error.includes('авторизации')) {
                     Toast.error('Ошибка авторизации. Обновите страницу и войдите заново.');
                 } else {
@@ -292,28 +433,40 @@ const adminApp = {
             }
 
             this.teams = result.teams || [];
-            this.users = result.users || [];
             this.requests = result.requests || [];
             this.permissions = result.permissions || {};
-            this.auditLog = result.auditLog || [];
+            // v2.27 FIXES-UI-01: getAdminData returns ALL users в result.users (non-paginated).
+            // Seed this.users ДО renderTeams() — иначе team cards показывают "0 Участников"
+            // т.к. renderTeams() читает this.users.filter(u => u.teamId === team.id).
+            // goToUsersPage(1) ниже перезаписывает с paginated subset.
+            if (Array.isArray(result.users)) {
+                this.users = result.users;
+            }
 
-            this.updateUI();
+            if (!this._optimistic) {
+                this._optimistic = OptimisticManager.create('admin-users');
+            }
+            if (!this._optimisticTeams) {
+                this._optimisticTeams = OptimisticManager.create('admin-teams');
+            }
+
+            this.populateRoleSelects();
+            this.updateCounts();
+            this.renderTeams();
+            this.renderRequests();
+            this.renderRolesTable();
+            this.renderPermissions();
+            this.populateTeamFilter();
+
+            await this.goToUsersPage(1);
+            // v2.27 FIXES-UI-01: re-render teams после того как goToUsersPage обновил this.users
+            // (paginated subset может отличаться от initial result.users для больших списков)
+            this.renderTeams();
+            await this.resetAndLoadAudit();
 
         } catch (error) {
             console.error('Error loading admin data:', error);
             Toast.error('Ошибка загрузки данных');
-        }
-    },
-
-    // ============ API ============
-
-    async apiCall(action, params = {}) {
-        // API через CloudStorage (автоматически добавляет токен)
-        try {
-            return await CloudStorage.callApi(action, params);
-        } catch (error) {
-            console.error('API call error:', error);
-            return { error: error.message || 'Ошибка сети' };
         }
     },
 
@@ -327,7 +480,6 @@ const adminApp = {
         this.renderRequests();
         this.renderRolesTable();
         this.renderPermissions();
-        this.renderAuditLog();
         this.populateTeamFilter();
     },
 
@@ -360,7 +512,7 @@ const adminApp = {
 
     updateCounts() {
         document.getElementById('teamsCount').textContent = this.teams.filter(t => t.isActive).length;
-        document.getElementById('usersCount').textContent = this.users.length;
+        document.getElementById('usersCount').textContent = this.usersTotalCount || this.users.length;
         document.getElementById('requestsCount').textContent = this.requests.length;
     },
 
@@ -448,12 +600,27 @@ const adminApp = {
 
     // ============ Teams ============
 
+    /**
+     * Phase 46 LIT-CONT-01 — атомарная миграция renderTeams() →
+     * signal-driven <app-card> grid + Lit cell renderers (XSS-proof через автоэскейп).
+     *
+     * Pattern (Phase 40 LIT-MIG-01 admin pilot continuation):
+     *   1. _mountTeamsGrid() — однократно настраивает effect(() => grid renders <app-card>s from _teamsSignal)
+     *   2. renderTeams() — пишет filtered/sorted rows в _teamsSignal, Lit реактивно перерисовывает
+     *
+     * Cleanup: _teamsDisposers вызываются в destroy() (Pitfall C — no memory leak).
+     *
+     * Атомарность (Pitfall #12): мигрирована ТОЛЬКО renderTeams. renderUsers/renderAuditLog
+     * отложены к Phase 48/49.
+     */
     renderTeams() {
         const grid = document.getElementById('teamsGrid');
         const emptyEl = document.getElementById('emptyTeams');
+        if (!grid) return;
+
         const searchValue = document.getElementById('searchTeams')?.value.toLowerCase() || '';
 
-        // Фильтрация
+        // Фильтрация (data layer — без DOM)
         let filtered = [...this.teams];
         if (searchValue) {
             filtered = filtered.filter(t =>
@@ -463,70 +630,155 @@ const adminApp = {
             );
         }
 
-        // Очистить (кроме empty state)
-        const cards = grid.querySelectorAll('.team-card');
-        cards.forEach(card => card.remove());
-
-        if (filtered.length === 0) {
-            emptyEl.classList.remove('hidden');
-            return;
-        }
-
-        emptyEl.classList.add('hidden');
-
         // Сортировка: активные первые
         filtered.sort((a, b) => {
             if (a.isActive !== b.isActive) return b.isActive - a.isActive;
             return a.name.localeCompare(b.name);
         });
 
-        filtered.forEach(team => {
-            const card = this.createTeamCard(team);
-            grid.insertBefore(card, emptyEl);
+        // Build view-model rows (precompute members + initials, без DOM)
+        const rows = filtered.map(team => {
+            const members = this.users.filter(u => u.teamId === team.id).map(m => ({
+                id: m.email,
+                name: m.name || m.email,
+                roleName: RolesConfig.getName(m.role),
+                picture: m.picture || '',
+                initials: this.getInitials(m.name)
+            }));
+            return {
+                id: team.id,
+                name: team.name,
+                isActive: !!team.isActive,
+                leaderName: team.leaderName,
+                leaderInitials: this.getInitials(team.leaderName),
+                pending: !!team._pending,
+                error: !!team._error,
+                members
+            };
         });
+
+        // Toggle empty state (legacy DOM — preserved для compat с existing skeleton/empty UX)
+        if (emptyEl) {
+            if (rows.length === 0) emptyEl.classList.remove('hidden');
+            else emptyEl.classList.add('hidden');
+        }
+
+        // Mount once (idempotent) — затем записываем в signal
+        this._mountTeamsGrid();
+
+        if (this._teamsSignal) {
+            this._teamsSignal.value = rows;
+        } else {
+            // Fallback: signals/Lit недоступны → graceful degradation (показываем empty state)
+            console.warn('[admin] _teamsSignal not initialized — Lit/signals unavailable, teams grid degraded');
+        }
     },
 
-    createTeamCard(team) {
-        const card = document.createElement('div');
-        card.className = 'team-card' + (team.isActive ? '' : ' inactive');
-        card.dataset.action = 'open-edit-team-modal';
-        card.dataset.teamId = team.id;
+    /**
+     * Phase 46 LIT-CONT-01 — однократная настройка <app-card> grid в #teamsGrid:
+     * — effect-binding _teamsSignal → render <app-card> children (Lit html`` экранирует автоматически)
+     * — disposers tracked в _teamsDisposers (cleanup в destroy)
+     */
+    _mountTeamsGrid() {
+        if (this._teamsGridMounted) return;
 
-        const initials = this.getInitials(team.leaderName);
-        const members = this.users.filter(u => u.teamId === team.id);
-        const membersHtml = members.map(m => {
-            const mInitials = this.getInitials(m.name);
-            const roleName = RolesConfig.getName(m.role);
-            return `<div class="team-member">
-                <div class="team-member-avatar">${m.picture ? `<img src="${this.escapeHtml(m.picture)}" alt="">` : mInitials}</div>
-                <div class="team-member-info">
-                    <span class="team-member-name">${this.escapeHtml(m.name || m.email)}</span>
-                    <span class="team-member-role">${this.escapeHtml(roleName)}</span>
-                </div>
-            </div>`;
-        }).join('');
+        const grid = document.getElementById('teamsGrid');
+        const emptyEl = document.getElementById('emptyTeams');
+        if (!grid) return;
 
-        card.innerHTML = `
-            <div class="team-card-header">
-                <div class="team-name">${this.escapeHtml(team.name)}</div>
-                <div class="team-status${team.isActive ? '' : ' inactive'}"></div>
-            </div>
-            <div class="team-card-body">
-                <div class="team-leader">
-                    <div class="team-leader-avatar">${initials}</div>
-                    <span>${this.escapeHtml(team.leaderName)}</span>
-                </div>
-                ${members.length > 0 ? `<div class="team-members-list">${membersHtml}</div>` : ''}
-                <div class="team-stats">
-                    <div class="team-stat">
-                        <span class="team-stat-value">${members.length}</span>
-                        <span class="team-stat-label">Участников</span>
-                    </div>
-                </div>
-            </div>
-        `;
+        // Lit globals + signals required (cdn-deps.js loaded asynchronously)
+        if (typeof window.signal !== 'function' || typeof window.effect !== 'function' || !window.litHtml || !window.litRender) {
+            // Lit ещё не готов — попытаемся отложить mount до lit-ready event
+            if (!this._teamsPendingMount) {
+                this._teamsPendingMount = true;
+                window.addEventListener('lit-ready', () => {
+                    this._teamsPendingMount = false;
+                    this._mountTeamsGrid();
+                    if (typeof this.renderTeams === 'function') {
+                        this.renderTeams();
+                    }
+                }, { once: true });
+            }
+            return;
+        }
 
-        return card;
+        const html = window.litHtml;
+        const render = window.litRender;
+        const self = this;
+
+        try {
+            this._teamsSignal = window.signal([]);
+
+            // Создать host для Lit-render внутри grid (рядом с emptyEl).
+            // Lit render() в существующий контейнер поддерживает диффинг — повторные render-ы пересобирают
+            // только изменённые app-card элементы.
+            let renderHost = grid.querySelector('[data-teams-render-host]');
+            if (!renderHost) {
+                renderHost = document.createElement('div');
+                renderHost.setAttribute('data-teams-render-host', '');
+                renderHost.style.display = 'contents';
+                if (emptyEl && emptyEl.parentNode === grid) {
+                    grid.insertBefore(renderHost, emptyEl);
+                } else {
+                    grid.appendChild(renderHost);
+                }
+            }
+
+            // Reactive render via effect (Option A — Lit render внутрь host)
+            const dispose = window.effect(() => {
+                const items = self._teamsSignal.value || [];
+                const template = html`${items.map(team => {
+                    const cardClass = `team-card${team.isActive ? '' : ' inactive'}${team.pending ? ' item--pending' : ''}${team.error ? ' item--error' : ''}`;
+                    return html`
+                        <app-card
+                            variant="default"
+                            class="${cardClass}"
+                            data-action="open-edit-team-modal"
+                            data-team-id="${team.id}"
+                        >
+                            <div slot="header" class="team-card-header">
+                                <div class="team-name">${team.name}</div>
+                                <div class="${team.isActive ? 'team-status' : 'team-status inactive'}"></div>
+                            </div>
+                            <div class="team-card-body">
+                                <div class="team-leader">
+                                    <div class="team-leader-avatar">${team.leaderInitials}</div>
+                                    <span>${team.leaderName}</span>
+                                </div>
+                                ${team.members.length > 0 ? html`
+                                    <div class="team-members-list">
+                                        ${team.members.map(m => html`
+                                            <div class="team-member">
+                                                <div class="team-member-avatar">
+                                                    ${m.picture ? html`<img src="${m.picture}" alt="">` : m.initials}
+                                                </div>
+                                                <div class="team-member-info">
+                                                    <span class="team-member-name">${m.name}</span>
+                                                    <span class="team-member-role">${m.roleName}</span>
+                                                </div>
+                                            </div>
+                                        `)}
+                                    </div>
+                                ` : ''}
+                                <div class="team-stats">
+                                    <div class="team-stat">
+                                        <span class="team-stat-value">${team.members.length}</span>
+                                        <span class="team-stat-label">Участников</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </app-card>
+                    `;
+                })}`;
+                render(template, renderHost);
+            });
+            this._teamsDisposers.push(dispose);
+
+            this._teamsGridMounted = true;
+        } catch (e) {
+            console.warn('[admin] _mountTeamsGrid failed (non-fatal):', e?.message);
+            this._teamsGridMounted = false;
+        }
     },
 
     filterTeams() {
@@ -556,7 +808,7 @@ const adminApp = {
         if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
 
         try {
-            const result = await this.apiCall('createTeam', { name, leaderEmail, description });
+            const result = await CloudStorage.createTeam({ name, leaderEmail, description });
 
             if (result.error) {
                 throw new Error(result.error);
@@ -564,6 +816,7 @@ const adminApp = {
 
             Toast.success('Команда создана');
             this.closeModal('createTeamModal');
+            CloudStorage.clearCacheNamespace('adminData');
             await this.loadAllData();
 
         } catch (error) {
@@ -608,29 +861,49 @@ const adminApp = {
             return false;
         }
 
-        const btn = document.querySelector('[data-action="submit-edit-team"]');
-        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+        const teamId = this.editingTeam.id;
+        const idx = this.teams.findIndex(t => t.id === teamId);
+        if (idx === -1) return false;
+
+        const snapshot = structuredClone(this.teams);
+        const team = this.teams[idx];
+        team.name = name;
+        team.description = description;
+        team.isActive = this.editingTeamActive;
+        team._pending = true;
+
+        const opId = this._optimisticTeams.apply({
+            stateRef: this.teams,
+            index: idx,
+            snapshot,
+            operation: 'update',
+            item: team,
+            onRollback: (error) => {
+                this.renderTeams();
+                Toast.error('Ошибка сохранения команды: ' + error.message, 5000, {
+                    action: { label: 'Повторить', callback: () => this.saveTeam(event) }
+                });
+            }
+        });
+
+        this.closeModal('editTeamModal');
+        this.renderTeams();
 
         try {
-            const result = await this.apiCall('updateTeam', {
-                teamId: this.editingTeam.id,
+            const result = await CloudStorage.updateTeam({
+                teamId,
                 name,
                 description,
                 isActive: this.editingTeamActive
             });
 
-            if (result.error) {
-                throw new Error(result.error);
-            }
+            if (result.error) throw new Error(result.error);
 
+            this._optimisticTeams.confirm(opId);
             Toast.success('Команда обновлена');
-            this.closeModal('editTeamModal');
-            await this.loadAllData();
 
         } catch (error) {
-            Toast.error('Ошибка: ' + error.message);
-        } finally {
-            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
+            this._optimisticTeams.rollback(opId, error);
         }
 
         return false;
@@ -654,148 +927,287 @@ const adminApp = {
     async deleteTeam() {
         if (!this.editingTeam) return;
 
-        try {
-            const result = await this.apiCall('deleteTeam', {
-                teamId: this.editingTeam.id
-            });
+        const teamId = this.editingTeam.id;
+        const idx = this.teams.findIndex(t => t.id === teamId);
+        if (idx === -1) return;
 
-            if (result.error) {
-                throw new Error(result.error);
+        const snapshot = structuredClone(this.teams);
+        const removed = this.teams.splice(idx, 1)[0];
+        removed._pending = true;
+
+        const opId = this._optimisticTeams.apply({
+            stateRef: this.teams,
+            index: idx,
+            snapshot,
+            operation: 'delete',
+            item: removed,
+            onRollback: (error) => {
+                this.renderTeams();
+                Toast.error('Ошибка удаления команды: ' + error.message, 5000, {
+                    action: { label: 'Повторить', callback: () => this.deleteTeam() }
+                });
             }
+        });
 
+        this.closeModal('deleteTeamModal');
+        this.renderTeams();
+        this.updateCounts();
+
+        try {
+            const result = await CloudStorage.deleteTeam({ teamId });
+            if (result.error) throw new Error(result.error);
+            this._optimisticTeams.confirm(opId);
             Toast.success('Команда удалена');
-            this.closeModal('deleteTeamModal');
-            await this.loadAllData();
-
         } catch (error) {
-            Toast.error('Ошибка: ' + error.message);
+            this._optimisticTeams.rollback(opId, error);
         }
     },
 
     // ============ Users ============
 
+    async goToUsersPage(page) {
+        const reqId = ++this._usersRequestId;
+        this._renderUsersSkeleton();
+        try {
+            const result = await CloudStorage.getAdminData({
+                usersPage: page,
+                usersPageSize: this.usersPageSize,
+                filter_team: this.usersServerFilter.filter_team || undefined,
+                filter_role: this.usersServerFilter.filter_role || undefined,
+                filter_status: this.usersServerFilter.filter_status || undefined
+            });
+            if (reqId !== this._usersRequestId) return;
+            // v2.27 FIXES-CACHE-03: handle notModified short-circuit — backend сказал "no changes",
+            // не перезаписываем this.users пустым массивом (раньше result.users undefined → []).
+            if (result && result.notModified === true) {
+                // Keep current this.users / counts / page (already correct from cache)
+                this.renderUsers();
+                return;
+            }
+            this.users = result.users || [];
+            this.usersTotalCount = result.usersTotalCount || 0;
+            this.usersPage = result.usersPage || page;
+            this.renderUsers();
+            PaginationHelper.render(
+                document.getElementById('usersPagination'),
+                {
+                    page: this.usersPage,
+                    pageSize: this.usersPageSize,
+                    totalCount: this.usersTotalCount,
+                    onPageChange: (p) => this.goToUsersPage(p)
+                }
+            );
+        } catch (error) {
+            if (reqId !== this._usersRequestId) return;
+            Toast.error('Ошибка загрузки: ' + error.message);
+        }
+    },
+
+    _renderUsersSkeleton() {
+        const table = document.getElementById('usersTable');
+        if (table) table.classList.add('hidden');
+        const emptyUsers = document.getElementById('emptyUsers');
+        if (emptyUsers) emptyUsers.classList.add('hidden');
+        const loading = document.getElementById('usersLoadingState');
+        if (loading) loading.classList.remove('hidden');
+    },
+
+    /**
+     * Phase 48 LIT-CONT-02 admin — атомарная миграция renderUsers() →
+     * signal-driven <app-table> mount + Lit cell renderers (XSS-proof через автоэскейп).
+     *
+     * Pattern (Phase 40 LIT-MIG-01 admin pilot precedent + Phase 46 LIT-CONT-01 continuation):
+     *   1. _mountUsersTable() — однократно настраивает columns + effect(() => tableEl.items = ...)
+     *   2. renderUsers() — пишет filtered rows в _usersSignal, Lit реактивно перерисовывает строки
+     *
+     * Server-pagination preserved (usersPageSize: 20 — фильтры/пагинация на сервере через goToUsersPage).
+     * Client-side только клиентский search filter по текущей странице (GAS не поддерживает search param).
+     *
+     * Cleanup: _usersDisposers вызываются в destroy() (Pitfall C — no memory leak).
+     *
+     * Атомарность (Pitfall #12): мигрирована ТОЛЬКО renderUsers. renderAuditLog отложен к Phase 49.
+     */
     renderUsers() {
-        const tbody = document.getElementById('usersTableBody');
+        const table = document.getElementById('usersTable');
+        const usersLoading = document.getElementById('usersLoadingState');
+        if (usersLoading) usersLoading.classList.add('hidden');
         const emptyEl = document.getElementById('emptyUsers');
-        const pagination = document.getElementById('usersPagination');
 
+        // Данные уже отфильтрованы и постранично на сервере
         const searchValue = document.getElementById('searchUsers')?.value.toLowerCase() || '';
-        const teamFilter = this._getFilterValue('filterTeam');
-        const roleFilter = this._getFilterValue('filterRole');
-        const statusFilter = this._getFilterValue('filterStatus');
-
-        // Фильтрация
         let filtered = [...this.users];
 
-        // Leader видит только свою команду (admin видит всех)
-        const isAdmin = typeof RoleGuard !== 'undefined' && RoleGuard.isAdmin();
-        const isLeader = typeof RoleGuard !== 'undefined' && RoleGuard.hasRole('leader');
-        const myTeamId = RoleGuard?.user?.teamId;
-        if (isLeader && !isAdmin && myTeamId) {
-            filtered = filtered.filter(u => u.teamId === myTeamId);
-        }
-
+        // Клиентский поиск только по текущей странице (GAS не поддерживает search param)
         if (searchValue) {
             filtered = filtered.filter(u =>
-                u.name.toLowerCase().includes(searchValue) ||
-                u.email.toLowerCase().includes(searchValue) ||
-                u.reddyId.includes(searchValue)
+                (u.name || '').toLowerCase().includes(searchValue) ||
+                (u.email || '').toLowerCase().includes(searchValue) ||
+                (u.reddyId || '').includes(searchValue)
             );
         }
 
-        if (teamFilter) {
-            filtered = filtered.filter(u => u.teamId === teamFilter);
-        }
-
-        if (roleFilter) {
-            filtered = filtered.filter(u => u.role === roleFilter);
-        }
-
-        if (statusFilter) {
-            filtered = filtered.filter(u => u.status === statusFilter);
-        }
-
-        // Очистить таблицу
-        tbody.innerHTML = '';
-
-        if (filtered.length === 0) {
-            emptyEl.classList.remove('hidden');
-            pagination.innerHTML = '';
-            return;
-        }
-
-        emptyEl.classList.add('hidden');
-
-        // Пагинация
-        const totalPages = Math.max(1, Math.ceil(filtered.length / this.usersPerPage));
-        if (this.usersPage > totalPages) this.usersPage = totalPages;
-        if (this.usersPage < 1) this.usersPage = 1;
-
-        const start = (this.usersPage - 1) * this.usersPerPage;
-        const end = start + this.usersPerPage;
-        const pageUsers = filtered.slice(start, end);
-
-        // Рендер строк
-        pageUsers.forEach(user => {
-            try {
-                const row = this.createUserRow(user);
-                tbody.appendChild(row);
-            } catch (e) {
-                console.error('Error rendering user:', user, e);
-            }
+        // Build view-model rows (data layer — без DOM)
+        const rows = filtered.map(user => {
+            const team = this.teams.find(t => t.id === user.teamId);
+            const teamName = team ? team.name : '';
+            const statusText = user.status === 'active' ? 'Активен' :
+                              user.status === 'blocked' ? 'Заблокирован' :
+                              user.status === 'waiting_invite' ? 'Ожидает' : 'Без команды';
+            return {
+                id: user.email,
+                name: user.name || '',
+                email: user.email || '',
+                picture: user.picture || '',
+                initials: this.getInitials(user.name),
+                role: user.role,
+                roleName: RolesConfig.getName(user.role),
+                roleColor: RolesConfig.isCustomRole(user.role) ? RolesConfig.getColor(user.role) : '',
+                teamName,
+                status: user.status,
+                statusClass: 'status-' + user.status,
+                statusText,
+                pending: !!user._pending,
+                error: !!user._error
+            };
         });
 
-        // Рендер пагинации
-        this.renderPagination(pagination, this.usersPage, totalPages, (page) => {
-            this.usersPage = page;
-            this.renderUsers();
-        });
+        // Toggle empty state (legacy DOM — preserved для compat с existing skeleton/empty UX)
+        // v2.27 FIXES-VISUAL-02: при пустом списке прячем app-table ПОЛНОСТЬЮ (его дефолтный
+        // "Нет данных" дублировал legacy #emptyUsers с иконкой). Показываем только legacy emptyUsers.
+        const isEmpty = rows.length === 0;
+        if (emptyEl) {
+            if (isEmpty) emptyEl.classList.remove('hidden');
+            else emptyEl.classList.add('hidden');
+        }
+        if (table) {
+            if (isEmpty) table.classList.add('hidden');
+            else table.classList.remove('hidden');
+        }
 
+        // Mount once (idempotent) — затем записываем в signal
+        this._mountUsersTable();
+
+        if (this._usersSignal) {
+            this._usersSignal.value = rows;
+        } else {
+            // Fallback: signals/Lit недоступны → graceful degradation (показываем empty state)
+            console.warn('[admin] _usersSignal not initialized — Lit/signals unavailable, users table degraded');
+        }
+
+        // Apply badge colors для кастомных ролей (data-role-color → inline style)
         this.applyBadgeColors();
     },
 
-    createUserRow(user) {
-        const row = document.createElement('tr');
-        const initials = this.getInitials(user.name);
-        const roleName = RolesConfig.getName(user.role);
-        const team = this.teams.find(t => t.id === user.teamId);
-        const teamName = team ? team.name : '';
+    /**
+     * Phase 48 LIT-CONT-02 — однократная настройка <app-table id="usersTable">:
+     * — columns с Lit cell renderers (user cell / team / role / status / actions)
+     * — effect-binding _usersSignal → tableEl.items (reactive)
+     * — disposers tracked в _usersDisposers (cleanup в destroy)
+     *
+     * Pattern: Phase 40 LIT-MIG-01 _mountRolesTable() precedent (direct prop assignment via effect).
+     */
+    _mountUsersTable() {
+        if (this._usersTableMounted) return;
 
-        let statusClass = user.status;
-        let statusText = user.status === 'active' ? 'Активен' :
-                        user.status === 'blocked' ? 'Заблокирован' :
-                        user.status === 'waiting_invite' ? 'Ожидает' : 'Без команды';
+        const tableEl = document.getElementById('usersTable');
+        if (!tableEl) return;
 
-        row.innerHTML = `
-            <td>
-                <div class="user-cell">
-                    <div class="user-avatar">${user.picture ? `<img src="${this.escapeHtml(user.picture)}" alt="">` : initials}</div>
-                    <div class="user-details">
-                        <span class="user-name">${this.escapeHtml(user.name)}</span>
-                        <span class="user-email">${this.escapeHtml(user.email)}</span>
-                    </div>
-                </div>
-            </td>
-            <td>
-                <span class="user-team${teamName ? '' : ' no-team'}">${this.escapeHtml(teamName) || 'Нет'}</span>
-            </td>
-            <td>
-                <span class="role-badge role-${this.escapeHtml(user.role)}" data-role-color="${RolesConfig.isCustomRole(user.role) ? this.escapeHtml(RolesConfig.getColor(user.role)) : ''}">${this.escapeHtml(roleName)}</span>
-            </td>
-            <td>
-                <span class="status-badge ${this.escapeHtml(statusClass)}">${statusText}</span>
-            </td>
-            <td>
-                <button class="action-btn" data-action="open-edit-user-modal" data-email="${this.escapeHtml(user.email)}">Изменить</button>
-            </td>
-        `;
+        // Lit globals + signals required (cdn-deps.js loaded asynchronously)
+        if (typeof window.signal !== 'function' || typeof window.effect !== 'function' || !window.litHtml) {
+            // Lit ещё не готов — попытаемся отложить mount до lit-ready event
+            if (!this._usersPendingMount) {
+                this._usersPendingMount = true;
+                window.addEventListener('lit-ready', () => {
+                    this._usersPendingMount = false;
+                    this._mountUsersTable();
+                    if (typeof this.renderUsers === 'function') {
+                        this.renderUsers();
+                    }
+                }, { once: true });
+            }
+            return;
+        }
 
-        return row;
+        const html = window.litHtml;
+        const self = this;
+
+        try {
+            this._usersSignal = window.signal([]);
+
+            // Cell renderers — Lit html`` автоматически экранирует interpolated values (XSS-proof)
+            tableEl.columns = [
+                {
+                    key: 'user',
+                    label: 'Пользователь',
+                    render: (item) => html`
+                        <div class="user-cell">
+                            <div class="user-avatar">
+                                ${item.picture ? html`<img src="${item.picture}" alt="">` : item.initials}
+                            </div>
+                            <div class="user-details">
+                                <span class="user-name">${item.name}</span>
+                                <span class="user-email">${item.email}</span>
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    key: 'team',
+                    label: 'Команда',
+                    render: (item) => html`
+                        <span class="${item.teamName ? 'user-team' : 'user-team no-team'}">${item.teamName || 'Нет'}</span>
+                    `
+                },
+                {
+                    key: 'role',
+                    label: 'Роль',
+                    render: (item) => html`
+                        <span class="role-badge role-${item.role}" data-role-color="${item.roleColor}">${item.roleName}</span>
+                    `
+                },
+                {
+                    key: 'status',
+                    label: 'Статус',
+                    render: (item) => html`
+                        <span class="status-badge ${item.statusClass}">${item.statusText}</span>
+                    `
+                },
+                {
+                    key: 'actions',
+                    label: 'Действия',
+                    render: (item) => html`
+                        <button
+                            class="btn btn-sm btn--ghost"
+                            data-action="open-edit-user-modal"
+                            data-email="${item.email}"
+                            @click=${() => self.openEditUserModal(item.email)}
+                        >Изменить</button>
+                    `
+                }
+            ];
+
+            // Reactive prop binding (Option A — direct prop assignment via effect)
+            const dispose = window.effect(() => {
+                tableEl.items = self._usersSignal.value || [];
+                // Re-apply badge colors after Lit render (data-role-color → inline style)
+                queueMicrotask(() => self.applyBadgeColors());
+            });
+            this._usersDisposers.push(dispose);
+
+            this._usersTableMounted = true;
+        } catch (e) {
+            console.warn('[admin] _mountUsersTable failed (non-fatal):', e?.message);
+            this._usersTableMounted = false;
+        }
     },
 
     filterUsers() {
-        this.usersPage = 1;
-        this.renderUsers();
+        this.usersServerFilter = {
+            filter_team: this._getFilterValue('filterTeam') || undefined,
+            filter_role: this._getFilterValue('filterRole') || undefined,
+            filter_status: this._getFilterValue('filterStatus') || undefined
+        };
+        this.goToUsersPage(1);
     },
 
     applyBadgeColors() {
@@ -903,34 +1315,88 @@ const adminApp = {
         const status = isBlocked ? 'blocked' :
                       (teamId ? 'active' : (role === 'guest' ? 'waiting_invite' : 'approved_no_team'));
 
-        const btn = document.querySelector('[data-action="save-user"]');
-        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+        const isRoleOrStatusChange = (role !== this.editingUser.role) || (status !== this.editingUser.status);
 
-        try {
-            const result = await this.apiCall('updateUser', {
-                targetEmail: this.editingUser.email,
-                teamId,
-                role,
-                status
+        if (isRoleOrStatusChange) {
+            // ADM-03: смена роли/статуса — pessimistic (btn-loading, ожидание сервера)
+            const btn = document.querySelector('[data-action="save-user"]');
+            if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+
+            try {
+                const result = await CloudStorage.updateUser({
+                    targetEmail: this.editingUser.email,
+                    teamId,
+                    role,
+                    status
+                });
+
+                if (result.error) throw new Error(result.error);
+
+                Toast.success('Пользователь обновлён');
+                this.closeModal('editUserModal');
+                CloudStorage.clearCacheNamespace('adminData');
+                await this.goToUsersPage(this.usersPage);
+
+            } catch (error) {
+                Toast.error('Ошибка: ' + error.message);
+            } finally {
+                if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
+            }
+        } else {
+            // Только данные пользователя (команда) — optimistic update
+            const email = this.editingUser.email;
+            const idx = this.users.findIndex(u => u.email === email);
+            if (idx === -1) return;
+
+            const snapshot = structuredClone(this.users);
+            const user = this.users[idx];
+            user.teamId = teamId;
+            user._pending = true;
+
+            const opId = this._optimistic.apply({
+                stateRef: this.users,
+                index: idx,
+                snapshot,
+                operation: 'update',
+                item: user,
+                onRollback: (err) => {
+                    this.renderUsers();
+                    Toast.error('Ошибка сохранения: ' + err.message, 5000, {
+                        action: { label: 'Повторить', callback: () => this.saveUser() }
+                    });
+                }
             });
 
-            if (result.error) {
-                throw new Error(result.error);
-            }
-
-            Toast.success('Пользователь обновлён');
             this.closeModal('editUserModal');
-            await this.loadAllData();
+            this.renderUsers();
 
-        } catch (error) {
-            Toast.error('Ошибка: ' + error.message);
-        } finally {
-            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
+            try {
+                const result = await CloudStorage.updateUser({
+                    targetEmail: email,
+                    teamId,
+                    role,
+                    status
+                });
+
+                if (result.error) throw new Error(result.error);
+
+                this._optimistic.confirm(opId);
+                Toast.success('Пользователь обновлён');
+
+            } catch (error) {
+                this._optimistic.rollback(opId, error);
+            }
         }
     },
 
     confirmDeleteUser() {
         if (!this.editingUser) return;
+
+        // v2.27 FIXES-RBAC-01: self-delete protection (UI side; backend also rejects)
+        if (this.currentUser && this.editingUser.email === this.currentUser.email) {
+            Toast.warning('Нельзя удалить самого себя');
+            return;
+        }
 
         document.getElementById('deleteUserName').textContent =
             this.editingUser.name || this.editingUser.email;
@@ -942,21 +1408,46 @@ const adminApp = {
     async deleteUser() {
         if (!this.editingUser) return;
 
-        try {
-            const result = await this.apiCall('deleteUser', {
-                targetEmail: this.editingUser.email
-            });
+        const email = this.editingUser.email;
 
-            if (result.error) {
-                throw new Error(result.error);
-            }
-
-            Toast.success('Пользователь удалён');
+        // v2.27 FIXES-RBAC-01: defence in depth — second check at execution
+        if (this.currentUser && email === this.currentUser.email) {
+            Toast.error('Нельзя удалить самого себя');
             this.closeModal('deleteUserModal');
-            await this.loadAllData();
+            return;
+        }
+        const idx = this.users.findIndex(u => u.email === email);
+        if (idx === -1) return;
 
+        const snapshot = structuredClone(this.users);
+        const removed = this.users.splice(idx, 1)[0];
+        removed._pending = true;
+
+        const opId = this._optimistic.apply({
+            stateRef: this.users,
+            index: idx,
+            snapshot,
+            operation: 'delete',
+            item: removed,
+            onRollback: (error) => {
+                this.renderUsers();
+                Toast.error('Ошибка удаления: ' + error.message, 5000, {
+                    action: { label: 'Повторить', callback: () => this.deleteUser() }
+                });
+            }
+        });
+
+        this.closeModal('deleteUserModal');
+        this.renderUsers();
+        this.updateCounts();
+
+        try {
+            const result = await CloudStorage.deleteUser({ targetEmail: email });
+            if (result.error) throw new Error(result.error);
+            this._optimistic.confirm(opId);
+            Toast.success('Пользователь удалён');
         } catch (error) {
-            Toast.error('Ошибка: ' + error.message);
+            this._optimistic.rollback(opId, error);
         }
     },
 
@@ -965,6 +1456,9 @@ const adminApp = {
     renderRequests() {
         const grid = document.getElementById('requestsGrid');
         const emptyEl = document.getElementById('emptyRequests');
+        // EXP-05: скрыть loading-state при рендере (данные уже получены)
+        const loadingEl = document.getElementById('requestsLoadingState');
+        if (loadingEl) loadingEl.classList.add('hidden');
 
         // Очистить (кроме empty state)
         const cards = grid.querySelectorAll('.request-card');
@@ -1042,7 +1536,7 @@ const adminApp = {
         if (triggerBtn) { triggerBtn.classList.add('btn-loading'); triggerBtn.disabled = true; }
 
         try {
-            const result = await this.apiCall('approveRequest', { requestId });
+            const result = await CloudStorage.approveRequest({ requestId });
 
             if (result.error) {
                 throw new Error(result.error);
@@ -1058,6 +1552,7 @@ const adminApp = {
                 Toast.warning(result.warning);
             }
 
+            CloudStorage.clearCacheNamespace('adminData');
             await this.loadAllData();
 
         } catch (error) {
@@ -1069,6 +1564,10 @@ const adminApp = {
 
     confirmRejectRequest(requestId) {
         this._pendingRejectId = requestId;
+        // EXP-07: показать имя пользователя в модалке подтверждения отклонения
+        const request = this.requests.find(r => r.id === requestId);
+        const nameEl = document.getElementById('rejectRequestName');
+        if (nameEl) nameEl.textContent = request?.name || '';
         this.openModal('confirmRejectModal');
     },
 
@@ -1082,7 +1581,7 @@ const adminApp = {
         if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
 
         try {
-            const result = await this.apiCall('rejectRequest', { requestId });
+            const result = await CloudStorage.rejectRequest({ requestId });
 
             if (result.error) {
                 throw new Error(result.error);
@@ -1090,6 +1589,7 @@ const adminApp = {
 
             this.closeModal('confirmRejectModal');
             Toast.success('Запрос отклонён');
+            CloudStorage.clearCacheNamespace('adminData');
             await this.loadAllData();
 
         } catch (error) {
@@ -1118,62 +1618,153 @@ const adminApp = {
     _pendingColors: {},
     _pendingDeleteRole: null,
 
+    /**
+     * Phase 40 LIT-MIG-01 admin pilot — атомарная миграция renderRolesTable() →
+     * signal-driven <app-table> mount + Lit cell renderers (XSS-proof через автоэскейп).
+     *
+     * Pattern (Phase 25-07 partners pilot precedent):
+     *   1. _mountRolesTable() — однократно настраивает columns + effect(() => tableEl.items = ...)
+     *   2. renderRolesTable() — пишет в _rolesSignal, Lit реактивно перерисовывает rows
+     *
+     * Cleanup: _rolesDisposers вызываются в destroy() (Pitfall C — no memory leak).
+     *
+     * Атомарность (Pitfall #12): мигрирована ТОЛЬКО renderRolesTable (smallest render
+     * function в admin.js — ~5-15 ролей). renderUsers (~1000+ rows), renderTeams,
+     * renderAuditLog отложены к v2.33+ continuation per audit-FIRST methodology.
+     */
     renderRolesTable() {
-        const tbody = document.getElementById('rolesTableBody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
+        // Dirty-exclusion: пропустить обновление signal если пользователь активно
+        // редактирует поле «Название» роли (защита от poll-перезаписи каретки/значения).
+        // По образцу onboarding-form.js _dirtyFields — не сбрасываем чужой ввод.
+        const activeEl = document.activeElement;
+        if (activeEl && activeEl.classList.contains('role-name-input')) return;
+
+        // Dirty-exclusion для цвета: пропустить rerender пока открыт color-picker.
+        // Фоновый poll (30s) вызывает renderRolesTable() → this._pendingColors = {} →
+        // выбранный но несохранённый цвет откатывался. Guard: if (this._activePicker) return
+        // — точный и безопасный сигнал «идёт выбор», без риска залипания (после save
+        // applyRoleColors/saveRoleConfig обнуляет _pendingColors ДО следующего poll).
+        if (this._activePicker) return;
+
+        // Сбросить pending color overrides (унаследовано от legacy: при rerender теряются несохранённые цвета)
         this._pendingColors = {};
 
-        RolesConfig.ALL_ROLES.forEach(role => {
-            const color = RolesConfig.getColor(role);
-            const isSystem = RolesConfig.isSystemRole(role);
-            const row = document.createElement('tr');
+        // Build rows from RolesConfig (data layer — без DOM)
+        const rows = RolesConfig.ALL_ROLES.map(role => ({
+            id: role,
+            role,
+            name: RolesConfig.getName(role),
+            placeholder: RolesConfig.getDefaultName(role),
+            color: RolesConfig.getColor(role),
+            isSystem: RolesConfig.isSystemRole(role),
+            isAdmin: role === 'admin'
+        }));
 
-            // Color dot
-            const tdColor = document.createElement('td');
-            const dot = document.createElement('span');
-            dot.className = 'role-color-dot';
-            dot.style.background = color;
-            dot.dataset.role = role;
-            dot.addEventListener('click', () => this.pickRoleColor(dot, role));
-            tdColor.appendChild(dot);
+        // Mount once (idempotent) — затем записываем в signal
+        this._mountRolesTable();
 
-            // Key
-            const tdKey = document.createElement('td');
-            const code = document.createElement('code');
-            code.className = 'role-key';
-            code.textContent = role;
-            tdKey.appendChild(code);
+        if (this._rolesSignal) {
+            this._rolesSignal.value = rows;
+        } else {
+            // Fallback: signals/Lit недоступны → graceful degradation (показываем пустую таблицу)
+            console.warn('[admin] _rolesSignal not initialized — Lit/signals unavailable, roles UI degraded');
+        }
+    },
 
-            // Name input
-            const tdName = document.createElement('td');
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.className = 'form-input role-name-input';
-            input.dataset.role = role;
-            input.value = RolesConfig.getName(role);
-            input.placeholder = RolesConfig.getDefaultName(role);
-            if (role === 'admin') input.disabled = true;
-            tdName.appendChild(input);
+    /**
+     * Phase 40 LIT-MIG-01 — однократная настройка <app-table id="rolesTable">:
+     * — columns с Lit cell renderers (color dot / key code / name input / delete button)
+     * — effect-binding signal → tableEl.items (reactive)
+     * — disposers tracked в _rolesDisposers (cleanup в destroy)
+     */
+    _mountRolesTable() {
+        if (this._rolesTableMounted) return;
 
-            // Actions
-            const tdActions = document.createElement('td');
-            if (!isSystem) {
-                const btn = document.createElement('button');
-                btn.className = 'btn-delete-role';
-                btn.dataset.role = role;
-                btn.title = 'Удалить роль';
-                btn.textContent = '✕';
-                btn.addEventListener('click', () => this.openDeleteRoleModal(role));
-                tdActions.appendChild(btn);
+        const tableEl = document.getElementById('rolesTable');
+        if (!tableEl) return;
+
+        // Lit globals + signals required (cdn-deps.js loaded asynchronously)
+        if (typeof window.signal !== 'function' || typeof window.effect !== 'function' || !window.litHtml) {
+            // Lit ещё не готов — попытаемся отложить mount до lit-ready event
+            if (!this._rolesPendingMount) {
+                this._rolesPendingMount = true;
+                window.addEventListener('lit-ready', () => {
+                    this._rolesPendingMount = false;
+                    this._mountRolesTable();
+                    // re-trigger render для записи в signal
+                    if (typeof this.renderRolesTable === 'function') {
+                        this.renderRolesTable();
+                    }
+                }, { once: true });
             }
+            return;
+        }
 
-            row.appendChild(tdColor);
-            row.appendChild(tdKey);
-            row.appendChild(tdName);
-            row.appendChild(tdActions);
-            tbody.appendChild(row);
-        });
+        const html = window.litHtml;
+        const self = this;
+
+        try {
+            this._rolesSignal = window.signal([]);
+
+            // Cell renderers — Lit html`` автоматически экранирует interpolated values (XSS-proof)
+            tableEl.columns = [
+                {
+                    key: 'color',
+                    label: '',
+                    render: (item) => html`
+                        <span
+                            class="role-color-dot"
+                            style="background: ${item.color}"
+                            data-role="${item.role}"
+                            @click=${(e) => self.pickRoleColor(e.currentTarget, item.role)}
+                        ></span>
+                    `
+                },
+                {
+                    key: 'role',
+                    label: 'Ключ',
+                    render: (item) => html`<code class="role-key">${item.role}</code>`
+                },
+                {
+                    key: 'name',
+                    label: 'Название',
+                    render: (item) => html`
+                        <input
+                            type="text"
+                            class="form-input role-name-input"
+                            data-role="${item.role}"
+                            .value=${item.name}
+                            placeholder="${item.placeholder}"
+                            ?disabled=${item.isAdmin}
+                        />
+                    `
+                },
+                {
+                    key: 'actions',
+                    label: '',
+                    render: (item) => item.isSystem ? html`` : html`
+                        <button
+                            class="btn-delete-role"
+                            data-role="${item.role}"
+                            title="Удалить роль"
+                            aria-label="Удалить роль ${item.role}"
+                            @click=${() => self.openDeleteRoleModal(item.role)}
+                        >✕</button>
+                    `
+                }
+            ];
+
+            // Reactive prop binding (Option A — direct prop assignment via effect)
+            const dispose = window.effect(() => {
+                tableEl.items = self._rolesSignal.value || [];
+            });
+            this._rolesDisposers.push(dispose);
+
+            this._rolesTableMounted = true;
+        } catch (e) {
+            console.warn('[admin] _mountRolesTable failed (non-fatal):', e?.message);
+            this._rolesTableMounted = false;
+        }
     },
 
     pickRoleColor(dot, role) {
@@ -1243,12 +1834,12 @@ const adminApp = {
         colorPicker.className = 'role-color-picker';
 
         const addBtn = document.createElement('button');
-        addBtn.className = 'btn-primary btn-sm';
+        addBtn.className = 'btn btn-primary btn-sm';
         addBtn.textContent = 'Добавить';
         addBtn.addEventListener('click', () => this.addRole());
 
         const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'btn-primary btn-sm';
+        cancelBtn.className = 'btn btn-secondary btn-sm';
         cancelBtn.textContent = 'Отмена';
         cancelBtn.addEventListener('click', () => this.toggleAddRole());
 
@@ -1328,7 +1919,7 @@ const adminApp = {
         if (RolesConfig.isCustomRole(roleKey)) {
             // Проверяем есть ли она на бэкенде (сохранена ли)
             try {
-                const result = await this.apiCall('getUsersByRole', { roleKey });
+                const result = await CloudStorage.getUsersByRole({ roleKey });
                 if (result.success && result.count > 0) {
                     usersEl.innerHTML = result.users.map(u =>
                         '<div class="delete-role-user">' + this.escapeHtml(u.name || u.email) + ' (' + this.escapeHtml(u.email) + ')</div>'
@@ -1345,7 +1936,7 @@ const adminApp = {
         } else {
             // Дефолтная роль — всегда проверяем на бэкенде
             try {
-                const result = await this.apiCall('getUsersByRole', { roleKey });
+                const result = await CloudStorage.getUsersByRole({ roleKey });
                 if (result.success && result.count > 0) {
                     usersEl.innerHTML = result.users.map(u =>
                         '<div class="delete-role-user">' + this.escapeHtml(u.name || u.email) + ' (' + this.escapeHtml(u.email) + ')</div>'
@@ -1375,7 +1966,7 @@ const adminApp = {
         if (reassignGroupVisible && reassignTo) {
             // Есть пользователи — удаляем через API с переназначением
             try {
-                const result = await this.apiCall('deleteRole', {
+                const result = await CloudStorage.deleteRole({
                     roleKey: roleKey,
                     reassignTo: reassignTo
                 });
@@ -1416,7 +2007,7 @@ const adminApp = {
 
         // Сохранить обновлённый конфиг
         try {
-            await this.apiCall('saveRoleConfig', { config: RolesConfig.getFullConfig() });
+            await CloudStorage.saveRoleConfig({ config: RolesConfig.getFullConfig() });
         } catch (e) {
             // Уже удалено локально, ошибка сохранения не критична
         }
@@ -1458,7 +2049,7 @@ const adminApp = {
         if (Object.keys(colorOverrides).length > 0) config.overrides.colors = colorOverrides;
 
         try {
-            const result = await this.apiCall('saveRoleConfig', { config });
+            const result = await CloudStorage.saveRoleConfig({ config });
 
             if (result.error) {
                 throw new Error(result.error);
@@ -1503,6 +2094,9 @@ const adminApp = {
     renderPermissions() {
         const tbody = document.getElementById('permissionsTableBody');
         tbody.innerHTML = '';
+        // EXP-06: скрыть loading-state при рендере (данные уже получены)
+        const loadingEl = document.getElementById('permissionsLoadingState');
+        if (loadingEl) loadingEl.classList.add('hidden');
 
         // Получаем права, которые можно назначать
         const assignable = typeof RoleGuard !== 'undefined'
@@ -1530,12 +2124,23 @@ const adminApp = {
 
                 if (isSystem) {
                     // Системные роли — только отображение, без редактирования
+                    const safeRoleName = this.escapeHtml(roleName);
+                    const safeModule = this.escapeHtml(module);
                     cells += `
                         <td>
                             <div class="permission-checkboxes">
-                                <div class="permission-cb view${perm.view ? ' checked' : ''} disabled" title="Просмотр (системная роль)">V</div>
-                                <div class="permission-cb edit${perm.edit ? ' checked' : ''} disabled" title="Редактирование (системная роль)">E</div>
-                                <div class="permission-cb delete${perm.delete ? ' checked' : ''} disabled" title="Удаление (системная роль)">D</div>
+                                <div class="permission-cb view${perm.view ? ' checked' : ''} disabled"
+                                     role="checkbox" aria-checked="${perm.view ? 'true' : 'false'}" tabindex="-1"
+                                     aria-label="Просмотр: ${safeRoleName} / ${safeModule} (системная роль)"
+                                     title="Просмотр (системная роль)">V</div>
+                                <div class="permission-cb edit${perm.edit ? ' checked' : ''} disabled"
+                                     role="checkbox" aria-checked="${perm.edit ? 'true' : 'false'}" tabindex="-1"
+                                     aria-label="Редактирование: ${safeRoleName} / ${safeModule} (системная роль)"
+                                     title="Редактирование (системная роль)">E</div>
+                                <div class="permission-cb delete${perm.delete ? ' checked' : ''} disabled"
+                                     role="checkbox" aria-checked="${perm.delete ? 'true' : 'false'}" tabindex="-1"
+                                     aria-label="Удаление: ${safeRoleName} / ${safeModule} (системная роль)"
+                                     title="Удаление (системная роль)">D</div>
                             </div>
                         </td>
                     `;
@@ -1544,21 +2149,29 @@ const adminApp = {
                     const canAssignView = !assignable || assignable[module]?.canView;
                     const canAssignEdit = !assignable || assignable[module]?.canEdit;
                     const canAssignDelete = !assignable || assignable[module]?.canDelete;
+                    const safeRoleName = this.escapeHtml(roleName);
+                    const safeModule = this.escapeHtml(module);
 
                     cells += `
                         <td>
                             <div class="permission-checkboxes">
                                 <div class="permission-cb view${perm.view ? ' checked' : ''}${!canAssignView ? ' disabled' : ''}"
+                                     role="checkbox" aria-checked="${perm.view ? 'true' : 'false'}" tabindex="${canAssignView ? '0' : '-1'}"
                                      data-role="${role}" data-module="${module}" data-type="view"
                                      ${canAssignView ? 'data-action="toggle-permission"' : ''}
+                                     aria-label="Просмотр: ${safeRoleName} / ${safeModule}${!canAssignView ? ' (недоступно)' : ''}"
                                      title="Просмотр${!canAssignView ? ' (недоступно)' : ''}">V</div>
                                 <div class="permission-cb edit${perm.edit ? ' checked' : ''}${!canAssignEdit ? ' disabled' : ''}"
+                                     role="checkbox" aria-checked="${perm.edit ? 'true' : 'false'}" tabindex="${canAssignEdit ? '0' : '-1'}"
                                      data-role="${role}" data-module="${module}" data-type="edit"
                                      ${canAssignEdit ? 'data-action="toggle-permission"' : ''}
+                                     aria-label="Редактирование: ${safeRoleName} / ${safeModule}${!canAssignEdit ? ' (недоступно)' : ''}"
                                      title="Редактирование${!canAssignEdit ? ' (недоступно)' : ''}">E</div>
                                 <div class="permission-cb delete${perm.delete ? ' checked' : ''}${!canAssignDelete ? ' disabled' : ''}"
+                                     role="checkbox" aria-checked="${perm.delete ? 'true' : 'false'}" tabindex="${canAssignDelete ? '0' : '-1'}"
                                      data-role="${role}" data-module="${module}" data-type="delete"
                                      ${canAssignDelete ? 'data-action="toggle-permission"' : ''}
+                                     aria-label="Удаление: ${safeRoleName} / ${safeModule}${!canAssignDelete ? ' (недоступно)' : ''}"
                                      title="Удаление${!canAssignDelete ? ' (недоступно)' : ''}">D</div>
                             </div>
                         </td>
@@ -1576,6 +2189,8 @@ const adminApp = {
     togglePermission(el) {
         if (el.classList.contains('disabled')) return;
         el.classList.toggle('checked');
+        // EXP-03: синхронизировать aria-checked для скринридеров (VIS-02)
+        el.setAttribute('aria-checked', el.classList.contains('checked') ? 'true' : 'false');
     },
 
     async savePermissions() {
@@ -1599,7 +2214,7 @@ const adminApp = {
         });
 
         try {
-            const result = await this.apiCall('savePermissions', { permissions });
+            const result = await CloudStorage.savePermissions({ permissions });
 
             if (result.error) {
                 throw new Error(result.error);
@@ -1616,6 +2231,7 @@ const adminApp = {
                 btn.innerHTML = 'Сохранить';
             }, 2000);
 
+            CloudStorage.clearCacheNamespace('adminData');
             await this.loadAllData();
 
         } catch (error) {
@@ -1666,156 +2282,433 @@ const adminApp = {
         }
     },
 
-    renderAuditLog() {
-        const list = document.getElementById('auditList');
+    async loadMoreAudit() {
+        if (this.vsEnabled) return;
+        if (this._auditLoading) return;
+        this._auditLoading = true;
+        const btn = document.getElementById('loadMoreAuditBtn');
+        if (btn) btn.classList.add('btn-loading');
+        try {
+            const result = await CloudStorage.getAuditLog({
+                cursor: this.auditCursor || undefined,
+                pageSize: this.auditPageSize,
+                dateFrom: this.auditFilters.dateFrom || undefined,
+                dateTo: this.auditFilters.dateTo || undefined,
+                action: this.auditFilters.action || undefined
+            });
+            this.auditItems.push(...(result.data || []));
+            this.auditCursor = result.nextCursor || null;
+            this.auditTotalCount = result.totalCount || this.auditItems.length;
+            this._appendAuditItems(result.data || []);
+            this._updateAuditCounter();
+            this._updateLoadMoreBtn();
+        } catch (error) {
+            Toast.error('Ошибка загрузки истории: ' + error.message);
+        } finally {
+            this._auditLoading = false;
+            if (btn) btn.classList.remove('btn-loading');
+        }
+    },
+
+    async resetAndLoadAudit() {
+        this.auditItems = [];
+        this.auditCursor = null;
+        this.auditTotalCount = 0;
+
+        if (this.vsEnabled && this._auditVS) {
+            // VirtualScroller integration (Phase 19 v2.29) — VS owns legacy <table id="auditTable">,
+            // .destroy() очищает spacer-TR + visible rows атомарно.
+            this._auditVS.destroy();
+            this._auditVS = null;
+        } else {
+            // Phase 49 LIT-CONT-03 — non-VS path: clear signal вместо tbody.innerHTML = ''.
+            // <app-table id="auditLogTable"> reactivно стирает строки через Lit диффинг (XSS-proof).
+            this._mountAuditLogTable();
+            if (this._auditSignal) this._auditSignal.value = [];
+            // Legacy fallback: на случай если Lit недоступен или mount не удался — clear legacy tbody.
+            // Не удаляем — VS spacer-TR pattern требует пустой tbody при reset когда vsEnabled позже включат.
+            const tbody = document.getElementById('auditTbody');
+            if (tbody) tbody.replaceChildren();
+        }
+        this._updateAuditCounter();
+        await this._loadFirstAuditChunk();
+    },
+
+    async _loadFirstAuditChunk() {
+        this._auditLoading = true;
+        const loadingEl = document.getElementById('auditLoadingState');
+        const listEl = document.getElementById('auditList');
         const emptyEl = document.getElementById('emptyAudit');
-        const pagination = document.getElementById('auditPagination');
 
-        const searchValue = document.getElementById('searchAudit')?.value.toLowerCase() || '';
-        const actionFilter = this._getFilterValue('filterAction');
+        // Показать спиннер, скрыть список и empty
+        if (loadingEl) loadingEl.classList.remove('hidden');
+        if (listEl) listEl.classList.add('hidden');
+        if (emptyEl) emptyEl.classList.add('hidden');
 
-        // Фильтрация
-        let filtered = [...this.auditLog];
+        try {
+            const result = await CloudStorage.getAuditLog({
+                cursor: undefined,
+                pageSize: this.auditPageSize,
+                dateFrom: this.auditFilters.dateFrom || undefined,
+                dateTo: this.auditFilters.dateTo || undefined,
+                action: this.auditFilters.action || undefined
+            });
+            this.auditItems = result.data || [];
+            this.auditCursor = result.nextCursor || null;
+            this.auditTotalCount = result.totalCount || this.auditItems.length;
 
-        if (searchValue) {
-            filtered = filtered.filter(log =>
-                log.targetEmail.toLowerCase().includes(searchValue) ||
-                log.actorEmail.toLowerCase().includes(searchValue) ||
-                log.details.toLowerCase().includes(searchValue)
+            if (this.auditItems.length === 0) {
+                if (emptyEl) emptyEl.classList.remove('hidden');
+                this._updateAuditCounter();
+                return;
+            }
+
+            // Показать список
+            if (listEl) listEl.classList.remove('hidden');
+
+            if (this.vsEnabled) {
+                const auditTab = document.getElementById('tab-audit');
+                if (auditTab && auditTab.classList.contains('active')) {
+                    this._initAndStartAuditVS();
+                } else {
+                    this._auditVSPending = true;
+                }
+            } else {
+                this._appendAuditItems(this.auditItems);
+            }
+            this._updateAuditCounter();
+            this._updateLoadMoreBtn();
+        } catch (error) {
+            Toast.error('Ошибка загрузки истории: ' + error.message);
+        } finally {
+            this._auditLoading = false;
+            if (loadingEl) loadingEl.classList.add('hidden');
+        }
+    },
+
+    _initAndStartAuditVS() {
+        this._initAuditVirtualScroller();
+        if (this._auditVS) {
+            const total = this.auditCursor ? (this.auditTotalCount || this.auditItems.length + 1) : this.auditItems.length;
+            this._auditVS.init(
+                this.auditItems,
+                total,
+                (page, pageSize) => this._auditFetchChunk(page, pageSize)
             );
         }
+        this._auditVSPending = false;
+    },
 
-        if (actionFilter) {
-            filtered = filtered.filter(log => log.action === actionFilter);
+    _initAuditVirtualScroller() {
+        if (!this.vsEnabled) return;
+        const container = document.getElementById('auditList');
+        const tbody = document.getElementById('auditTbody');
+        if (!container || !tbody) return;
+
+        this._auditVS = VirtualScroller.create({
+            container: container,
+            tbody: tbody,
+            colCount: 1,
+            renderRow: (item, index) => this._renderAuditRow(item, index),
+            overscan: 5
+        });
+    },
+
+    _renderAuditRow(item, index) {
+        return this.createAuditRow(item);
+    },
+
+    _auditFetchChunk(_page, _pageSize) {
+        return this._loadAuditChunk();
+    },
+
+    async _loadAuditChunk() {
+        if (this._auditLoading || this.auditCursor === null) return;
+        this._auditLoading = true;
+        try {
+            const result = await CloudStorage.getAuditLog({
+                cursor: this.auditCursor || undefined,
+                pageSize: this.auditPageSize,
+                dateFrom: this.auditFilters.dateFrom || undefined,
+                dateTo: this.auditFilters.dateTo || undefined,
+                action: this.auditFilters.action || undefined
+            });
+            const newItems = result.data || [];
+            this.auditItems.push(...newItems);
+            this.auditCursor = result.nextCursor || null;
+            this.auditTotalCount = result.totalCount || this.auditItems.length;
+
+            if (this._auditVS) {
+                this._auditVS.setItems(this.auditItems);
+            }
+            this._updateAuditCounter();
+        } catch (error) {
+            Toast.error('Ошибка загрузки истории: ' + error.message);
+        } finally {
+            this._auditLoading = false;
         }
+    },
 
-        // Очистить (кроме empty state)
-        const items = list.querySelectorAll('.audit-item');
-        items.forEach(item => item.remove());
+    _appendAuditItems(items) {
+        const tbody = document.getElementById('auditTbody');
+        const emptyEl = document.getElementById('emptyAudit');
+        const appTable = document.getElementById('auditLogTable');
+        if (!tbody || !items.length) {
+            if (this.auditItems.length === 0 && emptyEl) {
+                emptyEl.classList.remove('hidden');
+                // v2.27 FIXES-VISUAL-02: hide app-table при empty (его дефолтный "Нет данных"
+                // дублировал legacy #emptyAudit с иконкой + двухстрочной подписью)
+                if (appTable) appTable.classList.add('hidden');
+            }
+            // Phase 49 LIT-CONT-03 — sync signal даже при пустых items (для empty-state Lit path)
+            this._mountAuditLogTable();
+            if (this._auditSignal) this._auditSignal.value = this._buildAuditRows(this.auditItems);
+            return;
+        }
+        if (emptyEl) emptyEl.classList.add('hidden');
+        if (appTable) appTable.classList.remove('hidden'); // v2.27 FIXES-VISUAL-02 unhide on data
+        // Legacy DOM path (для VS spacer-TR pattern когда vsEnabled=true, либо non-VS fallback)
+        items.forEach(log => {
+            tbody.appendChild(this.createAuditRow(log));
+        });
+        // Phase 49 LIT-CONT-03 — также пишем в signal (полный auditItems set, не дельта)
+        // <app-table id="auditLogTable"> Lit-диффинг сам найдёт новые записи и обновит DOM атомарно.
+        // Когда vsEnabled=true — <app-table> остаётся hidden, но signal sync保ёт parity для non-VS path и тестов.
+        this._mountAuditLogTable();
+        if (this._auditSignal) this._auditSignal.value = this._buildAuditRows(this.auditItems);
+    },
 
-        if (filtered.length === 0) {
-            emptyEl.classList.remove('hidden');
-            pagination.innerHTML = '';
+    /**
+     * Phase 49 LIT-CONT-03 — строит view-model rows для <app-table id="auditLogTable">.
+     * Pure data layer (no DOM) — Lit cell renderers потом экранируют через автоэскейп.
+     * Унифицирует pre-computation icon/message/time per row для signal-driven path.
+     */
+    _buildAuditRows(logs) {
+        if (!Array.isArray(logs)) return [];
+        return logs.map((log, idx) => {
+            const actionName = this.actionNames[log.action] || log.action;
+            const onbActions = ['onboarding_created','onboarding_step_submitted','onboarding_step_approved','onboarding_step_rejected','onboarding_reassigned','onboarding_completed','onboarding_cancelled','onboarding_deleted','onboarding_imported','onboarding_reactivated','onboarding_rolled_back','onboarding_withdrawn','onboarding_file_uploaded','onboarding_settings_updated'];
+            const iconMap = {
+                user_approved:  'approved',
+                user_rejected:  'rejected',
+                user_blocked:   'blocked',
+                user_unblocked: 'unblocked',
+                role_changed:   'role_changed',
+                team_created:   'team_created',
+                permissions_changed: 'permissions',
+            };
+            const iconClass = iconMap[log.action] || (onbActions.includes(log.action) ? 'onboarding' : 'info');
+            // Stable id для litRepeat (избегаем DOM пересоздания при reorder/append)
+            const id = log.id || `${log.timestamp || ''}-${log.action || ''}-${log.actorEmail || ''}-${idx}`;
+            return {
+                id,
+                action: log.action,
+                actionName,
+                iconClass,
+                actorEmail: log.actorEmail || '',
+                targetEmail: log.targetEmail || '',
+                oldValue: log.oldValue || '',
+                newValue: log.newValue || '',
+                details: log.details || '',
+                timestamp: log.timestamp,
+                timeStr: log.timestamp ? new Date(log.timestamp).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''
+            };
+        });
+    },
+
+    /**
+     * Phase 49 LIT-CONT-03 — однократная настройка <app-table id="auditLogTable">:
+     * — columns config с Lit cell renderer (auto-escape XSS-proof)
+     * — effect-binding _auditSignal → tableEl.items (reactive)
+     * — disposers tracked в _auditDisposers (cleanup в destroy)
+     *
+     * VirtualScroller (this._auditVS) integration preserved as-is — VS owns legacy
+     * <table id="auditTable">. <app-table> mount активен только для non-VS path.
+     */
+    _mountAuditLogTable() {
+        if (this._auditTableMounted) return;
+
+        const tableEl = document.getElementById('auditLogTable');
+        if (!tableEl) return;
+
+        // Lit globals + signals required (cdn-deps.js loaded asynchronously)
+        if (typeof window.signal !== 'function' || typeof window.effect !== 'function' || !window.litHtml) {
+            // Lit ещё не готов — попытаемся отложить mount до lit-ready event
+            if (!this._auditPendingMount) {
+                this._auditPendingMount = true;
+                window.addEventListener('lit-ready', () => {
+                    this._auditPendingMount = false;
+                    this._mountAuditLogTable();
+                    // После late mount — re-sync signal с текущими items
+                    if (this._auditSignal) {
+                        this._auditSignal.value = this._buildAuditRows(this.auditItems || []);
+                    }
+                }, { once: true });
+            }
             return;
         }
 
-        emptyEl.classList.add('hidden');
+        const html = window.litHtml;
+        const self = this;
 
-        // Пагинация
-        const totalPages = Math.max(1, Math.ceil(filtered.length / this.auditPerPage));
-        if (this.auditPage > totalPages) this.auditPage = totalPages;
-        if (this.auditPage < 1) this.auditPage = 1;
+        try {
+            this._auditSignal = window.signal([]);
 
-        const start = (this.auditPage - 1) * this.auditPerPage;
-        const end = start + this.auditPerPage;
-        const pageItems = filtered.slice(start, end);
+            // Action icon SVG map — pure presentation, без user input → инлайн SVG ok (статичный набор иконок).
+            const ICON_SVGS = {
+                approved:    html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>`,
+                rejected:    html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>`,
+                blocked:     html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`,
+                unblocked:   html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`,
+                role_changed: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+                team_created: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>`,
+                permissions: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+                onboarding:  html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>`,
+                info:        html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+            };
 
-        // Рендер
-        pageItems.forEach(log => {
-            const item = this.createAuditItem(log);
-            list.insertBefore(item, emptyEl);
-        });
+            // Single column — audit row composes icon + message + actor + time inside one cell.
+            // Lit html`` template автоматически экранирует interpolated values (XSS-proof для actorEmail, targetEmail и т.д.)
+            tableEl.columns = [
+                {
+                    key: 'audit',
+                    label: '',
+                    render: (item) => {
+                        const iconSvg = ICON_SVGS[item.iconClass] || ICON_SVGS.info;
+                        // Message rendering — Lit автоэскейп для interpolated values (item.targetEmail, oldValue, etc)
+                        let messageNode;
+                        switch (item.action) {
+                            case 'user_approved':
+                                messageNode = html`Пользователь <strong>${item.targetEmail}</strong> одобрен`;
+                                break;
+                            case 'user_rejected':
+                                messageNode = html`Пользователь <strong>${item.targetEmail}</strong> отклонён`;
+                                break;
+                            case 'user_blocked':
+                                messageNode = html`Пользователь <strong>${item.targetEmail}</strong> заблокирован`;
+                                break;
+                            case 'user_unblocked':
+                                messageNode = html`Пользователь <strong>${item.targetEmail}</strong> разблокирован`;
+                                break;
+                            case 'role_changed': {
+                                const oldName = RolesConfig.getName(item.oldValue) || item.oldValue;
+                                const newName = RolesConfig.getName(item.newValue) || item.newValue;
+                                messageNode = html`<strong>${item.targetEmail}</strong>: ${oldName} → ${newName}`;
+                                break;
+                            }
+                            case 'team_created':
+                                messageNode = html`Создана команда <strong>${item.newValue}</strong>`;
+                                break;
+                            case 'permissions_changed':
+                                messageNode = 'Изменены права ролей';
+                                break;
+                            default:
+                                messageNode = html`${item.actionName}: ${item.targetEmail || item.details}`;
+                                break;
+                        }
+                        return html`
+                            <div class="audit-cell">
+                                <div class="audit-icon ${item.iconClass}">${iconSvg}</div>
+                                <div class="audit-content">
+                                    <div class="audit-message">${messageNode}</div>
+                                    <div class="audit-details">${item.actorEmail}</div>
+                                </div>
+                                <div class="audit-time">${item.timeStr}</div>
+                            </div>
+                        `;
+                    }
+                }
+            ];
 
-        // Рендер пагинации
-        this.renderPagination(pagination, this.auditPage, totalPages, (page) => {
-            this.auditPage = page;
-            this.renderAuditLog();
-        });
+            // Reactive items binding via effect (Option A — direct prop assignment, mirror Phase 40/48 pattern)
+            const dispose = window.effect(() => {
+                tableEl.items = self._auditSignal.value || [];
+            });
+            this._auditDisposers.push(dispose);
+
+            this._auditTableMounted = true;
+        } catch (e) {
+            console.warn('[admin] _mountAuditLogTable failed (non-fatal):', e?.message);
+            this._auditTableMounted = false;
+        }
     },
 
-    createAuditItem(log) {
-        const item = document.createElement('div');
-        item.className = 'audit-item';
-
-        const actionName = this.actionNames[log.action] || log.action;
-        let iconClass = '';
-        let iconSvg = '';
-
-        switch (log.action) {
-            case 'user_approved':
-                iconClass = 'approved';
-                iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>';
-                break;
-            case 'user_rejected':
-                iconClass = 'rejected';
-                iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>';
-                break;
-            case 'user_blocked':
-                iconClass = 'blocked';
-                iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>';
-                break;
-            case 'user_unblocked':
-                iconClass = 'unblocked';
-                iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
-                break;
-            case 'role_changed':
-                iconClass = 'role_changed';
-                iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
-                break;
-            case 'team_created':
-                iconClass = 'team_created';
-                iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>';
-                break;
-            case 'permissions_changed':
-                iconClass = 'permissions';
-                iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
-                break;
-            default:
-                iconClass = 'permissions';
-                iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+    _updateAuditCounter() {
+        const el = document.getElementById('auditCounter');
+        if (!el) return;
+        if (this.auditTotalCount > 0) {
+            el.textContent = 'Показано ' + this.auditItems.length + ' из ' + this.auditTotalCount;
+        } else {
+            el.textContent = '';
         }
+    },
 
-        let message = '';
-        const safeEmail = this.escapeHtml(log.targetEmail);
-        switch (log.action) {
-            case 'user_approved':
-                message = `Пользователь <strong>${safeEmail}</strong> одобрен`;
-                break;
-            case 'user_rejected':
-                message = `Пользователь <strong>${safeEmail}</strong> отклонён`;
-                break;
-            case 'user_blocked':
-                message = `Пользователь <strong>${safeEmail}</strong> заблокирован`;
-                break;
-            case 'user_unblocked':
-                message = `Пользователь <strong>${safeEmail}</strong> разблокирован`;
-                break;
-            case 'role_changed':
-                message = `<strong>${safeEmail}</strong>: ${RolesConfig.getName(log.oldValue) || this.escapeHtml(log.oldValue)} → ${RolesConfig.getName(log.newValue) || this.escapeHtml(log.newValue)}`;
-                break;
-            case 'team_created':
-                message = `Создана команда <strong>${this.escapeHtml(log.newValue)}</strong>`;
-                break;
-            case 'permissions_changed':
-                message = `Изменены права ролей`;
-                break;
-            default:
-                message = `${this.escapeHtml(actionName)}: ${safeEmail || this.escapeHtml(log.details)}`;
+    _updateLoadMoreBtn() {
+        const btn = document.getElementById('loadMoreAuditBtn');
+        if (!btn) return;
+        if (this.vsEnabled) {
+            btn.classList.add('hidden');
+            return;
         }
-
-        const date = new Date(log.timestamp);
-        const timeStr = date.toLocaleDateString('ru-RU', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        item.innerHTML = `
-            <div class="audit-icon ${iconClass}">${iconSvg}</div>
-            <div class="audit-content">
-                <div class="audit-message">${message}</div>
-                <div class="audit-details">${this.escapeHtml(log.actorEmail)}</div>
-            </div>
-            <div class="audit-time">${timeStr}</div>
-        `;
-
-        return item;
+        btn.classList.toggle('hidden', this.auditCursor === null);
     },
 
     filterAudit() {
-        this.auditPage = 1;
-        this.renderAuditLog();
+        this.auditFilters.action = this._getFilterValue('filterAction') || '';
+        this.resetAndLoadAudit();
+    },
+
+    /** Создаёт <tr> для аудит-лога. Используется и VS, и non-VS путями. */
+    createAuditRow(log) {
+        const actionName = this.actionNames[log.action] || log.action;
+
+        // Иконка + цвет
+        const iconMap = {
+            user_approved:  ['approved',    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>'],
+            user_rejected:  ['rejected',    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>'],
+            user_blocked:   ['blocked',     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>'],
+            user_unblocked: ['unblocked',   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>'],
+            role_changed:   ['role_changed', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'],
+            team_created:   ['team_created', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>'],
+            permissions_changed: ['permissions', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'],
+        };
+        const onbActions = ['onboarding_created','onboarding_step_submitted','onboarding_step_approved','onboarding_step_rejected','onboarding_reassigned','onboarding_completed','onboarding_cancelled','onboarding_deleted','onboarding_imported','onboarding_reactivated','onboarding_rolled_back','onboarding_withdrawn','onboarding_file_uploaded','onboarding_settings_updated'];
+        const onbIcon = ['onboarding', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>'];
+        const defaultIcon = ['info', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'];
+
+        const [iconClass, iconSvg] = iconMap[log.action] || (onbActions.includes(log.action) ? onbIcon : defaultIcon);
+
+        // Сообщение
+        const e = (v) => this.escapeHtml(v || '');
+        let message;
+        switch (log.action) {
+            case 'user_approved':  message = `Пользователь <strong>${e(log.targetEmail)}</strong> одобрен`; break;
+            case 'user_rejected':  message = `Пользователь <strong>${e(log.targetEmail)}</strong> отклонён`; break;
+            case 'user_blocked':   message = `Пользователь <strong>${e(log.targetEmail)}</strong> заблокирован`; break;
+            case 'user_unblocked': message = `Пользователь <strong>${e(log.targetEmail)}</strong> разблокирован`; break;
+            case 'role_changed':   message = `<strong>${e(log.targetEmail)}</strong>: ${RolesConfig.getName(log.oldValue) || e(log.oldValue)} → ${RolesConfig.getName(log.newValue) || e(log.newValue)}`; break;
+            case 'team_created':   message = `Создана команда <strong>${e(log.newValue)}</strong>`; break;
+            case 'permissions_changed': message = 'Изменены права ролей'; break;
+            default: message = `${e(actionName)}: ${e(log.targetEmail) || e(log.details)}`; break;
+        }
+
+        // Время
+        const timeStr = new Date(log.timestamp).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+        // Строка таблицы
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.innerHTML = `
+            <div class="audit-cell">
+                <div class="audit-icon ${iconClass}">${iconSvg}</div>
+                <div class="audit-content">
+                    <div class="audit-message">${message}</div>
+                    <div class="audit-details">${e(log.actorEmail)}</div>
+                </div>
+                <div class="audit-time">${timeStr}</div>
+            </div>`;
+        tr.appendChild(td);
+        return tr;
     },
 
     // ============ Pagination ============
@@ -1884,16 +2777,39 @@ const adminApp = {
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.toggle('active', content.id === 'tab-' + tabName);
         });
+
+        // VirtualScroller: lazy init при первом показе таба аудита
+        if (tabName === 'audit' && this.vsEnabled) {
+            if (this._auditVSPending) {
+                requestAnimationFrame(() => this._initAndStartAuditVS());
+            } else if (this._auditVS) {
+                requestAnimationFrame(() => this._auditVS.refresh());
+            }
+        }
     },
 
     // ============ Modals ============
 
     openModal(modalId) {
-        document.getElementById(modalId).classList.add('active');
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        // Phase 28 LIT-MIG-01: <app-modal> Lit component использует boolean attribute API
+        if (modal.tagName === 'APP-MODAL') {
+            modal.setAttribute('open', '');
+        } else {
+            modal.classList.add('active');
+        }
     },
 
     closeModal(modalId) {
-        document.getElementById(modalId).classList.remove('active');
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        // Phase 28 LIT-MIG-01: <app-modal> compat
+        if (modal.tagName === 'APP-MODAL') {
+            modal.removeAttribute('open');
+        } else {
+            modal.classList.remove('active');
+        }
     },
 
     // ============ Helpers ============
@@ -1902,6 +2818,9 @@ const adminApp = {
     escapeHtml(text) { return Utils.escapeHtml(text); },
 
     destroy() {
+        // Phase 67 SYNC-FIX-05: stop cross-user polling
+        this._stopCrossUserPoll();
+
         if (this._inputHandler) {
             document.removeEventListener('input', this._inputHandler);
             this._inputHandler = null;
@@ -1914,8 +2833,53 @@ const adminApp = {
             document.removeEventListener('click', this._clickHandler);
             this._clickHandler = null;
         }
+        if (this._permKeyHandler) {
+            document.removeEventListener('keydown', this._permKeyHandler);
+            this._permKeyHandler = null;
+        }
         clearTimeout(this._filterTimer);
         this._paginationCallbacks = null;
+
+        // Phase 40 LIT-MIG-01 admin pilot — dispose Lit effects (Pitfall C — no memory leak)
+        if (Array.isArray(this._rolesDisposers)) {
+            this._rolesDisposers.forEach(d => {
+                try { d(); } catch (e) { /* swallow dispose errors */ }
+            });
+            this._rolesDisposers.length = 0;
+        }
+        this._rolesSignal = null;
+        this._rolesTableMounted = false;
+
+        // Phase 46 LIT-CONT-01 — dispose teams Lit effects (Pitfall C — no memory leak)
+        if (Array.isArray(this._teamsDisposers)) {
+            this._teamsDisposers.forEach(d => {
+                try { d(); } catch (e) { /* swallow dispose errors */ }
+            });
+            this._teamsDisposers.length = 0;
+        }
+        this._teamsSignal = null;
+        this._teamsGridMounted = false;
+
+        // Phase 48 LIT-CONT-02 — dispose users Lit effects (Pitfall C — no memory leak)
+        if (Array.isArray(this._usersDisposers)) {
+            this._usersDisposers.forEach(d => {
+                try { d(); } catch (e) { /* swallow dispose errors */ }
+            });
+            this._usersDisposers.length = 0;
+        }
+        this._usersSignal = null;
+        this._usersTableMounted = false;
+
+        // Phase 49 LIT-CONT-03 — dispose audit-log Lit effects (Pitfall C — no memory leak).
+        // VirtualScroller separately owns _auditVS — его destroy() уже вызывается из resetAndLoadAudit/Tab switch.
+        if (Array.isArray(this._auditDisposers)) {
+            this._auditDisposers.forEach(d => {
+                try { d(); } catch (e) { /* swallow dispose errors */ }
+            });
+            this._auditDisposers.length = 0;
+        }
+        this._auditSignal = null;
+        this._auditTableMounted = false;
     }
 };
 

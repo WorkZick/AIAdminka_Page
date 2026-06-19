@@ -1,7 +1,13 @@
 // StepsNavigator - Навигация между шагами
+//
+// Phase 24 SIG-02: state теперь signals-based ExcelReportsState IIFE
+// (не Pub/Sub). Reads через `state.<signal>.value`, writes через mutator
+// methods (state.reset(), state.currentStep.value =, etc.) — Pitfall A:
+// no signal.value = inside effects (this module не запускает effects).
 
 class StepsNavigator {
     constructor(stateManager) {
+        // Принимает ExcelReportsState (signals-based IIFE)
         this.state = stateManager;
     }
 
@@ -41,7 +47,7 @@ class StepsNavigator {
 
     // Получить все шаги для текущего шаблона
     getAllSteps() {
-        const template = this.state.get('selectedTemplate');
+        const template = this.state.selectedTemplate.value;
 
         if (!template) {
             // Если шаблон не выбран, показываем только первый шаг
@@ -63,8 +69,8 @@ class StepsNavigator {
             this.state.reset();
         }
 
-        // Устанавливаем текущий шаг
-        this.state.set('currentStep', stepId);
+        // Устанавливаем текущий шаг (signal write — НЕ inside effect, Pitfall A)
+        this.state.currentStep.value = stepId;
 
         return true;
     }
@@ -79,12 +85,12 @@ class StepsNavigator {
         // Обработка доступна если выбран шаблон (свободная навигация)
         // UI покажет предупреждение если файлы не загружены
         if (stepId === 'process') {
-            return this.state.get('selectedTemplate') !== null;
+            return this.state.selectedTemplate.value !== null;
         }
 
         // После выбора шаблона ВСЕ файловые шаги доступны для клика
         // (свободная навигация как в traffic-calculation)
-        const template = this.state.get('selectedTemplate');
+        const template = this.state.selectedTemplate.value;
         if (template) {
             // Проверяем что шаг существует в конфигурации шаблона
             return template.filesConfig && stepId in template.filesConfig;
@@ -97,7 +103,7 @@ class StepsNavigator {
     isStepCompleted(stepId) {
         // template завершён, если выбран шаблон
         if (stepId === 'template') {
-            return this.state.get('selectedTemplate') !== null;
+            return this.state.selectedTemplate.value !== null;
         }
 
         // process никогда не завершён (конечный шаг)
@@ -106,7 +112,7 @@ class StepsNavigator {
         }
 
         // Проверяем что шаг существует в текущем шаблоне
-        const template = this.state.get('selectedTemplate');
+        const template = this.state.selectedTemplate.value;
         if (!template || !template.filesConfig || !(stepId in template.filesConfig)) {
             return false;
         }
@@ -122,7 +128,7 @@ class StepsNavigator {
 
     // Получить текущий шаг
     getCurrentStep() {
-        return this.state.get('currentStep');
+        return this.state.currentStep.value;
     }
 
     // Получить следующий доступный шаг

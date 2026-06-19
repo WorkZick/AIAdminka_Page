@@ -1,3 +1,4 @@
+@layer shared {
 /**
  * Skeleton Loaders - Анимированные placeholder'ы для загрузки контента
  * Используются вместо спиннеров для улучшения UX
@@ -18,39 +19,32 @@
 }
 
 /* Анимация пульсации */
-@keyframes skeleton-loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
+
 
 /* Варианты размеров */
 .skeleton-text {
   height: 14px;
   margin-bottom: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .skeleton-text-lg {
   height: 18px;
   margin-bottom: 12px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .skeleton-title {
   height: 24px;
   width: 60%;
   margin-bottom: 16px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
 }
 
 .skeleton-paragraph {
   height: 12px;
   margin-bottom: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .skeleton-paragraph:last-child {
@@ -125,7 +119,7 @@
 
 .skeleton-table-cell {
   height: 16px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 /* Skeleton для списков */
@@ -156,7 +150,7 @@
   height: 12px;
   width: 100px;
   margin-bottom: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 /* Skeleton для изображений */
@@ -182,7 +176,7 @@
 .skeleton-badge {
   height: 20px;
   width: 60px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   display: inline-block;
 }
 
@@ -281,14 +275,7 @@
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-@keyframes skeleton-pulse {
-  0%, 100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
+
 
 /* Адаптивность */
 @media (max-width: 768px) {
@@ -302,5 +289,26 @@
 
   .skeleton-image {
     height: 150px;
+  }
+}
+}
+
+/* @keyframes ВНЕ @layer — Phase 44 fix: keyframes lookup may fail across layers */
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.7;
   }
 }

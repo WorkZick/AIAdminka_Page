@@ -32,17 +32,6 @@ const settingsApp = {
             profileForm.addEventListener('submit', (e) => this.saveProfile(e));
         }
 
-        // Team name modal input - Enter key
-        const teamNameInput = document.getElementById('teamNameModalInput');
-        if (teamNameInput) {
-            teamNameInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    this.saveTeamNameFromModal();
-                }
-            });
-        }
-
         // Delegate clicks for data-action buttons
         this._clickHandler = (e) => {
             const target = e.target.closest('[data-action]');
@@ -56,22 +45,10 @@ const settingsApp = {
                     this.editTeamName();
                     break;
                 case 'clear-cache':
-                    this.openModal('clearCacheModal');
+                    this.clearCache();
                     break;
                 case 'logout':
                     this.logout();
-                    break;
-                case 'close-modal':
-                    if (modal) this.closeModal(modal);
-                    break;
-                case 'confirm-logout':
-                    this.confirmLogout();
-                    break;
-                case 'confirm-clear-cache':
-                    this.confirmClearCache();
-                    break;
-                case 'save-team-name':
-                    this.saveTeamNameFromModal();
                     break;
             }
         };
@@ -477,12 +454,13 @@ const settingsApp = {
 
     // ============ Auth Actions ============
 
-    logout() {
-        this.openModal('logoutModal');
-    },
-
-    confirmLogout() {
-        this.closeModal('logoutModal');
+    async logout() {
+        const confirmed = await ConfirmModal.show('Вы уверены, что хотите выйти?', {
+            confirmText: 'Выйти',
+            cancelText: 'Отмена',
+            danger: true
+        });
+        if (!confirmed) return;
 
         sessionStorage.removeItem('cloud-auth');
         localStorage.removeItem('cloud-storage-info');
@@ -493,8 +471,14 @@ const settingsApp = {
         window.location.href = '../login/index.html';
     },
 
-    confirmClearCache() {
-        this.closeModal('clearCacheModal');
+    async clearCache() {
+        const confirmed = await ConfirmModal.show('Очистить кэш данных?', {
+            description: 'Данные будут загружены заново из облака при следующем посещении.',
+            confirmText: 'Очистить',
+            cancelText: 'Отмена',
+            danger: true
+        });
+        if (!confirmed) return;
 
         localStorage.removeItem('partners-data');
         localStorage.removeItem('traffic-analytics-temp');
@@ -514,18 +498,6 @@ const settingsApp = {
         Toast.success('Кэш очищен');
     },
 
-    // ============ Modals ============
-
-    openModal(modalId) {
-        const el = document.getElementById(modalId);
-        if (el) el.classList.add('active');
-    },
-
-    closeModal(modalId) {
-        const el = document.getElementById(modalId);
-        if (el) el.classList.remove('active');
-    },
-
     // ============ Helpers ============
 
     getInitials(name) { return Utils.getInitials(name); },
@@ -534,15 +506,26 @@ const settingsApp = {
 
     // ============ Team Settings ============
 
-    editTeamName() {
-        // TODO: Редактирование названия команды требует API метода updateTeam
-        // Пока показываем информационное сообщение
-        Toast.info('Изменение названия команды доступно в админ-панели');
-    },
-
-    saveTeamNameFromModal() {
-        // TODO: Реализовать через API
-        this.closeModal('teamNameModal');
+    async editTeamName() {
+        const currentName = localStorage.getItem('team-name') || this.userProfile?.teamName || '';
+        const newName = await PromptModal.show('Введите название команды:', {
+            defaultValue: currentName,
+            placeholder: 'Название команды',
+            confirmText: 'Сохранить',
+            cancelText: 'Отмена'
+        });
+        if (!newName) return;
+        const teamId = this.userProfile?.teamId;
+        if (!teamId) { Toast.error('Команда не определена'); return; }
+        try {
+            const result = await CloudStorage.updateTeam({ teamId, name: newName });
+            if (result?.error) throw new Error(result.error);
+            localStorage.setItem('team-name', newName);
+            Toast.success('Название команды обновлено');
+            this.updateTeamInfo?.();
+        } catch (e) {
+            Toast.error('Ошибка: ' + e.message);
+        }
     },
 
     // ============ Sync to Team Info ============
@@ -640,6 +623,7 @@ const settingsApp = {
 PageLifecycle.init({
     module: 'settings',
     async onInit() {
+        if (typeof DatePicker !== 'undefined') DatePicker.initAll();
         await settingsApp.init();
         settingsApp.attachEventListeners();
     },

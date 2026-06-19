@@ -54,7 +54,4 @@ const logger = {
     }
 };
 
-// Initialize logger when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    logger.init();
-});
+// logger.init() вызывается из excel-reports.js onInit (JS-01: PageLifecycle единая точка входа)

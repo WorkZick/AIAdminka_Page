@@ -1,0 +1,38 @@
+@layer shared {
+/* ============================================================
+   AIAdminka — VirtualScroller CSS
+   Styles for virtual scroll spacer rows and container.
+   Phase 26-02: обёрнут в @layer shared (Hotspot #3 deviation Rule 2 —
+   Plan 25-02 пропустил этот файл, как и base.css в Plan 25-09).
+   ============================================================ */
+
+/* Container must have fixed height and overflow for scroll to work.
+   Added programmatically by VirtualScroller.init() — not global. */
+.vs-container {
+    contain: strict;
+    will-change: transform;
+}
+
+/* Spacer rows — invisible, no interaction, no borders */
+.vs-spacer {
+    pointer-events: none;
+}
+
+.vs-spacer td {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    line-height: 0;
+}
+
+/* Focused row indicator for keyboard navigation */
+tr[tabindex="0"]:focus {
+    outline: 2px solid var(--accent, #fdbe2f);
+    outline-offset: -2px;
+}
+
+tr[tabindex="0"]:focus-visible {
+    outline: 2px solid var(--accent, #fdbe2f);
+    outline-offset: -2px;
+}
+}

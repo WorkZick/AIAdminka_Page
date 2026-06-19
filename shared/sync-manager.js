@@ -295,6 +295,41 @@ const SyncManager = {
                 this.clearQueueStorage(); // Очищаем localStorage
                 this.showCancelled();
                 break;
+
+            case 'TS_UPDATED':
+                // Phase 65 (MULTI-TAB-02): другая вкладка обновила namespace ts → invalidate local cache
+                // Shape: { type: 'TS_UPDATED', ns: 'partners', ts: 1747857600000 }
+                if (typeof CloudStorage !== 'undefined' && typeof data.ns === 'string') {
+                    CloudStorage.clearCacheNamespace(data.ns);
+                    // Invalidate _lastKnownNsTs — следующий getX() запрос пошлёт без clientTs (cold-cache path)
+                    // или с устаревшим ts (server вернёт shape A или B); в любом случае cache rebuild
+                    if (CloudStorage._lastKnownNsTs) {
+                        delete CloudStorage._lastKnownNsTs[data.ns];
+                    }
+                    // One-time logging per session для verification (Phase 65 acceptance test)
+                    if (!this._tsUpdatedLogged) {
+                        this._tsUpdatedLogged = true;
+                        console.log('[SyncManager] TS_UPDATED received from cross-tab:', data.ns);
+                    }
+                    // Phase 67 SYNC-FIX-03: notify page-level subscribers (team-info, etc.) — generic primitive, любой module может subscribe
+                    try {
+                        window.dispatchEvent(new CustomEvent('cs-ts-updated', {
+                            detail: { ns: data.ns, ts: data.ts, source: 'shared-worker' }
+                        }));
+                    } catch (e) { /* graceful — CustomEvent в legacy browsers */ }
+                }
+                break;
+
+            case 'NAMESPACE_INVALIDATE':
+                // Phase 65 (MULTI-TAB-02): explicit cache invalidate без known new ts
+                // Shape: { type: 'NAMESPACE_INVALIDATE', ns: 'partners' }
+                if (typeof CloudStorage !== 'undefined' && typeof data.ns === 'string') {
+                    CloudStorage.clearCacheNamespace(data.ns);
+                    if (CloudStorage._lastKnownNsTs) {
+                        delete CloudStorage._lastKnownNsTs[data.ns];
+                    }
+                }
+                break;
         }
     },
 
@@ -446,6 +481,38 @@ const SyncManager = {
 
         this.showIndicator();
         return Date.now().toString();
+    },
+
+    /**
+     * Phase 65 (MULTI-TAB-03): broadcast TS_UPDATED через SharedWorker после successful mutation.
+     * Cloud-storage.js вызывает после mutation API success → SharedWorker relays к OTHER tabs.
+     * Сам tab уже обновил свой _lastKnownNsTs locally — relay только OTHER tabs.
+     *
+     * Defense in depth: ALSO записывает в localStorage broadcast key для Safari <15 fallback.
+     *
+     * @param {string} ns - namespace (e.g. 'partners', 'employees')
+     * @param {number} ts - epoch ms (server-returned ts)
+     */
+    sendTsUpdate(ns, ts) {
+        if (typeof ns !== 'string' || typeof ts !== 'number' || !Number.isFinite(ts)) return;
+
+        // 1. SharedWorker relay (primary path)
+        if (this.isConnected && this.port) {
+            try {
+                this.port.postMessage({ type: 'TS_UPDATED', ns: ns, ts: ts });
+            } catch (e) { /* port closed — fallback на storage event */ }
+        }
+
+        // 2. localStorage broadcast (fallback для Safari <15 без SharedWorker)
+        // storage event fires только в OTHER tabs (не в sender) — exactly what we want
+        try {
+            const env = (typeof EnvConfig !== 'undefined') ? EnvConfig.getCurrentEnv() : 'default';
+            const key = 'cs-broadcast-' + env;
+            const payload = JSON.stringify({ type: 'TS_UPDATED', ns: ns, ts: ts, timestamp: Date.now() });
+            localStorage.setItem(key, payload);
+            // Cleanup ASAP — мы используем key только как event trigger
+            // (но не remove сразу — другие tabs нужно прочитать payload через storage event)
+        } catch (e) { /* localStorage недоступен — SharedWorker fallback */ }
     },
 
     hasPendingSync() {

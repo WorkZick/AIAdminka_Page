@@ -97,8 +97,12 @@ const OnboardingSource = (() => {
     function openSettings() {
         _editingSourceId = null;
         _renderSourceList();
+        // Phase 30 LIT-MIG-04: <app-modal> uses boolean property API (was .modal class .active)
         const modal = document.getElementById('sourceSettingsModal');
-        if (modal) modal.classList.add('active');
+        if (modal) {
+            if (modal.tagName === 'APP-MODAL') modal.open = true;
+            else modal.classList.add('active');
+        }
     }
 
     function _renderSourceList() {
@@ -114,15 +118,22 @@ const OnboardingSource = (() => {
         if (listFooter) listFooter.classList.remove('hidden');
         if (editFooter) editFooter.classList.add('hidden');
 
-        // Update modal title
-        const title = document.querySelector('#sourceSettingsModal .modal-title');
-        if (title) title.textContent = 'Источники лидов';
+        // Phase 30 LIT-MIG-04: <app-modal> renders own title from .title property (was DOM <h2>.textContent)
+        const modal = document.getElementById('sourceSettingsModal');
+        if (modal) {
+            if (modal.tagName === 'APP-MODAL') modal.title = 'Источники лидов';
+            else { const t = modal.querySelector('.modal-title'); if (t) t.textContent = 'Источники лидов'; }
+        }
 
         const listContainer = document.getElementById('sourceListItems');
         if (!listContainer) return;
 
         if (settings.sources.length === 0) {
-            listContainer.innerHTML = '<div class="source-empty">Нет источников</div>';
+            // Phase 54 LIT-FIN-02: static empty-state — DOM construction вместо innerHTML
+            const empty = document.createElement('div');
+            empty.className = 'source-empty';
+            empty.textContent = 'Нет источников';
+            listContainer.replaceChildren(empty);
             return;
         }
 
@@ -163,9 +174,13 @@ const OnboardingSource = (() => {
         if (listFooter) listFooter.classList.add('hidden');
         if (editFooter) editFooter.classList.remove('hidden');
 
-        // Update modal title
-        const title = document.querySelector('#sourceSettingsModal .modal-title');
-        if (title) title.textContent = source ? 'Редактировать источник' : 'Добавить источник';
+        // Phase 30 LIT-MIG-04: <app-modal> renders own title from .title property (was DOM <h2>.textContent)
+        const newTitle = source ? 'Редактировать источник' : 'Добавить источник';
+        const modal = document.getElementById('sourceSettingsModal');
+        if (modal) {
+            if (modal.tagName === 'APP-MODAL') modal.title = newTitle;
+            else { const t = modal.querySelector('.modal-title'); if (t) t.textContent = newTitle; }
+        }
 
         const nameInput = document.getElementById('sourceEditName');
         const urlInput = document.getElementById('sourceEditUrl');
@@ -631,8 +646,12 @@ const OnboardingSource = (() => {
         _toggleConditionsMode(hasUrl ? 'view' : 'edit', data);
         _renderConditionsStatus(data);
 
+        // Phase 30 LIT-MIG-04: <app-modal> uses boolean property API (was .modal class .active)
         const modal = document.getElementById('conditionsModal');
-        if (modal) modal.classList.add('active');
+        if (modal) {
+            if (modal.tagName === 'APP-MODAL') modal.open = true;
+            else modal.classList.add('active');
+        }
     }
 
     function editConditionsUrl() {
@@ -690,7 +709,9 @@ const OnboardingSource = (() => {
         const countries = new Set(data.conditions.map(c => c.condition_country).filter(Boolean));
         const types = new Set(data.conditions.map(c => c.method_type).filter(Boolean));
         const timeStr = data.lastSyncTime ? OnboardingUtils.formatDateTime(data.lastSyncTime) : '';
-        const parts = [`<span class="conditions-status-count">${count}</span> ${Utils.pluralRu(count, 'условие', 'условия', 'условий')}`];
+        // BFIX (audit 2026-05-20): убран дубль числа. pluralRu возвращает "N слово",
+        // а раньше ещё префиксили <span>${count}</span> → "6 6 условий".
+        const parts = [`<span class="conditions-status-count">${Utils.pluralRu(count, 'условие', 'условия', 'условий')}</span>`];
         if (countries.size) parts.push(`Стран: ${countries.size}`);
         parts.push(`Типов: ${types.size}`);
         el.innerHTML = `<div class="conditions-status-row"><div>${parts.join(' · ')}</div><button class="conditions-delete-btn" data-action="onb-clearConditions" title="Удалить условия"><img src="../shared/icons/cross.svg" width="14" height="14" alt="Удалить"></button></div>` +

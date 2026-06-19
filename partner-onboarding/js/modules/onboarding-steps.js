@@ -46,7 +46,7 @@ const OnboardingSteps = (() => {
         const executorDone = OnboardingRoles.getGlobalModuleRole(sysRole) === 'executor' && OnboardingConfig.isExecutorCompleted(request);
         const statusConf = OnboardingConfig.STATUSES[request.status] || {};
         const statusLabel = executorDone ? 'Партнёр заведён' : (statusConf.label || request.status);
-        const statusClass = executorDone ? 'status--completed' : (statusConf.cssClass || '');
+        const statusClass = executorDone ? 'status-success' : (statusConf.cssClass || '');
         const assigneeName = request.assigneeName || request.assigneeEmail || '';
         const createdDate = request.createdDate ? OnboardingUtils.formatDateTime(request.createdDate) : '';
 
@@ -71,7 +71,11 @@ const OnboardingSteps = (() => {
 
         const history = request.history || [];
         if (history.length === 0) {
-            container.innerHTML = '<p class="history-empty">Нет записей</p>';
+            // Phase 54 LIT-FIN-02: static empty-state — DOM construction вместо innerHTML
+            const empty = document.createElement('p');
+            empty.className = 'history-empty';
+            empty.textContent = 'Нет записей';
+            container.replaceChildren(empty);
             return;
         }
 

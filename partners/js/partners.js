@@ -1,11 +1,91 @@
-// Partners App - Controller (delegates to modules)
+// Partners App - Controller (delegates to modules) + Phase 25 LIT-06 ModuleFactory + Lit bridge
+//
+// Phase 25 LIT-06 (Plan 25-07) bridge strategy:
+// — partnersApp.init() создаёт ModuleFactory.create({optimistic:true}) внутри PageLifecycle.onInit
+// — <app-table id="partners-table"> mount node для Lit consumers / E2E selectors
+// — window.effect() bind: signals → Lit prop assignment (Option A — direct prop)
+// — _disposers tracked для PageLifecycle.onDestroy cleanup (Pitfall C)
+// — Existing PartnersState/Renderer/Forms/etc. preserved (full атомic-rewrite deferred to Phase 27 mass migration)
+// Reference: 25-RESEARCH.md §"Pattern 2: ModuleFactory + Lit binding (Option A)" + 25-CONTEXT.md.
 const partnersApp = {
+    // ==================== ModuleFactory + Lit bridge state ====================
+    mod: null,
+    _disposers: [],
+
     // ==================== INITIALIZATION ====================
     async init() {
         // AuthGuard.checkWithRole() и CloudStorage.init() уже вызваны в PageLifecycle
         // Полноэкранный спиннер (.page-loading) показывается PageLifecycle на время onInit()
 
-        // Event delegation for table row clicks (перенесено из глобальной области)
+        // Phase 25 LIT-06: ждём Lit ready (cdn-deps.js loaded) до mounting
+        if (!window.__LIT_LOADED__) {
+            await new Promise((resolve) => {
+                const t = setTimeout(resolve, 3000); // safety timeout
+                window.addEventListener('lit-ready', () => { clearTimeout(t); resolve(); }, { once: true });
+            });
+        }
+
+        // Phase 25 LIT-06: ModuleFactory.create — replaces partners-state.js patterns
+        // (existing PartnersState preserved для legacy code; mod.items mirrors PartnersState.cachedPartners)
+        try {
+            if (typeof window.ModuleFactory?.create === 'function' && typeof window.signal === 'function') {
+                this.mod = window.ModuleFactory.create({
+                    name: 'partners',
+                    entity: 'partners',
+                    pageSize: 20,
+                    optimistic: true
+                });
+                window.partnersModule = this.mod;
+            }
+        } catch (e) {
+            console.warn('[partners] ModuleFactory.create failed (non-fatal):', e?.message);
+            this.mod = null;
+        }
+
+        // Phase 25 LIT-06: <app-table> mount + effect-based prop assignment (Option A)
+        const tableEl = document.getElementById('partners-table');
+        if (tableEl && this.mod && typeof window.effect === 'function') {
+            // Configure columns once (Lit html cell renderers с auto-escape)
+            try {
+                const html = window.litHtml;
+                tableEl.columns = [
+                    { key: 'method',     label: 'Метод',       sortable: true,
+                      render: (item) => html`<span class="method-badge">${item.method ?? ''}</span>` },
+                    { key: 'subagent',   label: 'Субагент',    sortable: true,
+                      render: (item) => html`${item.subagent ?? ''}` },
+                    { key: 'subagentId', label: 'ID Субагента', sortable: true,
+                      render: (item) => html`${item.subagentId ?? ''}` },
+                    { key: 'status',     label: 'Статус',      sortable: true,
+                      render: (item) => {
+                          const s = item.status || 'Открыт';
+                          const cls = s === 'Открыт' ? 'status-open' : 'status-closed';
+                          return html`<span class="${cls}">${s}</span>`;
+                      } }
+                ];
+                tableEl.emptyMessage = 'Нет партнёров';
+
+                // Reactive prop assignment via effect (Option A — direct prop)
+                this._disposers.push(this.mod.effect(() => {
+                    tableEl.items = this.mod.items.value || [];
+                }));
+
+                // Component event subscriptions
+                tableEl.addEventListener('row-click', (e) => {
+                    if (e.detail && e.detail.id) {
+                        PartnersNavigation.selectPartner(e.detail.id);
+                    }
+                });
+                tableEl.addEventListener('sort-change', (e) => {
+                    if (e.detail && e.detail.field) {
+                        PartnersRenderer.sortBy(e.detail.field);
+                    }
+                });
+            } catch (e) {
+                console.warn('[partners] <app-table> bridge setup failed (non-fatal):', e?.message);
+            }
+        }
+
+        // Event delegation for table row clicks (legacy table — preserved)
         const tableBody = document.getElementById('partnersTableBody');
         if (tableBody) {
             tableBody.addEventListener('click', (e) => {
@@ -25,14 +105,27 @@ const partnersApp = {
             }
         });
 
+        // Phase 25 LIT-06: dispose cleanup at PageLifecycle teardown (Pitfall C)
+        PageLifecycle.addCleanup(() => {
+            partnersApp.destroy();
+        });
+
         try {
+            // Show skeleton before loading
+            PartnersRenderer.renderSkeletonRows();
+
+            // Create optimistic manager instance for partners module (legacy — preserved)
+            PartnersState._optimistic = OptimisticManager.create('partners');
+
             // Load data from cloud
             await PartnersForms.loadAllData();
+
+            // Mirror PartnersState.cachedPartners → ModuleFactory.items signal (bridge)
+            partnersApp._mirrorStateToModuleFactory();
 
             // Render UI
             PartnersColumns.renderTableHeader();
             PartnersRenderer.render();
-            PartnersRenderer.updateStats();
             PartnersImportExport.setupImportHandler();
             PartnersAvatars.setupCropHandlers();
             PartnersColumns.renderColumnsMenu();
@@ -41,6 +134,35 @@ const partnersApp = {
             console.error('Init error:', error);
             PartnersUtils.showError('Ошибка загрузки данных: ' + error.message);
         }
+    },
+
+    // Phase 25 LIT-06: bridge — sync existing PartnersState.cachedPartners → mod.items signal
+    _mirrorStateToModuleFactory() {
+        if (!this.mod || typeof window.batch !== 'function') return;
+        try {
+            window.batch(() => {
+                this.mod.items.value = (PartnersState.cachedPartners || []).slice();
+                if (this.mod.totalCount) {
+                    this.mod.totalCount.value = PartnersState.totalCount || PartnersState.cachedPartners.length;
+                }
+            });
+        } catch (e) {
+            console.warn('[partners] _mirrorStateToModuleFactory failed:', e?.message);
+        }
+    },
+
+    // Phase 25 LIT-06: explicit destroy для PageLifecycle.onDestroy
+    destroy() {
+        try {
+            this._disposers.forEach((d) => { try { d(); } catch (_) {} });
+        } finally {
+            this._disposers = [];
+        }
+        if (this.mod && typeof this.mod.destroy === 'function') {
+            try { this.mod.destroy(); } catch (_) {}
+        }
+        this.mod = null;
+        window.partnersModule = null;
     },
 
     // ==================== PROXY METHODS (for data-action compatibility) ====================
@@ -58,18 +180,15 @@ const partnersApp = {
     updateFileLabel: (...args) => PartnersUtils.updateFileLabel(...args),
     resetFileLabel: (...args) => PartnersUtils.resetFileLabel(...args),
 
-    // Methods
+    // Methods (inline dropdown management)
     loadMethods: (...args) => PartnersMethods.loadMethods(...args),
-    showMethodsDialog: (...args) => PartnersMethods.showMethodsDialog(...args),
-    closeMethodsDialog: (...args) => PartnersMethods.closeMethodsDialog(...args),
-    addMethod: (...args) => PartnersMethods.addMethod(...args),
-    deleteMethod: (...args) => PartnersMethods.deleteMethod(...args),
-    startEditMethod: (...args) => PartnersMethods.startEditMethod(...args),
-    saveEditMethod: (...args) => PartnersMethods.saveEditMethod(...args),
-    cancelEditMethod: (...args) => PartnersMethods.cancelEditMethod(...args),
-    renderMethodsList: (...args) => PartnersMethods.renderMethodsList(...args),
     populateMethodsSelect: (...args) => PartnersMethods.populateMethodsSelect(...args),
-    updateMethodsCount: (...args) => PartnersMethods.updateMethodsCount(...args),
+    showAddMethodInput: (...args) => PartnersMethods.showAddMethodInput(...args),
+    addMethodInline: (...args) => PartnersMethods.addMethodInline(...args),
+    deleteMethodInline: (...args) => PartnersMethods.deleteMethodInline(...args),
+    startEditMethodInline: (...args) => PartnersMethods.startEditMethodInline(...args),
+    saveEditMethodInline: (...args) => PartnersMethods.saveEditMethodInline(...args),
+    cancelEditMethodInline: (...args) => PartnersMethods.cancelEditMethodInline(...args),
 
     // Columns
     getColumnsConfig: (...args) => PartnersColumns.getColumnsConfig(...args),
@@ -93,7 +212,7 @@ const partnersApp = {
     updateStats: (...args) => PartnersRenderer.updateStats(...args),
     sortBy: (...args) => PartnersRenderer.sortBy(...args),
     filterTable: (...args) => PartnersRenderer.filterTable(...args),
-    goToPage: (page) => PartnersRenderer.goToPage(page),
+    goToPage: (page) => PartnersForms.goToPage(page),
     toggleSidebar: (...args) => PartnersRenderer.toggleSidebar(...args),
 
     // Navigation
@@ -175,37 +294,16 @@ const partnersApp = {
     cancelImport: (...args) => PartnersImportExport.cancelImport(...args),
     removeDuplicates: (...args) => PartnersImportExport.removeDuplicates(...args),
 
-    // Form Dropdowns
-    toggleFormDropdown(target) {
-        const menuId = target.dataset?.target || target;
-        const menu = document.getElementById(typeof menuId === 'string' ? menuId : '');
-        if (!menu) return;
-        // Close other form dropdowns
-        document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden)').forEach(m => {
-            if (m !== menu) m.classList.add('hidden');
-        });
-        menu.classList.toggle('hidden');
+    // Form Dropdowns — QWIN-03: делегируем в shared/js/dropdown-helper.js
+    // BFIX-15: evt передаётся для touchend.preventDefault внутри DropdownHelper.toggle
+    toggleFormDropdown(target, evt) {
+        DropdownHelper.toggle(target, evt);
     },
     selectFormDropdown(target) {
-        const menu = target.closest('.dropdown-menu');
+        DropdownHelper.select(target, target.dataset.value ?? '', target.textContent);
+        // Page-specific post-callbacks (template change, export preview, excel hint)
         const wrap = target.closest('.dropdown-wrap--form');
-        if (!menu || !wrap) return;
-        const value = target.dataset.value ?? '';
-        const label = target.textContent;
-        // Update hidden input
-        const input = wrap.querySelector('input[type="hidden"]');
-        if (input) input.value = value;
-        // Update trigger label
-        const trigger = wrap.querySelector('.dropdown-trigger--form');
-        const labelEl = trigger?.querySelector('span');
-        if (labelEl) labelEl.textContent = label;
-        trigger?.classList.toggle('placeholder', !value);
-        // Update active state
-        menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
-        target.classList.add('active');
-        menu.classList.add('hidden');
-        // Trigger change callbacks
-        const wrapId = wrap.id;
+        const wrapId = wrap?.id;
         if (wrapId === 'templateSelectWrap') {
             PartnersTemplates.handleTemplateChange();
         } else if (wrapId === 'exportTemplateSelectWrap') {
@@ -220,11 +318,17 @@ const partnersApp = {
     getMethods: () => PartnersState.getMethods()
 };
 
+// Expose для inline event handlers (HTML data-action attribute legacy)
+window.partnersApp = partnersApp;
+
 // ==================== PageLifecycle ====================
 PageLifecycle.init({
     module: 'partners',
     async onInit() {
         await partnersApp.init();
+    },
+    onDestroy() {
+        partnersApp.destroy();
     },
     modals: {
         '#importModal': () => partnersApp.closeImportDialog(),
@@ -235,10 +339,9 @@ PageLifecycle.init({
 // ==================== Global Event Listeners ====================
 
 // Close dropdowns and menus when clicking outside
-const _dropdownRefs = { columnsSettings: null, columnsMenu: null, _init: false };
+const _dropdownRefs = { columnsMenu: null, _init: false };
 function _ensureDropdownRefs() {
     if (_dropdownRefs._init) return;
-    _dropdownRefs.columnsSettings = document.querySelector('.columns-settings');
     _dropdownRefs.columnsMenu = document.getElementById('columnsMenu');
     _dropdownRefs._init = true;
 }
@@ -246,10 +349,15 @@ document.addEventListener('click', (e) => {
     _ensureDropdownRefs();
     const r = _dropdownRefs;
 
-    if (r.columnsSettings && r.columnsMenu && !r.columnsSettings.contains(e.target)) {
-        r.columnsMenu.classList.remove('active');
+    // Закрыть меню «Колонки» при клике вне меню и не по кнопке-триггеру
+    if (r.columnsMenu && r.columnsMenu.classList.contains('active')) {
+        const onToggleBtn = e.target.closest('[data-action="partners-toggleColumnsMenu"]');
+        if (!r.columnsMenu.contains(e.target) && !onToggleBtn) {
+            r.columnsMenu.classList.remove('active');
+        }
     }
     // Close all custom dropdowns (form + status) when clicking outside
+    // Exception: formMethodMenu stays open if click is inside it (for inline edit/add/delete)
     document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden), .dropdown-wrap--status .dropdown-menu:not(.hidden)').forEach(menu => {
         const wrap = menu.closest('.dropdown-wrap--form, .dropdown-wrap--status');
         if (wrap && !wrap.contains(e.target)) {
@@ -277,9 +385,16 @@ document.addEventListener('click', (e) => {
         e.stopPropagation();
     }
 
-    // Form dropdowns — передаём DOM-элемент
+    // Inline method management actions — stop propagation to prevent selectFormDropdown/toggleFormDropdown
+    if (action === 'startEditMethodInline' || action === 'deleteMethodInline'
+        || action === 'saveEditMethodInline' || action === 'cancelEditMethodInline'
+        || action === 'addMethodInline' || action === 'showAddMethodInput') {
+        e.stopPropagation();
+    }
+
+    // Form dropdowns — передаём DOM-элемент И event (BFIX-15: для touchend handling в DropdownHelper.toggle)
     if (action === 'toggleFormDropdown' || action === 'selectFormDropdown') {
-        partnersApp[action](target);
+        partnersApp[action](target, e);
         return;
     }
 
@@ -345,7 +460,7 @@ document.addEventListener('keypress', (e) => {
 
     const action = target.dataset.action.replace('partners-', '');
 
-    if (action === 'methodInputKeypress' && e.key === 'Enter') {
-        partnersApp.addMethod();
+    if (typeof partnersApp[action] === 'function' && e.key === 'Enter') {
+        partnersApp[action]();
     }
 });

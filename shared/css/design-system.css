@@ -10,6 +10,7 @@
 /* Components */
 @import 'components/scrollbar.css';
 @import 'components/layout.css';
+@import 'components/section-header.css';
 @import 'components/sidebar.css';
 @import 'components/buttons.css';
 @import 'components/forms.css';
@@ -30,3 +31,6 @@
 @import 'components/loading.css';
 @import 'components/sub-tabs.css';
 @import 'components/dropdown.css';
+@import 'components/datepicker.css';
+@import 'components/optimistic.css';
+@import 'components/detail-panel.css';

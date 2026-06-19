@@ -34,114 +34,24 @@ const PartnersUtils = {
     },
 
     /**
-     * Показать диалог подтверждения (замена confirm)
+     * Показать диалог подтверждения (shared ConfirmModal — Phase 27 HTML-02)
      * @param {string} message - Текст сообщения
-     * @param {string} title - Заголовок диалога
+     * @param {string} title - Заголовок диалога (не используется ConfirmModal, сохранён для совместимости call-sites)
      * @returns {Promise<boolean>} true если подтверждено
      */
     showConfirm(message, title = 'Подтверждение') {
-        return new Promise((resolve) => {
-            const modal = document.getElementById('confirmDialog');
-            const titleEl = document.getElementById('confirmDialogTitle');
-            const messageEl = document.getElementById('confirmDialogMessage');
-            const okBtn = document.getElementById('confirmDialogOk');
-            const cancelBtn = document.getElementById('confirmDialogCancel');
-
-            titleEl.textContent = title;
-            messageEl.textContent = message;
-            modal.classList.add('active');
-
-            const cleanup = () => {
-                modal.classList.remove('active');
-                okBtn.removeEventListener('click', handleOk);
-                cancelBtn.removeEventListener('click', handleCancel);
-                modal.removeEventListener('click', handleBackdrop);
-            };
-
-            const handleOk = () => {
-                cleanup();
-                resolve(true);
-            };
-
-            const handleCancel = () => {
-                cleanup();
-                resolve(false);
-            };
-
-            const handleBackdrop = (e) => {
-                if (e.target === modal) {
-                    handleCancel();
-                }
-            };
-
-            okBtn.addEventListener('click', handleOk);
-            cancelBtn.addEventListener('click', handleCancel);
-            modal.addEventListener('click', handleBackdrop);
-        });
+        return ConfirmModal.show(message, { confirmText: 'Подтвердить', cancelText: 'Отмена' });
     },
 
     /**
-     * Показать диалог ввода (замена prompt)
+     * Показать диалог ввода (shared PromptModal — Phase 27 HTML-02)
      * @param {string} message - Текст сообщения
      * @param {string} defaultValue - Значение по умолчанию
-     * @param {string} title - Заголовок диалога
+     * @param {string} title - Заголовок диалога (не используется PromptModal, сохранён для совместимости call-sites)
      * @returns {Promise<string|null>} введённое значение или null
      */
     showPrompt(message, defaultValue = '', title = 'Ввод') {
-        return new Promise((resolve) => {
-            const modal = document.getElementById('promptDialog');
-            const titleEl = document.getElementById('promptDialogTitle');
-            const messageEl = document.getElementById('promptDialogMessage');
-            const inputEl = document.getElementById('promptDialogInput');
-            const okBtn = document.getElementById('promptDialogOk');
-            const cancelBtn = document.getElementById('promptDialogCancel');
-
-            titleEl.textContent = title;
-            messageEl.textContent = message;
-            inputEl.value = defaultValue;
-            modal.classList.add('active');
-
-            // Фокус на input
-            setTimeout(() => inputEl.focus(), 100);
-
-            const cleanup = () => {
-                modal.classList.remove('active');
-                okBtn.removeEventListener('click', handleOk);
-                cancelBtn.removeEventListener('click', handleCancel);
-                inputEl.removeEventListener('keydown', handleKeydown);
-                modal.removeEventListener('click', handleBackdrop);
-            };
-
-            const handleOk = () => {
-                const value = inputEl.value.trim();
-                cleanup();
-                resolve(value || null);
-            };
-
-            const handleCancel = () => {
-                cleanup();
-                resolve(null);
-            };
-
-            const handleKeydown = (e) => {
-                if (e.key === 'Enter') {
-                    handleOk();
-                } else if (e.key === 'Escape') {
-                    handleCancel();
-                }
-            };
-
-            const handleBackdrop = (e) => {
-                if (e.target === modal) {
-                    handleCancel();
-                }
-            };
-
-            okBtn.addEventListener('click', handleOk);
-            cancelBtn.addEventListener('click', handleCancel);
-            inputEl.addEventListener('keydown', handleKeydown);
-            modal.addEventListener('click', handleBackdrop);
-        });
+        return PromptModal.show(message, { defaultValue, confirmText: 'OK', cancelText: 'Отмена' });
     },
 
     incrementCounter(inputId) {
@@ -184,9 +94,9 @@ const PartnersUtils = {
 
     getStatusColor(status) {
         const colors = {
-            'Открыт': 'green',
-            'Закрыт': 'red'
+            'Открыт': 'no-dot status-active',
+            'Закрыт': 'no-dot status-inactive'
         };
-        return colors[status] || 'green';
+        return colors[status] || 'no-dot status-active';
     }
 };

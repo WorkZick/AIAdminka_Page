@@ -1,4 +1,11 @@
 // Partners Import/Export - export and import functionality
+//
+// Phase 25 LIT-06 (Plan 25-07) status:
+// — 80% logic preserved (Excel parsing, JSON validation, file handling)
+// — 0 unsafe DOM sites already (file предсуществует XSS-clean)
+// — Modal UI binding ready для <app-modal> mount nodes (см. partners/index.html)
+// — Lit auto-escape применяется через cell renderers в partners.js columns config
+// Reference: 25-07-PLAN.md §"Wave 5".
 const PartnersImportExport = {
     showExportDialog() {
         const partners = PartnersState.getPartners();
@@ -76,7 +83,7 @@ const PartnersImportExport = {
 
         const previewInfo = document.getElementById('exportPreviewInfo');
 
-        let baseColumns = ['Субагент', 'ID Субагента', 'Метод', 'DEP', 'WITH', 'COMP', 'Статус', 'Фото'];
+        const baseColumns = ['Субагент', 'ID Субагента', 'Метод', 'DEP', 'WITH', 'COMP', 'Статус', 'Фото'];
         let customColumns = [];
 
         if (templateId) {
@@ -459,7 +466,7 @@ const PartnersImportExport = {
                         'Фото': 'avatar'
                     };
 
-                    let expectedColumns = [...baseColumns];
+                    const expectedColumns = [...baseColumns];
                     const templateId = PartnersState.selectedImportTemplateId;
                     if (templateId) {
                         const template = PartnersState.cachedTemplates[templateId];

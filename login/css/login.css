@@ -1,6 +1,8 @@
+@layer module {
 /* ============================================================
    Login Page - Specific Styles
    Base variables provided by ../shared/css/design-system.css
+   Phase 32 ROLLOUT-01: wrapped in @layer module per CSS-01 cascade order
    ============================================================ */
 
 /* Override body for login page (centered layout) */
@@ -24,9 +26,9 @@ body {
     justify-content: center;
     padding: var(--spacing-xl);
     background:
-        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.12) 0%, transparent 40%),
-        radial-gradient(circle at 70% 80%, rgba(80, 120, 200, 0.12) 0%, transparent 40%),
-        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.04) 0%, transparent 50%),
+        radial-gradient(circle at 30% 20%, var(--white-a12) 0%, transparent 40%),
+        radial-gradient(circle at 70% 80%, rgba(80, 120, 200, 0.12) 0%, transparent 40%), /* one-off: rgba(80,120,200,0.12) blue radial tint */
+        radial-gradient(circle at 50% 50%, var(--glass-bg-light) 0%, transparent 50%),
         var(--bg-black);
 }
 
@@ -35,17 +37,17 @@ body {
    =========================================== */
 
 .login-card {
-    background: rgba(30, 30, 30, 0.6);
+    background: var(--glass-bg-medium-soft);
     backdrop-filter: blur(var(--glass-blur-strong));
     -webkit-backdrop-filter: blur(var(--glass-blur-strong));
     border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    padding: 48px 40px;
+    border-radius: 20px; /* one-off: login card design radius */
+    padding: 48px 40px; /* one-off: login card padding */
     width: 100%;
     max-width: 420px;
     box-shadow:
-        0 20px 60px rgba(0, 0, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        0 20px 60px rgba(0, 0, 0, 0.4), /* one-off: rgba(0,0,0,0.4) card depth shadow */
+        inset 0 1px 0 var(--white-a05);
 }
 
 /* ===========================================
@@ -54,17 +56,17 @@ body {
 
 .login-card-wide {
     display: flex;
-    background: rgba(30, 30, 30, 0.6);
+    background: var(--glass-bg-medium-soft);
     backdrop-filter: blur(var(--glass-blur-strong));
     -webkit-backdrop-filter: blur(var(--glass-blur-strong));
     border: 1px solid var(--glass-border);
-    border-radius: 20px;
+    border-radius: 20px; /* one-off: login card design radius */
     width: 100%;
     max-width: 780px;
     max-height: 90vh;
     box-shadow:
-        0 20px 60px rgba(0, 0, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        0 20px 60px rgba(0, 0, 0, 0.4), /* one-off: rgba(0,0,0,0.4) card depth shadow */
+        inset 0 1px 0 var(--white-a05);
     overflow: hidden;
 }
 
@@ -74,9 +76,9 @@ body {
     flex-direction: column;
     width: 280px;
     min-width: 280px;
-    padding: 32px 28px;
+    padding: var(--spacing-3xl) 28px;
     border-right: 1px solid var(--glass-border);
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.15); /* one-off: rgba(0,0,0,0.15) left panel subtle dark overlay */
 }
 
 .login-card-left .login-logo {
@@ -85,11 +87,6 @@ body {
 
 .login-card-left .login-logo h1 {
     font-size: 22px;
-}
-
-.login-card-left .login-status {
-    margin-bottom: var(--spacing-lg);
-    padding: 10px var(--spacing-lg);
 }
 
 .login-card-left .login-user {
@@ -121,40 +118,17 @@ body {
     margin-top: var(--spacing-lg);
 }
 
-.refresh-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-sm);
+/* Refresh button: base styles from .btn .btn--ghost .btn-sm */
+#btnRefresh {
     width: 100%;
-    padding: 10px var(--spacing-lg);
-    background: var(--glass-bg-light);
-    border: 1px solid var(--glass-border);
-    color: var(--gray-light);
-    border-radius: var(--radius-lg);
-    font-family: var(--font-family);
-    font-size: var(--font-size-base);
-    cursor: pointer;
-    transition: var(--transition-colors);
 }
 
-.refresh-button:hover {
-    background: var(--glass-bg-hover);
-    border-color: var(--glass-border-hover);
-    color: var(--accent);
-}
-
-.refresh-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.refresh-button svg {
+#btnRefresh svg {
     width: 16px;
     height: 16px;
 }
 
-.refresh-button.loading svg {
+#btnRefresh.loading svg {
     animation: spin 1s linear infinite;
 }
 
@@ -168,7 +142,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 32px;
+    padding: var(--spacing-3xl);
     overflow-y: auto;
 }
 
@@ -178,14 +152,14 @@ body {
 
 .login-logo {
     text-align: center;
-    margin-bottom: 32px;
+    margin-bottom: var(--spacing-3xl);
 }
 
 .login-logo img {
     width: 72px;
     height: 72px;
     margin-bottom: var(--spacing-lg);
-    filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.20));
+    filter: drop-shadow(0 4px 12px var(--white-a20));
 }
 
 .login-logo h1 {
@@ -193,51 +167,6 @@ body {
     font-weight: 700;
     color: var(--white);
     letter-spacing: -0.5px;
-}
-
-/* ===========================================
-   Status Messages
-   =========================================== */
-
-.login-status {
-    text-align: center;
-    padding: 14px var(--spacing-xl);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
-    margin-bottom: var(--spacing-2xl);
-}
-
-.login-status .status-text {
-    font-size: var(--font-size-md);
-    color: var(--gray-light);
-}
-
-.login-status.success {
-    background: rgba(81, 207, 102, 0.1);
-    border-color: rgba(81, 207, 102, 0.2);
-}
-
-.login-status.success .status-text {
-    color: var(--status-green);
-}
-
-.login-status.error {
-    background: rgba(255, 107, 107, 0.1);
-    border-color: rgba(255, 107, 107, 0.2);
-}
-
-.login-status.error .status-text {
-    color: var(--status-red);
-}
-
-.login-status.pending {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-.login-status.pending .status-text {
-    color: var(--accent);
 }
 
 /* ===========================================
@@ -260,28 +189,21 @@ body {
    =========================================== */
 
 .login-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-md);
     width: 100%;
     padding: var(--spacing-lg) var(--spacing-2xl);
     background: var(--white);
     color: var(--black);
     border: none;
     border-radius: var(--radius-xl);
-    font-family: var(--font-family);
-    font-size: 15px;
+    font-size: var(--font-size-md);
     font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition-colors);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); /* one-off: rgba(0,0,0,0.2) login button shadow */
 }
 
 .login-button:hover {
-    background: #e8e8e8;
+    background: #e8e8e8; /* one-off: #e8e8e8 near-white */
     transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 6px 24px var(--black-a30);
 }
 
 .login-button:active {
@@ -318,7 +240,7 @@ body {
 .login-user {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: var(--spacing-md-lg);
     padding: var(--spacing-lg);
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
@@ -341,7 +263,7 @@ body {
     font-weight: 700;
     color: var(--white);
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.20);
+    box-shadow: 0 4px 12px var(--white-a20);
 }
 
 .user-avatar img {
@@ -358,7 +280,7 @@ body {
 }
 
 .user-name {
-    font-size: 15px;
+    font-size: var(--font-size-md);
     font-weight: 600;
     color: var(--white);
     margin-bottom: 3px;
@@ -389,8 +311,8 @@ body {
 }
 
 .logout-button:hover {
-    background: rgba(255, 107, 107, 0.1);
-    border-color: rgba(255, 107, 107, 0.3);
+    background: var(--status-red-tint-soft);
+    border-color: var(--status-red-tint-strong);
     color: var(--status-red);
 }
 
@@ -402,8 +324,8 @@ body {
     width: 64px;
     height: 64px;
     margin: 0 auto var(--spacing-lg);
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--glass-border);
+    border: 1px solid var(--white-a15);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -417,8 +339,8 @@ body {
 }
 
 .waiting-icon.pending {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: var(--glass-border);
+    border-color: var(--white-a15);
 }
 
 .waiting-icon.pending svg {
@@ -426,8 +348,8 @@ body {
 }
 
 .waiting-icon.success {
-    background: rgba(81, 207, 102, 0.1);
-    border-color: rgba(81, 207, 102, 0.2);
+    background: var(--status-green-tint-soft);
+    border-color: var(--status-green-tint-strong);
 }
 
 .waiting-icon.success svg {
@@ -435,8 +357,8 @@ body {
 }
 
 .waiting-icon.error {
-    background: rgba(255, 107, 107, 0.1);
-    border-color: rgba(255, 107, 107, 0.2);
+    background: var(--status-red-tint-soft);
+    border-color: rgba(255, 107, 107, 0.2); /* one-off: rgba(255,107,107,0.2) error icon border */
 }
 
 .waiting-icon.error svg {
@@ -444,8 +366,8 @@ body {
 }
 
 .waiting-icon.blocked {
-    background: rgba(120, 120, 120, 0.1);
-    border-color: rgba(120, 120, 120, 0.2);
+    background: rgba(120, 120, 120, 0.1); /* one-off: rgba(120,120,120,0.1) blocked icon bg */
+    border-color: rgba(120, 120, 120, 0.2); /* one-off: rgba(120,120,120,0.2) blocked icon border */
 }
 
 .waiting-icon.blocked svg {
@@ -493,16 +415,16 @@ body {
     display: block;
     width: 100%;
     padding: var(--spacing-lg) var(--spacing-2xl);
-    background: rgba(255, 255, 255, 0.10);
+    background: var(--white-a10);
     color: var(--white);
-    border: 1px solid rgba(255, 255, 255, 0.20);
+    border: 1px solid var(--white-a20);
     border-radius: var(--radius-xl);
     font-family: var(--font-family);
-    font-size: 15px;
+    font-size: var(--font-size-md);
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition-colors);
-    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 16px var(--glass-border);
     text-decoration: none;
     text-align: center;
 }
@@ -511,10 +433,10 @@ body {
 .request-button:hover,
 .submit-button:hover,
 .continue-button:hover {
-    background: rgba(255, 255, 255, 0.16);
-    border-color: rgba(255, 255, 255, 0.35);
+    background: var(--white-a16);
+    border-color: var(--white-a35);
     transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(255, 255, 255, 0.12);
+    box-shadow: 0 6px 24px var(--white-a12);
 }
 
 .init-button:disabled,
@@ -586,66 +508,9 @@ body {
 
 /* Form styles - Login specific (larger padding) */
 .registration-form .form-group {
-    margin-bottom: 18px;
+    margin-bottom: var(--spacing-xl);
 }
 
-.registration-form .form-group label {
-    display: block;
-    font-size: var(--font-size-base);
-    font-weight: 500;
-    color: var(--gray-light);
-    margin-bottom: var(--spacing-sm);
-}
-
-.registration-form .form-group label .required {
-    color: var(--status-red);
-}
-
-.registration-form .form-hint {
-    font-size: var(--font-size-sm);
-    color: var(--gray);
-    margin-top: 6px;
-    line-height: 1.4;
-}
-
-.registration-form .form-group input,
-.registration-form .form-group select {
-    width: 100%;
-    padding: 14px var(--spacing-lg);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    font-family: var(--font-family);
-    font-size: var(--font-size-md);
-    color: var(--white);
-    transition: var(--transition-colors);
-}
-
-.registration-form .form-group input::placeholder {
-    color: var(--gray);
-}
-
-.registration-form .form-group input:focus,
-.registration-form .form-group select:focus {
-    outline: none;
-    border-color: rgba(255, 255, 255, 0.25);
-    background: var(--glass-bg-light);
-}
-
-.registration-form .form-group select {
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b6b6b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    padding-right: 40px;
-    cursor: pointer;
-}
-
-.registration-form .form-group select option {
-    background: var(--gray-darker);
-    color: var(--white);
-    padding: var(--spacing-md);
-}
 
 /* Input with prefix (@) */
 .input-prefix {
@@ -658,12 +523,12 @@ body {
 }
 
 .input-prefix:focus-within {
-    border-color: rgba(255, 255, 255, 0.25);
+    border-color: var(--white-a25);
     background: var(--glass-bg-light);
 }
 
 .input-prefix span {
-    padding: 14px 0 14px var(--spacing-lg);
+    padding: var(--spacing-md-lg) 0 var(--spacing-md-lg) var(--spacing-lg);
     color: var(--gray);
     font-size: var(--font-size-md);
 }
@@ -671,7 +536,7 @@ body {
 .input-prefix input {
     border: none;
     background: transparent;
-    padding: 14px var(--spacing-lg) 14px 4px;
+    padding: var(--spacing-md-lg) var(--spacing-lg) var(--spacing-md-lg) var(--spacing-xs);
 }
 
 .input-prefix input:focus {
@@ -681,86 +546,22 @@ body {
 }
 
 /* ===========================================
-   Leader Toggle & Details
+   Leader Details
    =========================================== */
 
-.leader-toggle {
-    margin-bottom: 18px;
-}
-
-.toggle-label {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    padding: 12px var(--spacing-lg);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    transition: var(--transition-colors);
-}
-
-.toggle-label:hover {
-    background: var(--glass-bg-light);
-    border-color: var(--glass-border-hover);
-}
-
-.toggle-label input[type="checkbox"] {
-    display: none;
-}
-
-.toggle-switch {
-    position: relative;
-    width: 40px;
-    height: 22px;
-    background: var(--glass-bg-light);
-    border: 1px solid var(--glass-border);
-    border-radius: 11px;
-    flex-shrink: 0;
-    transition: var(--transition-colors);
-}
-
-.toggle-switch::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 16px;
-    height: 16px;
-    background: var(--gray-light);
-    border-radius: 50%;
-    transition: var(--transition-colors);
-}
-
-.toggle-label input:checked ~ .toggle-switch {
-    background: rgba(77, 171, 247, 0.3);
-    border-color: rgba(77, 171, 247, 0.5);
-}
-
-.toggle-label input:checked ~ .toggle-switch::after {
-    left: 20px;
-    background: var(--accent);
-}
-
-.toggle-text {
-    font-size: var(--font-size-md);
-    font-weight: 500;
-    color: var(--gray-light);
-}
-
 .leader-details {
-    margin-bottom: 18px;
+    margin-bottom: var(--spacing-xl);
 }
 
 .leader-info-block {
     display: flex;
-    gap: 10px;
+    gap: var(--spacing-md-sm);
     align-items: flex-start;
-    padding: 12px var(--spacing-lg);
-    background: rgba(77, 171, 247, 0.08);
-    border: 1px solid rgba(77, 171, 247, 0.15);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: rgba(77, 171, 247, 0.08); /* one-off: rgba(77,171,247,0.08) info block blue bg */
+    border: 1px solid rgba(77, 171, 247, 0.15); /* one-off: rgba(77,171,247,0.15) info block blue border */
     border-radius: var(--radius-lg);
-    margin-bottom: 18px;
+    margin-bottom: var(--spacing-xl);
 }
 
 .leader-info-block svg {
@@ -777,30 +578,6 @@ body {
     line-height: 1.5;
 }
 
-.registration-form textarea {
-    width: 100%;
-    padding: 14px var(--spacing-lg);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    font-family: var(--font-family);
-    font-size: var(--font-size-md);
-    color: var(--white);
-    resize: vertical;
-    min-height: 60px;
-    transition: var(--transition-colors);
-}
-
-.registration-form textarea::placeholder {
-    color: var(--gray);
-}
-
-.registration-form textarea:focus {
-    outline: none;
-    border-color: rgba(255, 255, 255, 0.25);
-    background: var(--glass-bg-light);
-}
-
 /* ===========================================
    Access States (right panel content)
    =========================================== */
@@ -812,10 +589,9 @@ body {
     padding: var(--spacing-lg);
 }
 
-.retry-button,
-.logout-button-full {
+.retry-button {
     width: 100%;
-    padding: 14px 28px;
+    padding: var(--spacing-md-lg) 28px; /* one-off: 28px login retry button padding */
     background: var(--glass-bg-light);
     border: 1px solid var(--glass-border);
     color: var(--gray-light);
@@ -832,10 +608,9 @@ body {
     color: var(--accent);
 }
 
-.logout-button-full:hover {
-    background: rgba(255, 107, 107, 0.1);
-    border-color: rgba(255, 107, 107, 0.3);
-    color: var(--status-red);
+/* Logout button: base styles from .btn .btn-danger */
+#btnLogout {
+    width: 100%;
 }
 
 /* ===========================================
@@ -875,11 +650,11 @@ body {
 }
 
 .role-option:first-child:hover {
-    border-color: rgba(255, 255, 255, 0.25);
+    border-color: var(--white-a25);
 }
 
 .role-option.secondary:hover {
-    border-color: rgba(81, 207, 102, 0.4);
+    border-color: rgba(81, 207, 102, 0.4); /* one-off: rgba(81,207,102,0.4) green role hover border */
 }
 
 .role-icon {
@@ -903,7 +678,7 @@ body {
 }
 
 .role-title {
-    font-size: 15px;
+    font-size: var(--font-size-md);
     font-weight: 600;
     color: var(--white);
 }
@@ -919,7 +694,7 @@ body {
    =========================================== */
 
 .login-footer {
-    margin-top: 32px;
+    margin-top: var(--spacing-3xl);
     text-align: center;
 }
 
@@ -985,7 +760,5 @@ body {
 /* ===========================================
    Utility Classes
    =========================================== */
-
-.hidden {
-    display: none !important;
+/* .hidden moved to shared/css/utilities.css (CSS-03) */
 }

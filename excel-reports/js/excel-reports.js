@@ -1,4 +1,16 @@
 // Excel Reports Application - Новая модульная архитектура
+//
+// Phase 24 SIG-02: state — signals-based ExcelReportsState IIFE
+// (заменил Pub/Sub StateManager). Эффекты регистрируются в setupSubscriptions()
+// и dispose в onDestroy через ModuleFactory (Pitfall C — no memory leak).
+// Все signal writes происходят в mutator-методах state, НЕ inside effect (Pitfall A).
+//
+// Phase 24 SIG-04: ModuleFactory canary integration. ModuleFactory.create({
+// name: 'excel-reports', optimistic: false }) вызывается inside PageLifecycle.onInit
+// и предоставляет: events scope (auto-cleanup на destroy) + effect tracking
+// (через _disposers внутри factory). PageLifecycle untouched. ExcelReportsState
+// (Plan 24-03 domain state) coexists — НЕ заменён ModuleFactory (factory — infra).
+// excel-reports не использует items/filtered/crud — canary scope: smaller blast radius.
 
 const excelApp = {
     // Модули
@@ -8,15 +20,32 @@ const excelApp = {
     uiRenderer: null,
     utils: null,
 
+    // ModuleFactory instance (Plan 24-05 canary). Инициализируется в init() из onInit.
+    // Provides: events scope (auto-cleanup on destroy), effect tracking (auto-disposed).
+    module: null,
+
     // Результат обработки
     result: null,
 
-    // Инициализация приложения
-    init() {
+    // Trackers для подавления повторного re-render одного и того же шага
+    _lastRenderedStep: null,
+    _lastSelectedTemplateForIndicator: null,
+
+    // Инициализация приложения. Принимает ModuleFactory instance из PageLifecycle.onInit.
+    init(moduleInstance) {
         try {
+            // ModuleFactory canary (SIG-04): events scope + effect tracking + destroy lifecycle
+            this.module = moduleInstance;
+            if (!this.module) {
+                throw new Error('ModuleFactory instance не передан — canary integration broken');
+            }
+
             // Инициализация модулей
             this.utils = new ExcelReportsUtils();
-            this.state = new StateManager();
+            this.state = window.ExcelReportsState; // signals-based IIFE (cdn-deps.js loaded)
+            if (!this.state) {
+                throw new Error('ExcelReportsState недоступен — проверьте загрузку cdn-deps.js + state-manager.js');
+            }
             this.navigator = new StepsNavigator(this.state);
             this.fileProcessor = new FileProcessor(this.utils);
             this.uiRenderer = new UIRenderer(this.state, this.navigator, this.utils);
@@ -26,10 +55,10 @@ const excelApp = {
                 throw new Error('Не удалось инициализировать UI');
             }
 
-            // Подписки на изменения состояния
+            // Подписки на изменения состояния (через mod.effect → auto-disposed at destroy)
             this.setupSubscriptions();
 
-            // Подключаем event listeners
+            // Подключаем event listeners (через mod.events.on → auto-cleanup at destroy)
             this.setupEventListeners();
 
             // Рендерим начальный шаг (выбор шаблона)
@@ -42,62 +71,83 @@ const excelApp = {
         }
     },
 
-    // Настройка подписок на изменения состояния
+    // Настройка подписок на изменения состояния через signals effects.
+    // Effects регистрируются через this.module.effect(...) — factory auto-tracks dispose
+    // в _disposers и вызывает их в this.module.destroy() (Pitfall C — no memory leak).
     setupSubscriptions() {
         // При изменении текущего шага - обновляем UI
-        this.state.subscribe('currentStep', (newStep) => {
-            this.uiRenderer.renderStep(newStep);
-            logger.log(`Переход к шагу: ${newStep}`, 'info');
+        // Effect автоматически subscribes к currentStep.value
+        this.module.effect(() => {
+            const newStep = this.state.currentStep.value;
+            // Initial fire (newStep === 'template') — пропускаем, т.к. init() уже вызвал renderStep
+            if (this._lastRenderedStep !== null && this._lastRenderedStep !== newStep) {
+                this.uiRenderer.renderStep(newStep);
+                logger.log(`Переход к шагу: ${newStep}`, 'info');
+            }
+            this._lastRenderedStep = newStep;
         });
 
-        // При инициализации шагов - обновляем индикатор
-        this.state.subscribe('stepsInitialized', (template) => {
-            this.uiRenderer.updateStepsIndicator();
-            logger.log(`Шаблон выбран: ${template.name}`, 'success');
+        // При выборе шаблона (selectedTemplate signal) - обновляем индикатор
+        // Заменяет legacy 'stepsInitialized' notification path
+        this.module.effect(() => {
+            const template = this.state.selectedTemplate.value;
+            // Skip initial null fire — обновляем только когда шаблон РЕАЛЬНО выбран и изменился
+            if (template && this._lastSelectedTemplateForIndicator !== template) {
+                this.uiRenderer.updateStepsIndicator();
+                logger.log(`Шаблон выбран: ${template.name}`, 'success');
+            }
+            this._lastSelectedTemplateForIndicator = template;
         });
     },
 
-    // Настройка event listeners для кнопок
+    // Настройка event listeners для кнопок через this.module.events.on (auto-cleanup на destroy).
     setupEventListeners() {
+        if (!this.module.events) {
+            // EventManager не доступен — graceful degradation (factory вернул events=null)
+            logger.log('ModuleFactory.events недоступен — fallback на addEventListener', 'warning');
+            this._setupEventListenersFallback();
+            this.setupEventDelegation();
+            return;
+        }
+
         // Log panel toggle buttons
         const logToggleBtn = document.getElementById('logToggleBtn');
         const logCloseBtn = document.getElementById('logCloseBtn');
         if (logToggleBtn) {
-            logToggleBtn.addEventListener('click', toggleLogPanel);
+            this.module.events.on(logToggleBtn, 'click', toggleLogPanel);
         }
         if (logCloseBtn) {
-            logCloseBtn.addEventListener('click', toggleLogPanel);
+            this.module.events.on(logCloseBtn, 'click', toggleLogPanel);
         }
 
         // Log clear button
         const logClearBtn = document.getElementById('logClearBtn');
         if (logClearBtn) {
-            logClearBtn.addEventListener('click', () => logger.clear());
+            this.module.events.on(logClearBtn, 'click', () => logger.clear());
         }
 
-        // Reset modal buttons
-        const resetModalClose = document.getElementById('resetModalClose');
-        const resetModalCancel = document.getElementById('resetModalCancel');
-        const resetModalConfirm = document.getElementById('resetModalConfirm');
-
-        if (resetModalClose) {
-            resetModalClose.addEventListener('click', () => this.closeResetModal());
-        }
-        if (resetModalCancel) {
-            resetModalCancel.addEventListener('click', () => this.closeResetModal());
-        }
-        if (resetModalConfirm) {
-            resetModalConfirm.addEventListener('click', () => this.confirmReset());
-        }
-
-        // Event delegation для динамического контента
+        // Event delegation для динамического контента (через mod.events для cleanup)
         this.setupEventDelegation();
     },
 
-    // Настройка event delegation для динамически генерируемого HTML
+    // Fallback при отсутствии mod.events (graceful degradation).
+    _setupEventListenersFallback() {
+        const logToggleBtn = document.getElementById('logToggleBtn');
+        const logCloseBtn = document.getElementById('logCloseBtn');
+        if (logToggleBtn) logToggleBtn.addEventListener('click', toggleLogPanel);
+        if (logCloseBtn) logCloseBtn.addEventListener('click', toggleLogPanel);
+
+        const logClearBtn = document.getElementById('logClearBtn');
+        if (logClearBtn) logClearBtn.addEventListener('click', () => logger.clear());
+
+    },
+
+    // Настройка event delegation для динамически генерируемого HTML.
+    // Document-level handlers — через this.module.events.on если доступен (auto-cleanup
+    // на destroy), иначе fallback на document.addEventListener.
     setupEventDelegation() {
         // Делегирование для кликов
-        document.addEventListener('click', (e) => {
+        const onClick = (e) => {
             const target = e.target.closest('[data-action]');
             if (!target) return;
 
@@ -137,7 +187,7 @@ const excelApp = {
 
                 case 'show-reset-modal':
                     e.preventDefault();
-                    this.showResetModal();
+                    this.showResetModal(); // async, fire-and-forget OK (ConfirmModal handles its own lifecycle)
                     break;
 
                 case 'process-files':
@@ -145,12 +195,12 @@ const excelApp = {
                     this.processFiles();
                     break;
             }
-        });
+        };
 
         // Делегирование для изменения файловых input'ов
-        document.addEventListener('change', (e) => {
+        const onChange = (e) => {
             const target = e.target;
-            if (!target.matches('[data-action]')) return;
+            if (!target.matches || !target.matches('[data-action]')) return;
 
             const action = target.dataset.action;
 
@@ -173,7 +223,16 @@ const excelApp = {
                     }
                     break;
             }
-        });
+        };
+
+        if (this.module && this.module.events) {
+            this.module.events.on(document, 'click', onClick);
+            this.module.events.on(document, 'change', onChange);
+        } else {
+            // Graceful degradation: factory не предоставил events
+            document.addEventListener('click', onClick);
+            document.addEventListener('change', onChange);
+        }
     },
 
     // ==================== ПУБЛИЧНЫЕ МЕТОДЫ (вызываются из HTML) ====================
@@ -200,7 +259,7 @@ const excelApp = {
 
         } catch (error) {
             console.error('Ошибка выбора шаблона:', error);
-            this.utils.showError(error.message);
+            Toast.error(error.message);
             logger.log(`Ошибка: ${error.message}`, 'error');
         }
     },
@@ -210,7 +269,7 @@ const excelApp = {
         if (!files || files.length === 0) return;
 
         try {
-            const template = this.state.get('selectedTemplate');
+            const template = this.state.selectedTemplate.value;
             if (!template || !template.filesConfig[stepId]) {
                 throw new Error('Конфигурация шага не найдена');
             }
@@ -242,7 +301,7 @@ const excelApp = {
                 // Показываем конкретную ошибку пользователю
                 const failedFiles = results.filter(r => !r.success);
                 const userError = failedFiles.map(f => f.error).join('; ');
-                this.utils.showError(userError || 'Ошибка загрузки файлов');
+                Toast.error(userError || 'Ошибка загрузки файлов');
                 return;
             }
 
@@ -263,7 +322,7 @@ const excelApp = {
         } catch (error) {
             this.hideInlineLoader(stepId);
             console.error('Ошибка загрузки файлов:', error);
-            this.utils.showError(error.message);
+            Toast.error(error.message);
             logger.log(`Ошибка: ${error.message}`, 'error');
         }
     },
@@ -293,7 +352,7 @@ const excelApp = {
                 // Показываем конкретную ошибку пользователю
                 const failedFiles = results.filter(r => !r.success);
                 const userError = failedFiles.map(f => f.error).join('; ');
-                this.utils.showError(userError || 'Ошибка загрузки файла');
+                Toast.error(userError || 'Ошибка загрузки файла');
                 return;
             }
 
@@ -303,7 +362,7 @@ const excelApp = {
             this.state.setStepFiles(subId, Array.from(files).map(f => f.name));
 
             // Сохраняем данные в основной шаг для обработки
-            const template = this.state.get('selectedTemplate');
+            const template = this.state.selectedTemplate.value;
             const config = template.filesConfig[stepId];
 
             // Собираем данные всех subFiles
@@ -340,7 +399,7 @@ const excelApp = {
         } catch (error) {
             this.hideSubFileLoader(`${stepId}_${subFileId}`);
             console.error('Ошибка загрузки файла:', error);
-            this.utils.showError(error.message);
+            Toast.error(error.message);
             logger.log(`Ошибка: ${error.message}`, 'error');
         }
     },
@@ -356,7 +415,7 @@ const excelApp = {
             loader.innerHTML = `
                 <div class="inline-loader-content">
                     <div class="inline-loader-header">
-                        <div class="inline-loader-spinner"></div>
+                        <div class="spinner spinner--sm"></div>
                         <span class="inline-loader-text">${message}</span>
                     </div>
                     <div class="inline-loader-progress">
@@ -416,7 +475,7 @@ const excelApp = {
             const uploadArea = card.querySelector('.file-upload-area-compact');
             if (uploadArea) {
                 uploadArea.innerHTML = `
-                    <div class="inline-loader-spinner"></div>
+                    <div class="spinner spinner--sm"></div>
                     <div class="upload-text-compact">Загрузка...</div>
                 `;
             }
@@ -461,7 +520,7 @@ const excelApp = {
     // Обработка и экспорт данных
     async processFiles() {
         try {
-            const template = this.state.get('selectedTemplate');
+            const template = this.state.selectedTemplate.value;
             if (!template) {
                 throw new Error('Шаблон не выбран');
             }
@@ -497,7 +556,7 @@ const excelApp = {
         } catch (error) {
             this.uiRenderer.hideLoadingSpinner();
             console.error('Ошибка обработки:', error);
-            this.utils.showError(error.message);
+            Toast.error(error.message);
             logger.log(`Ошибка: ${error.message}`, 'error');
         }
     },
@@ -505,14 +564,14 @@ const excelApp = {
     // Экспорт результата
     async exportResult() {
         if (!this.result) {
-            this.utils.showError('Нет данных для экспорта');
+            Toast.error('Нет данных для экспорта');
             return;
         }
 
         try {
             this.uiRenderer.showLoadingSpinner('Экспорт в Excel...');
 
-            const template = this.state.get('selectedTemplate');
+            const template = this.state.selectedTemplate.value;
             const workbook = new ExcelJS.Workbook();
 
             // Создаём листы из результата
@@ -594,35 +653,35 @@ const excelApp = {
             window.URL.revokeObjectURL(url);
 
             this.uiRenderer.hideLoadingSpinner();
-            this.utils.showSuccess('Файл успешно сохранён');
+            Toast.success('Файл успешно сохранён');
             logger.log('✓ Файл успешно экспортирован', 'success');
 
         } catch (error) {
             this.uiRenderer.hideLoadingSpinner();
             console.error('Ошибка экспорта:', error);
-            this.utils.showError(error.message);
+            Toast.error(error.message);
             logger.log(`Ошибка экспорта: ${error.message}`, 'error');
         }
     },
 
-    // Показать модальное окно подтверждения сброса
-    showResetModal() {
-        document.getElementById('resetModal').classList.add('active');
+    // Показать диалог подтверждения сброса через shared ConfirmModal (HTML-03)
+    async showResetModal() {
+        const confirmed = await ConfirmModal.show('Вы уверены, что хотите начать заново?', {
+            description: 'Все загруженные данные будут удалены.',
+            confirmText: 'Сбросить',
+            cancelText: 'Отмена',
+            danger: true
+        });
+        if (confirmed) this._performReset();
     },
 
-    // Закрыть модальное окно подтверждения сброса
-    closeResetModal() {
-        document.getElementById('resetModal').classList.remove('active');
-    },
-
-    // Подтверждение и выполнение сброса
-    confirmReset() {
-        this.closeResetModal();
+    // Сброс состояния приложения (вызывается после подтверждения в ConfirmModal)
+    _performReset() {
         this.state.reset();
         this.result = null;
         this.navigator.navigateTo('template');
         logger.log('Приложение сброшено', 'info');
-        this.utils.showSuccess('Данные очищены. Начните заново.');
+        Toast.success('Данные очищены. Начните заново.');
     },
 
     // Переключение сайдбара
@@ -702,18 +761,43 @@ function toggleLogPanel() {
     }
 }
 
-// Initialize via PageLifecycle
+// Initialize via PageLifecycle.
+//
+// Phase 24 SIG-04 canary integration:
+//   ModuleFactory.create() called INSIDE onInit (NOT replace PageLifecycle).
+//   excel-reports config: name='excel-reports', НЕТ entity (no CRUD), optimistic=false (no mutations).
+//   Smaller blast radius — canary validates factory creation + events scope + destroy lifecycle
+//   до Phase 27 mass adoption (partners/team-info/admin/partner-onboarding).
+//
+//   Exposed: window.excelReportsModule (для onDestroy + DevTools inspection).
+//   onDestroy → mod.destroy() → events.destroyAll() + _disposers.forEach(d => d())
+//   (Pitfall C — no memory leaks).
 PageLifecycle.init({
     module: 'reports',
     async onInit() {
-        excelApp.init();
+        logger.init();  // JS-01: ранее в logger.js DOMContentLoaded
+        // ModuleFactory canary (SIG-04). Provides events + effect tracking + destroy lifecycle.
+        // ExcelReportsState (Plan 24-03) — domain state — coexists в excelApp.state.
+        const mod = window.ModuleFactory.create({
+            name: 'excel-reports',
+            // entity: undefined — нет CRUD сущности (excel-reports — wizard, не CRUD-страница)
+            optimistic: false  // нет server-side mutations (только локальная обработка файлов)
+        });
+        window.excelReportsModule = mod;
+        excelApp.init(mod);
     },
     onDestroy() {
+        // ModuleFactory.destroy() → events.destroyAll() + _disposers.forEach(d => d())
+        // Idempotent (safe для double-cleanup). Pitfall C prevention — нет memory leaks
+        // на navigate-away (verified via Plan 24-04 D-group tests).
+        if (window.excelReportsModule) {
+            window.excelReportsModule.destroy();
+            window.excelReportsModule = null;
+        }
+        excelApp.module = null;
         if (excelApp.fileProcessor) {
             excelApp.fileProcessor.destroy();
         }
     },
-    modals: {
-        '#resetModal': () => excelApp.closeResetModal()
-    }
+    modals: {}
 });

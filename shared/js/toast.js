@@ -45,8 +45,12 @@ const Toast = {
      * @param {string} message - Текст сообщения
      * @param {string} type - Тип: success, error, warning, info
      * @param {number} duration - Длительность показа в мс (0 = не закрывать автоматически)
+     * @param {Object} options - Дополнительные опции
+     * @param {Object} [options.action] - Кнопка действия (например, Retry при откате)
+     * @param {string} options.action.label - Текст кнопки
+     * @param {Function} options.action.callback - Функция при клике
      */
-    show(message, type = 'info', duration = 4000) {
+    show(message, type = 'info', duration = 4000, options = {}) {
         this.init();
 
         const toast = document.createElement('div');
@@ -68,7 +72,20 @@ const Toast = {
             </svg>`;
         closeBtn.addEventListener('click', () => this.close(toast));
 
-        toast.append(iconDiv, msgDiv, closeBtn);
+        // Action button (optional) -- for Retry on rollback, etc.
+        if (options.action && options.action.label && typeof options.action.callback === 'function') {
+            const actionBtn = document.createElement('button');
+            actionBtn.className = 'toast-action';
+            actionBtn.textContent = options.action.label;
+            actionBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                options.action.callback();
+                this.close(toast);
+            });
+            toast.append(iconDiv, msgDiv, actionBtn, closeBtn);
+        } else {
+            toast.append(iconDiv, msgDiv, closeBtn);
+        }
 
         this.container.appendChild(toast);
 
@@ -105,20 +122,20 @@ const Toast = {
     /**
      * Быстрые методы для разных типов
      */
-    success(message, duration = 4000) {
-        return this.show(message, 'success', duration);
+    success(message, duration = 4000, options = {}) {
+        return this.show(message, 'success', duration, options);
     },
 
-    error(message, duration = 5000) {
-        return this.show(message, 'error', duration);
+    error(message, duration = 5000, options = {}) {
+        return this.show(message, 'error', duration, options);
     },
 
-    warning(message, duration = 4000) {
-        return this.show(message, 'warning', duration);
+    warning(message, duration = 4000, options = {}) {
+        return this.show(message, 'warning', duration, options);
     },
 
-    info(message, duration = 4000) {
-        return this.show(message, 'info', duration);
+    info(message, duration = 4000, options = {}) {
+        return this.show(message, 'info', duration, options);
     }
 };
 

@@ -16,7 +16,8 @@ const OnboardingState = (() => {
         },
         userRole: 'executor',
         userEmail: '',
-        loading: false
+        loading: false,
+        _optimistic: null
     };
 
     const _subscribers = {};
@@ -45,6 +46,13 @@ const OnboardingState = (() => {
     function subscribe(key, callback) {
         if (!_subscribers[key]) _subscribers[key] = [];
         _subscribers[key].push(callback);
+        // Phase 31 BRIDGE-01: return unsubscribe function (excel-reports StateManager pattern).
+        // Backwards-compatible: existing consumers calling subscribe() без использования return value
+        // продолжают работать. Defensive в callers: `if (typeof unsub === 'function') unsub()`.
+        return () => {
+            if (!_subscribers[key]) return;
+            _subscribers[key] = _subscribers[key].filter(fn => fn !== callback);
+        };
     }
 
     function _notify(key) {
@@ -53,5 +61,13 @@ const OnboardingState = (() => {
         }
     }
 
-    return { get, set, subscribe };
+    function getOptimistic() {
+        return _state._optimistic;
+    }
+
+    function setOptimistic(mgr) {
+        _state._optimistic = mgr;
+    }
+
+    return { get, set, subscribe, getOptimistic, setOptimistic };
 })();

@@ -11,25 +11,7 @@ const TeamAPI = {
      * Основной метод API вызова
      */
     async call(action, params = {}) {
-        // API через Google Apps Script
-        const url = new URL(CloudStorage.SCRIPT_URL);
-        url.searchParams.set('action', action);
-
-        for (const [key, value] of Object.entries(params)) {
-            if (value !== undefined && value !== null) {
-                url.searchParams.set(key, typeof value === 'object' ? JSON.stringify(value) : value);
-            }
-        }
-
-        const response = await fetch(url.toString(), { method: 'GET' });
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        try {
-            return await response.json();
-        } catch (e) {
-            throw new Error('Неверный формат ответа сервера');
-        }
+        return CloudStorage.callApi(action, params);
     },
 
     /**

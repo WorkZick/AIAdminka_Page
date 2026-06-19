@@ -42,7 +42,7 @@ const TeamState = {
     dragStart: { x: 0, y: 0 },
 
     // Настройки приглашений
-    currentInviteType: 'guests', // По умолчанию показываем список гостей
+    currentInviteType: 'reddyId', // По умолчанию активен Reddy ID (совпадает с .invite-type-btn.active в HTML)
     pendingInvites: [],
 
     // Гости (пользователи waiting_invite для приглашения)
@@ -101,6 +101,12 @@ const TeamState = {
             this.sortDirection = 'asc';
         }
     },
+
+    // Server pagination state
+    serverPaginationEnabled: false,
+    pageSize: 20,
+    totalCount: 0,
+    _currentRequestId: 0,
 
     // Pagination & filtering
     currentPage: 1,

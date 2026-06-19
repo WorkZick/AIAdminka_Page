@@ -1,3 +1,4 @@
+@layer module {
 /* partner-onboarding.css — Стили модуля */
 
 /* ── Views ── */
@@ -19,8 +20,8 @@
     position: absolute;
     top: var(--spacing-sm);
     right: var(--spacing-sm);
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -52,44 +53,10 @@
 
 /* Filter dropdown — uses shared .dropdown-wrap */
 
-/* Search */
-.search-box {
-    position: relative;
+/* Search — uses shared .search-input-wrapper from forms.css */
+.search-input-wrapper {
     flex: 1;
     max-width: 240px;
-}
-
-.search-box .search-icon {
-    position: absolute;
-    left: var(--spacing-sm);
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0.5;
-    pointer-events: none;
-    filter: brightness(0) invert(1);
-}
-
-.search-box .search-input {
-    width: 100%;
-    padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm) 32px;
-    font-size: var(--font-size-sm);
-    font-family: var(--font-family);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    color: var(--white);
-    transition: var(--transition-colors);
-    box-sizing: border-box;
-}
-
-.search-box .search-input:hover,
-.search-box .search-input:focus {
-    border-color: var(--accent-muted);
-    background: var(--glass-bg-hover);
-}
-
-.search-box .search-input::placeholder {
-    color: var(--gray);
 }
 
 /* btn-new-request / btn-settings → DS .btn--ghost.btn-sm */
@@ -111,7 +78,7 @@
 .rc-steps {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    gap: var(--spacing-2xs);
 }
 
 .rc-step {
@@ -155,7 +122,7 @@
 
 .rc-no-review {
     margin-left: auto;
-    font-size: 9px;
+    font-size: var(--font-size-2xs);
     color: var(--gray);
     font-style: italic;
 }
@@ -163,7 +130,7 @@
 .rc-step-body {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--spacing-xs);
 }
 
 .rc-section {
@@ -212,31 +179,16 @@
     color: var(--accent);
 }
 
-.rc-select {
-    background: var(--gray-dark);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm);
-    color: var(--white);
-    font-family: var(--font-family);
+/* Role config: extra-small select for inline use */
+#roleConfigBody .form-select {
+    padding: 2px var(--spacing-2xl) 2px var(--spacing-2xs);
     font-size: var(--font-size-xs);
-    padding: 1px 5px;
+    min-width: 0;
+    background-position: right var(--spacing-2xs) center;
 }
 
-.rc-select option {
-    background: var(--gray-dark);
-    color: var(--white);
-}
-
-.role-config-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.role-config-actions {
-    display: flex;
-    gap: var(--spacing-sm);
-}
+/* role-config-footer/actions удалены (audit 2026-05-20) — теперь стандартный .modal-footer
+   (flex-end + gap 12px) даёт равные отступы между "Сбросить" и "Сохранить". */
 
 /* ── Sync Bar ── */
 
@@ -277,17 +229,13 @@
 
 /* ── Source Settings Modal ── */
 
-.form-hint {
-    font-size: var(--font-size-xs);
-    color: var(--gray);
-    margin-top: var(--spacing-xs);
-}
+/* .form-hint — uses DS from shared/css/components/forms.css */
 
 /* Source list */
 .source-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    gap: var(--spacing-2xs);
 }
 
 .source-empty {
@@ -314,7 +262,7 @@
 }
 
 .source-item-error {
-    border-color: rgba(255, 107, 107, 0.3);
+    border-color: var(--status-red-tint-strong);
 }
 
 .source-item-info {
@@ -350,7 +298,7 @@
     opacity: 1;
 }
 
-/* btn-add-source removed → DS .btn--ghost.btn--dashed.btn-sm.btn-block */
+/* btn-add-source removed → DS .btn-secondary.btn-sm.btn-block */
 
 /* Source edit footer */
 .source-edit-actions {
@@ -443,7 +391,7 @@
 
 .conditions-example-note code {
     background: var(--glass-bg-light);
-    padding: 1px 4px;
+    padding: 1px var(--spacing-xs);
     border-radius: var(--radius-sm);
     color: var(--accent-muted);
 }
@@ -483,27 +431,16 @@
     margin-bottom: var(--spacing-sm);
 }
 
-.conditions-example-table {
-    width: 100%;
-    border-collapse: collapse;
+.conditions-example .table {
     font-size: var(--font-size-xs);
     white-space: nowrap;
 }
-
-.conditions-example-table th,
-.conditions-example-table td {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border: 1px solid var(--glass-border);
-    text-align: left;
-}
-
-.conditions-example-table th {
+.conditions-example .table th {
     background: var(--glass-bg-light);
     color: var(--accent-muted);
     font-weight: 600;
 }
-
-.conditions-example-table td {
+.conditions-example .table td {
     color: var(--gray-light);
 }
 
@@ -585,7 +522,7 @@
 
 .conditions-delete-btn:hover {
     opacity: 1;
-    background: rgba(255, 107, 107, 0.15);
+    background: var(--status-red-tint);
 }
 
 .conditions-delete-btn img {
@@ -620,26 +557,28 @@
     cursor: pointer;
 }
 
-.select-all-label input[type="checkbox"] {
-    accent-color: var(--accent);
-    width: 16px;
-    height: 16px;
-}
-
 /* ── Request Table (rows) ── */
 
 .requests-table {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--spacing-2xs);
     flex: 1;
     overflow-y: auto;
     contain: layout style;
 }
 
+/* Когда список скрыт (loading/empty), эти state-блоки забирают flex-grow
+   на себя — иначе пагинация всплывает к верху flex-контейнера .onb-view. */
+.onb-view #listLoading:not(.hidden),
+.onb-view #listEmpty:not(.hidden) {
+    flex: 1;
+    justify-content: center;
+}
+
 .request-row {
     display: grid;
-    grid-template-columns: 72px 1fr 160px 110px 120px;
+    grid-template-columns: 72px 1fr 12% 12% 10%;
     align-items: center;
     gap: var(--spacing-md);
     padding: var(--spacing-sm) var(--spacing-lg);
@@ -651,17 +590,12 @@
     min-height: 40px;
     contain: layout style paint;
     will-change: background;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 40px;
 }
 
 .request-row.has-checkbox {
-    grid-template-columns: 28px 72px 1fr 160px 110px 120px;
-}
-
-.row-checkbox {
-    accent-color: var(--accent);
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
+    grid-template-columns: 28px 72px 1fr 12% 12% 10%;
 }
 
 .request-row:hover {
@@ -673,20 +607,50 @@
     opacity: 0.5;
     pointer-events: none;
     position: relative;
+    /* Override .request-row contain/content-visibility которые блокируют paint
+       absolutely-positioned children с animations */
+    contain: none !important;
+    content-visibility: visible !important;
 }
 
-.request-row.row-loading::after {
-    content: '';
+/* Phase 45 FINAL: компактный inline spinner справа на row.
+   Reuse shared `.spinner.spinner--sm` (size + animation наследуются из shared/loading.css —
+   keyframes `spin` там объявлен top-level, чтобы не сломаться при cross-layer reference). */
+.row-spinner {
+    display: none;
+}
+
+/* BFIX (audit 2026-05-20): unified spinner для row-loading И item--pending.
+   Раньше: row-loading использовал .row-spinner (HTML element, .spinner class),
+   а item--pending использовал .item--pending::after (pseudo с собственной анимацией
+   optimistic-spin). Pseudo-element спиннер выглядел заморозившимся на assistant role.
+   Сейчас: оба state показывают единый .row-spinner HTML element — same proven
+   .spinner.spinner--sm с @keyframes spin (top-level, верифицирован Round 4 audit).
+   item--pending::after отключён ниже (см. .request-row.item--pending::after). */
+.request-row.row-loading .row-spinner,
+.request-row.item--pending .row-spinner {
+    display: block;
     position: absolute;
     right: var(--spacing-lg);
     top: 50%;
-    width: 16px;
-    height: 16px;
-    margin-top: -8px;
-    border: 2px solid var(--glass-border);
-    border-top-color: var(--white);
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
+    margin-top: -10px;
+    pointer-events: none;
+    z-index: 5;
+}
+
+/* Disable pseudo-element spinner from shared/optimistic.css для request-row.
+   Этот pseudo не нужен — используем HTML .row-spinner вместо. */
+.request-row.item--pending::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Скрываем "Требует действия" / "Ожидание" текст когда показан спиннер
+   (либо .row-loading из onb-флоу, либо .item--pending от OptimisticManager — оба
+   рисуют спиннер справа, текст должен скрываться чтобы не накладывался) */
+.request-row.row-loading .row-turn,
+.request-row.item--pending .row-turn {
+    visibility: hidden;
 }
 
 .request-row.my-turn {
@@ -711,7 +675,7 @@
 .progress-segment {
     flex: 1;
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--radius-xs);
     background: var(--gray-medium);
 }
 
@@ -784,6 +748,7 @@
 .row-status {
     display: flex;
     align-items: center;
+    overflow: hidden;
 }
 
 /* ── Turn Cell ── */
@@ -804,53 +769,11 @@
     color: var(--gray-light);
 }
 
-/* ── Status Badges ── */
-
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px var(--spacing-sm);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-xs);
-    font-weight: 700;
-    line-height: 1.4;
-    white-space: nowrap;
-}
-
-.status--new {
-    background: rgba(218, 119, 242, 0.15);
-    color: var(--status-purple);
-}
-
-.status--in-progress {
-    background: rgba(255, 255, 255, 0.12);
-    color: var(--accent);
-}
-
-.status--on-review {
-    background: rgba(116, 192, 252, 0.15);
-    color: var(--status-blue);
-}
-
-.status--completed {
-    background: rgba(81, 207, 102, 0.15);
-    color: var(--status-green);
-}
-
-.status--approved {
-    background: rgba(81, 207, 102, 0.15);
-    color: var(--status-green);
-}
-
-.status--revision-needed {
-    background: rgba(255, 146, 43, 0.15);
-    color: var(--status-orange);
-}
-
-.status--cancelled {
-    background: rgba(255, 107, 107, 0.15);
-    color: var(--status-red);
-}
+/* Status badges: uses DS classes from shared/css/components/badges.css
+   Mapping: new→status-new_request, in_progress→status-working,
+   on_review→status-in_progress, approved→status-active,
+   revision_needed→status-need_info, completed→status-success,
+   cancelled→status-inactive */
 
 /* ── Header ── */
 
@@ -947,7 +870,7 @@
 
 .v-step.active .v-step-dot {
     background: var(--accent);
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.30);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.30); /* one-off: white-30 glow (--white-a25 is 0.25, --white-a35 is 0.35; no 0.30 token) */
 }
 
 .v-step-label {
@@ -1069,7 +992,7 @@
     flex-direction: column;
     min-height: 0;
     padding: var(--spacing-md);
-    padding-right: calc(var(--spacing-sm) + 28px + var(--spacing-xs));
+    padding-right: calc(var(--spacing-sm) + 32px + var(--spacing-xs));
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
@@ -1118,39 +1041,6 @@
     color: var(--white);
 }
 
-/* ── Date Input with "Now" button ── */
-
-.date-input-wrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.date-input-wrap .form-input {
-    flex: 1;
-    padding-right: 80px;
-}
-
-.date-now-btn {
-    position: absolute;
-    right: 8px;
-    padding: 4px 10px;
-    background: var(--glass-bg-hover);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm);
-    color: var(--accent);
-    font-size: var(--font-size-xs);
-    font-family: var(--font-family);
-    cursor: pointer;
-    transition: var(--transition-colors);
-}
-
-.date-now-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: var(--white);
-    border-color: rgba(255, 255, 255, 0.25);
-}
-
 /* ── Form Fields ── */
 
 .onb-form-fields {
@@ -1169,6 +1059,16 @@
 .field-required {
     color: var(--status-red);
     margin-left: 2px;
+}
+
+/* ── Disabled cascade hint ── */
+
+.disabled-hint {
+    opacity: 0.4;
+    cursor: not-allowed;
+    font-style: italic;
+    color: var(--gray) !important;
+    font-size: var(--font-size-sm);
 }
 
 /* ── File Upload ── */
@@ -1214,11 +1114,11 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.7); /* one-off: near-opaque black overlay (no black-70 token; --glass-bg-overlay is rgba(25,25,25,0.98)) */
     color: var(--white);
     border: none;
     cursor: pointer;
-    font-size: 16px;
+    font-size: var(--font-size-lg);
     line-height: 1;
     display: flex;
     align-items: center;
@@ -1276,7 +1176,7 @@
     border: none;
     color: var(--gray-light);
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--font-size-md);
     padding: 0;
     line-height: 1;
 }
@@ -1332,8 +1232,8 @@
 label.checklist-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px var(--spacing-sm);
+    gap: var(--spacing-2xs);
+    padding: var(--spacing-2xs) var(--spacing-sm);
     margin-bottom: 0;
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
@@ -1347,15 +1247,6 @@ label.checklist-item {
 
 label.checklist-item:hover {
     background: var(--glass-bg-hover);
-}
-
-label.checklist-item input[type="checkbox"] {
-    accent-color: var(--accent);
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-    margin: 0;
-    padding: 0;
 }
 
 /* Checklist item wrapper (checkbox + comment) */
@@ -1426,9 +1317,9 @@ label.checklist-item input[type="checkbox"] {
     display: none;
 }
 
-.checklist-comment-input {
-    font-size: var(--font-size-sm) !important;
-    min-height: 36px !important;
+.checklist-comment .form-textarea {
+    font-size: var(--font-size-sm);
+    min-height: 36px;
     resize: none;
     overflow: hidden;
 }
@@ -1555,6 +1446,26 @@ label.checklist-item input[type="checkbox"] {
     display: none;
 }
 
+/* Status dropdown: btn-primary acts as trigger without ::after conflict */
+.status-dropdown-wrap #btnStatusSubmit {
+    position: relative;
+}
+
+.status-arrow {
+    font-size: var(--font-size-xs);
+    opacity: 0.7;
+    transition: transform var(--transition-fast);
+}
+
+.status-dropdown-wrap:has(.dropdown-menu:not(.hidden)) .status-arrow {
+    transform: rotate(180deg);
+}
+
+.status-dropdown-wrap:has(.dropdown-menu:not(.hidden)) #btnStatusSubmit {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    border-top-color: transparent;
+}
+
 /* ── Review Header ── */
 
 .onb-review-header {
@@ -1588,7 +1499,7 @@ label.checklist-item input[type="checkbox"] {
     position: fixed;
     inset: 0;
     z-index: var(--z-modal);
-    background: rgba(0, 0, 0, 0.92);
+    background: rgba(0, 0, 0, 0.92); /* one-off: near-opaque pure black lightbox bg (--glass-bg-overlay is rgba(25,25,25,0.98)) */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1601,7 +1512,7 @@ label.checklist-item input[type="checkbox"] {
     max-height: 95vh;
     object-fit: contain;
     border-radius: var(--radius-sm);
-    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5); /* one-off: custom shadow value (--shadow-lg is 0 8px 32px rgba(0,0,0,0.3), different spread+alpha) */
 }
 
 /* ── DEV Role Switcher ── */
@@ -1647,8 +1558,8 @@ label.checklist-item input[type="checkbox"] {
 }
 
 .dev-role-btn.active {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.25);
+    background: var(--white-a12);
+    border-color: var(--white-a25);
     color: var(--white);
     font-weight: 700;
 }
@@ -1666,7 +1577,7 @@ label.checklist-item input[type="checkbox"] {
         flex: 1;
     }
 
-    .search-box {
+    .search-input-wrapper {
         max-width: none;
         flex: 1 1 100%;
     }
@@ -1716,4 +1627,5 @@ label.checklist-item input[type="checkbox"] {
 .form-group--waiting .form-input:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+}
 }

@@ -132,7 +132,7 @@ const PageLifecycle = {
             profileData.predefinedFields['Корп. e-mail'] = user.email;
 
             // syncMyProfile — безопасный эндпоинт, email привязан к токену на бэкенде
-            await CloudStorage.callApi('syncMyProfile', { data: profileData });
+            await CloudStorage.syncMyProfile(profileData);
             localStorage.setItem(syncKey, Date.now().toString());
         } catch (e) {
             console.warn('[PageLifecycle] Auto-sync profile failed:', e.message);

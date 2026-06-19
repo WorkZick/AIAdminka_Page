@@ -1,3 +1,4 @@
+@layer module {
 /* ============================================================
    Settings Module - Specific Styles
    Base styles provided by ../shared/css/design-system.css
@@ -33,7 +34,7 @@
    =========================================== */
 
 .settings-card {
-    background: rgba(40, 40, 40, 0.4);
+    background: rgba(40, 40, 40, 0.4); /* one-off: settings card bg (rgba(40,40,40,0.4) — distinct from glass-bg-medium rgba(30,30,30,0.8)) */
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-2xl);
     padding: var(--spacing-xl);
@@ -124,7 +125,7 @@
 .profile-email {
     font-size: var(--font-size-sm);
     color: var(--gray-light);
-    margin-bottom: 6px;
+    margin-bottom: var(--spacing-2xs);
 }
 
 .profile-role {
@@ -142,9 +143,9 @@
 .team-name-editable {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    background: rgba(255, 255, 255, 0.05);
+    gap: var(--spacing-2xs);
+    padding: var(--spacing-xs) var(--spacing-md-sm);
+    background: var(--white-a05);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
     font-size: var(--font-size-sm);
@@ -154,7 +155,7 @@
 }
 
 .team-name-editable:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--glass-border);
     border-color: var(--accent);
     color: var(--white);
 }
@@ -176,7 +177,7 @@
     align-items: center;
     justify-content: center;
     background: transparent;
-    border: 1px solid rgba(255, 107, 107, 0.3);
+    border: 1px solid var(--status-red-tint-strong);
     color: var(--status-red);
     border-radius: var(--radius-md);
     cursor: pointer;
@@ -185,7 +186,7 @@
 }
 
 .btn-logout:hover {
-    background: rgba(255, 107, 107, 0.1);
+    background: var(--status-red-tint-soft);
     border-color: var(--status-red);
 }
 
@@ -242,7 +243,7 @@
 .input-with-prefix {
     display: flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--white-a05);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     transition: var(--transition-colors);
@@ -250,7 +251,7 @@
 
 .input-with-prefix:focus-within {
     border-color: var(--accent);
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--glass-border);
 }
 
 .input-with-prefix span {
@@ -285,7 +286,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 0;
+    padding: var(--spacing-md-sm) 0;
     border-bottom: 1px solid var(--glass-border);
 }
 
@@ -311,7 +312,7 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
-    padding: 10px 0;
+    padding: var(--spacing-md-sm) 0;
     border-bottom: 1px solid var(--glass-border);
 }
 
@@ -352,7 +353,7 @@
 }
 
 .btn-text {
-    padding: 6px var(--spacing-md);
+    padding: var(--spacing-2xs) var(--spacing-md);
     background: transparent;
     border: none;
     color: var(--gray-light);
@@ -371,7 +372,7 @@
    =========================================== */
 
 .card-danger {
-    border-color: rgba(255, 107, 107, 0.15);
+    border-color: var(--status-red-tint);
 }
 
 .card-danger .card-title {
@@ -384,9 +385,9 @@
     justify-content: center;
     gap: var(--spacing-sm);
     width: 100%;
-    padding: 10px var(--spacing-lg);
+    padding: var(--spacing-md-sm) var(--spacing-lg);
     background: transparent;
-    border: 1px solid rgba(255, 107, 107, 0.3);
+    border: 1px solid var(--status-red-tint-strong);
     color: var(--status-red);
     border-radius: var(--radius-md);
     font-family: var(--font-family);
@@ -397,7 +398,7 @@
 }
 
 .btn-danger-outline:hover {
-    background: rgba(255, 107, 107, 0.1);
+    background: var(--status-red-tint-soft);
     border-color: var(--status-red);
 }
 
@@ -455,7 +456,5 @@
 /* =========================================
    Utility Classes
    ========================================= */
-
-.hidden {
-    display: none !important;
+/* .hidden moved to shared/css/utilities.css (CSS-03) */
 }

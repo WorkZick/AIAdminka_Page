@@ -1,0 +1,90 @@
+@layer shared {
+/* ============================================================
+   AIAdminka Design System - Section Header (CSS-04 Canonical)
+   Phase 26 Plan 03: единый shared компонент.
+   Заменяет дубли:
+     partners.css (2 hits) + team-info.css (5 hits) +
+     admin.css (3 hits) + traffic-calculation.css (1 hit, мигр. в --compact)
+   Excel-reports НЕ затронут (использует .template-section-header — другой компонент)
+   Phase 26-06 (CSS-02): refactored to native CSS Nesting Level 1.
+   ============================================================ */
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-lg) var(--spacing-xl);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+
+    /* Combined nested selector — covers .section-header .header-title (team-info pattern) */
+    & .header-title {
+        font-size: var(--font-size-md);
+        font-weight: 700;
+        color: var(--white);
+    }
+
+    /* Combined nested selector — covers .section-header .header-right (team-info pattern) */
+    & .header-right {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+    }
+
+    /* Search slot — fixed width when used inside section-header
+       (covers team-info L86-88) */
+    & .search-input-wrapper {
+        width: 280px;
+    }
+
+    /* Variant: less padding for nested/compact headers
+       (covers traffic-calculation L55-63) */
+    &.section-header--compact {
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+
+    /* Variant: vertical spacing for stacked sections
+       (covers admin L652-654 --spaced) */
+    &.section-header--spaced {
+        margin-top: var(--spacing-2xl);
+    }
+
+    /* Responsive: stack vertically below 600px
+       (covers partners L1365-1368, team-info L951-954, admin L997-1000) */
+    @media (max-width: 600px) {
+        flex-wrap: wrap;
+        gap: var(--spacing-md);
+        flex-direction: column;
+        align-items: stretch;
+
+        & .header-right {
+            flex-direction: column;
+        }
+    }
+}
+
+/* Standalone .section-title (admin pattern) — preserve outside .section-header
+   nesting since it can be used without parent .section-header */
+.section-title {
+    font-size: var(--font-size-md);
+    font-weight: 700;
+    color: var(--white);
+}
+
+/* Standalone .section-actions (admin pattern) — preserve outside nesting */
+.section-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+
+    @media (max-width: 600px) {
+        flex-direction: column;
+    }
+}
+}

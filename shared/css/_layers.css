@@ -1,0 +1,6 @@
+/* shared/css/_layers.css — Phase 25 CSS-01
+ * Declares cascade order: reset, base, shared, module, utility
+ * Loaded FIRST на любой странице (BEFORE variables.css / components / module CSS).
+ * Reference: docs/lit-components-conventions.md, .planning/research/PITFALLS.md (Hotspot #3)
+ */
+@layer reset, base, shared, module, utility;

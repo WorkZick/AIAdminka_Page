@@ -118,6 +118,19 @@ const Utils = {
     },
 
     /**
+     * Валидация Reddy ID (4-15 цифр)
+     * Единый источник правды для всех модулей
+     * @param {string} value - Reddy ID для проверки
+     * @returns {boolean} true если Reddy ID валиден
+     */
+    isValidReddyId(value) {
+        return /^\d{4,15}$/.test(value);
+    },
+
+    /** Сообщение об ошибке для невалидного Reddy ID */
+    REDDY_ID_ERROR: 'Введите корректный Reddy ID (4-15 цифр)',
+
+    /**
      * Дебаунс функции
      * @param {Function} func - Функция для дебаунса
      * @param {number} wait - Задержка в миллисекундах

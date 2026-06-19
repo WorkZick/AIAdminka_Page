@@ -1,6 +1,8 @@
+@layer module {
 /* ============================================================
    Home Page - Specific Styles
    Base styles provided by shared/css/design-system.css
+   Phase 32 ROLLOUT-01: wrapped in @layer module per CSS-01 cascade order
    ============================================================ */
 
 /* ===========================================
@@ -40,4 +42,5 @@
     .content-area {
         padding: 40px 16px 16px 16px;
     }
+}
 }

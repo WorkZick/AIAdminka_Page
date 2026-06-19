@@ -1,16 +1,59 @@
-/* onboarding-config.js — Конфигурация шагов, полей, статусов */
+/* onboarding-config.js — Конфигурация шагов, полей, статусов
+ *
+ * Phase 23 (RULES-08) migration: per-field opt-in declarative rules.
+ * Fields can opt into evaluator-driven visibility/required/readonly/options via:
+ *
+ * @typedef {Object} Rule
+ * @property {'eq'|'neq'|'notEmpty'|'empty'|'role'|'roleIn'|'phase'|'status'|'flag'|'and'|'or'|'not'} type
+ * @property {string} [field] — for eq/neq/notEmpty/empty/flag (field id from data)
+ * @property {string|number|boolean} [value] — for eq/neq/role/phase/status
+ * @property {string[]} [values] — for roleIn
+ * @property {string} [flag] — for flag (key in data._<flag>)
+ * @property {Rule[]} [rules] — for and/or
+ * @property {Rule} [rule] — for not
+ *
+ * @typedef {Object} OptionsSource
+ * @property {string} provider — name of window.OnboardingProviders.<provider>
+ * @property {string[]} args — data field ids passed to provider
+ * @property {string[]} dependsOn — fields that must be filled or returns { disabled, message }
+ * @property {string} disabledMessage — shown when dependsOn empty
+ *
+ * @typedef {Object} Field
+ * @property {string} id
+ * @property {string} type — 'select'|'textarea'|'text'|'date'|'file'|'list'|'checklist'
+ * @property {string} label
+ * @property {boolean} [required] — boolean fallback when no requiredWhen[]
+ * @property {Rule[]} [visibility] — поле visible если ВСЕ rules true (AND semantics)
+ * @property {Rule[]} [readonlyWhen] — поле readonly если ЛЮБОЕ rule true (OR semantics)
+ * @property {Rule[]} [requiredWhen] — поле required если ЛЮБОЕ rule true (OR), но visibility check baked INSIDE isFieldRequired (Pitfall #9 — kills bug #8)
+ * @property {OptionsSource} [optionsSource] — для select dynamic options
+ *
+ * @typedef {Object} ViewRule
+ * @property {Rule} when
+ * @property {'form'|'review'|'readonly'} view
+ *
+ * @typedef {Object} Button
+ * @property {string} id
+ * @property {string} label
+ * @property {string} action — must match WorkflowMachine action vocabulary (SUBMIT/APPROVE/REJECT/...)
+ * @property {Rule} [showWhen] — без showWhen → always-allowed by rules; FSM availableActions still filters
+ *
+ * @typedef {Object} Step
+ * @property {ViewRule[]} [viewRules] — first-match wins; default 'form'
+ * @property {Button[]} [buttons] — filtered by showWhen, intersected with WorkflowMachine.availableActions
+ */
 
 const OnboardingConfig = (() => {
     'use strict';
 
     const STATUSES = {
-        new: { label: 'Новая', cssClass: 'status--new' },
-        in_progress: { label: 'В работе', cssClass: 'status--in-progress' },
-        on_review: { label: 'На проверке', cssClass: 'status--on-review' },
-        approved: { label: 'Проверка пройдена', cssClass: 'status--approved' },
-        revision_needed: { label: 'Требуется доработка', cssClass: 'status--revision-needed' },
-        completed: { label: 'Завершена', cssClass: 'status--completed' },
-        cancelled: { label: 'Отменена', cssClass: 'status--cancelled' }
+        new: { label: 'Новая', cssClass: 'status-new_request' },
+        in_progress: { label: 'В работе', cssClass: 'status-working' },
+        on_review: { label: 'На проверке', cssClass: 'status-in_progress' },
+        approved: { label: 'Проверка пройдена', cssClass: 'status-active' },
+        revision_needed: { label: 'Требуется доработка', cssClass: 'status-need_info' },
+        completed: { label: 'Завершена', cssClass: 'status-success' },
+        cancelled: { label: 'Отменена', cssClass: 'status-inactive' }
     };
 
     const LEAD_SOURCES = [
@@ -115,16 +158,49 @@ const OnboardingConfig = (() => {
             isLeadStep: true,
             hasGeoCountry: true,
             fields: [
-                { id: 'lead_source', type: 'select', label: 'Источник лида', required: true, options: LEAD_SOURCES, readonlyForImport: true },
-                { id: 'lead_status', type: 'select', label: 'Статус', required: true, options: LEAD_STATUSES, asSubmitButton: true },
-                { id: 'lead_date', type: 'date', label: 'Дата обращения', required: true, readonlyForImport: true },
-                { id: 'geo_country', type: 'select', label: 'Страна поиска партнера', required: true, options: GEO_COUNTRIES, readonlyForImport: true },
-                { id: 'contact_name', type: 'text', label: 'ФИО', placeholder: 'Имя контактного лица' },
-                { id: 'tg_username', type: 'text', label: 'Юзернейм ТГ', placeholder: '@username', oneOf: 'contact_required' },
-                { id: 'phone', type: 'text', label: 'Номер телефона', placeholder: '+7 999 123 45 67', oneOf: 'contact_required' },
-                { id: 'email', type: 'email', label: 'Почта', placeholder: 'email@example.com' },
-                { id: 'contact_channels', type: 'list', label: 'Где написали лиду', placeholder: 'Добавить канал...', suggestions: ['WhatsApp', 'Telegram', 'e-mail'] },
-                { id: 'reject_reason', type: 'textarea', label: 'Причина отказа', placeholder: 'Укажите причину отказа...', visibleWhen: { field: 'lead_status', value: 'refused' } }
+                // Phase 36 (v2.32) RULES-MIG-03 Group A — `readonlyForImport` declarative migration.
+                // `readonlyWhen` использует расширенный `flag` оператор: проверяет ctx.flags array
+                // (form.js инжектирует flags=['readonlyForImport'] когда request.createdBy === 'import:google-sheets').
+                // `readonlyForImport: true` сохранён для backward-compat (review-render path + любые legacy consumers).
+                { id: 'lead_source', type: 'select', label: 'Источник лида', required: true, options: LEAD_SOURCES, readonlyForImport: true,
+                    readonlyWhen: [{ type: 'flag', flag: 'readonlyForImport' }] },
+                // Phase 51 (v2.35) RULES-MIG Group D — declarative migration via `always` operator.
+                // visibility: [{type:'always'}] — tautological marker для always-visible fields без
+                // conditional logic. Не меняет runtime behavior (field.required boolean fallback
+                // в OnboardingEvaluator.isFieldRequired остаётся source of truth для не-conditional полей).
+                // Достигает 100% coverage milestone (43/43 = последний Group D).
+                { id: 'lead_status', type: 'select', label: 'Статус', required: true, options: LEAD_STATUSES, asSubmitButton: true,
+                    visibility: [{ type: 'always' }] },
+                { id: 'lead_date', type: 'date', label: 'Дата обращения', required: true, readonlyForImport: true,
+                    readonlyWhen: [{ type: 'flag', flag: 'readonlyForImport' }] },
+                { id: 'geo_country', type: 'select', label: 'Страна поиска партнера', required: true, options: GEO_COUNTRIES, readonlyForImport: true,
+                    readonlyWhen: [{ type: 'flag', flag: 'readonlyForImport' }] },
+                { id: 'contact_name', type: 'text', label: 'ФИО', placeholder: 'Имя контактного лица',
+                    visibility: [{ type: 'always' }] },
+                { id: 'tg_username', type: 'text', label: 'Юзернейм ТГ', placeholder: '@username', oneOf: 'contact_required',
+                    visibility: [{ type: 'always' }] },
+                { id: 'phone', type: 'text', label: 'Номер телефона', placeholder: '+7 999 123 45 67', oneOf: 'contact_required',
+                    visibility: [{ type: 'always' }] },
+                { id: 'email', type: 'email', label: 'Почта', placeholder: 'email@example.com',
+                    visibility: [{ type: 'always' }] },
+                { id: 'contact_channels', type: 'list', label: 'Где написали лиду', placeholder: 'Добавить канал...', suggestions: ['WhatsApp', 'Telegram', 'e-mail'],
+                    visibility: [{ type: 'always' }] },
+                {
+                    id: 'reject_reason',
+                    type: 'textarea',
+                    label: 'Причина отказа',
+                    placeholder: 'Укажите причину отказа...',
+                    // Phase 29 RULES-MIG-01 — миграция из imperative visibleWhen на declarative rules.
+                    // visibility + requiredWhen ИДЕНТИЧНЫ — поле required только когда reject выбран.
+                    // Pitfall #9 anti-regression: hidden (lead_status !== 'refused') → NOT required
+                    // (visibility check baked в OnboardingEvaluator.isFieldRequired).
+                    visibility: [
+                        { type: 'eq', field: 'lead_status', value: 'refused' }
+                    ],
+                    requiredWhen: [
+                        { type: 'eq', field: 'lead_status', value: 'refused' }
+                    ]
+                }
             ]
         },
         {
@@ -135,23 +211,57 @@ const OnboardingConfig = (() => {
             reviewer: 'reviewer',
             hasConditionsCascade: true,
             fields: [
-                { id: 'condition_country', type: 'select', label: 'Страна', required: true },
-                { id: 'method_type', type: 'select', label: 'Тип метода', required: true },
-                { id: 'method_name', type: 'select', label: 'Название метода', required: true },
-                { id: 'deal_1', type: 'text', label: 'Пополнения' },
-                { id: 'deal_2', type: 'text', label: 'Выводы' },
-                { id: 'deal_3', type: 'text', label: 'Компенсация' },
-                { id: 'prepayment_method', type: 'select', label: 'Способ предоплаты', required: true, options: PREPAYMENT_METHODS },
-                { id: 'prepayment_amount', type: 'text', label: 'Сумма предоплаты' },
-                { id: 'country', type: 'text', label: 'Страна из документа', required: true },
-                { id: 'city', type: 'text', label: 'Город', required: true },
-                { id: 'birth_date', type: 'date', label: 'Дата рождения', required: true, noNowButton: true },
-                { id: 'phone', type: 'text', label: 'Номер телефона', required: true },
-                { id: 'email', type: 'email', label: 'Электронная почта', required: true },
-                { id: 'document_number', type: 'text', label: 'Номер документа', required: true },
-                { id: 'wallets', type: 'list', label: 'Номера кошельков', required: true, placeholder: 'Номер кошелька' },
-                { id: 'document_photo', type: 'file', label: 'Фото документа', required: true, accept: 'image/*' },
-                { id: 'selfie_photo', type: 'file', label: 'Фото селфи с документом', required: true, accept: 'image/*' }
+                // Phase 41 (v2.33) RULES-MIG Group B — declarative optionsSource cascade.
+                // Заменяет imperative branches в onboarding-form.js _renderFields (~50 LOC).
+                // Provider lookup через window.OnboardingProviders (см. onboarding-providers.js).
+                // Smart fallback: если OnboardingSource.hasConditions() === false ИЛИ optionsSource
+                // вернёт пустой массив → form.js использует field.options || [] (legacy path) для
+                // backward-compat с конфигурациями без conditions table.
+                { id: 'condition_country', type: 'select', label: 'Страна', required: true,
+                    optionsSource: { provider: 'getCountries', args: [], dependsOn: [] } },
+                { id: 'method_type', type: 'select', label: 'Тип метода', required: true,
+                    optionsSource: { provider: 'getMethodTypes', args: ['condition_country'],
+                        dependsOn: ['condition_country'], disabledMessage: 'Сначала выберите страну' } },
+                { id: 'method_name', type: 'select', label: 'Название метода', required: true,
+                    optionsSource: { provider: 'getMethodNames', args: ['condition_country', 'method_type'],
+                        dependsOn: ['condition_country', 'method_type'], disabledMessage: 'Сначала выберите тип метода' } },
+                // deal_1/2/3 + prepayment_method/amount: generic getConditionField provider —
+                // self-identifies via ctx.field.id; returns Array (pipe-split dropdown),
+                // {readonlyValue:'X'} (single value), или {hidden:true} (нет condition).
+                { id: 'deal_1', type: 'text', label: 'Пополнения', required: true,
+                    optionsSource: { provider: 'getConditionField', args: ['condition_country', 'method_type', 'method_name'],
+                        dependsOn: ['condition_country', 'method_type', 'method_name'] } },
+                { id: 'deal_2', type: 'text', label: 'Выводы', required: true,
+                    optionsSource: { provider: 'getConditionField', args: ['condition_country', 'method_type', 'method_name'],
+                        dependsOn: ['condition_country', 'method_type', 'method_name'] } },
+                { id: 'deal_3', type: 'text', label: 'Компенсация', required: true,
+                    optionsSource: { provider: 'getConditionField', args: ['condition_country', 'method_type', 'method_name'],
+                        dependsOn: ['condition_country', 'method_type', 'method_name'] } },
+                { id: 'prepayment_method', type: 'select', label: 'Способ предоплаты', required: true, options: PREPAYMENT_METHODS,
+                    optionsSource: { provider: 'getConditionField', args: ['condition_country', 'method_type', 'method_name'],
+                        dependsOn: ['condition_country', 'method_type', 'method_name'] } },
+                { id: 'prepayment_amount', type: 'text', label: 'Сумма предоплаты', required: true,
+                    optionsSource: { provider: 'getConditionField', args: ['condition_country', 'method_type', 'method_name'],
+                        dependsOn: ['condition_country', 'method_type', 'method_name'] } },
+                // Phase 51 (v2.35) RULES-MIG Group D — declarative migration via `always` operator (9 fields step 2).
+                { id: 'country', type: 'text', label: 'Страна из документа', required: true,
+                    visibility: [{ type: 'always' }] },
+                { id: 'city', type: 'text', label: 'Город', required: true,
+                    visibility: [{ type: 'always' }] },
+                { id: 'birth_date', type: 'date', label: 'Дата рождения', required: true, noNowButton: true,
+                    visibility: [{ type: 'always' }] },
+                { id: 'phone', type: 'text', label: 'Номер телефона', required: true,
+                    visibility: [{ type: 'always' }] },
+                { id: 'email', type: 'email', label: 'Электронная почта', required: true,
+                    visibility: [{ type: 'always' }] },
+                { id: 'document_number', type: 'text', label: 'Номер документа', required: true,
+                    visibility: [{ type: 'always' }] },
+                { id: 'wallets', type: 'list', label: 'Номера кошельков', required: true, placeholder: 'Номер кошелька',
+                    visibility: [{ type: 'always' }] },
+                { id: 'document_photo', type: 'file', label: 'Фото документа', required: true, accept: 'image/*',
+                    visibility: [{ type: 'always' }] },
+                { id: 'selfie_photo', type: 'file', label: 'Фото селфи с документом', required: true, accept: 'image/*',
+                    visibility: [{ type: 'always' }] }
             ]
         },
         {
@@ -166,9 +276,55 @@ const OnboardingConfig = (() => {
                 reviewerValue: 'reviewer'
             },
             fields: [
-                { id: 'account_creator', type: 'select', label: 'Кто создаёт аккаунт', required: true, options: ACCOUNT_CREATORS },
-                { id: 'account_login', type: 'text', label: 'Логин', required: true, placeholder: 'Логин аккаунта', showWhen: { phase: 'fill' } },
-                { id: 'account_password', type: 'text', label: 'Пароль', required: true, placeholder: 'Пароль аккаунта', showWhen: { phase: 'fill', onlyCreator: 'reviewer' } }
+                // Phase 51 (v2.35) RULES-MIG Group D — declarative migration via `always` operator.
+                { id: 'account_creator', type: 'select', label: 'Кто создаёт аккаунт', required: true, options: ACCOUNT_CREATORS,
+                    visibility: [{ type: 'always' }] },
+                {
+                    id: 'account_login', type: 'text', label: 'Логин', required: true, placeholder: 'Логин аккаунта',
+                    // Viewer-aware visibility: visible when confirm phase (readonly for sales) OR
+                    // fill phase AND (executor is creator OR viewer is the reviewer filling).
+                    // Fixes: login was shown to sales when reviewer is selected as creator (phase='fill', role='executor').
+                    // Legacy showWhen retained как backward-compat marker (cleanup в задаче 47-03).
+                    showWhen: { phase: 'fill' },
+                    visibility: [{ type: 'or', rules: [
+                        { type: 'phase', value: 'confirm' },
+                        { type: 'and', rules: [
+                            { type: 'phase', value: 'fill' },
+                            { type: 'or', rules: [
+                                { type: 'eq', field: 'account_creator', value: 'executor' },
+                                { type: 'role', value: 'reviewer' }
+                            ]}
+                        ]}
+                    ]}]
+                },
+                {
+                    id: 'account_password',
+                    type: 'text',
+                    label: 'Пароль',
+                    placeholder: 'Пароль аккаунта',
+                    // legacy showWhen retained для role/phase gating (cleanup в 23-07).
+                    showWhen: { phase: 'fill', onlyCreator: 'reviewer' },
+                    // Пароль вводится ТОЛЬКО когда reviewer создаёт аккаунт. Когда executor (sales) создаёт —
+                    // пароль не нужен (sales отправляет только логин). Visible только при account_creator='reviewer':
+                    //   - phase=fill + role=reviewer → reviewer заполняет
+                    //   - phase=confirm → sales подтверждает readonly после handoff
+                    // Pitfall #9 anti-regression: hidden → NOT required (visibility check baked в isFieldRequired).
+                    visibility: [{ type: 'and', rules: [
+                        { type: 'eq', field: 'account_creator', value: 'reviewer' },
+                        { type: 'or', rules: [
+                            { type: 'phase', value: 'confirm' },
+                            { type: 'and', rules: [
+                                { type: 'phase', value: 'fill' },
+                                { type: 'role', value: 'reviewer' }
+                            ]}
+                        ]}
+                    ]}],
+                    requiredWhen: [{ type: 'and', rules: [
+                        { type: 'phase', value: 'fill' },
+                        { type: 'eq', field: 'account_creator', value: 'reviewer' },
+                        { type: 'role', value: 'reviewer' }
+                    ]}]
+                }
             ]
         },
         {
@@ -178,8 +334,10 @@ const OnboardingConfig = (() => {
             executor: 'executor',
             reviewer: 'reviewer',
             fields: [
+                // Phase 51 (v2.35) RULES-MIG Group D — declarative migration via `always` operator (3 fields step 4).
                 {
                     id: 'profile_checklist', type: 'checklist', label: 'Обязательные поля', required: true,
+                    visibility: [{ type: 'always' }],
                     items: [
                         { label: 'ФИО' },
                         { label: 'Дата рождения' },
@@ -192,13 +350,15 @@ const OnboardingConfig = (() => {
                 },
                 {
                     id: 'profile_checklist_optional', type: 'checklist', label: 'Необязательные поля',
+                    visibility: [{ type: 'always' }],
                     items: [
                         { label: 'Когда выдан' },
                         { label: 'Кем выдан' },
                         { label: 'Адрес регистрации' }
                     ]
                 },
-                { id: 'profile_screenshots', type: 'file', label: 'Скриншоты заполненного профиля', accept: 'image/*', multiple: true }
+                { id: 'profile_screenshots', type: 'file', label: 'Скриншоты заполненного профиля', accept: 'image/*', multiple: true,
+                    visibility: [{ type: 'always' }] }
             ]
         },
         {
@@ -209,8 +369,23 @@ const OnboardingConfig = (() => {
             reviewer: null,
             isAntifraud: true,
             fields: [
-                { id: 'antifraud_result', type: 'select', label: 'Результат проверки', required: true, options: ANTIFRAUD_RESULTS },
-                { id: 'antifraud_comment', type: 'textarea', label: 'Комментарий', placeholder: 'Детали проверки...' }
+                // Phase 51 (v2.35) RULES-MIG Group D — declarative migration via `always` operator.
+                { id: 'antifraud_result', type: 'select', label: 'Результат проверки', required: true, options: ANTIFRAUD_RESULTS,
+                    visibility: [{ type: 'always' }] },
+                {
+                    id: 'antifraud_comment',
+                    type: 'textarea',
+                    label: 'Комментарий',
+                    placeholder: 'Детали проверки...',
+                    // Phase 23 RULES-08 canary migration. visibility + requiredWhen IDENTICAL —
+                    // proves baked-in visibility check в OnboardingEvaluator.isFieldRequired (Pitfall #9, kills bug #8).
+                    visibility: [
+                        { type: 'eq', field: 'antifraud_result', value: 'failed' }
+                    ],
+                    requiredWhen: [
+                        { type: 'eq', field: 'antifraud_result', value: 'failed' }
+                    ]
+                }
             ]
         },
         {
@@ -220,9 +395,12 @@ const OnboardingConfig = (() => {
             executor: 'executor',
             reviewer: 'reviewer',
             fields: [
-                { id: 'deposit_amount', type: 'text', label: 'Сумма пополнения', readonly: true, autofill: { step: 2, field: 'prepayment_amount' } },
+                // Phase 51 (v2.35) RULES-MIG Group D — declarative migration via `always` operator (2 fields step 6).
+                { id: 'deposit_amount', type: 'text', label: 'Сумма пополнения', readonly: true, autofill: { step: 2, field: 'prepayment_amount' },
+                    visibility: [{ type: 'always' }] },
                 {
                     id: 'deposit_checklist', type: 'checklist', label: 'Подтверждение', required: true,
+                    visibility: [{ type: 'always' }],
                     items: [
                         { label: 'Партнёр пополнил счёт' }
                     ]
@@ -243,11 +421,29 @@ const OnboardingConfig = (() => {
                 autoHandoff: true
             },
             fields: [
-                { id: 'messenger_login', type: 'text', label: 'Логин', required: true, placeholder: 'Логин аккаунта', showWhen: { phase: 'fill' } },
-                { id: 'messenger_password', type: 'text', label: 'Пароль', required: true, placeholder: 'Пароль аккаунта', showWhen: { phase: 'fill' } },
+                {
+                    id: 'messenger_login', type: 'text', label: 'Логин', required: true, placeholder: 'Логин аккаунта',
+                    // Phase 47 (v2.34) RULES-MIG Group C: declarative visibility (fill OR confirm).
+                    // Legacy showWhen retained как backward-compat marker (cleanup в задаче 47-03).
+                    showWhen: { phase: 'fill' },
+                    visibility: [
+                        { type: 'phase', values: ['fill', 'confirm'] }
+                    ]
+                },
+                {
+                    id: 'messenger_password', type: 'text', label: 'Пароль', required: true, placeholder: 'Пароль аккаунта',
+                    showWhen: { phase: 'fill' },
+                    visibility: [
+                        { type: 'phase', values: ['fill', 'confirm'] }
+                    ]
+                },
                 {
                     id: 'messenger_checklist', type: 'checklist', label: 'Подтверждение',
+                    // Confirm-phase only — visible only after _handoff_complete (executor confirms reviewer's work).
                     showWhen: { phase: 'confirm' },
+                    visibility: [
+                        { type: 'phase', value: 'confirm' }
+                    ],
                     items: [
                         { label: 'Партнёр вошёл в мессенджер' }
                     ]
@@ -264,9 +460,13 @@ const OnboardingConfig = (() => {
             executorName: 'Партнёр заведён',
             executorShortName: 'Заведён',
             fields: [
-                { id: 'subagent', type: 'text', label: 'Имя субагента', required: true, autofill: { step: 1, field: 'contact_name' } },
-                { id: 'subagent_id', type: 'text', label: 'Номер субагента', required: true },
-                { id: 'method', type: 'text', label: 'Метод', required: true, autofill: { step: 2, field: 'method_name' } }
+                // Phase 51 (v2.35) RULES-MIG Group D — declarative migration via `always` operator (3 fields step 8).
+                { id: 'subagent', type: 'text', label: 'Имя субагента', required: true, autofill: { step: 1, field: 'contact_name' },
+                    visibility: [{ type: 'always' }] },
+                { id: 'subagent_id', type: 'text', label: 'Номер субагента', required: true,
+                    visibility: [{ type: 'always' }] },
+                { id: 'method', type: 'text', label: 'Метод', required: true, autofill: { step: 2, field: 'method_name' },
+                    visibility: [{ type: 'always' }] }
             ]
         }
     ];
@@ -436,8 +636,31 @@ const OnboardingConfig = (() => {
         const stepNumber = step.number;
         const currentStep = request.currentStep;
 
+        // Terminal status — заявка целиком завершена/отменена, submit на любом шаге не нужен.
+        // Без этой проверки UI показывает disabled "На проверку" с FSM-tooltip
+        // "No transition from completed via SUBMIT" — это путает пользователя (Bug C).
+        if (request.status === 'completed' || request.status === 'cancelled') {
+            return { label: '', action: 'onb-submit', visible: false, statusDropdown: false };
+        }
+
         // Past step — hidden
         if (stepNumber < currentStep) {
+            return { label: '', action: 'onb-submit', visible: false, statusDropdown: false };
+        }
+
+        // Bug D fix: status='on_review' на не-dynamicExecutor шаге — submit скрыт.
+        // Executor уже submit'нул; reviewer использует Approve/Reject, не SUBMIT.
+        // dynamicExecutor шаги (3, 7) сохраняют existing behavior (autoHandoff path).
+        //
+        // BFIX (audit 2026-05-20): exclude executorIsReviewer steps (5, 8).
+        // У этих шагов reviewer=null → нет separate approver → executor сам и
+        // submit'ит и подтверждает (например, антифрод/финализация). Скрытие
+        // submit ломает workflow — executor застревает с filled данными и
+        // status=on_review, не может продвинуться.
+        // executorIsReviewer определяется через step.executor === step.reviewer ИЛИ
+        // отсутствие reviewer (step.reviewer === null/undefined → no review needed).
+        var isExecutorIsReviewerStep = !step.reviewer || step.executor === step.reviewer;
+        if (request.status === 'on_review' && !step.dynamicExecutor && !isExecutorIsReviewerStep) {
             return { label: '', action: 'onb-submit', visible: false, statusDropdown: false };
         }
 

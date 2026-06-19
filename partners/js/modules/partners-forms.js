@@ -1,4 +1,14 @@
 // Partners Forms - form operations (add, edit, save, delete, data loading)
+//
+// Phase 25 LIT-06 (Plan 25-07) status:
+// — <app-modal> consumed для E2E test selectors (см. partners/index.html mount node)
+// — <app-form-dropdown> ready для status/method binding
+// — Existing form/card right-panel UI preserved (legacy DOM с right-panel form #partnerForm)
+// — Lit auto-escape via window.litHtml в shared/components/* renderers
+// — Full migration partner card → <app-card> + add modal → <app-modal> deferred
+//   к Phase 27 mass migration (Pitfall #6 atomic invariant maintained: partners pilot
+//   validates Lit infrastructure без полной перезаписи 581 LOC working code)
+// Reference: 25-07-PLAN.md §"Wave 3" + 25-CONTEXT.md §"LIT-06: Migration scope".
 const PartnersForms = {
     showAddModal() {
         PartnersState.editingPartnerId = null;
@@ -57,9 +67,7 @@ const PartnersForms = {
         formAvatarImg.classList.add('hidden');
         document.querySelector('.form-avatar-placeholder').classList.remove('hidden');
 
-        const statusText = document.getElementById('formStatusText');
-        statusText.textContent = 'Открыт';
-        statusText.className = 'status-badge green';
+        PartnersNavigation._updateStatusBadge('formStatusText', 'Открыт');
 
         PartnersTemplates.updateTemplateList();
     },
@@ -134,9 +142,7 @@ const PartnersForms = {
             placeholder.classList.remove('hidden');
         }
 
-        const statusText = document.getElementById('formStatusText');
-        statusText.textContent = PartnersState.formStatus;
-        statusText.className = 'status-badge ' + PartnersUtils.getStatusColor(PartnersState.formStatus);
+        PartnersNavigation._updateStatusBadge('formStatusText', PartnersState.formStatus);
 
         if (partner.customFields) {
             Object.entries(partner.customFields).forEach(([label, value]) => {
@@ -144,7 +150,7 @@ const PartnersForms = {
                 const fieldHtml = `
                     <div class="form-group-inline" data-custom-field="true">
                         <label>${PartnersUtils.escapeHtml(label)}:</label>
-                        <input type="text" id="${fieldId}" value="${PartnersUtils.escapeHtml(value)}" data-field-label="${PartnersUtils.escapeHtml(label)}">
+                        <input type="text" class="form-input" id="${fieldId}" value="${PartnersUtils.escapeHtml(value)}" data-field-label="${PartnersUtils.escapeHtml(label)}">
                     </div>
                 `;
                 document.getElementById('formBody').insertAdjacentHTML('beforeend', fieldHtml);
@@ -284,21 +290,22 @@ const PartnersForms = {
             comp: comp
         };
 
-        // OPTIMISTIC UPDATE: Сохраняем состояние для отката
-        const previousPartners = [...PartnersState.cachedPartners];
+        // OPTIMISTIC UPDATE: Take snapshot BEFORE mutation
+        const snapshot = structuredClone(PartnersState.cachedPartners);
         const isEditing = !!PartnersState.editingPartnerId;
         const tempId = isEditing ? PartnersState.editingPartnerId : `temp_${Date.now()}`;
 
-        // OPTIMISTIC UPDATE: Обновляем UI сразу
+        // OPTIMISTIC UPDATE: Mutate state in-place immediately
         if (isEditing) {
             partnerData.id = PartnersState.editingPartnerId;
             const index = PartnersState.cachedPartners.findIndex(p => p.id === PartnersState.editingPartnerId);
             if (index !== -1) {
-                PartnersState.cachedPartners[index] = { ...PartnersState.cachedPartners[index], ...partnerData };
+                PartnersState.cachedPartners[index] = { ...PartnersState.cachedPartners[index], ...partnerData, _pending: true };
             }
             PartnersState.selectedPartnerId = PartnersState.editingPartnerId;
         } else {
             partnerData.id = tempId;
+            partnerData._pending = true;
             PartnersState.cachedPartners.push(partnerData);
             PartnersState.selectedPartnerId = tempId;
         }
@@ -309,18 +316,38 @@ const PartnersForms = {
         PartnersRenderer.render();
         PartnersNavigation.showPartnerCard(PartnersState.selectedPartnerId);
 
-        PartnersUtils.showLoading(true);
+        // Find item reference for OptimisticManager
+        const itemIndex = PartnersState.cachedPartners.findIndex(p => p.id === tempId);
+        const itemRef = PartnersState.cachedPartners[itemIndex];
 
-        // Индикатор загрузки аватара
-        const saveBtnText = document.getElementById('formSaveBtnText');
-        const originalBtnText = saveBtnText.textContent;
+        // Rollback callback: re-render and show Toast.error with Retry
+        const onRollback = (error) => {
+            PartnersState.selectedPartnerId = isEditing ? tempId : null;
+            PartnersForms.syncPartnersToLocalStorage();
+            PartnersColumns.renderColumnsMenu();
+            PartnersRenderer.render();
+            if (PartnersState.selectedPartnerId) {
+                PartnersNavigation.showPartnerCard(PartnersState.selectedPartnerId);
+            } else {
+                PartnersNavigation.showHintPanel();
+            }
+            Toast.error('Ошибка сохранения: ' + error.message, 6000, {
+                action: { label: 'Повторить', callback: () => PartnersForms.saveFromForm() }
+            });
+        };
+
+        const opId = PartnersState._optimistic.apply({
+            stateRef: PartnersState.cachedPartners,
+            index: isEditing ? itemIndex : -1,
+            snapshot,
+            operation: isEditing ? 'update' : 'add',
+            item: itemRef,
+            onRollback
+        });
 
         try {
             // Если есть новый avatar, загружаем в Google Drive
             if (isNewAvatar) {
-                // Показываем индикатор загрузки аватара
-                saveBtnText.textContent = 'Загрузка аватара...';
-
                 // Удаляем старый аватар, чтобы не было дубликатов
                 if (currentAvatarFileId) {
                     try {
@@ -336,9 +363,6 @@ const PartnersForms = {
                 if (uploadResult && uploadResult.fileId) {
                     partnerData.avatarFileId = uploadResult.fileId;
                 }
-
-                // Возвращаем текст кнопки
-                saveBtnText.textContent = 'Сохранение...';
             }
 
             // Отправляем на сервер
@@ -346,23 +370,17 @@ const PartnersForms = {
                 await CloudStorage.updatePartner(tempId, partnerData);
 
                 // Обновляем avatarFileId в cachedPartners после загрузки аватара
-                const index = PartnersState.cachedPartners.findIndex(p => p.id === tempId);
-                if (index !== -1) {
-                    PartnersState.cachedPartners[index].avatarFileId = partnerData.avatarFileId;
-                }
+                const idx = PartnersState.cachedPartners.findIndex(p => p.id === tempId);
+                if (idx !== -1) PartnersState.cachedPartners[idx].avatarFileId = partnerData.avatarFileId;
+                PartnersState._optimistic.confirm(opId);
             } else {
                 const result = await CloudStorage.addPartner(partnerData);
-                // Обновляем временный ID на реальный
-                const index = PartnersState.cachedPartners.findIndex(p => p.id === tempId);
-                if (index !== -1) {
-                    PartnersState.cachedPartners[index].id = result.id;
-                    PartnersState.cachedPartners[index].avatarFileId = partnerData.avatarFileId;
-                }
+                PartnersState._optimistic.confirm(opId, { realId: result.id });
                 PartnersState.selectedPartnerId = result.id;
                 PartnersForms.syncPartnersToLocalStorage();
             }
 
-            // Обновляем UI после успешного сохранения (включая новый аватар)
+            // Обновляем UI после успешного сохранения
             PartnersForms.syncPartnersToLocalStorage();
             PartnersRenderer.render();
             if (PartnersState.selectedPartnerId) {
@@ -371,23 +389,7 @@ const PartnersForms = {
 
             Toast.success(isEditing ? 'Партнёр обновлён' : 'Партнёр добавлен');
         } catch (error) {
-            // ROLLBACK: Откатываем изменения при ошибке
-            PartnersState.cachedPartners = previousPartners;
-            PartnersState.selectedPartnerId = isEditing ? tempId : null;
-            PartnersForms.syncPartnersToLocalStorage();
-            PartnersColumns.renderColumnsMenu();
-            PartnersRenderer.render();
-            if (PartnersState.selectedPartnerId) {
-                PartnersNavigation.showPartnerCard(PartnersState.selectedPartnerId);
-            } else {
-                PartnersNavigation.showHintPanel();
-            }
-
-            PartnersUtils.showError('Ошибка сохранения: ' + error.message);
-        } finally {
-            PartnersUtils.showLoading(false);
-            // Восстанавливаем текст кнопки
-            saveBtnText.textContent = originalBtnText;
+            PartnersState._optimistic.rollback(opId, error);
         }
     },
 
@@ -397,20 +399,39 @@ const PartnersForms = {
         const confirmed = await PartnersUtils.showConfirm('Вы уверены, что хотите удалить этого партнера?', 'Удаление партнера');
         if (!confirmed) return;
 
-        // OPTIMISTIC UPDATE: Сохраняем состояние для отката
-        const previousPartners = [...PartnersState.cachedPartners];
+        // OPTIMISTIC UPDATE: Take snapshot BEFORE mutation
+        const snapshot = structuredClone(PartnersState.cachedPartners);
         const deletedId = PartnersState.selectedPartnerId;
         const partnerToDelete = PartnersState.cachedPartners.find(p => p.id === deletedId);
+        const deletedIndex = PartnersState.cachedPartners.findIndex(p => p.id === deletedId);
 
-        // OPTIMISTIC UPDATE: Удаляем из UI сразу
-        PartnersState.cachedPartners = PartnersState.cachedPartners.filter(p => p.id !== deletedId);
+        // OPTIMISTIC UPDATE: Remove from array in-place (splice preserves reference for rollback)
+        if (deletedIndex !== -1) PartnersState.cachedPartners.splice(deletedIndex, 1);
         PartnersForms.syncPartnersToLocalStorage();
         PartnersState.selectedPartnerId = null;
         PartnersColumns.cleanupUnusedColumns();
         PartnersRenderer.render();
         PartnersNavigation.showHintPanel();
 
-        PartnersUtils.showLoading(true);
+        const onRollback = (error) => {
+            PartnersState.selectedPartnerId = deletedId;
+            PartnersForms.syncPartnersToLocalStorage();
+            PartnersColumns.cleanupUnusedColumns();
+            PartnersRenderer.render();
+            PartnersNavigation.showPartnerCard(deletedId);
+            Toast.error('Ошибка удаления: ' + error.message, 6000, {
+                action: { label: 'Повторить', callback: () => PartnersForms.deleteFromCard() }
+            });
+        };
+
+        const opId = PartnersState._optimistic.apply({
+            stateRef: PartnersState.cachedPartners,
+            index: deletedIndex,
+            snapshot,
+            operation: 'delete',
+            item: partnerToDelete || { id: deletedId },
+            onRollback
+        });
 
         try {
             await CloudStorage.deletePartner(deletedId);
@@ -424,19 +445,10 @@ const PartnersForms = {
                 }
             }
 
+            PartnersState._optimistic.confirm(opId);
             Toast.success('Партнёр удалён');
         } catch (error) {
-            // ROLLBACK: Откатываем удаление при ошибке
-            PartnersState.cachedPartners = previousPartners;
-            PartnersForms.syncPartnersToLocalStorage();
-            PartnersState.selectedPartnerId = deletedId;
-            PartnersColumns.cleanupUnusedColumns();
-            PartnersRenderer.render();
-            PartnersNavigation.showPartnerCard(deletedId);
-
-            PartnersUtils.showError('Ошибка удаления: ' + error.message);
-        } finally {
-            PartnersUtils.showLoading(false);
+            PartnersState._optimistic.rollback(opId, error);
         }
     },
 
@@ -446,13 +458,14 @@ const PartnersForms = {
         const confirmed = await PartnersUtils.showConfirm('Вы уверены, что хотите удалить этого партнера?', 'Удаление партнера');
         if (!confirmed) return;
 
-        // OPTIMISTIC UPDATE: Сохраняем состояние для отката
-        const previousPartners = [...PartnersState.cachedPartners];
+        // OPTIMISTIC UPDATE: Take snapshot BEFORE mutation
+        const snapshot = structuredClone(PartnersState.cachedPartners);
         const deletedId = PartnersState.editingPartnerId;
         const partnerToDelete = PartnersState.cachedPartners.find(p => p.id === deletedId);
+        const deletedIndex = PartnersState.cachedPartners.findIndex(p => p.id === deletedId);
 
-        // OPTIMISTIC UPDATE: Удаляем из UI сразу
-        PartnersState.cachedPartners = PartnersState.cachedPartners.filter(p => p.id !== deletedId);
+        // OPTIMISTIC UPDATE: Remove from array in-place (splice preserves reference for rollback)
+        if (deletedIndex !== -1) PartnersState.cachedPartners.splice(deletedIndex, 1);
         PartnersForms.syncPartnersToLocalStorage();
         PartnersState.editingPartnerId = null;
         PartnersState.selectedPartnerId = null;
@@ -460,7 +473,25 @@ const PartnersForms = {
         PartnersRenderer.render();
         PartnersNavigation.showHintPanel();
 
-        PartnersUtils.showLoading(true);
+        const onRollback = (error) => {
+            PartnersState.editingPartnerId = deletedId;
+            PartnersState.selectedPartnerId = null;
+            PartnersForms.syncPartnersToLocalStorage();
+            PartnersColumns.cleanupUnusedColumns();
+            PartnersRenderer.render();
+            Toast.error('Ошибка удаления: ' + error.message, 6000, {
+                action: { label: 'Повторить', callback: () => PartnersForms.deleteFromForm() }
+            });
+        };
+
+        const opId = PartnersState._optimistic.apply({
+            stateRef: PartnersState.cachedPartners,
+            index: deletedIndex,
+            snapshot,
+            operation: 'delete',
+            item: partnerToDelete || { id: deletedId },
+            onRollback
+        });
 
         try {
             await CloudStorage.deletePartner(deletedId);
@@ -474,41 +505,60 @@ const PartnersForms = {
                 }
             }
 
+            PartnersState._optimistic.confirm(opId);
             Toast.success('Партнёр удалён');
         } catch (error) {
-            // ROLLBACK: Откатываем удаление при ошибке
-            PartnersState.cachedPartners = previousPartners;
-            PartnersForms.syncPartnersToLocalStorage();
-            PartnersState.editingPartnerId = deletedId;
-            PartnersState.selectedPartnerId = null;
-            PartnersColumns.cleanupUnusedColumns();
-            PartnersRenderer.render();
-
-            PartnersUtils.showError('Ошибка удаления: ' + error.message);
-        } finally {
-            PartnersUtils.showLoading(false);
+            PartnersState._optimistic.rollback(opId, error);
         }
     },
 
     async loadAllData() {
-        // Load all data in parallel
-        const [partners, methods, templates] = await Promise.all([
-            CloudStorage.getPartners(),
+        const [result, methods, templates] = await Promise.all([
+            CloudStorage.getPartners({ page: 1, pageSize: PartnersState.pageSize }),
             CloudStorage.getMethods(),
             CloudStorage.getTemplates()
         ]);
 
-        PartnersState.cachedPartners = partners;
-        PartnersState.cachedMethods = methods;
+        // Pending guard: don't overwrite in-flight optimistic mutations
+        if (PartnersState._optimistic && PartnersState._optimistic.hasPending && PartnersState._optimistic.hasPending()) return;
 
-        // Cache partners to localStorage for other modules (traffic-calculation)
-        PartnersForms.syncPartnersToLocalStorage();
+        PartnersState.cachedPartners = result.partners || [];
+        PartnersState.totalCount = result.totalCount || 0;
+        PartnersState.currentPage = result.page || 1;
+        PartnersState.cachedMethods = methods || [];
 
         // Convert templates array to object
         PartnersState.cachedTemplates = {};
-        templates.forEach(t => {
-            PartnersState.cachedTemplates[t.id] = t;
-        });
+        if (templates) {
+            templates.forEach(t => {
+                PartnersState.cachedTemplates[t.id] = t;
+            });
+        }
+    },
+
+    async goToPage(page) {
+        const reqId = ++PartnersState._currentRequestId;
+        PartnersRenderer.renderSkeletonRows();
+        try {
+            const result = await CloudStorage.getPartners({
+                page,
+                pageSize: PartnersState.pageSize,
+                filter: PartnersState.serverFilter || undefined,
+                sortBy: PartnersState.sortField || undefined,
+                order: PartnersState.sortField ? PartnersState.sortDirection : undefined
+            });
+            // Stale response discard
+            if (reqId !== PartnersState._currentRequestId) return;
+            PartnersState.cachedPartners = result.partners || [];
+            PartnersState.totalCount = result.totalCount || 0;
+            PartnersState.currentPage = result.page || page;
+            PartnersRenderer.render();
+        } catch (error) {
+            if (reqId !== PartnersState._currentRequestId) return;
+            console.error('Ошибка загрузки страницы:', error);
+            Toast.error('Ошибка загрузки данных: ' + error.message);
+            PartnersRenderer.render();
+        }
     },
 
     // Sync partners to localStorage for other modules
@@ -528,13 +578,12 @@ const PartnersForms = {
     async loadDataFromCloud() {
         try {
             // Очищаем только кэш данных партнёров (не трогаем employees, onboarding и т.д.)
-            CloudStorage.clearCache('partners');
+            CloudStorage.clearCacheNamespace('partners');
             CloudStorage.clearCache('methods');
             CloudStorage.clearCache('templates');
-            await PartnersForms.loadAllData();
             PartnersColumns.renderColumnsMenu();
             PartnersColumns.renderTableHeader();
-            PartnersRenderer.render();
+            await PartnersForms.goToPage(PartnersState.currentPage);
         } catch (e) {
             console.error('Ошибка обновления данных с сервера:', e);
         }

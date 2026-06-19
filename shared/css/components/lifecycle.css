@@ -1,3 +1,4 @@
+@layer shared {
 /* ============================================================
    Lifecycle - Плавное появление контента и состояния загрузки
    ============================================================ */
@@ -47,6 +48,11 @@ body.lifecycle-ready .skeleton-placeholder {
     position: relative;
     pointer-events: none;
     color: transparent !important;
+    user-select: none;
+}
+
+.btn-loading * {
+    visibility: hidden;
 }
 
 .btn-loading::after {
@@ -58,7 +64,8 @@ body.lifecycle-ready .skeleton-placeholder {
     height: 16px;
     margin: -8px 0 0 -8px;
     border: 2px solid var(--glass-border);
-    border-top-color: var(--white);
+    border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
+}
 }

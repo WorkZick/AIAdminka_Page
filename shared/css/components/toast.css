@@ -1,3 +1,4 @@
+@layer shared {
 /* ============================================================
    AIAdminka Design System - Toast Notifications
    ============================================================ */
@@ -30,7 +31,7 @@
     background: rgba(30, 30, 30, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     opacity: 0;
@@ -55,7 +56,7 @@
     justify-content: center;
     width: 36px;
     height: 36px;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     flex-shrink: 0;
 }
 
@@ -67,7 +68,7 @@
 /* Toast Message */
 .toast-message {
     flex: 1;
-    font-size: 13px;
+    font-size: var(--font-size-base);
     font-weight: 500;
     line-height: 1.4;
     color: var(--white);
@@ -82,7 +83,7 @@
     height: 28px;
     background: rgba(255, 255, 255, 0.08);
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: var(--gray-light);
     cursor: pointer;
     transition: background var(--transition-fast), color var(--transition-fast);
@@ -119,7 +120,7 @@
     bottom: 0;
     width: 3px;
     background: var(--status-green);
-    border-radius: 12px 0 0 12px;
+    border-radius: var(--radius-xl) 0 0 var(--radius-xl);
 }
 
 /* Error Toast */
@@ -140,7 +141,7 @@
     bottom: 0;
     width: 3px;
     background: var(--status-red);
-    border-radius: 12px 0 0 12px;
+    border-radius: var(--radius-xl) 0 0 var(--radius-xl);
 }
 
 /* Warning Toast */
@@ -161,7 +162,7 @@
     bottom: 0;
     width: 3px;
     background: var(--status-yellow);
-    border-radius: 12px 0 0 12px;
+    border-radius: var(--radius-xl) 0 0 var(--radius-xl);
 }
 
 /* Info Toast */
@@ -182,7 +183,27 @@
     bottom: 0;
     width: 3px;
     background: var(--status-blue);
-    border-radius: 12px 0 0 12px;
+    border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+}
+
+/* Toast action button (e.g., Retry on rollback) */
+.toast-action {
+    background: none;
+    border: 1px solid currentColor;
+    color: inherit;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm, 4px);
+    cursor: pointer;
+    font-size: var(--font-size-xs, 10px);
+    font-family: inherit;
+    white-space: nowrap;
+    margin-left: var(--spacing-sm, 8px);
+    transition: opacity var(--transition-fast, 0.2s ease);
+    flex-shrink: 0;
+}
+
+.toast-action:hover {
+    opacity: 0.8;
 }
 
 /* ==================== Responsive ==================== */
@@ -196,4 +217,5 @@
         min-width: auto;
         max-width: none;
     }
+}
 }

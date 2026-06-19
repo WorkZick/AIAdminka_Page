@@ -5,15 +5,23 @@
     <meta charset="UTF-8">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' 'sha384-QjwLundxB4NaHWOfxQoy8G+BY7T7kjRSxeKIjdPAUQ76EitE8bUlehJxnQEJquiL' 'sha384-cdYhdOlBc0MtESQfAGUIQ6Mf8mJZZ9E9VOP6SAR7sOvPVvRwQlwQ8UR6AjsGDSW3' 'sha384-/YOimVOt6Bq+nJVuTUHWt8a0+2GkUKsKQKq9P9jNkKqsupthdkM6WWQaaVIlnig/' 'sha384-wgqcWx+Dzs2/x1d1yYLKO34rUT5WhUT+OSqnt51rzc/Hi6CBs3tTpstly4/Hwv2y' 'sha384-sChJXbOWDzAc/w2cKkZyzzTmyVLtLgALn0PCewYcW4Nv4WHOMwANhSAqDFQyu3Iq' 'sha384-WO+CQNc5o8u/05JkylStFXt6f895hAovGF97PqyaWgflx6csiESfjnPzUJUrNAfk'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com https://cdn.jsdelivr.net">
     <title>Настройки - AIAdminka</title>
     <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Regular.woff2" type="font/woff2" crossorigin>
     <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Bold.woff2" type="font/woff2" crossorigin>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
+    <!-- Phase 26-02: cascade order declaration FIRST (BEFORE design-system/components/module) -->
+    <link rel="stylesheet" href="../shared/css/_layers.css">
     <!-- Design System (base styles) -->
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <!-- Module-specific styles -->
     <link rel="stylesheet" href="css/sync.css">
+    <!-- Phase 24 CSS-02: utilities (highest priority @layer utility, loaded LAST per cascade order) -->
+    <link rel="stylesheet" href="../shared/css/utilities.css">
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@preact/signals-core@1.14.1/+esm" integrity="sha384-QjwLundxB4NaHWOfxQoy8G+BY7T7kjRSxeKIjdPAUQ76EitE8bUlehJxnQEJquiL" crossorigin="anonymous">
+    <!-- Phase 32 ROLLOUT-01: cdn-deps (signals + Lit) + components aggregator (4 Lit custom elements) -->
+    <script type="module" src="../shared/js/cdn-deps.js"></script>
+    <script type="module" src="../shared/components/index.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -154,11 +162,11 @@
                                     <div class="form-row">
                                         <div class="form-group form-group--compact">
                                             <label>День рождения</label>
-                                            <input type="date" class="form-input" id="profileBirthday" name="birthday">
+                                            <input type="hidden" class="form-input" id="profileBirthday" name="birthday" data-datepicker="date">
                                         </div>
                                         <div class="form-group form-group--compact">
                                             <label>Начало работы</label>
-                                            <input type="date" class="form-input" id="profileStartDate" name="startDate">
+                                            <input type="hidden" class="form-input" id="profileStartDate" name="startDate" data-datepicker="date">
                                         </div>
                                     </div>
                                     <div class="form-row">
@@ -264,81 +272,24 @@
     <!-- About Modal Container (loaded via ComponentLoader) -->
     <div id="about-modal-container"></div>
 
-    <!-- Confirm Logout Modal (module-specific) -->
-    <div class="modal" id="logoutModal">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-header">
-                <h2 class="modal-title">Выход из аккаунта</h2>
-                <button class="modal-close" data-action="close-modal" data-modal="logoutModal">
-                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Вы уверены, что хотите выйти?</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-action="close-modal" data-modal="logoutModal">Отмена</button>
-                <button class="btn btn-danger" data-action="confirm-logout">Выйти</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Team Name Modal -->
-    <div class="modal" id="teamNameModal">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-header">
-                <h2 class="modal-title">Название команды</h2>
-                <button class="modal-close" data-action="close-modal" data-modal="teamNameModal">
-                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group form-group--compact">
-                    <label>Введите название</label>
-                    <input type="text" class="form-input" id="teamNameModalInput" placeholder="Название команды">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-action="close-modal" data-modal="teamNameModal">Отмена</button>
-                <button class="btn btn-primary" data-action="save-team-name">Сохранить</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Clear Cache Confirmation Modal -->
-    <div class="modal" id="clearCacheModal">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-header">
-                <h2 class="modal-title">Очистить кэш</h2>
-                <button class="modal-close" data-action="close-modal" data-modal="clearCacheModal">
-                    <img src="../shared/icons/cross.svg" width="24" height="24" alt="Закрыть">
-                </button>
-            </div>
-            <div class="modal-body">
-                <p>Очистить кэш данных? Данные будут загружены заново из облака при следующем посещении.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-action="close-modal" data-modal="clearCacheModal">Отмена</button>
-                <button class="btn btn-danger" data-action="confirm-clear-cache">Очистить</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Shared JS -->
-    <script src="../shared/js/component-loader.js"></script>
-    <script src="../shared/js/sidebar-controller.js"></script>
-    <script src="../shared/js/about-modal.js"></script>
-    <script src="../shared/js/toast.js"></script>
-    <script src="../shared/js/error-handler.js"></script>
-    <script src="../shared/utils.js"></script>
     <script src="../shared/version.js"></script>
     <script src="../shared/env-config.js"></script>
     <script src="../shared/cloud-storage.js"></script>
     <script src="../shared/sync-manager.js"></script>
+    <script src="../shared/utils.js"></script>
     <script src="../shared/auth-guard.js"></script>
     <script src="../shared/roles-config.js"></script>
     <script src="../shared/role-guard.js"></script>
+    <script src="../shared/js/toast.js"></script>
+    <script src="../shared/js/error-handler.js"></script>
+    <script src="../shared/js/component-loader.js"></script>
+    <script src="../shared/js/sidebar-controller.js"></script>
+    <script src="../shared/js/about-modal.js"></script>
+    <script src="../shared/js/confirm-modal.js"></script>
+    <script src="../shared/js/prompt-modal.js"></script>
     <script src="../shared/js/page-lifecycle.js"></script>
+    <script src="../shared/js/date-picker.js"></script>
 
     <!-- Module JS -->
     <script src="js/settings.js"></script>

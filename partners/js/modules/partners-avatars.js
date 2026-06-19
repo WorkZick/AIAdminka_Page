@@ -19,35 +19,61 @@ const PartnersAvatars = {
     showCropModal(imageSrc) {
         const modal = document.getElementById('cropModal');
         const cropImage = document.getElementById('cropImage');
+        const cropSlider = document.getElementById('cropSlider');
+        const cropZoomValue = document.getElementById('cropZoomValue');
 
-        cropImage.src = imageSrc;
+        // Reset crop data
         PartnersState.cropData.scale = 1;
         PartnersState.cropData.offsetX = 0;
         PartnersState.cropData.offsetY = 0;
+        PartnersState.cropData.isDragging = false;
+        PartnersState.cropData.startX = 0;
+        PartnersState.cropData.startY = 0;
 
-        modal.classList.add('active');
+        cropImage.src = imageSrc;
+
+        // Init slider
+        if (cropSlider) cropSlider.value = 100;
+        if (cropZoomValue) cropZoomValue.textContent = '1.0x';
 
         cropImage.onload = () => {
             PartnersAvatars.updateCropTransform();
         };
+
+        modal.classList.add('active');
     },
 
     closeCropModal() {
         document.getElementById('cropModal').classList.remove('active');
         document.getElementById('formAvatarInput').value = '';
+
+        // Reset slider
+        const cropSlider = document.getElementById('cropSlider');
+        const cropZoomValue = document.getElementById('cropZoomValue');
+        if (cropSlider) cropSlider.value = 100;
+        if (cropZoomValue) cropZoomValue.textContent = '1.0x';
     },
 
     setupCropHandlers() {
         const cropPreview = document.getElementById('cropPreview');
         if (!cropPreview) return;
 
+        const cropSlider = document.getElementById('cropSlider');
+        const cropZoomValue = document.getElementById('cropZoomValue');
+
+        // Wheel zoom with slider sync
         cropPreview.addEventListener('wheel', (e) => {
             e.preventDefault();
             const delta = e.deltaY > 0 ? -0.1 : 0.1;
-            PartnersState.cropData.scale = Math.max(0.5, Math.min(3, PartnersState.cropData.scale + delta));
+            PartnersState.cropData.scale = Math.max(1, Math.min(3, PartnersState.cropData.scale + delta));
             PartnersAvatars.updateCropTransform();
+
+            // Sync slider
+            if (cropSlider) cropSlider.value = Math.round(PartnersState.cropData.scale * 100);
+            if (cropZoomValue) cropZoomValue.textContent = PartnersState.cropData.scale.toFixed(1) + 'x';
         }, { passive: false });
 
+        // Drag handlers
         cropPreview.addEventListener('mousedown', (e) => {
             PartnersState.cropData.isDragging = true;
             PartnersState.cropData.startX = e.clientX - PartnersState.cropData.offsetX;
@@ -67,12 +93,26 @@ const PartnersAvatars = {
         document.addEventListener('mousemove', PartnersAvatars._mouseMoveHandler);
         document.addEventListener('mouseup', PartnersAvatars._mouseUpHandler);
 
+        // Slider input handler
+        if (cropSlider) {
+            PartnersAvatars._sliderHandler = () => {
+                PartnersState.cropData.scale = parseInt(cropSlider.value) / 100;
+                if (cropZoomValue) cropZoomValue.textContent = PartnersState.cropData.scale.toFixed(1) + 'x';
+                PartnersAvatars.updateCropTransform();
+            };
+            cropSlider.addEventListener('input', PartnersAvatars._sliderHandler);
+        }
+
         PageLifecycle.addCleanup(() => {
             if (PartnersAvatars._mouseMoveHandler) {
                 document.removeEventListener('mousemove', PartnersAvatars._mouseMoveHandler);
                 document.removeEventListener('mouseup', PartnersAvatars._mouseUpHandler);
                 PartnersAvatars._mouseMoveHandler = null;
                 PartnersAvatars._mouseUpHandler = null;
+            }
+            if (PartnersAvatars._sliderHandler && cropSlider) {
+                cropSlider.removeEventListener('input', PartnersAvatars._sliderHandler);
+                PartnersAvatars._sliderHandler = null;
             }
         });
     },
@@ -86,44 +126,71 @@ const PartnersAvatars = {
         const translateX = PartnersState.cropData.offsetX;
         const translateY = PartnersState.cropData.offsetY;
 
-        // Calculate initial size to cover container (like background-size: cover)
         const previewWidth = cropPreview.clientWidth;
         const previewHeight = cropPreview.clientHeight;
         const imgWidth = cropImage.naturalWidth;
         const imgHeight = cropImage.naturalHeight;
 
-        const scaleToFit = Math.max(
-            previewWidth / imgWidth,
-            previewHeight / imgHeight
-        );
+        const scaleToFit = Math.max(previewWidth / imgWidth, previewHeight / imgHeight);
 
-        // Set base size to cover the container using CSS custom properties (CSP compliant)
-        cropImage.style.setProperty('--crop-width', imgWidth * scaleToFit + 'px');
-        cropImage.style.setProperty('--crop-height', imgHeight * scaleToFit + 'px');
-        cropImage.style.setProperty('--crop-translate-x', translateX + 'px');
-        cropImage.style.setProperty('--crop-translate-y', translateY + 'px');
-        cropImage.style.setProperty('--crop-scale', scale);
+        cropImage.style.width = imgWidth * scaleToFit + 'px';
+        cropImage.style.height = imgHeight * scaleToFit + 'px';
+        cropImage.style.transform = `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(${scale})`;
     },
 
     applyCrop() {
-        // Сохраняем оригинал для загрузки в Drive
         const originalData = PartnersState.cropData.originalSrc;
+        const cropPreview = document.getElementById('cropPreview');
 
-        // Создаём сжатую версию для предпросмотра в UI (быстро)
-        PartnersAvatars.compressImage(originalData, 400, 0.85).then(compressedPreview => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 200;
+        canvas.height = 200;
+        const ctx = canvas.getContext('2d');
+
+        const img = new Image();
+        img.onload = () => {
+            const previewWidth = cropPreview.clientWidth;
+            const previewHeight = cropPreview.clientHeight;
+            const scale = PartnersState.cropData.scale;
+            const translateX = PartnersState.cropData.offsetX;
+            const translateY = PartnersState.cropData.offsetY;
+            const imgWidth = img.width;
+            const imgHeight = img.height;
+
+            const scaleToFit = Math.max(previewWidth / imgWidth, previewHeight / imgHeight);
+            const displayedWidth = imgWidth * scaleToFit * scale;
+            const displayedHeight = imgHeight * scaleToFit * scale;
+
+            const imgLeft = previewWidth / 2 - displayedWidth / 2 + translateX;
+            const imgTop = previewHeight / 2 - displayedHeight / 2 + translateY;
+
+            // Mask = 80% of preview (centered square)
+            const maskSize = previewWidth * 0.8;
+            const maskLeft = (previewWidth - maskSize) / 2;
+            const maskTop = (previewHeight - maskSize) / 2;
+
+            // Source rect in original image coordinates
+            const srcX = (maskLeft - imgLeft) / (scaleToFit * scale);
+            const srcY = (maskTop - imgTop) / (scaleToFit * scale);
+            const srcW = maskSize / (scaleToFit * scale);
+            const srcH = maskSize / (scaleToFit * scale);
+
+            ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, 200, 200);
+
+            const croppedData = canvas.toDataURL('image/jpeg', 0.9);
             const formAvatar = document.getElementById('formAvatar');
             const placeholder = document.querySelector('.form-avatar-placeholder');
 
-            // Показываем сжатый предпросмотр в UI
-            formAvatar.src = compressedPreview;
+            formAvatar.src = croppedData;
             formAvatar.classList.remove('hidden');
             if (placeholder) placeholder.classList.add('hidden');
 
-            // Сохраняем оригинал для отправки в Drive (в data-атрибуте)
+            // CRITICAL: Preserve originalSrc for Drive upload
             formAvatar.dataset.originalSrc = originalData;
 
             PartnersAvatars.closeCropModal();
-        });
+        };
+        img.src = originalData;
     },
 
     /**
@@ -137,7 +204,6 @@ const PartnersAvatars = {
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
-                // Вычисляем новый размер с сохранением пропорций
                 let width = img.width;
                 let height = img.height;
 
@@ -153,14 +219,12 @@ const PartnersAvatars = {
                     }
                 }
 
-                // Создаём canvas и рисуем сжатое изображение
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // Конвертируем в JPEG с указанным качеством
                 const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
                 resolve(compressedBase64);
             };

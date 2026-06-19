@@ -98,8 +98,12 @@ const OnboardingRoles = (() => {
 
     function openSettings() {
         _renderSettings();
+        // Phase 30 LIT-MIG-04: <app-modal> uses boolean property API (was .modal class .active)
         const modal = document.getElementById('roleConfigModal');
-        if (modal) modal.classList.add('active');
+        if (modal) {
+            if (modal.tagName === 'APP-MODAL') modal.open = true;
+            else modal.classList.add('active');
+        }
     }
 
     function _renderSettings() {
@@ -146,15 +150,24 @@ const OnboardingRoles = (() => {
             if (hasReview) {
                 html += '<div class="rc-section">';
                 html += '<span class="rc-label">Проверяющий</span>';
-                html += `<select class="rc-select" name="rev_${step.number}">`;
-                html += '<option value="">— нет —</option>';
+                const revMenuId = `menu_rev_${step.number}`;
+                const selRole = sc.reviewer || '';
+                const selRoleName = selRole && typeof RolesConfig !== 'undefined' ? RolesConfig.getName(selRole) : '';
+                const revTrigLabel = selRoleName || '— нет —';
+                const revPhClass = selRole ? '' : ' placeholder';
+                html += `<div class="dropdown-wrap dropdown-wrap--form">`;
+                html += `<button class="dropdown-trigger dropdown-trigger--form${revPhClass}" type="button" data-action="onb-toggleFormDropdown" data-target="${revMenuId}"><span>${Utils.escapeHtml(revTrigLabel)}</span></button>`;
+                html += `<div class="dropdown-menu hidden" id="${revMenuId}">`;
+                html += `<div class="dropdown-item${!selRole ? ' active' : ''}" data-action="onb-selectFormDropdown" data-value="">— нет —</div>`;
                 for (let j = 0; j < roles.length; j++) {
                     const role = roles[j];
-                    const selected = sc.reviewer === role ? ' selected' : '';
+                    const selected = sc.reviewer === role;
                     const roleName = typeof RolesConfig !== 'undefined' ? RolesConfig.getName(role) : role;
-                    html += `<option value="${Utils.escapeHtml(role)}"${selected}>${Utils.escapeHtml(roleName)}</option>`;
+                    html += `<div class="dropdown-item${selected ? ' active' : ''}" data-action="onb-selectFormDropdown" data-value="${Utils.escapeHtml(role)}">${Utils.escapeHtml(roleName)}</div>`;
                 }
-                html += '</select>';
+                html += '</div>';
+                html += `<input type="hidden" name="rev_${step.number}" value="${Utils.escapeHtml(selRole)}">`;
+                html += '</div>';
                 html += '</div>';
             }
 
@@ -197,8 +210,8 @@ const OnboardingRoles = (() => {
 
             let reviewer = null;
             if (hasReview) {
-                const select = body.querySelector(`select.rc-select[name="rev_${num}"]`);
-                reviewer = select ? (select.value || null) : null;
+                const revInput = body.querySelector(`input[type="hidden"][name="rev_${num}"]`);
+                reviewer = revInput ? (revInput.value || null) : null;
             }
 
             newConfig[num] = { executors: executors, reviewer: reviewer };
@@ -211,6 +224,12 @@ const OnboardingRoles = (() => {
             await CloudStorage.postApi('saveOnboardingRoleConfig', { config: newConfig });
             CloudStorage.clearCache('onboardingSettings');
             Toast.success('Роли сохранены');
+            // BFIX (audit 2026-05-20): close modal только ПОСЛЕ успешного save.
+            // Раньше handler закрывал immediately → пользователь не видел индикации
+            // ошибки если backend упал. Сейчас: btn-loading spinner до server-ack,
+            // close on success, оставить открытой на error (Toast.error от ErrorHandler).
+            var modal = document.getElementById('roleConfigModal');
+            if (modal) modal.open = false;
         } catch (e) {
             ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'saveRoleConfig' });
         } finally {

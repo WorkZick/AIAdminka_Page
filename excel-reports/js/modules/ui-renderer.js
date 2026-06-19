@@ -1,4 +1,9 @@
 // UIRenderer - Рендеринг UI компонентов
+//
+// Phase 24 SIG-02: state — signals-based ExcelReportsState IIFE.
+// Reads через `state.<signal>.value` или helper методы (getStepData/getStepFiles).
+// Этот модуль ТОЛЬКО рендерит — НЕ запускает effects (effects управляются
+// в excel-reports.js через _disposers array, Pitfall A: no signal.value = в эффектах).
 
 class UIRenderer {
     constructor(stateManager, navigator, utils) {
@@ -60,7 +65,7 @@ class UIRenderer {
 
     // Рендеринг выбора шаблона
     renderTemplateSelection() {
-        const selectedTemplate = this.state.get('selectedTemplate');
+        const selectedTemplate = this.state.selectedTemplate.value;
 
         // Главный шаблон
         const mainTemplate = { id: 'combined-report', obj: window.TEMPLATE_COMBINED_REPORT };
@@ -74,7 +79,7 @@ class UIRenderer {
             { id: 'analytics-t9', obj: window.TEMPLATE_ANALYTICS_T9 }
         ];
 
-        const uniqueId = this.utils.generateId('components');
+        const uniqueId = Utils.generateId();
 
         let html = `
             <div class="step-content">
@@ -99,10 +104,10 @@ class UIRenderer {
                             </div>
                             ${isSelected ? '<span class="selected-badge"><img src="../shared/icons/done.svg" width="12" height="12" alt="✓"> Выбран</span>' : ''}
                         </div>
-                        <p class="template-description">${mainTemplate.obj.description}</p>
+                        <p class="template-description">${Utils.escapeHtml(mainTemplate.obj.description)}</p>
 
                         <div class="template-components">
-                            <button type="button" class="components-toggle" data-action="toggle-components" data-target-id="${uniqueId}">
+                            <button type="button" class="btn btn-sm btn--ghost components-toggle" data-action="toggle-components" data-target-id="${uniqueId}">
                                 <span class="toggle-icon">▶</span>
                                 <span class="toggle-text">Из чего состоит</span>
                                 <span class="components-count">${reportComponents.length} отчётов</span>
@@ -116,8 +121,8 @@ class UIRenderer {
                 html += `
                     <li class="component-item" data-action="select-template" data-template-id="${id}">
                         <div class="component-info">
-                            <span class="component-name">${obj.name}</span>
-                            <span class="component-desc">${obj.description}</span>
+                            <span class="component-name">${Utils.escapeHtml(obj.name)}</span>
+                            <span class="component-desc">${Utils.escapeHtml(obj.description)}</span>
                         </div>
                         <span class="component-arrow">→</span>
                     </li>
@@ -154,7 +159,7 @@ class UIRenderer {
                             </button>
                         ` : ''}
                     </div>
-                    <h2>${config.name}</h2>
+                    <h2>${Utils.escapeHtml(config.name)}</h2>
                     <div class="nav-right">
                         ${nextStep && isCompleted ? `
                             <button class="btn btn-primary" data-action="navigate-next">
@@ -172,14 +177,14 @@ class UIRenderer {
             // Требуемые колонки один раз для всего шага (если они одинаковые)
             const firstSubFile = config.subFiles[0];
             if (firstSubFile.requiredColumns && firstSubFile.requiredColumns.length > 0) {
-                const uniqueId = this.utils.generateId('required-cols');
+                const uniqueId = Utils.generateId();
                 const columnsList = firstSubFile.requiredColumns
                     .map(col => `<li>${col}</li>`)
                     .join('');
 
                 html += `
                     <div class="required-columns-block">
-                        <button type="button" class="required-columns-toggle" data-action="toggle-required-columns" data-target-id="${uniqueId}">
+                        <button type="button" class="btn btn-sm btn--ghost required-columns-toggle" data-action="toggle-required-columns" data-target-id="${uniqueId}">
                             <span class="toggle-icon">▶</span>
                             <span class="toggle-text">Требуемые колонки</span>
                             <span class="columns-count">(${firstSubFile.requiredColumns.length})</span>
@@ -205,7 +210,7 @@ class UIRenderer {
 
                 html += `
                     <div class="sub-file-card">
-                        <h3 class="sub-file-card-title">${shortName}</h3>
+                        <h3 class="sub-file-card-title">${Utils.escapeHtml(shortName)}</h3>
                         <label class="file-upload-label">
                             <input type="file"
                                    id="fileInput_${subId}"
@@ -213,14 +218,14 @@ class UIRenderer {
                                    data-action="upload-sub-file"
                                    data-step-id="${stepId}"
                                    data-sub-file-id="${subFile.id}"
-                                   data-sub-file-config="${this.utils.escapeHtml(JSON.stringify(subFile))}"
+                                   data-sub-file-config="${Utils.escapeHtml(JSON.stringify(subFile))}"
                                    class="file-input">
-                            <div class="file-upload-area-compact ${subCompleted ? 'uploaded' : ''}">
-                                <div class="upload-icon-small">📁</div>
-                                <div class="upload-text-compact">
+                            <div class="upload-zone ${subCompleted ? 'has-file' : ''}">
+                                <div class="upload-zone-icon"><img src="../shared/icons/upload.svg" width="48" height="48" alt="Загрузить"></div>
+                                <div class="upload-zone-text">
                                     ${subCompleted ? '<strong>✓ Загружен</strong>' : '<strong>Выберите файл</strong> или перетащите сюда'}
                                 </div>
-                                ${!subCompleted ? '<div class="upload-hint">Поддерживаются .xlsx и .xls</div>' : ''}
+                                ${!subCompleted ? '<div class="upload-zone-hint">Поддерживаются .xlsx и .xls</div>' : ''}
                             </div>
                         </label>
                 `;
@@ -251,14 +256,14 @@ class UIRenderer {
 
             // Требуемые колонки (если есть)
             if (config.requiredColumns && config.requiredColumns.length > 0) {
-                const uniqueId = this.utils.generateId('required-cols');
+                const uniqueId = Utils.generateId();
                 const columnsList = config.requiredColumns
                     .map(col => `<li>${col}</li>`)
                     .join('');
 
                 html += `
                     <div class="required-columns-block">
-                        <button type="button" class="required-columns-toggle" data-action="toggle-required-columns" data-target-id="${uniqueId}">
+                        <button type="button" class="btn btn-sm btn--ghost required-columns-toggle" data-action="toggle-required-columns" data-target-id="${uniqueId}">
                             <span class="toggle-icon">▶</span>
                             <span class="toggle-text">Требуемые колонки</span>
                             <span class="columns-count">(${config.requiredColumns.length})</span>
@@ -281,30 +286,27 @@ class UIRenderer {
                                data-action="upload-file"
                                data-step-id="${stepId}"
                                class="file-input">
-                        <div class="file-upload-area">
-                            <div class="upload-icon">📁</div>
-                            <div class="upload-text">
-                                <strong>Выберите файл(ы)</strong> или перетащите сюда
+                        <div class="upload-zone ${isCompleted ? 'has-file' : ''}">
+                            <div class="upload-zone-icon"><img src="../shared/icons/upload.svg" width="48" height="48" alt="Загрузить"></div>
+                            <div class="upload-zone-text">
+                                ${isCompleted ? '<strong>✓ Загружен</strong>' : '<strong>Выберите файл(ы)</strong> или перетащите сюда'}
                             </div>
-                            <div class="upload-hint">Поддерживаются .xlsx и .xls</div>
+                            ${!isCompleted ? '<div class="upload-zone-hint">Поддерживаются .xlsx и .xls</div>' : ''}
                         </div>
                     </label>
                 </div>
             `;
 
-            // Статус загрузки
+            // Статус загрузки (inline-стиль эталона шага 6)
             if (isCompleted && stepFiles && stepFiles.length > 0) {
                 const totalRows = stepData ? (Array.isArray(stepData[0]) ? stepData.length - 1 : 0) : 0;
+                const fileCountInfo = (config.multiple && stepFiles.length > 1)
+                    ? `${stepFiles.length} файл(ов), `
+                    : '';
 
                 html += `
-                    <div class="file-status success">
-                        <div class="status-icon">✓</div>
-                        <div class="status-content">
-                            <div class="status-title">Файлы успешно загружены</div>
-                            <div class="status-details">
-                                Загружено: ${stepFiles.length} файл(ов), ${this.utils.formatNumber(totalRows)} строк данных
-                            </div>
-                        </div>
+                    <div class="file-info-compact">
+                        ${fileCountInfo}${this.utils.formatNumber(totalRows)} строк
                     </div>
                 `;
             }
@@ -317,7 +319,7 @@ class UIRenderer {
     // Рендеринг секции обработки
     renderProcessSection() {
         const canProcess = this.navigator.areAllFilesLoaded();
-        const template = this.state.get('selectedTemplate');
+        const template = this.state.selectedTemplate.value;
 
         if (!template) {
             return this.renderError('Шаблон не выбран');
@@ -338,7 +340,7 @@ class UIRenderer {
                     </div>
                     <h2>Обработка данных</h2>
                     <div class="nav-right">
-                        <button class="btn btn-primary" data-action="show-reset-modal">
+                        <button class="btn btn-danger" data-action="show-reset-modal">
                             Начать заново
                         </button>
                     </div>
@@ -392,7 +394,7 @@ class UIRenderer {
                     <div class="status-icon">✗</div>
                     <div class="status-content">
                         <div class="status-title">Ошибка</div>
-                        <div class="status-details">${this.utils.escapeHtml(message)}</div>
+                        <div class="status-details">${Utils.escapeHtml(message)}</div>
                     </div>
                 </div>
             </div>
@@ -447,10 +449,10 @@ class UIRenderer {
         return `
             <div class="${classes.join(' ')}"
                  data-step="${step.id}"
-                 data-title="${step.name}"
+                 data-title="${Utils.escapeHtml(step.name)}"
                  ${actionAttr}>
                 <div class="step-number">${index}</div>
-                <div class="step-text">${step.name}</div>
+                <div class="step-text">${Utils.escapeHtml(step.name)}</div>
             </div>
         `;
     }
@@ -459,24 +461,25 @@ class UIRenderer {
 
     // Показать спиннер загрузки
     showLoadingSpinner(message = 'Загрузка...') {
-        const spinner = document.createElement('div');
-        spinner.id = 'loadingSpinner';
+        const overlay = document.createElement('div');
+        overlay.id = 'loadingSpinner';
+        overlay.className = 'loading-overlay active';
 
-        const content = document.createElement('div');
-        content.className = 'spinner-content';
+        const state = document.createElement('div');
+        state.className = 'loading-state';
 
         const spinnerEl = document.createElement('div');
         spinnerEl.className = 'spinner spinner--lg';
 
         const textEl = document.createElement('div');
-        textEl.className = 'spinner-text';
-        textEl.textContent = message; // Используем textContent для безопасности
+        textEl.className = 'loading-text';
+        textEl.textContent = message;
 
-        content.appendChild(spinnerEl);
-        content.appendChild(textEl);
-        spinner.appendChild(content);
+        state.appendChild(spinnerEl);
+        state.appendChild(textEl);
+        overlay.appendChild(state);
 
-        document.body.appendChild(spinner);
+        document.body.appendChild(overlay);
     }
 
     // Скрыть спиннер загрузки
@@ -489,7 +492,7 @@ class UIRenderer {
 
     // Обновить текст спиннера
     updateSpinnerText(message) {
-        const spinnerText = document.querySelector('#loadingSpinner .spinner-text');
+        const spinnerText = document.querySelector('#loadingSpinner .loading-text');
         if (spinnerText) {
             spinnerText.textContent = message;
         }

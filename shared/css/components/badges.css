@@ -1,3 +1,4 @@
+@layer shared {
 /* ============================================================
    AIAdminka Design System - Badges
    ============================================================ */
@@ -10,8 +11,8 @@
     min-width: 28px;
     height: 28px;
     padding: 0 8px;
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-caption);
     font-weight: 700;
     cursor: default;
 }
@@ -86,15 +87,31 @@
     color: var(--status-blue);
 }
 
-.status-badge.status-need_info {
+.status-badge.status-need_info,
+.status-badge.status-approved_no_team {
     background: rgba(255, 146, 43, 0.2);
     color: var(--status-orange);
+}
+
+.status-badge.status-waiting_invite {
+    background: rgba(116, 192, 252, 0.2);
+    color: var(--status-blue);
 }
 
 .status-badge.status-resolved,
 .status-badge.status-closed {
     background: rgba(107, 107, 107, 0.2);
     color: var(--gray);
+}
+
+.status-badge.status-new_request {
+    background: rgba(218, 119, 242, 0.15);
+    color: var(--status-purple);
+}
+
+.status-badge.status-working {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--accent);
 }
 
 /* Status dot */
@@ -147,22 +164,22 @@
 
 .role-badge.role-partners_mgr {
     background: rgba(218, 119, 242, 0.2);
-    color: #da77f2;
+    color: var(--status-purple);
 }
 
 .role-badge.role-payments {
     background: rgba(56, 217, 169, 0.2);
-    color: #38d9a9;
+    color: var(--status-teal);
 }
 
 .role-badge.role-antifraud {
     background: rgba(255, 146, 43, 0.2);
-    color: #ff922b;
+    color: var(--status-orange);
 }
 
 .role-badge.role-tech {
     background: rgba(116, 143, 252, 0.2);
-    color: #748ffc;
+    color: var(--status-indigo);
 }
 
 /* ==================== COUNT BADGE ==================== */
@@ -173,24 +190,26 @@
     min-width: 18px;
     height: 18px;
     padding: 0 5px;
-    background: var(--status-red);
-    border-radius: 9px;
+    background: rgba(255, 107, 107, 0.2);
+    border-radius: var(--radius-pill);
     font-size: var(--font-size-xs);
     font-weight: 700;
-    color: var(--white);
+    color: var(--status-red);
 }
 
 .count-badge.yellow {
-    background: var(--status-yellow);
-    color: var(--black);
+    background: rgba(253, 190, 47, 0.2);
+    color: var(--status-yellow);
 }
 
 .count-badge.blue {
-    background: var(--status-blue);
+    background: rgba(116, 192, 252, 0.2);
+    color: var(--status-blue);
 }
 
 .count-badge.green {
-    background: var(--status-green);
+    background: rgba(81, 207, 102, 0.2);
+    color: var(--status-green);
 }
 
 /* ==================== TAG ==================== */
@@ -241,4 +260,15 @@
 .stats-inline {
     display: flex;
     gap: 6px;
+}
+
+/* ==================== STATUS DOT ==================== */
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: var(--spacing-xs);
+    vertical-align: middle;
+}
 }

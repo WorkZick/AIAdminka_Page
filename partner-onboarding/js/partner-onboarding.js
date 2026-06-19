@@ -5,14 +5,44 @@ const PartnerOnboarding = (() => {
 
     let _confirmCallback = null;
     let _actionInProgress = false;
-    let _lastSavedDraftKey = null;
-    let _lastSavedDraftJson = null;
     let _pollTimer = null;
     let _visHandler = null;
     let _lastModifiedTs = null;
+    let _beforeUnloadHandler = null;
     const SYNC_INTERVAL = 10000;
     const _debouncedSearch = Utils.debounce(() => OnboardingList.applyFilters(), 150);
-    const _debouncedAutosave = Utils.debounce(() => _autosaveDraft(), 5000);
+
+    // ── Phase 52 LIT-FIN-01-A: Lit render helper (XSS-proof через автоэскейп) ──
+    // Заменяет imperative innerHTML с string concat + escapeHtml на Lit html`` templates.
+    // Если Lit ещё не загружен (cdn-deps.js async) — defers render до lit-ready event.
+    // Гарантирует что pending render attempts не теряются (single pending per container).
+    const _litPendingRenders = new WeakMap();
+    function _litRenderInto(container, templateBuilder) {
+        if (!container) return false;
+        const html = window.litHtml;
+        const render = window.litRender;
+        if (!html || !render) {
+            // Lit ещё не готов — отложить render до lit-ready (Pitfall: однократный listener per container).
+            if (!_litPendingRenders.has(container)) {
+                _litPendingRenders.set(container, true);
+                window.addEventListener('lit-ready', () => {
+                    _litPendingRenders.delete(container);
+                    _litRenderInto(container, templateBuilder);
+                }, { once: true });
+            }
+            return false;
+        }
+        try {
+            render(templateBuilder(html), container);
+            return true;
+        } catch (e) {
+            // BFIX: container.replaceChildren() удалён — удаляло Lit Comment markers, разрушая
+            // _$litPart$ state и делая все последующие render на этот контейнер неудачными.
+            try { render(html``, container); } catch (_) { /* best-effort Lit state reset */ }
+            console.error('[partner-onboarding] Lit render failed:', e);
+            return false;
+        }
+    }
 
     // ── Loading helpers ──
 
@@ -38,6 +68,48 @@ const PartnerOnboarding = (() => {
         return _actionInProgress;
     }
 
+    // ── Phase 8 / Plan 03: unsaved-changes guard ──
+
+    function _isFormDirty() {
+        if (OnboardingState.get('view') !== 'form') return false;
+        if (typeof OnboardingForm === 'undefined' || !OnboardingForm.getDirtyFields) return false;
+        const dirty = OnboardingForm.getDirtyFields();
+        return !!(dirty && dirty.size > 0);
+    }
+
+    function _installBeforeUnloadGuard() {
+        if (_beforeUnloadHandler) return;
+        _beforeUnloadHandler = (e) => {
+            if (!_isFormDirty()) return undefined;
+            e.preventDefault();
+            e.returnValue = 'Часть изменений может быть не сохранена';
+            return 'Часть изменений может быть не сохранена';
+        };
+        window.addEventListener('beforeunload', _beforeUnloadHandler);
+    }
+
+    function _uninstallBeforeUnloadGuard() {
+        if (_beforeUnloadHandler) {
+            window.removeEventListener('beforeunload', _beforeUnloadHandler);
+            _beforeUnloadHandler = null;
+        }
+    }
+
+    function _confirmUnsavedNavigation(proceedCallback) {
+        if (!_isFormDirty()) {
+            proceedCallback();
+            return;
+        }
+        _showConfirm(
+            'Уйти без сохранения?',
+            'Часть изменений может быть не сохранена. Локальная копия draft сохранена в браузере — данные восстановятся при возврате.',
+            () => {
+                if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDirty) OnboardingForm.clearDirty();
+                proceedCallback();
+            }
+        );
+    }
+
     // ── Init ──
 
     async function init() {
@@ -45,17 +117,23 @@ const PartnerOnboarding = (() => {
         _loadUserData();
         _setupDevRoleSwitcher();
 
-        // Параллельная загрузка: заявки + настройки источников (независимы)
-        const [,, tsResult] = await Promise.all([
-            _loadRequests(),
-            OnboardingSource.init(),
-            CloudStorage.postApi('getOnboardingLastModified', {}).catch(() => ({ ts: '0' }))
-        ]);
-        _lastModifiedTs = tsResult?.ts || '0';
+        // Phase 63 (TS-PROTO-06): legacy modified-ts probe deprecated.
+        // Use _readNsTs('onboardings') as initial timestamp source — _writeNsTs is called
+        // inside getOnboardingRequests/_applyApiResult (see Tasks 1-2), so namespace ts is
+        // warmed после первого goToOnboardingPage. _lastModifiedTs locally maintained для
+        // existing _checkForUpdates compare logic (full migration к _lastKnownNsTs deferred к Phase 65).
+        await OnboardingSource.init();
+        const _initTs = (typeof CloudStorage !== 'undefined' && typeof CloudStorage._readNsTs === 'function')
+            ? CloudStorage._readNsTs('onboardings')
+            : null;
+        _lastModifiedTs = _initTs ? String(_initTs) : '0';
+
+        OnboardingState.setOptimistic(OptimisticManager.create('onboarding'));
 
         OnboardingList.setupDefaultFilters();
-        OnboardingList.applyFilters();
+        await OnboardingList.goToOnboardingPage(1);
         _updateToolbarForRole();
+        _cleanupStaleBuffers();   // Phase 8 / Plan 04: orphan + stale draft buffer cleanup
         _startSmartSync();
     }
 
@@ -108,9 +186,21 @@ const PartnerOnboarding = (() => {
     }
 
     function _applyApiResult(result) {
-        _lastModifiedTs = Date.now().toString();
         if (!result || !result.request) return;
-        CloudStorage.clearCache('onboardingRequests');
+        CloudStorage.clearCacheNamespace('onboardingRequests');
+        // Phase 63 (TS-PROTO-06): capture server ts so next read can short-circuit (single chokepoint)
+        // BFIX: _lastModifiedTs must match the serverTs format used in _checkForUpdates
+        // (String(result.ts)). Using Date.now() caused _lastModifiedTs to always differ
+        // from serverTs → every poll after a submit triggered false self-conflict detection.
+        const _ts = (result && typeof result.ts === 'number') ? result.ts : Date.now();
+        _lastModifiedTs = String(_ts);
+        if (typeof CloudStorage._writeNsTs === 'function') {
+            CloudStorage._writeNsTs('onboardings', _ts);
+            // Phase 65 (MULTI-TAB-03): broadcast TS_UPDATED to other tabs after onboarding mutation
+            if (typeof SyncManager !== 'undefined' && typeof SyncManager.sendTsUpdate === 'function') {
+                SyncManager.sendTsUpdate('onboardings', _ts);
+            }
+        }
         const requests = OnboardingState.get('requests') || [];
         const idx = requests.findIndex(r => r.id === result.request.id);
         if (idx !== -1) {
@@ -156,18 +246,26 @@ const PartnerOnboarding = (() => {
     // ── Views ──
 
     function _showView(view) {
+        const prevView = OnboardingState.get('view');
         OnboardingState.set('view', view);
         const r = _getViewRefs();
         r.viewList.classList.toggle('hidden', view !== 'list');
         r.viewForm.classList.toggle('hidden', view !== 'form');
         r.viewReview.classList.toggle('hidden', view !== 'review');
 
+        // QWIN-01: уходим из формы — очищаем dirty tracking (no leftover dirty fields в Set
+        // когда пользователь сменил view → нет ложных polling-exclusion на следующем checkForUpdates).
+        if (prevView === 'form' && view !== 'form' && typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDirty) {
+            OnboardingForm.clearDirty();
+        }
+
         // Clear inactive view content to prevent duplicate element IDs (e.g. checkComment_*)
+        // Phase 52 LIT-FIN-01-A: replaceChildren() XSS-safer чем innerHTML='' (нет HTML parsing path).
         if (view !== 'form' && r.formFields) {
-            r.formFields.innerHTML = '';
+            r.formFields.replaceChildren();
         }
         if (view !== 'review' && r.reviewFields) {
-            r.reviewFields.innerHTML = '';
+            r.reviewFields.replaceChildren();
         }
 
         const headerTitle = r.headerTitle;
@@ -193,20 +291,55 @@ const PartnerOnboarding = (() => {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        let html = '';
-        if (request.status !== 'completed' && request.status !== 'cancelled') {
-            if (isAdmin && view === 'form') {
-                html += `<button class="btn btn-secondary" data-action="onb-showReassign">Передать</button>`;
-                html += `<button class="btn btn-secondary" data-action="onb-showRollback">Откатить</button>`;
+        // Phase 22 (WMACH-06): FSM context getter (Pitfall #7 — closure, не snapshot).
+        // hasFsm guard защищает от ReferenceError если workflow-machine.js не подключён.
+        const hasFsm = typeof WorkflowMachine !== 'undefined' && WorkflowMachine;
+        const getAdminCtx = function () {
+            return {
+                role: 'admin',
+                isAdmin: !!isAdmin,
+                executorId: request && request.assigneeEmail,
+                userId: OnboardingState.get('userEmail'),
+                hasRequiredFields: true,
+                hasRejectReason: false
+            };
+        };
+
+        // Pre-compute available actions snapshot (single FSM call shared by all checks).
+        // When FSM unavailable, fallback uses local terminal/cancelled detection without status === literal.
+        const reqStatus = request && request.status;
+        const isTerminal = reqStatus === 'completed' || reqStatus === 'cancelled';  // KEEP-equivalent display gate
+        const isCancelled = reqStatus === 'cancelled';
+        const fsmActions = hasFsm ? WorkflowMachine.availableActions(reqStatus, getAdminCtx) : null;
+
+        // Phase 52 LIT-FIN-01-A: pre-compute action visibility flags (data-layer separated от render).
+        let showReassign = false, showRollback = false, showCancel = false;
+        if (!isTerminal && isAdmin) {
+            if (view === 'form') {
+                showReassign = !fsmActions || fsmActions.includes('REASSIGN');
+                showRollback = !fsmActions || fsmActions.includes('ROLLBACK');
             }
-            if (isAdmin) {
-                html += `<button class="btn btn-danger" data-action="onb-cancelRequest">Отменить</button>`;
-            }
+            showCancel = !fsmActions || fsmActions.includes('CANCEL');
         }
-        if (request.status === 'cancelled' && isAdmin) {
-            html += `<button class="btn btn-secondary" data-action="onb-reactivateRequest">Восстановить</button>`;
+        // Phase 22 (WMACH-06): REPLACE per audit row partner-onboarding.js:214 — workflow gate
+        // controlling REACTIVATE button visibility. Replaced literal status check with FSM
+        // availableActions (REACTIVATE valid only from cancelled per transitions table).
+        const allowReactivate = fsmActions ? fsmActions.includes('REACTIVATE') : isCancelled;
+        const showReactivate = isAdmin && allowReactivate;
+
+        // Phase 52 LIT-FIN-01-A: Lit render заменяет imperative html string + innerHTML.
+        // Lit auto-escapes ${...} interpolations + проверяет attribute values на security.
+        // Fallback (Lit not loaded): defer через _litRenderInto's lit-ready listener.
+        const ok = _litRenderInto(container, (html) => html`
+            ${showReassign ? html`<button class="btn btn-secondary" data-action="onb-showReassign">Передать</button>` : ''}
+            ${showRollback ? html`<button class="btn btn-secondary" data-action="onb-showRollback">Откатить</button>` : ''}
+            ${showCancel ? html`<button class="btn btn-danger" data-action="onb-cancelRequest">Отменить</button>` : ''}
+            ${showReactivate ? html`<button class="btn btn-secondary" data-action="onb-reactivateRequest">Восстановить</button>` : ''}
+        `);
+        if (!ok) {
+            // Lit not ready — clear visible buttons until lit-ready event re-renders.
+            container.replaceChildren();
         }
-        container.innerHTML = html;
     }
 
     // ── Toolbar Role Visibility ──
@@ -259,9 +392,22 @@ const PartnerOnboarding = (() => {
 
         switch (action) {
             // Navigation
-            case 'onb-back': _showView('list'); break;
-            case 'onb-newRequest': _createRequest(); break;
-            case 'onb-openRequest': _openRequest(value); break;
+            case 'onb-back':
+                _confirmUnsavedNavigation(() => _showView('list'));
+                break;
+            case 'onb-newRequest':
+                _confirmUnsavedNavigation(() => _createRequest());
+                break;
+            case 'onb-openRequest':
+                if (OnboardingState.get('view') === 'form') {
+                    const _curReq = OnboardingState.get('currentRequest');
+                    if (_curReq && _curReq.id !== value) {
+                        _confirmUnsavedNavigation(() => _openRequest(value));
+                        break;
+                    }
+                }
+                _openRequest(value);
+                break;
             case 'onb-goToStep': _goToStep(parseInt(value, 10)); break;
 
             // Filters
@@ -277,7 +423,7 @@ const PartnerOnboarding = (() => {
             }
             case 'onb-toggleStatusDropdown': _toggleStatusDropdown(); break;
             case 'onb-selectLeadStatus': _selectLeadStatus(value); break;
-            case 'onb-setDateNow': _setDateNow(value); break;
+            // onb-setDateNow removed — handled by DatePicker "Сейчас" button
 
             // Review actions
             case 'onb-approve': _approveStep(); break;
@@ -302,8 +448,8 @@ const PartnerOnboarding = (() => {
             case 'onb-closeRollback': _closeModal('rollbackModal'); break;
             case 'onb-confirmRollback': _confirmRollback(); break;
 
-            // Form dropdowns
-            case 'onb-toggleFormDropdown': _toggleFormDropdown(target); break;
+            // Form dropdowns — BFIX-15: передаём event для touchend.preventDefault в DropdownHelper.toggle
+            case 'onb-toggleFormDropdown': _toggleFormDropdown(target, e); break;
             case 'onb-selectFormDropdown': _selectFormDropdown(target); break;
 
             // Confirm modal
@@ -335,6 +481,34 @@ const PartnerOnboarding = (() => {
             }
             case 'onb-openPhoto': _openPhotoLightbox(target); break;
 
+            // BFIX-13: file upload retry (failed FileReader pipeline) — see onboarding-form.js _renderFailedFile
+            case 'retry-upload': {
+                const fid = target.dataset.fieldId;
+                const fidx = target.dataset.fileIdx !== undefined ? Number(target.dataset.fileIdx) : undefined;
+                if (typeof OnboardingForm !== 'undefined' && OnboardingForm._retryUpload) {
+                    OnboardingForm._retryUpload(fid, fidx);
+                }
+                break;
+            }
+            case 'remove-file': {
+                const fid = target.dataset.fieldId;
+                const fidx = target.dataset.fileIdx !== undefined ? Number(target.dataset.fileIdx) : undefined;
+                if (typeof OnboardingForm !== 'undefined') {
+                    if (fidx !== undefined && OnboardingForm.removeMultiFile) {
+                        OnboardingForm.removeMultiFile(fid, fidx);
+                    } else if (OnboardingForm.removeFile) {
+                        OnboardingForm.removeFile(fid);
+                    }
+                }
+                // Also remove the failed-UI element if present
+                const sel = fidx === undefined
+                    ? '.file-item--failed[data-field-id="' + fid + '"]:not([data-file-idx])'
+                    : '.file-item--failed[data-field-id="' + fid + '"][data-file-idx="' + fidx + '"]';
+                const el = document.querySelector(sel);
+                if (el) el.remove();
+                break;
+            }
+
             // Selection (admin/leader)
             case 'onb-toggleSelect': e.stopPropagation(); OnboardingList.updateSelection(); break;
             case 'onb-goToPage': OnboardingList.goToPage(value); break;
@@ -365,11 +539,118 @@ const PartnerOnboarding = (() => {
             // Role config settings
             case 'onb-openRoleConfig': _closeSettingsDropdown(); OnboardingRoles.openSettings(); break;
             case 'onb-closeRoleConfig': _closeModal('roleConfigModal'); break;
-            case 'onb-saveRoleConfig': OnboardingRoles.saveConfig(); _closeModal('roleConfigModal'); break;
+            // BFIX (audit 2026-05-20): close moved INSIDE OnboardingRoles.saveConfig
+            // — закрываем только после успешного API. Раньше fire-and-forget +
+            // immediate close скрывал любые backend ошибки.
+            case 'onb-saveRoleConfig': OnboardingRoles.saveConfig(); break;
             case 'onb-resetRoleConfig': OnboardingRoles.resetToDefaults(); break;
 
             // DEV
             case 'onb-devRole': _switchDevRole(value, target); break;
+        }
+    }
+
+    // Phase 8 / Plan 02: local-first draft buffer (заменяет server-side autosave).
+    // Debounce 500ms балансирует частоту localStorage writes при печати vs UX latency.
+    const _debouncedPersistDraft = Utils.debounce(() => {
+        const request = OnboardingState.get('currentRequest');
+        const stepNumber = OnboardingState.get('currentStep');
+        if (!request || OnboardingState.get('view') !== 'form') return;
+        if (typeof OnboardingForm === 'undefined' || !OnboardingForm.persistDraft) return;
+        const data = OnboardingForm.collectFormData(stepNumber, { excludeFiles: true });
+        OnboardingForm.persistDraft(request.id, stepNumber, data, request.version || 0);
+    }, 500);
+
+    function _persistDraftToLocal() {
+        _debouncedPersistDraft();
+    }
+
+    function _restoreDraftIfPresent(request, stepNumber) {
+        if (!request || stepNumber == null) return;
+        if (typeof OnboardingForm === 'undefined' || !OnboardingForm.restoreDraft) return;
+        const buffered = OnboardingForm.restoreDraft(request.id, stepNumber, request.version || 0);
+        if (!buffered) return;
+        if (!request.stageData) request.stageData = {};
+        if (!request.stageData[stepNumber]) request.stageData[stepNumber] = {};
+        Object.assign(request.stageData[stepNumber], buffered);
+        // Re-render с merged data. skipQwin01: true — не перечитывать DOM (он ещё пустой),
+        // иначе QWIN-01 перезапишет buffered data пустыми DOM-значениями.
+        // Восстановлено silently — без Toast (per CONTEXT.md decision).
+        OnboardingForm.render(request, stepNumber, { skipQwin01: true });
+    }
+
+    // ── Phase 8 / Plan 04: stale draft buffer cleanup ──
+    // При init модуля удаляем буфера из localStorage для:
+    // 1. Неизвестных requestId (заявка удалена) — orphan-prevention
+    // 2. Старше 7 дней (savedAt < now - 7d) — long-term hygiene
+    // 3. Corrupted JSON — defensive.
+    // Вызывается ПОСЛЕ await OnboardingList.goToOnboardingPage(1), чтобы
+    // OnboardingState.get('requests') уже содержал загруженные заявки для knownIds.
+
+    const STALE_BUFFER_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+    function _cleanupStaleBuffers() {
+        let prefix;
+        try {
+            const env = (typeof EnvConfig !== 'undefined' && EnvConfig.getCurrentEnv)
+                ? EnvConfig.getCurrentEnv() : 'default';
+            prefix = `onb-draft:${env}:`;
+        } catch (_) { return; }
+
+        let removedUnknown = 0;
+        let removedOld = 0;
+        const now = Date.now();
+        const requests = OnboardingState.get('requests') || [];
+        const knownIds = new Set(requests.map(r => r.id));
+
+        try {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key || !key.startsWith(prefix)) continue;
+                // key format: onb-draft:{env}:{requestId}:{stepNumber}
+                const rest = key.slice(prefix.length);
+                const colonIdx = rest.indexOf(':');
+                if (colonIdx === -1) continue;
+                const requestId = rest.slice(0, colonIdx);
+
+                let parsed;
+                try {
+                    parsed = JSON.parse(localStorage.getItem(key) || 'null');
+                } catch (_) {
+                    // Corrupted JSON — удалить
+                    keysToRemove.push({ key, reason: 'corrupted' });
+                    continue;
+                }
+
+                // Unknown request — удалить
+                if (!knownIds.has(requestId)) {
+                    keysToRemove.push({ key, reason: 'unknown' });
+                    continue;
+                }
+                // Old buffer — удалить
+                if (parsed && typeof parsed.savedAt === 'number' && (now - parsed.savedAt) > STALE_BUFFER_MAX_AGE_MS) {
+                    keysToRemove.push({ key, reason: 'old' });
+                    continue;
+                }
+            }
+            for (const { key, reason } of keysToRemove) {
+                try {
+                    localStorage.removeItem(key);
+                    if (reason === 'unknown' || reason === 'corrupted') removedUnknown++;
+                    else removedOld++;
+                } catch (_) { /* silent */ }
+            }
+        } catch (e) {
+            if (typeof console !== 'undefined' && console.warn) {
+                console.warn('[partner-onboarding._cleanupStaleBuffers] failed:', e && e.message);
+            }
+        }
+
+        if (removedUnknown || removedOld) {
+            if (typeof console !== 'undefined' && console.log) {
+                console.log(`[partner-onboarding] Cleanup: removed ${removedUnknown} unknown + ${removedOld} old draft buffers`);
+            }
         }
     }
 
@@ -380,47 +661,25 @@ const PartnerOnboarding = (() => {
             _debouncedSearch();
             return;
         }
-        // Autosave draft on any form field input
+        // Сохранение черновика в локальный буфер при вводе в поля формы
         if (OnboardingState.get('view') === 'form' && target.closest('#formFields')) {
-            _debouncedAutosave();
+            _persistDraftToLocal();
         }
     }
 
     function _handleCascadeChange(target) {
-        const cascadeEntry = OnboardingConfig.CASCADE_FIELDS.find(c => c.trigger === target.name);
-        if (!cascadeEntry || !OnboardingSource.hasConditions()) return false;
-
-        const request = OnboardingState.get('currentRequest');
-        const stepNumber = OnboardingState.get('currentStep');
-        const step = OnboardingConfig.getStep(stepNumber);
-        if (!request || !step || !step.hasConditionsCascade) return false;
-
-        const currentData = OnboardingForm.collectFormData(stepNumber);
-        if (!request.stageData) request.stageData = {};
-        request.stageData[stepNumber] = { ...request.stageData[stepNumber], ...currentData };
-        request.stageData[stepNumber][target.name] = target.value;
-
-        if (cascadeEntry.autofill) {
-            const selCountry = request.stageData[stepNumber].condition_country || '';
-            const condition = OnboardingSource.getCondition(
-                selCountry, request.stageData[stepNumber].method_type, target.value
-            );
-            if (condition) {
-                request.stageData[stepNumber].deal_1 = condition.deal_1 || '';
-                request.stageData[stepNumber].deal_2 = condition.deal_2 || '';
-                request.stageData[stepNumber].deal_3 = condition.deal_3 || '';
-                request.stageData[stepNumber].prepayment_method = condition.prepayment_method || '';
-                request.stageData[stepNumber].prepayment_amount = condition.prepayment_amount || '';
-            }
-        } else {
-            for (const fieldId of cascadeEntry.clears) {
-                request.stageData[stepNumber][fieldId] = '';
+        // Phase 23 RULES-06 (Plan 23-06): delegate to OnboardingForm.handleCascadeChange
+        // (declarative applyCascadeWithConfirm flow с focus-based previousValue capture).
+        // Form module owns DOM rendering + cache lifecycle; controller только wiring.
+        if (typeof OnboardingForm !== 'undefined' && OnboardingForm
+                && typeof OnboardingForm.handleCascadeChange === 'function') {
+            const handled = OnboardingForm.handleCascadeChange({ target });
+            if (handled) {
+                _persistDraftToLocal();
+                return true;
             }
         }
-
-        _debouncedAutosave();
-        OnboardingForm.render(request, stepNumber);
-        return true;
+        return false;
     }
 
     function _handleChange(e) {
@@ -440,9 +699,9 @@ const PartnerOnboarding = (() => {
         }
         // Conditions cascade: single handler for all cascade fields
         if (_handleCascadeChange(target)) return;
-        // Autosave draft on select/checkbox changes
+        // Сохранение черновика в локальный буфер при изменении select/checkbox
         if (OnboardingState.get('view') === 'form' && target.closest('#formFields')) {
-            _debouncedAutosave();
+            _persistDraftToLocal();
         }
     }
 
@@ -470,7 +729,9 @@ const PartnerOnboarding = (() => {
             OnboardingForm.render(result.request, 1);
             _showView('form');
         } catch (e) {
-            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'createRequest' });
+            // Phase 45 F-C1: CONFLICT auto-handled by CloudStorage._handleConflict — silent
+            if (e && e._conflictHandled) { /* handler уже показал Toast.warning + reload */ }
+            else { ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'createRequest' }); }
         } finally {
             _setBtnLoading('#btnNewRequest', false);
             _setActionLock(false);
@@ -507,47 +768,102 @@ const PartnerOnboarding = (() => {
         let request = _getRequest(id);
         if (!request) return;
 
+        // Phase 45 FINAL FINAL: компактный spinner на КЛИКНУТОЙ row справа
+        // (как user сказал: "должен поялвяться справа, где требуется действие, и компактно").
+        // ТОЛЬКО для async work (executor auto-assign) — для остальных instant view switch
+        // не нуждается в visual feedback.
+        const _clickedRow = document.querySelector(`.request-row[data-value="${id}"]`);
+
         const { myRole, sysRole, isAdmin } = OnboardingUtils.getRoles();
         const step = OnboardingConfig.getStep(request.currentStep);
 
-        // Executor takes "new" request → assign via API
-        if (request.status === 'new' && step && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
-            // Show loading on the clicked row
-            const row = document.querySelector(`.request-row[data-value="${id}"]`);
-            if (row) row.classList.add('row-loading');
+        // Phase 22 (WMACH-06): REPLACE per audit row partner-onboarding.js:522 — workflow gate
+        // for executor auto-assign trigger on opening "new" request. Status check IS the FSM
+        // precondition; role check (isExecutorForStep) remains orthogonal.
+        // Per audit doc Plan 22-01 design Q1: используем SUBMIT с intent flag (avoids ASSIGN action
+        // table inflation; FSM transition new → on_review через SUBMIT уже валидна per Plan 22-02).
+        const hasFsmAssign = typeof WorkflowMachine !== 'undefined' && WorkflowMachine;
+        const getAssignCtx = function () {
+            const isExecForStep = step && OnboardingRoles.isExecutorForStep(sysRole, step.number);
+            return {
+                role: isExecForStep ? 'executor' : sysRole,
+                isAdmin: !!isAdmin,
+                executorId: request && request.assigneeEmail,
+                userId: OnboardingState.get('userEmail'),
+                hasRequiredFields: true,  // assign не валидирует поля — backend re-validates anyway
+                hasRejectReason: false,
+                intent: 'assign'
+            };
+        };
+        const reqStatusAssign = request && request.status;
+        // BFIX: auto-assign submit должен срабатывать ТОЛЬКО для status='new' (незаявленные импортированные заявки).
+        // Для status='in_progress' (созданные sales напрямую) assigneeEmail уже установлен при создании —
+        // submitStep с {_assign:true} вызывал полный _onbSubmit на backend, который для шага 1
+        // (hasReviewer:false) автоматически переводил currentStep=2, оставляя шаг 1 «завершённым» с пустыми данными.
+        // FSM canTransition('in_progress', 'SUBMIT', ...) возвращал allowed=true (SUBMIT разрешён для executor),
+        // что приводило к выполнению submitStep при каждом открытии заявки на шаге 1.
+        const canAssign = reqStatusAssign === 'new' && (hasFsmAssign
+            ? WorkflowMachine.canTransition(reqStatusAssign, 'SUBMIT', getAssignCtx).allowed
+            : true);
+        if (canAssign && step && OnboardingRoles.isExecutorForStep(sysRole, step.number)) {
+            // Phase 45 FINAL: row spinner ТОЛЬКО для async auto-assign (есть real wait)
+            if (_clickedRow) _clickedRow.classList.add('row-loading');
             try {
+                // Phase 22 (WMACH-04): version threading для optimistic locking
+                // Phase 44 fix: step должен быть = currentStep (был 0 — backend reject "Step mismatch")
                 const result = await CloudStorage.postApi('submitStep', {
-                    requestId: request.id, step: 0, data: { _assign: true }
+                    requestId: request.id, step: step.number, data: { _assign: true }, version: request.version || 0
                 });
                 if (result.success) _applyApiResult(result);
             } catch (e) {
-                ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'assignRequest' });
+                // Phase 22 (WMACH-04): CONFLICT auto-handled by CloudStorage._handleConflict — swallow silently
+                if (e && e._conflictHandled) { /* handler уже показал Toast.warning + reload */ }
+                else { ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'assignRequest' }); }
             } finally {
-                if (row) row.classList.remove('row-loading');
+                if (_clickedRow) _clickedRow.classList.remove('row-loading');
             }
         }
 
-        const fresh = _getRequest(id);
-        if (!fresh) return;
+        try {
+            const fromList = _getRequest(id);
+            if (!fromList) return;
 
-        OnboardingState.set('currentRequest', fresh);
-        OnboardingState.set('currentStep', fresh.currentStep);
+            // BFIX (audit 2026-05-20): deep-clone request перед set currentRequest.
+            // QWIN-01 в render() делает Object.assign(request.stageData, pendingData) —
+            // мутирует объект in-place. Раньше fromList и currentRequest были СОДНОЙ
+            // ссылкой → WIP-изменения assistant'а становились видны Sales'у через
+            // OnboardingState.get('requests')[i].stageData при switch role.
+            // Сейчас: clone изолирует local mutations от shared list. Submit/approve/reject
+            // явно перезаписывают list через _applyApiResult после server-ack.
+            const fresh = (typeof structuredClone === 'function')
+                ? structuredClone(fromList)
+                : JSON.parse(JSON.stringify(fromList));
 
-        const decision = OnboardingConfig.getViewDecision(step, fresh, { myRole, sysRole, isAdmin });
+            OnboardingState.set('currentRequest', fresh);
+            OnboardingState.set('currentStep', fresh.currentStep);
 
-        if (decision.stepOverride) {
-            OnboardingState.set('currentStep', decision.stepOverride);
-            OnboardingForm.render(fresh, decision.stepOverride);
-            _showView('form');
-            return;
-        }
+            const decision = OnboardingConfig.getViewDecision(step, fresh, { myRole, sysRole, isAdmin });
 
-        if (decision.view === 'form') {
-            OnboardingForm.render(fresh, fresh.currentStep);
-            _showView('form');
-        } else {
-            OnboardingReview.render(fresh, fresh.currentStep);
-            _showView('review');
+            if (decision.stepOverride) {
+                OnboardingState.set('currentStep', decision.stepOverride);
+                OnboardingForm.render(fresh, decision.stepOverride);
+                // Phase 8 / Plan 02: auto-restore из локального буфера (silent если version совпадает)
+                _restoreDraftIfPresent(fresh, decision.stepOverride);
+                _showView('form');
+                return;
+            }
+
+            if (decision.view === 'form') {
+                OnboardingForm.render(fresh, fresh.currentStep);
+                // Phase 8 / Plan 02: auto-restore из локального буфера (silent если version совпадает)
+                _restoreDraftIfPresent(fresh, fresh.currentStep);
+                _showView('form');
+            } else {
+                OnboardingReview.render(fresh, fresh.currentStep);
+                _showView('review');
+            }
+        } catch (e) {
+            ErrorHandler.handle(e, { module: 'partner-onboarding', action: '_openRequest' });
         }
     }
 
@@ -572,6 +888,8 @@ const PartnerOnboarding = (() => {
 
         if (view === 'form') {
             OnboardingForm.render(request, stepNumber);
+            // Phase 8 / Plan 02: auto-restore из локального буфера (silent если version совпадает)
+            _restoreDraftIfPresent(request, stepNumber);
         } else {
             OnboardingReview.render(request, stepNumber);
         }
@@ -583,46 +901,14 @@ const PartnerOnboarding = (() => {
 
     // ── Actions ──
 
-    function _autosaveDraft() {
-        const request = OnboardingState.get('currentRequest');
-        const stepNumber = OnboardingState.get('currentStep');
-        if (!request || OnboardingState.get('view') !== 'form') return;
-
-        const data = OnboardingForm.collectFormData(stepNumber, { excludeFiles: true });
-        if (!request.stageData) request.stageData = {};
-        request.stageData[stepNumber] = { ...request.stageData[stepNumber], ...data };
-
-        const autosaveStep = OnboardingConfig.getStep(stepNumber);
-        if (autosaveStep && autosaveStep.isLeadStep && data.lead_source) {
-            request.leadSource = data.lead_source;
-        }
-
-        // Don't autosave to server when reviewer is filling data on dynamicExecutor step (on_review).
-        if (request.status === 'on_review') return;
-
-        // Skip API call if data hasn't changed since last save
-        const draftKey = request.id + ':' + stepNumber;
-        if (draftKey !== _lastSavedDraftKey) {
-            _lastSavedDraftKey = draftKey;
-            _lastSavedDraftJson = null;
-        }
-        const draftJson = JSON.stringify(data);
-        if (draftJson === _lastSavedDraftJson) return;
-        _lastSavedDraftJson = draftJson;
-
-        // Fire-and-forget API save (without files — they are uploaded on submit)
-        CloudStorage.postApi('saveDraft', {
-            requestId: request.id, step: stepNumber, data: data
-        }).catch(() => { /* silent — draft save не критичен */ });
-    }
-
     async function _submitStep() {
         const request = OnboardingState.get('currentRequest');
         const stepNumber = OnboardingState.get('currentStep');
         if (!request || _isActionLocked()) return;
 
         const step = OnboardingConfig.getStep(stepNumber);
-        const { sysRole } = OnboardingUtils.getRoles();
+        // Phase 44 fix: добавлен myRole — line 973 use OnboardingUtils.isAdminLike(myRole) was ReferenceError
+        const { myRole, sysRole } = OnboardingUtils.getRoles();
 
         // Validate (except handoff-complete confirm phase)
         const isHandoffComplete = step && step.dynamicExecutor && (request.stageData[stepNumber] || {})._handoff_complete;
@@ -631,9 +917,10 @@ const PartnerOnboarding = (() => {
             if (!valid) { Toast.error(errors[0]); return; }
         }
 
-        // Block submit on past steps (autosave handles saving)
+        // Block submit on past steps (data уже в request.stageData через render-merge).
         if (stepNumber !== request.currentStep && !isHandoffComplete) {
-            _autosaveDraft();
+            // Plan 08-01: past-step submit no-op (data уже в request.stageData через render-merge).
+            // Plan 08-02 заменит на flush буфера если нужен.
             return;
         }
 
@@ -642,7 +929,7 @@ const PartnerOnboarding = (() => {
         _setActionLock(true);
         _setBtnLoading('#btnFormSubmit', true);
         // Also lock status-submit button if present
-        _setBtnLoading('.dropdown-wrap--up .dropdown-trigger', true);
+        _setBtnLoading('#btnStatusSubmit', true);
         try {
             // Upload pending files (base64) separately to avoid CORS/payload-size issues
             const pendingFiles = OnboardingForm.getPendingFiles();
@@ -683,27 +970,125 @@ const PartnerOnboarding = (() => {
                 }
             }
 
+            // Helper: build optimistic op before the actual API call(s)
+            const _applyOptimisticSubmit = (opts = {}) => {
+                const requests = OnboardingState.get('requests') || [];
+                const snapshot = structuredClone(requests);
+                const reqIdx = requests.findIndex(r => r.id === request.id);
+                if (reqIdx !== -1) {
+                    requests[reqIdx]._pending = true;
+                    requests[reqIdx].status = 'on_review';
+                    // BFIX: write collected form data into stageData optimistically so
+                    // OnboardingReview.render() displays actual field values immediately
+                    // instead of "—" during the ~1s round-trip to the server.
+                    requests[reqIdx].stageData = {
+                        ...(requests[reqIdx].stageData || {}),
+                        [stepNumber]: data
+                    };
+                }
+                OnboardingState.set('requests', requests);
+                OnboardingList.applyFilters();
+                const reqInState = reqIdx !== -1 ? requests[reqIdx] : request;
+                // Only show review UI optimistically if there's a reviewer for this step.
+                // Steps without a reviewer are auto-promoted by the server — showing review
+                // mode would flash an incorrect intermediate state for ~1 second.
+                // BFIX handoff-flash: для dynamicExecutor handoff (autoHandoff + saveDraft+approveStep)
+                // не рендерим optimistic review-view, потому что после server-ack идёт немедленный
+                // _openRequest(request.id) с переходом на корректный target view. Optimistic review
+                // показывает артефактный экран 'На проверке' с одним полем 'account_creator=Проверяющий'
+                // (остальные скрыты visibility-правилами в confirm-фазе для reviewer-handoff контекста).
+                // Аналогично прецедентам BFIX approve-flash (~1157) и BFIX reject-flash (~1267).
+                if (!opts.suppressReviewRender && OnboardingConfig.hasReviewer(stepNumber)) {
+                    OnboardingReview.render(reqInState, stepNumber);
+                    _showView('review');
+                }
+                const opId = OnboardingState.getOptimistic().apply({
+                    stateRef: requests,
+                    index: reqIdx,
+                    snapshot,
+                    operation: 'update',
+                    item: reqInState,
+                    onRollback: (error) => {
+                        OnboardingList.applyFilters();
+                        const restoredReq = _getRequest(request.id);
+                        if (restoredReq) {
+                            OnboardingState.set('currentRequest', restoredReq);
+                            OnboardingForm.render(restoredReq, stepNumber);
+                        }
+                        _showView('form');
+                        // BFIX: CONFLICT errors already handled by _handleConflict (Toast + reload)
+                        // — suppress duplicate error toast to avoid double-toasting on self-conflict.
+                        if (error && error._conflictHandled) return;
+                        Toast.error('Ошибка отправки: ' + error.message, 6000, {
+                            action: { label: 'Повторить', callback: () => _submitStep() }
+                        });
+                    }
+                });
+                return opId;
+            };
+
             // Reviewer filling data on dynamicExecutor step → save draft + approve (handoff)
             // AutoHandoff: reviewer submits from in_progress → submitStep + approveStep (handoff)
             // Only when handoff NOT yet complete (first reviewer fill, not executor confirm)
             if (OnboardingConfig.isWorkStatus(request.status) && step && step.dynamicExecutor && step.dynamicExecutor.autoHandoff && !isHandoffComplete) {
                 data[step.dynamicExecutor.field] = step.dynamicExecutor.defaultValue;
-                const submitResult = await CloudStorage.postApi('submitStep', {
-                    requestId: request.id, step: stepNumber, data: data
-                });
-                if (!submitResult.success) { Toast.error(submitResult.error || 'Ошибка'); return; }
-                _applyApiResult(submitResult);
-                const approveResult = await CloudStorage.postApi('approveStep', {
-                    requestId: request.id, step: stepNumber, comment: ''
-                });
-                if (!approveResult.success) { Toast.error(approveResult.error || 'Ошибка'); return; }
-                _applyApiResult(approveResult);
-                Toast.success('Создание завершено, передано в работу');
-                _openRequest(request.id);
+                // BFIX handoff-flash: подавить optimistic review-рендер — после server-ack идёт _openRequest
+                const opId = _applyOptimisticSubmit({ suppressReviewRender: true });
+                try {
+                    // Phase 22 (WMACH-04): version threading для optimistic locking
+                    const submitResult = await CloudStorage.postApi('submitStep', {
+                        requestId: request.id, step: stepNumber, data: data, version: request.version || 0
+                    });
+                    if (!submitResult.success) { OnboardingState.getOptimistic().rollback(opId, new Error(submitResult.error || 'Ошибка')); return; }
+                    _applyApiResult(submitResult);
+                    // Re-read version after submit (backend incremented it)
+                    const reqAfterSubmit = _getRequest(request.id) || request;
+                    const approveResult = await CloudStorage.postApi('approveStep', {
+                        requestId: request.id, step: stepNumber, comment: '', version: reqAfterSubmit.version || 0
+                    });
+                    if (!approveResult.success) { OnboardingState.getOptimistic().rollback(opId, new Error(approveResult.error || 'Ошибка')); return; }
+                    OnboardingState.getOptimistic().confirm(opId);
+                    _applyApiResult(approveResult);
+                    // QWIN-01: успешный submitStep+approveStep — очищаем dirty tracking
+                    if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDirty) OnboardingForm.clearDirty();
+                    if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDraftBuffer) OnboardingForm.clearDraftBuffer(request.id, stepNumber);
+                    Toast.success('Создание завершено, передано в работу');
+                    _openRequest(request.id);
+                } catch (e) {
+                    // Phase 22 (WMACH-04): CONFLICT auto-handled — rollback optimistic state silently
+                    if (e && e._conflictHandled) {
+                        OnboardingState.getOptimistic().rollback(opId, e);
+                        return;
+                    }
+                    OnboardingState.getOptimistic().rollback(opId, e);
+                }
                 return;
             }
 
-            if (request.status === 'on_review' && step && step.dynamicExecutor) {
+            // Phase 22 (WMACH-06): REPLACE per audit row partner-onboarding.js:761 — workflow gate
+            // for dynamicExecutor handoff (saveDraft + approveStep compound flow).
+            // Per audit doc Plan 22-01 design Q2: используем APPROVE с intent flag 'handoff'.
+            // FSM transition on_review → approved (или completed) через APPROVE валидна per Plan 22-02.
+            const hasFsmHandoff = typeof WorkflowMachine !== 'undefined' && WorkflowMachine;
+            const getHandoffCtx = function () {
+                const { sysRole: hSysRole, isAdmin: hIsAdmin } = OnboardingUtils.getRoles();
+                const isReviewer = step && OnboardingRoles.isReviewerForStep(hSysRole, step.number);
+                const isExecutor = step && OnboardingRoles.isExecutorForStep(hSysRole, step.number);
+                return {
+                    role: isReviewer ? 'reviewer' : (isExecutor ? 'executor' : hSysRole),
+                    isAdmin: !!hIsAdmin,
+                    executorId: request && request.assigneeEmail,
+                    userId: OnboardingState.get('userEmail'),
+                    hasRequiredFields: true,
+                    hasRejectReason: false,
+                    intent: 'handoff'
+                };
+            };
+            const reqStatusHandoff = request && request.status;
+            const canHandoff = hasFsmHandoff
+                ? WorkflowMachine.canTransition(reqStatusHandoff, 'APPROVE', getHandoffCtx).allowed
+                : (reqStatusHandoff === 'on_review');  // fallback when FSM unavailable
+            if (canHandoff && step && step.dynamicExecutor) {
                 // Pre-submit freshness check: verify request is still on_review
                 const freshStatus = await CloudStorage.postApi('getOnboardingStatus', {
                     requestId: request.id
@@ -716,35 +1101,92 @@ const PartnerOnboarding = (() => {
                     return;
                 }
 
-                await CloudStorage.postApi('saveDraft', {
-                    requestId: request.id, step: stepNumber, data: data
-                });
-                const approveResult = await CloudStorage.postApi('approveStep', {
-                    requestId: request.id, step: stepNumber, comment: ''
-                });
-                if (!approveResult.success) { Toast.error(approveResult.error || 'Ошибка'); return; }
-                _applyApiResult(approveResult);
-                Toast.success('Создание завершено, передано в работу');
-                _openRequest(request.id);
+                // BFIX handoff-flash: подавить optimistic review-рендер — после server-ack идёт _openRequest
+                const opId = _applyOptimisticSubmit({ suppressReviewRender: true });
+                try {
+                    // Phase 22 (WMACH-04): version threading для optimistic locking
+                    // BFIX: capture saveDraft result to get updated version — discarding result
+                    // caused reqAfterSave.version to stay at pre-saveDraft value → approveStep
+                    // sent stale version → backend CONFLICT (version N vs expected N+1).
+                    const saveDraftResult = await CloudStorage.postApi('saveDraft', {
+                        requestId: request.id, step: stepNumber, data: data, version: request.version || 0
+                    });
+                    // Update local state with new version from saveDraft response
+                    let approveVersion = request.version || 0;
+                    if (saveDraftResult && typeof saveDraftResult.version === 'number') {
+                        approveVersion = saveDraftResult.version;
+                        const currentReq = OnboardingState.get('currentRequest');
+                        if (currentReq && currentReq.id === request.id) {
+                            currentReq.version = saveDraftResult.version;
+                            const reqs = OnboardingState.get('requests') || [];
+                            const idx = reqs.findIndex(r => r.id === request.id);
+                            if (idx !== -1) reqs[idx].version = saveDraftResult.version;
+                        }
+                    }
+                    const approveResult = await CloudStorage.postApi('approveStep', {
+                        requestId: request.id, step: stepNumber, comment: '', version: approveVersion
+                    });
+                    if (!approveResult.success) { OnboardingState.getOptimistic().rollback(opId, new Error(approveResult.error || 'Ошибка')); return; }
+                    OnboardingState.getOptimistic().confirm(opId);
+                    _applyApiResult(approveResult);
+                    // QWIN-01: успешный saveDraft+approveStep — очищаем dirty tracking
+                    if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDirty) OnboardingForm.clearDirty();
+                    if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDraftBuffer) OnboardingForm.clearDraftBuffer(request.id, stepNumber);
+                    Toast.success('Создание завершено, передано в работу');
+                    _openRequest(request.id);
+                } catch (e) {
+                    // Phase 22 (WMACH-04): CONFLICT auto-handled — rollback optimistic state silently
+                    if (e && e._conflictHandled) {
+                        OnboardingState.getOptimistic().rollback(opId, e);
+                        return;
+                    }
+                    OnboardingState.getOptimistic().rollback(opId, e);
+                }
                 return;
             }
 
             // Freshness check: re-fetch requests and verify state hasn't changed
             const freshList = await CloudStorage.postApi('getOnboardingRequests', {});
+            // BFIX: track fresh version from server — use it for submitStep to avoid self-conflict
+            // caused by autosave version drift (autosave increments server version but previously
+            // didn't update local currentRequest.version before this point).
+            let _submitVersion = request.version || 0;
             if (freshList.requests) {
                 OnboardingState.set('requests', freshList.requests);
                 const freshReq = freshList.requests.find(r => r.id === request.id);
-                if (freshReq && (freshReq.currentStep !== request.currentStep || freshReq.status !== request.status)) {
-                    Toast.warning('Данные заявки изменились. Обновляю...');
-                    _openRequest(request.id);
-                    return;
+                if (freshReq) {
+                    if (freshReq.currentStep !== request.currentStep || freshReq.status !== request.status) {
+                        Toast.warning('Данные заявки изменились. Обновляю...');
+                        _openRequest(request.id);
+                        return;
+                    }
+                    // Use fresh version for submitStep — prevents CONFLICT when autosave incremented
+                    // server version but local request.version was not updated (fire-and-forget autosave).
+                    _submitVersion = typeof freshReq.version === 'number' ? freshReq.version : _submitVersion;
                 }
             }
 
-            const result = await CloudStorage.postApi('submitStep', {
-                requestId: request.id, step: stepNumber, data: data
-            });
-            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+            const opId = _applyOptimisticSubmit();
+            let result;
+            try {
+                // Phase 22 (WMACH-04): version threading для optimistic locking
+                result = await CloudStorage.postApi('submitStep', {
+                    requestId: request.id, step: stepNumber, data: data, version: _submitVersion
+                });
+                if (!result.success) { OnboardingState.getOptimistic().rollback(opId, new Error(result.error || 'Ошибка')); return; }
+                OnboardingState.getOptimistic().confirm(opId);
+                // QWIN-01: основной submitStep success — очищаем dirty tracking (server подтвердил приём)
+                if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDirty) OnboardingForm.clearDirty();
+                if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDraftBuffer) OnboardingForm.clearDraftBuffer(request.id, stepNumber);
+            } catch (e) {
+                // Phase 22 (WMACH-04): CONFLICT auto-handled by CloudStorage._handleConflict — rollback silently
+                if (e && e._conflictHandled) {
+                    OnboardingState.getOptimistic().rollback(opId, e);
+                    return;
+                }
+                OnboardingState.getOptimistic().rollback(opId, e);
+                return;
+            }
 
             _applyApiResult(result);
             const updated = result.request;
@@ -760,18 +1202,48 @@ const PartnerOnboarding = (() => {
                 Toast.success('Шаг выполнен');
             }
 
+            // Phase 22 (WMACH-06): REPLACE per audit row partner-onboarding.js:837 — workflow gate
+            // determining "next step executor is same user → continue editing inline" vs "open review".
+            // Status check (in_progress/approved) IS the FSM precondition: SUBMIT действие валидно
+            // только из этих source statuses (per WorkflowMachine.transitions table). Replaced со
+            // standard availableActions(...).includes('SUBMIT') translation per audit replacement pattern.
+            const hasFsmNext = typeof WorkflowMachine !== 'undefined' && WorkflowMachine;
+            const getNextStepCtx = function () {
+                const isExecForNextStep = OnboardingRoles.isExecutorForStep(sysRole, updated.currentStep);
+                return {
+                    role: isExecForNextStep ? 'executor' : sysRole,
+                    isAdmin: OnboardingUtils.isAdminLike(myRole),
+                    executorId: updated.assigneeEmail,
+                    userId: OnboardingState.get('userEmail'),
+                    hasRequiredFields: true,
+                    hasRejectReason: false
+                };
+            };
+            const updatedStatusNext = updated && updated.status;
+            const canSubmitNext = hasFsmNext
+                ? WorkflowMachine.availableActions(updatedStatusNext, getNextStepCtx).includes('SUBMIT')
+                : (updatedStatusNext === 'in_progress' || updatedStatusNext === 'approved');  // fallback when FSM unavailable
             // If next step executor is same user → continue editing
-            if ((updated.status === 'in_progress' || updated.status === 'approved') && OnboardingRoles.isExecutorForStep(sysRole, updated.currentStep)) {
+            if (canSubmitNext && OnboardingRoles.isExecutorForStep(sysRole, updated.currentStep)) {
                 OnboardingState.set('currentStep', updated.currentStep);
                 OnboardingForm.render(updated, updated.currentStep);
+                // BFIX: снимаем btn-loading ДО _showView('form') — форма не должна становиться
+                // видимой пока кнопка ещё в состоянии загрузки (browser может отрисовать фрейм
+                // между _showView и finally). finally делает idempotent second clear.
+                _setBtnLoading('#btnFormSubmit', false);
+                _setBtnLoading('#btnStatusSubmit', false);
+                _setActionLock(false);
+                _showView('form');
             } else {
                 _openRequest(request.id);
             }
         } catch (e) {
-            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'submitStep' });
+            // Phase 22 (WMACH-04): CONFLICT auto-handled by CloudStorage._handleConflict — silent on outer catch too
+            if (e && e._conflictHandled) { /* handler уже показал Toast.warning + reload */ }
+            else { ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'submitStep' }); }
         } finally {
             _setBtnLoading('#btnFormSubmit', false);
-            _setBtnLoading('.dropdown-wrap--up .dropdown-trigger', false);
+            _setBtnLoading('#btnStatusSubmit', false);
             _setActionLock(false);
         }
     }
@@ -785,17 +1257,66 @@ const PartnerOnboarding = (() => {
 
         _setActionLock(true);
         _setBtnLoading('#btnApprove', true);
+        let opId = null;
         try {
-            const result = await CloudStorage.postApi('approveStep', {
-                requestId: request.id, step: stepNumber, comment: comment.trim()
-            });
-            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+            // BFIX: read fresh version from state (autosave may have updated it via .then() handler)
+            const freshReq = _getRequest(request.id) || request;
+            const approveVersion = typeof freshReq.version === 'number' ? freshReq.version : (request.version || 0);
 
+            // OPTIMISTIC: snapshot → mutate status → update list (no re-render of review view)
+            const requests = OnboardingState.get('requests') || [];
+            const snapshot = structuredClone(requests);
+            const reqIdx = requests.findIndex(r => r.id === request.id);
+            const isLastStep = OnboardingConfig.getStep(stepNumber) &&
+                stepNumber >= OnboardingConfig.getVisibleStepCount(OnboardingState.get('userRole'));
+            if (reqIdx !== -1) {
+                requests[reqIdx]._pending = true;
+                requests[reqIdx].status = isLastStep ? 'completed' : 'approved';
+            }
+            OnboardingState.set('requests', requests);
+            OnboardingList.applyFilters();
+            // BFIX approve-flash: do NOT call _openRequest optimistically — onboarding-review.js
+            // treats isWorkStatus('approved') as "not yet submitted" and clears all data to {},
+            // causing a flash of empty review fields. Re-render only after real server response.
+            const reqInState = reqIdx !== -1 ? requests[reqIdx] : request;
+            opId = OnboardingState.getOptimistic().apply({
+                stateRef: requests,
+                index: reqIdx,
+                snapshot,
+                operation: 'update',
+                item: reqInState,
+                onRollback: (error) => {
+                    OnboardingList.applyFilters();
+                    const restoredReq = _getRequest(request.id);
+                    if (restoredReq) {
+                        OnboardingState.set('currentRequest', restoredReq);
+                        OnboardingReview.render(restoredReq, stepNumber);
+                    }
+                    _showView('review');
+                    Toast.error('Ошибка одобрения: ' + error.message, 6000, {
+                        action: { label: 'Повторить', callback: () => _approveStep() }
+                    });
+                }
+            });
+
+            // Phase 22 (WMACH-04): version threading для optimistic locking
+            const result = await CloudStorage.postApi('approveStep', {
+                requestId: request.id, step: stepNumber, comment: comment.trim(), version: approveVersion
+            });
+            if (!result.success) { OnboardingState.getOptimistic().rollback(opId, new Error(result.error || 'Ошибка')); return; }
+
+            OnboardingState.getOptimistic().confirm(opId);
             _applyApiResult(result);
+            // QWIN-01: успешный approveStep — очищаем dirty tracking
+            if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDirty) OnboardingForm.clearDirty();
+            if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDraftBuffer) OnboardingForm.clearDraftBuffer(request.id, stepNumber);
             Toast.success(result.request.status === 'completed' ? 'Заявка завершена!' : 'Шаг одобрен');
             _openRequest(request.id);
         } catch (e) {
-            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'approveStep' });
+            if (opId) OnboardingState.getOptimistic().rollback(opId, e);
+            // Phase 22 (WMACH-04): CONFLICT auto-handled by CloudStorage._handleConflict — silent
+            if (e && e._conflictHandled) { /* handler уже показал Toast.warning + reload */ }
+            else { ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'approveStep' }); }
         } finally {
             _setBtnLoading('#btnApprove', false);
             _setActionLock(false);
@@ -852,12 +1373,54 @@ const PartnerOnboarding = (() => {
 
         _setActionLock(true);
         _setBtnLoading('#btnReject', true);
+        let opId = null;
         try {
-            const result = await CloudStorage.postApi('rejectStep', {
-                requestId: request.id, step: stepNumber, comment, checklistData
-            });
-            if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
+            // BFIX: read fresh version from state (autosave may have updated it via .then() handler)
+            const freshReqForReject = _getRequest(request.id) || request;
+            const rejectVersion = typeof freshReqForReject.version === 'number' ? freshReqForReject.version : (request.version || 0);
 
+            // OPTIMISTIC: snapshot → mutate status → update list (no re-render of review view)
+            // BFIX reject-flash: do NOT call _openRequest optimistically — onboarding-review.js
+            // isCurrentNotSubmitted guard clears stageData to {} for revision_needed + reviewer,
+            // causing a flash of empty review fields. Re-render only after real server response.
+            const requests = OnboardingState.get('requests') || [];
+            const snapshot = structuredClone(requests);
+            const reqIdx = requests.findIndex(r => r.id === request.id);
+            if (reqIdx !== -1) {
+                requests[reqIdx]._pending = true;
+                requests[reqIdx].status = 'revision_needed';
+                requests[reqIdx].lastComment = comment;
+            }
+            OnboardingState.set('requests', requests);
+            OnboardingList.applyFilters();
+            const reqInState = reqIdx !== -1 ? requests[reqIdx] : request;
+            opId = OnboardingState.getOptimistic().apply({
+                stateRef: requests,
+                index: reqIdx,
+                snapshot,
+                operation: 'update',
+                item: reqInState,
+                onRollback: (error) => {
+                    OnboardingList.applyFilters();
+                    const restoredReq = _getRequest(request.id);
+                    if (restoredReq) {
+                        OnboardingState.set('currentRequest', restoredReq);
+                        OnboardingReview.render(restoredReq, stepNumber);
+                    }
+                    _showView('review');
+                    Toast.error('Ошибка отклонения: ' + error.message, 6000, {
+                        action: { label: 'Повторить', callback: () => _rejectStep() }
+                    });
+                }
+            });
+
+            // Phase 22 (WMACH-04): version threading для optimistic locking
+            const result = await CloudStorage.postApi('rejectStep', {
+                requestId: request.id, step: stepNumber, comment, checklistData, version: rejectVersion
+            });
+            if (!result.success) { OnboardingState.getOptimistic().rollback(opId, new Error(result.error || 'Ошибка')); return; }
+
+            OnboardingState.getOptimistic().confirm(opId);
             _applyApiResult(result);
             if (!result.request) _updateRequestLocal(request.id, { status: 'revision_needed', lastComment: comment });
 
@@ -882,10 +1445,16 @@ const PartnerOnboarding = (() => {
                 }
             }
 
+            // QWIN-01: успешный rejectStep — очищаем dirty tracking
+            if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDirty) OnboardingForm.clearDirty();
+            if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDraftBuffer) OnboardingForm.clearDraftBuffer(request.id, stepNumber);
             Toast.info('Заявка возвращена на доработку');
             _openRequest(request.id);
         } catch (e) {
-            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'rejectStep' });
+            if (opId) OnboardingState.getOptimistic().rollback(opId, e);
+            // Phase 22 (WMACH-04): CONFLICT auto-handled by CloudStorage._handleConflict — silent
+            if (e && e._conflictHandled) { /* handler уже показал Toast.warning + reload */ }
+            else { ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'rejectStep' }); }
         } finally {
             _setBtnLoading('#btnReject', false);
             _setActionLock(false);
@@ -899,17 +1468,23 @@ const PartnerOnboarding = (() => {
         _setActionLock(true);
         _setBtnLoading('#btnWithdraw', true);
         try {
+            // Phase 22 (WMACH-04): version threading для optimistic locking
             const result = await CloudStorage.postApi('withdrawOnboarding', {
-                requestId: request.id, step: request.currentStep
+                requestId: request.id, step: request.currentStep, version: request.version || 0
             });
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
             _applyApiResult(result);
             if (!result.request) _updateRequestLocal(request.id, { status: 'in_progress' });
+            // QWIN-01: успешный withdrawStep — очищаем dirty tracking (возврат с проверки → форма открывается заново)
+            if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDirty) OnboardingForm.clearDirty();
+            if (typeof OnboardingForm !== 'undefined' && OnboardingForm.clearDraftBuffer) OnboardingForm.clearDraftBuffer(request.id, request.currentStep);
             Toast.info('Заявка возвращена с проверки');
             _openRequest(request.id);
         } catch (e) {
-            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'withdrawStep' });
+            // Phase 22 (WMACH-04): CONFLICT auto-handled by CloudStorage._handleConflict — silent
+            if (e && e._conflictHandled) { /* handler уже показал Toast.warning + reload */ }
+            else { ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'withdrawStep' }); }
         } finally {
             _setBtnLoading('#btnWithdraw', false);
             _setActionLock(false);
@@ -932,14 +1507,19 @@ const PartnerOnboarding = (() => {
     }
 
     function _updateLeadStatusUI(value) {
-        const labelEl = document.querySelector('.dropdown-wrap--up .dropdown-trigger span');
-        if (labelEl) labelEl.textContent = OnboardingConfig.getOptionLabel(OnboardingConfig.LEAD_STATUSES, value);
-        document.querySelectorAll('#statusDropdown .dropdown-item').forEach(opt => {
-            opt.classList.toggle('active', opt.dataset.value === value);
-        });
-        document.querySelectorAll('#formFields [data-visible-when-field="lead_status"]').forEach(el => {
-            el.classList.toggle('hidden', value !== el.dataset.visibleWhenValue);
-        });
+        // BFIX: прямые DOM-мутации Lit-managed узлов (labelEl.textContent, opt.classList)
+        // удалены — они повреждали Lit ChildPart internal state (удаляли Comment markers)
+        // и вызывали TypeError в следующем _litRenderInto(statusWrap).
+        // OnboardingForm.render ниже делает полный Lit re-render, который корректно обновит UI.
+        // Phase 29 RULES-MIG: visibleWhen DOM-toggle удалён в пользу declarative re-render.
+        // reject_reason теперь использует visibility[] (eq lead_status === 'refused') — full
+        // form re-render пересчитывает skip-list через FieldRenderer.shouldShowField → evaluator.
+        const request = OnboardingState.get('currentRequest');
+        const stepNumber = OnboardingState.get('currentStep');
+        if (request && stepNumber && typeof OnboardingForm !== 'undefined' && OnboardingForm
+                && typeof OnboardingForm.render === 'function') {
+            OnboardingForm.render(request, stepNumber);
+        }
     }
 
     function _selectLeadStatus(value) {
@@ -991,18 +1571,54 @@ const PartnerOnboarding = (() => {
             async () => {
                 _setActionLock(true);
                 _setBtnLoading('#confirmOk', true);
+                let opId = null;
                 try {
-                    const result = await CloudStorage.postApi('deleteOnboardings', { requestIds: ids });
-                    if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
-
-                    CloudStorage.clearCache('onboardingRequests');
+                    // OPTIMISTIC: snapshot → remove selected from array → re-render
                     const requests = OnboardingState.get('requests') || [];
+                    const snapshot = structuredClone(requests);
+                    // Mark pending on each item to be deleted, then filter out
+                    ids.forEach(id => {
+                        const item = requests.find(r => r.id === id);
+                        if (item) item._pending = true;
+                    });
                     const remaining = requests.filter(r => !ids.includes(r.id));
-                    OnboardingState.set('requests', remaining);
+                    // Replace array content in-place to preserve reference for OptimisticManager
+                    requests.length = 0;
+                    requests.push(...remaining);
+                    OnboardingState.set('requests', requests);
                     OnboardingList.applyFilters();
+                    // Use first deleted item as representative for OptimisticManager
+                    const firstDeletedItem = snapshot.find(r => ids.includes(r.id)) || { id: ids[0] };
+                    opId = OnboardingState.getOptimistic().apply({
+                        stateRef: requests,
+                        index: -1,
+                        snapshot,
+                        operation: 'delete',
+                        item: firstDeletedItem,
+                        onRollback: (error) => {
+                            OnboardingList.applyFilters();
+                            Toast.error('Ошибка удаления: ' + error.message, 6000, {
+                                action: { label: 'Повторить', callback: () => _deleteSelectedRequests() }
+                            });
+                        }
+                    });
+
+                    const result = await CloudStorage.postApi('deleteOnboardings', { requestIds: ids });
+                    if (!result.success) { OnboardingState.getOptimistic().rollback(opId, new Error(result.error || 'Ошибка')); return; }
+
+                    OnboardingState.getOptimistic().confirm(opId);
+                    CloudStorage.clearCacheNamespace('onboardingRequests');
+                    // Phase 63 (TS-PROTO-06): capture server ts so next read short-circuits
+                    if (typeof CloudStorage._writeNsTs === 'function') {
+                        CloudStorage._writeNsTs('onboardings', (result && typeof result.ts === 'number') ? result.ts : Date.now());
+                    }
+                    await OnboardingList.goToOnboardingPage(OnboardingList.getCurrentPage());
                     Toast.success(`Удалено заявок: ${ids.length}`);
                 } catch (e) {
-                    ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'deleteRequests' });
+                    if (opId) OnboardingState.getOptimistic().rollback(opId, e);
+                    // Phase 45 F-C2: CONFLICT auto-handled by CloudStorage._handleConflict — silent (defensive consistency)
+                    if (e && e._conflictHandled) { /* handler уже показал Toast.warning + reload */ }
+                    else { ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'deleteRequests' }); }
                 } finally {
                     _setBtnLoading('#confirmOk', false);
                     _setActionLock(false);
@@ -1018,7 +1634,8 @@ const PartnerOnboarding = (() => {
         _setActionLock(true);
         _setBtnLoading('#confirmOk', true);
         try {
-            const result = await CloudStorage.postApi('cancelOnboarding', { requestId: request.id });
+            // Phase 22 (WMACH-04): version threading для optimistic locking
+            const result = await CloudStorage.postApi('cancelOnboarding', { requestId: request.id, version: request.version || 0 });
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
             _applyApiResult(result);
@@ -1026,7 +1643,9 @@ const PartnerOnboarding = (() => {
             Toast.warning('Заявка отменена');
             _openRequest(request.id);
         } catch (e) {
-            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'cancelRequest' });
+            // Phase 22 (WMACH-04): CONFLICT auto-handled by CloudStorage._handleConflict — silent
+            if (e && e._conflictHandled) { /* handler уже показал Toast.warning + reload */ }
+            else { ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'cancelRequest' }); }
         } finally {
             _setBtnLoading('#confirmOk', false);
             _setActionLock(false);
@@ -1040,7 +1659,8 @@ const PartnerOnboarding = (() => {
         _setActionLock(true);
         _setBtnLoading('#confirmOk', true);
         try {
-            const result = await CloudStorage.postApi('reactivateOnboarding', { requestId: request.id });
+            // Phase 22 (WMACH-04): version threading для optimistic locking
+            const result = await CloudStorage.postApi('reactivateOnboarding', { requestId: request.id, version: request.version || 0 });
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
             _applyApiResult(result);
@@ -1048,7 +1668,9 @@ const PartnerOnboarding = (() => {
             Toast.success('Заявка восстановлена');
             _openRequest(request.id);
         } catch (e) {
-            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'reactivateRequest' });
+            // Phase 22 (WMACH-04): CONFLICT auto-handled by CloudStorage._handleConflict — silent
+            if (e && e._conflictHandled) { /* handler уже показал Toast.warning + reload */ }
+            else { ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'reactivateRequest' }); }
         } finally {
             _setBtnLoading('#confirmOk', false);
             _setActionLock(false);
@@ -1056,32 +1678,15 @@ const PartnerOnboarding = (() => {
     }
 
     // ── Form Dropdowns ──
+    // QWIN-03: делегируем в shared/js/dropdown-helper.js
+    // BFIX-15: evt передаётся для touchend.preventDefault внутри DropdownHelper.toggle
 
-    function _toggleFormDropdown(trigger) {
-        const menuId = trigger.dataset.target;
-        const menu = document.getElementById(menuId);
-        if (!menu) return;
-        document.querySelectorAll('.dropdown-wrap--form .dropdown-menu:not(.hidden)').forEach(m => {
-            if (m !== menu) m.classList.add('hidden');
-        });
-        menu.classList.toggle('hidden');
+    function _toggleFormDropdown(trigger, evt) {
+        DropdownHelper.toggle(trigger, evt);
     }
 
     function _selectFormDropdown(target) {
-        const menu = target.closest('.dropdown-menu');
-        const wrap = target.closest('.dropdown-wrap--form');
-        if (!menu || !wrap) return;
-        const value = target.dataset.value ?? '';
-        const label = target.textContent;
-        const input = wrap.querySelector('input[type="hidden"]');
-        if (input) input.value = value;
-        const trigger = wrap.querySelector('.dropdown-trigger--form');
-        const labelEl = trigger?.querySelector('span');
-        if (labelEl) labelEl.textContent = label;
-        trigger?.classList.toggle('placeholder', !value);
-        menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
-        target.classList.add('active');
-        menu.classList.add('hidden');
+        DropdownHelper.select(target, target.dataset.value ?? '', target.textContent);
     }
 
     // ── History Modal ──
@@ -1099,35 +1704,32 @@ const PartnerOnboarding = (() => {
     // ── Reassign ──
 
     async function _showReassignModal() {
+        // BFIX (audit 2026-05-19): открыть модалку СРАЗУ + спиннер на trigger-кнопке.
+        // Раньше: await getEmployees() ДО _openModal → click "Передать" → пользователь
+        // не видит ничего до завершения fetch → "резко появляется модалка".
+        // Сейчас: модалка открывается мгновенно с "Загрузка..." в dropdown'е (visual feedback),
+        // btnReassign показывает spinner в bottom-bar до завершения fetch.
         const menu = document.getElementById('reassignTargetMenu');
         const input = document.getElementById('reassignTargetValue');
         const label = document.getElementById('reassignTargetLabel');
         const trigger = document.getElementById('reassignTargetTrigger');
+
+        // 1) Сброс полей в начальное состояние ДО открытия (чтобы старое значение не мигало).
+        if (input) input.value = '';
+        if (label) label.textContent = 'Выберите менеджера';
+        if (trigger) trigger.classList.add('placeholder');
         if (menu) {
-            menu.innerHTML = '<div class="dropdown-item dropdown-item--disabled">Загрузка...</div>';
-            if (input) input.value = '';
-            if (label) label.textContent = 'Выберите менеджера';
-            if (trigger) trigger.classList.add('placeholder');
-            try {
-                const employees = await CloudStorage.getEmployees();
-                let html = '<div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите менеджера</div>';
-                employees.forEach(emp => {
-                    html += '<div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="' + Utils.escapeHtml(emp.email) + '" data-label="' + Utils.escapeHtml(emp.name || emp.email) + '">' + Utils.escapeHtml(emp.name || emp.email) + '</div>';
-                });
-                menu.innerHTML = html;
-            } catch {
-                menu.innerHTML = '<div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите менеджера</div>';
-            }
+            _litRenderInto(menu, (html) => html`<div class="dropdown-item dropdown-item--disabled">Загрузка...</div>`);
         }
 
         const reasonMenu = document.getElementById('reassignReasonMenu');
         const reasonInput = document.getElementById('reassignReasonValue');
         if (reasonMenu && !reasonMenu.dataset.populated) {
-            let html = '<div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите причину</div>';
-            OnboardingConfig.REASSIGN_REASONS.forEach(r => {
-                html += '<div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="' + Utils.escapeHtml(r.value) + '">' + Utils.escapeHtml(r.label) + '</div>';
-            });
-            reasonMenu.innerHTML = html;
+            // Phase 52 LIT-FIN-01-A: Lit auto-escapes r.value/r.label (XSS-proof для config-derived values).
+            _litRenderInto(reasonMenu, (html) => html`
+                <div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите причину</div>
+                ${OnboardingConfig.REASSIGN_REASONS.map(r => html`<div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="${r.value}">${r.label}</div>`)}
+            `);
             reasonMenu.dataset.populated = '1';
         }
         if (reasonInput) reasonInput.value = '';
@@ -1136,7 +1738,36 @@ const PartnerOnboarding = (() => {
         if (reasonLabel) reasonLabel.textContent = 'Выберите причину';
         if (reasonTrigger) reasonTrigger.classList.add('placeholder');
 
+        // 2) Открываем модалку — пользователь сразу видит UI с "Загрузка..." в dropdown.
         _openModal('reassignModal');
+
+        // 3) Fetch employees в фоне (БЕЗ spinner на btnReassign — модалка уже даёт
+        //    visual feedback через "Загрузка..." в dropdown'е).
+        // BFIX (audit 2026-05-20): фильтруем текущего assignee из списка — нет смысла
+        // reassign на того же кто уже владеет заявкой. UX clarity + предотвращает
+        // backend error на no-op reassign.
+        if (menu) {
+            try {
+                if (typeof CloudStorage.clearCacheNamespace === 'function') {
+                    CloudStorage.clearCacheNamespace('employees');
+                }
+                const employees = await CloudStorage.getEmployees();
+                const currentReq = OnboardingState.get('currentRequest');
+                const currentAssignee = (currentReq && currentReq.assigneeEmail) ? String(currentReq.assigneeEmail).toLowerCase() : '';
+                const filtered = employees.filter(emp =>
+                    !currentAssignee || String(emp.email || '').toLowerCase() !== currentAssignee
+                );
+                _litRenderInto(menu, (html) => html`
+                    <div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите менеджера</div>
+                    ${filtered.map(emp => {
+                        const labelText = emp.name || emp.email;
+                        return html`<div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="${emp.email}" data-label="${labelText}">${labelText}</div>`;
+                    })}
+                `);
+            } catch {
+                _litRenderInto(menu, (html) => html`<div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите менеджера</div>`);
+            }
+        }
     }
 
     async function _confirmReassign() {
@@ -1151,13 +1782,30 @@ const PartnerOnboarding = (() => {
 
         if (!target) { Toast.error('Выберите менеджера'); return; }
         if (!reason) { Toast.error('Выберите причину'); return; }
+        // BFIX (audit 2026-05-20): client-side guard от reassign на того же assignee
+        // (dropdown уже фильтрует, но защитимся от race / direct input).
+        if (request.assigneeEmail && target.toLowerCase() === String(request.assigneeEmail).toLowerCase()) {
+            Toast.warning('Заявка уже у этого менеджера');
+            return;
+        }
 
         _setActionLock(true);
         const btn = document.querySelector('[data-action="onb-confirmReassign"]');
         _setBtnLoading(btn, true);
         try {
+            // Phase 22 (WMACH-04): version threading для optimistic locking
+            // BFIX (audit 2026-05-20): field name fix — real backend route ожидает
+            // `newAssignee` (см. ROUTE_TABLE в AppsScript_Test.js). Раньше слали
+            // targetEmail — mock-backend принимал alias, реальный backend reject'ил
+            // с "New assignee email is required". targetName тоже переименован
+            // для consistency (backend читает payload.newAssigneeName).
             const result = await CloudStorage.postApi('reassignOnboarding', {
-                requestId: request.id, targetEmail: target, targetName, reason, comment
+                requestId: request.id,
+                newAssignee: target,
+                newAssigneeName: targetName,
+                reason: reason,
+                comment: comment,
+                version: request.version || 0
             });
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
@@ -1167,7 +1815,9 @@ const PartnerOnboarding = (() => {
             Toast.success('Заявка передана');
             _openRequest(request.id);
         } catch (e) {
-            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'reassign' });
+            // Phase 22 (WMACH-04): CONFLICT auto-handled by CloudStorage._handleConflict — silent
+            if (e && e._conflictHandled) { /* handler уже показал Toast.warning + reload */ }
+            else { ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'reassign' }); }
         } finally {
             _setBtnLoading(btn, false);
             _setActionLock(false);
@@ -1186,11 +1836,15 @@ const PartnerOnboarding = (() => {
         const trigger = document.getElementById('rollbackTargetTrigger');
         if (!menu) return;
 
-        let html = '<div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите шаг</div>';
+        // Phase 52 LIT-FIN-01-A: Lit render — auto-escapes step labels (XSS-proof для config-derived).
+        const steps = [];
         for (let i = 1; i < request.currentStep; i++) {
-            html += '<div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="' + i + '">' + Utils.escapeHtml(OnboardingConfig.getStepLabel(i)) + '</div>';
+            steps.push({ value: i, label: OnboardingConfig.getStepLabel(i) });
         }
-        menu.innerHTML = html;
+        _litRenderInto(menu, (html) => html`
+            <div class="dropdown-item active" data-action="onb-selectFormDropdown" data-value="">Выберите шаг</div>
+            ${steps.map(s => html`<div class="dropdown-item" data-action="onb-selectFormDropdown" data-value="${s.value}">${s.label}</div>`)}
+        `);
         if (input) input.value = '';
         if (label) label.textContent = 'Выберите шаг';
         if (trigger) trigger.classList.add('placeholder');
@@ -1210,8 +1864,9 @@ const PartnerOnboarding = (() => {
         const btn = document.querySelector('[data-action="onb-confirmRollback"]');
         _setBtnLoading(btn, true);
         try {
+            // Phase 22 (WMACH-04): version threading для optimistic locking
             const result = await CloudStorage.postApi('rollbackOnboarding', {
-                requestId: request.id, targetStep, comment
+                requestId: request.id, targetStep, comment, version: request.version || 0
             });
             if (!result.success) { Toast.error(result.error || 'Ошибка'); return; }
 
@@ -1221,7 +1876,9 @@ const PartnerOnboarding = (() => {
             Toast.info('Откат выполнен');
             _openRequest(request.id);
         } catch (e) {
-            ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'rollback' });
+            // Phase 22 (WMACH-04): CONFLICT auto-handled by CloudStorage._handleConflict — silent
+            if (e && e._conflictHandled) { /* handler уже показал Toast.warning + reload */ }
+            else { ErrorHandler.handle(e, { module: 'partner-onboarding', action: 'rollback' }); }
         } finally {
             _setBtnLoading(btn, false);
             _setActionLock(false);
@@ -1250,20 +1907,14 @@ const PartnerOnboarding = (() => {
         // Update label
         const label = document.getElementById('filterLabel');
         if (label) label.textContent = target.textContent;
-        // Apply filter
+        // Apply filter — reset to page 1 with new server-side status filter
         OnboardingState.set('filters.status', value.startsWith('status:') ? value.replace('status:', '') : '');
-        OnboardingList.applyFilters();
+        OnboardingList.goToOnboardingPage(1);
         // Close
         _closeFilterDropdown();
     }
 
-    function _setDateNow(fieldId) {
-        const input = document.getElementById(`field_${fieldId}`);
-        if (!input) return;
-        const now = new Date();
-        const pad = n => String(n).padStart(2, '0');
-        input.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    }
+    // _setDateNow removed — handled by DatePicker component
 
     function _getFullResUrl(src) {
         // Already lh3 CDN — original resolution, use as-is
@@ -1307,17 +1958,32 @@ const PartnerOnboarding = (() => {
 
     function _openModal(id) {
         const modal = document.getElementById(id);
-        if (modal) modal.classList.add('active');
+        if (!modal) return;
+        // Phase 27 BFIX-19: <app-modal> Lit component (historyModal) использует boolean property API
+        if (modal.tagName === 'APP-MODAL') {
+            modal.open = true;
+        } else {
+            modal.classList.add('active');
+        }
     }
 
     function _closeModal(id) {
         const modal = document.getElementById(id);
-        if (modal) modal.classList.remove('active');
+        if (modal) {
+            // Phase 27 BFIX-19: <app-modal> compat
+            if (modal.tagName === 'APP-MODAL') {
+                modal.open = false;
+            } else {
+                modal.classList.remove('active');
+            }
+        }
         _confirmCallback = null;
     }
 
     function _showConfirm(title, message, callback) {
-        document.getElementById('confirmTitle').textContent = title;
+        // Phase 30 LIT-MIG-04: confirmTitle <h2> заменён на <app-modal title=""> — set via property
+        const modal = document.getElementById('confirmModal');
+        if (modal) modal.title = title;
         document.getElementById('confirmMessage').textContent = message;
         _confirmCallback = callback;
         _openModal('confirmModal');
@@ -1334,7 +2000,7 @@ const PartnerOnboarding = (() => {
         }
     }
 
-    function _switchDevRole(devRole, target) {
+    async function _switchDevRole(devRole, target) {
         OnboardingState.set('systemRole', devRole);
         OnboardingState.set('userRole', OnboardingRoles.getGlobalModuleRole(devRole));
         document.querySelectorAll('#roleSwitcher .dev-role-btn').forEach(b =>
@@ -1342,6 +2008,19 @@ const PartnerOnboarding = (() => {
         );
         _updateToolbarForRole();
         OnboardingList.setupDefaultFilters();
+
+        // BFIX (audit 2026-05-20): force fresh fetch при DEV switch — discards
+        // in-memory mutations from previous role's WIP edits. Mirrors real-world
+        // scenario where Sales/Assistant are separate sessions (clean server data).
+        // Раньше: assistant менял dropdown → QWIN-01 мутировал request.stageData
+        // → switch to Sales → видел WIP-изменения через shared object reference.
+        try {
+            if (typeof CloudStorage !== 'undefined' && typeof CloudStorage.clearCacheNamespace === 'function') {
+                CloudStorage.clearCacheNamespace('onboardings');
+            }
+            await _loadRequests();
+        } catch (_) { /* defensive — не блокировать switch */ }
+
         OnboardingList.applyFilters();
 
         // Re-render current view if not list
@@ -1357,7 +2036,9 @@ const PartnerOnboarding = (() => {
         if (e.key !== 'Escape') return;
 
         // Modals are handled by PageLifecycle — skip if any modal is active
+        // Phase 30 LIT-MIG-04: also skip if any <app-modal> is open (avoids navigating to list when modal closes)
         if (document.querySelector('.modal.active')) return;
+        if (document.querySelector('app-modal[open]')) return;
 
         // Close lightbox
         const lightbox = document.querySelector('.photo-lightbox');
@@ -1375,8 +2056,7 @@ const PartnerOnboarding = (() => {
 
     function _destroy() {
         _stopSmartSync();
-        // Flush pending draft before cleanup
-        _autosaveDraft();
+        _uninstallBeforeUnloadGuard();   // Phase 8 / Plan 03: cleanup before-unload listener
         OnboardingSource.destroy();
         OnboardingRoles.destroy();
         document.removeEventListener('click', _handleClick);
@@ -1412,24 +2092,102 @@ const PartnerOnboarding = (() => {
         if (_isActionLocked()) return;
         if (document.visibilityState === 'hidden') return;
         try {
-            const result = await CloudStorage.postApi('getOnboardingLastModified', {});
-            const serverTs = result.ts || '0';
+            // Phase 63 (TS-PROTO-06): replace legacy ts probe с conditional GET через
+            // getOnboardingRequests. Backend returns {notModified:true, ts} when nothing changed
+            // → no-op (skip render); else returns full data → existing reload pipeline triggers.
+            const _clientTs = (typeof CloudStorage._readNsTs === 'function')
+                ? CloudStorage._readNsTs('onboardings')
+                : null;
+            // BFIX (audit 2026-05-20): polling postApi ошибки тоже silent — GAS backend
+            // транзитно возвращает 500 (sheet lock, deploy, quota). Background polling
+            // не должен показывать alarming toast пользователю; next interval скорее
+            // всего успешен. Console.warn для debug, return для skip cycle.
+            let result;
+            try {
+                result = await CloudStorage.postApi('getOnboardingRequests', _clientTs ? { clientTs: _clientTs } : {});
+            } catch (apiError) {
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('[partner-onboarding._checkForUpdates] silent polling probe error:',
+                        apiError && apiError.message);
+                }
+                return;
+            }
+            // notModified short-circuit — нет изменений с момента _clientTs, skip render
+            if (result && result.notModified === true) return;
+            // Else: данные изменились — server returned full envelope (with new ts).
+            // raw postApi не идёт через CloudStorage.getOnboardingRequests → manually capture ts:
+            if (typeof CloudStorage._writeNsTs === 'function' && result && typeof result.ts === 'number') {
+                CloudStorage._writeNsTs('onboardings', result.ts);
+            }
+            const serverTs = (result && result.ts !== undefined) ? String(result.ts) : '0';
             if (serverTs === _lastModifiedTs) return;
             _lastModifiedTs = serverTs;
-            const data = await CloudStorage.getOnboardingRequests(false);
-            OnboardingState.set('requests', data.requests || []);
-            if (data.history) OnboardingState.set('history', data.history);
-            OnboardingList.applyFilters();
+            // Pending guard: skip sync if optimistic operations are in-flight
+            const optimistic = OnboardingState.getOptimistic();
+            if (optimistic && optimistic.getPendingCount() > 0) return;
+
+            // QWIN-01 ACTIVE EXCLUSION (Pitfall #5 prevention): capture user's dirty DOM
+            // values BEFORE state.requests перезаписан fresh server data. CONTEXT.md decision #3:
+            // polling does NOT pause; instead actively re-applies user's in-flight DOM
+            // values поверх fresh server stageData ПЕРЕД _openRequest re-render.
+            let _dirtyDomSnapshot = null;
+            let _dirtyFieldsSnapshot = null;
+            let _dirtyCurrentStep = null;
+            let _dirtyRequestId = null;
+            const _viewBefore = OnboardingState.get('view');
+            const _currentBefore = OnboardingState.get('currentRequest');
+            if (_viewBefore === 'form' && _currentBefore && typeof OnboardingForm !== 'undefined' && typeof OnboardingForm.getDirtyFields === 'function') {
+                const _dirty = OnboardingForm.getDirtyFields();
+                if (_dirty && _dirty.size > 0) {
+                    _dirtyFieldsSnapshot = new Set(_dirty);
+                    _dirtyCurrentStep = _currentBefore.currentStep;
+                    _dirtyRequestId = _currentBefore.id;
+                    try {
+                        _dirtyDomSnapshot = OnboardingForm.collectFormData(_dirtyCurrentStep, { excludeFiles: true });
+                    } catch (_) { _dirtyDomSnapshot = null; }
+                    // Toast.info indicator (UI feedback — secondary к данным защите)
+                    Toast.info('Другой пользователь изменил карточку. Ваши изменения сохранены.', 3000);
+                }
+            }
+
+            // Clear cache and reload current page (server pagination mode)
+            // BFIX (audit 2026-05-20): silent=true — background polling, не показывать
+            // Toast.error на транзитные backend 500-ки (next interval retry).
+            CloudStorage.clearCacheNamespace('onboardingRequests');
+            await OnboardingList.goToOnboardingPage(
+                OnboardingList.getCurrentPage ? OnboardingList.getCurrentPage() : 1,
+                { silent: true }
+            );
+
+            // QWIN-01 ACTIVE EXCLUSION (continued): re-apply DOM values поверх fresh server stageData
+            // ДО того как _openRequest вызовет render() с stale-from-server data.
+            if (_dirtyFieldsSnapshot && _dirtyDomSnapshot && _dirtyRequestId) {
+                const _freshRequests = OnboardingState.get('requests') || [];
+                const _freshRequest = _freshRequests.find(r => r.id === _dirtyRequestId);
+                if (_freshRequest) {
+                    if (!_freshRequest.stageData) _freshRequest.stageData = {};
+                    if (!_freshRequest.stageData[_dirtyCurrentStep]) _freshRequest.stageData[_dirtyCurrentStep] = {};
+                    for (const fieldId of _dirtyFieldsSnapshot) {
+                        if (fieldId in _dirtyDomSnapshot) {
+                            _freshRequest.stageData[_dirtyCurrentStep][fieldId] = _dirtyDomSnapshot[fieldId];
+                        }
+                    }
+                    // _freshRequest mutated in-place — OnboardingState.requests array references same object.
+                }
+            }
+
             const view = OnboardingState.get('view');
             if (view !== 'list') {
                 const current = OnboardingState.get('currentRequest');
                 if (current) {
-                    const updated = (data.requests || []).find(r => r.id === current.id);
+                    if (optimistic && optimistic.isPending(current.id)) return;
+                    const requests = OnboardingState.get('requests') || [];
+                    const updated = requests.find(r => r.id === current.id);
                     if (!updated) {
                         Toast.info('Заявка была удалена');
                         _showView('list');
                     } else if (updated.status !== current.status || updated.currentStep !== current.currentStep) {
-                        _openRequest(current.id);
+                        _openRequest(current.id);  // collectFormData wrap в render() (Defense Layer 1) protects DOM data here too
                     }
                 }
             }
@@ -1450,6 +2208,7 @@ const PartnerOnboarding = (() => {
             document.addEventListener('keydown', _handleKeydown);
             document.addEventListener('keypress', _handleKeypress);
             await init();
+            _installBeforeUnloadGuard();   // Phase 8 / Plan 03: unsaved-changes guard
         },
         onDestroy() {
             _destroy();

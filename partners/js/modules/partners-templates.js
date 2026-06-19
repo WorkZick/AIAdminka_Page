@@ -1,5 +1,5 @@
 // Partners Templates — создан через SharedTemplates factory
-var PartnersTemplates = SharedTemplates.create({
+const PartnersTemplates = SharedTemplates.create({
     state: PartnersState,
     forms: PartnersForms,
     dropdownAction: 'partners-selectFormDropdown',
@@ -15,7 +15,7 @@ var PartnersTemplates = SharedTemplates.create({
             delete PartnersState.cachedTemplates[templateId];
         },
         rename: async function(templateId, name, makeDefault) {
-            var all = PartnersState.cachedTemplates;
+            const all = PartnersState.cachedTemplates;
             if (makeDefault) {
                 Object.values(all).forEach(function(t) { t.isDefault = false; });
             }
@@ -52,7 +52,7 @@ var PartnersTemplates = SharedTemplates.create({
         document.getElementById('formSaveBtnText').textContent = 'Сохранить шаблон';
         document.getElementById('formBody').classList.add('hidden');
 
-        var formCounters = document.getElementById('formCounters');
+        const formCounters = document.getElementById('formCounters');
         formCounters.classList.remove('hidden');
         formCounters.classList.add('disabled');
         document.getElementById('formDep').value = '0';
@@ -61,21 +61,21 @@ var PartnersTemplates = SharedTemplates.create({
 
         document.querySelector('.form-partner-info').classList.remove('hidden');
 
-        var subagentInput = document.getElementById('formSubagent');
-        var subagentIdInput = document.getElementById('formSubagentId');
-        var methodWrap = document.getElementById('formMethodWrap');
-        var methodLabel = document.getElementById('formMethodLabel');
-        var methodValueInput = document.getElementById('formMethodValue');
-        var statusBadge = document.getElementById('formStatusBadge');
-        var formAvatar = document.querySelector('.form-avatar');
+        const subagentInput = document.getElementById('formSubagent');
+        const subagentIdInput = document.getElementById('formSubagentId');
+        const methodWrap = document.getElementById('formMethodWrap');
+        const methodLabel = document.getElementById('formMethodLabel');
+        const methodValueInput = document.getElementById('formMethodValue');
+        const statusBadge = document.getElementById('formStatusBadge');
+        const formAvatar = document.querySelector('.form-avatar');
 
         subagentInput.value = 'Субагент';
         subagentIdInput.value = 'ID Субагента';
         if (methodLabel) methodLabel.textContent = 'Метод';
         if (methodValueInput) methodValueInput.value = '';
-        var methodTrigger = document.getElementById('formMethodTrigger');
+        const methodTrigger = document.getElementById('formMethodTrigger');
         if (methodTrigger) methodTrigger.classList.add('placeholder');
-        var methodMenu = document.getElementById('formMethodMenu');
+        const methodMenu = document.getElementById('formMethodMenu');
         if (methodMenu) methodMenu.innerHTML = '';
 
         subagentInput.classList.add('disabled');
@@ -86,7 +86,7 @@ var PartnersTemplates = SharedTemplates.create({
         subagentInput.readOnly = true;
         subagentIdInput.readOnly = true;
 
-        var methodWrapper = document.querySelector('.form-method-wrapper');
+        const methodWrapper = document.querySelector('.form-method-wrapper');
         if (methodWrapper) methodWrapper.classList.add('disabled', 'pointer-events-none');
         if (formAvatar) formAvatar.classList.add('disabled', 'pointer-events-none');
 
@@ -105,44 +105,44 @@ var PartnersTemplates = SharedTemplates.create({
     },
 
     onSaveCleanup: function() {
-        var formAvatar = document.querySelector('.form-avatar');
+        const formAvatar = document.querySelector('.form-avatar');
         if (formAvatar) {
             formAvatar.classList.remove('disabled', 'pointer-events-none');
             formAvatar.classList.add('pointer-events-auto');
         }
 
         ['formSubagent', 'formSubagentId'].forEach(function(id) {
-            var el = document.getElementById(id);
+            const el = document.getElementById(id);
             if (el) { el.classList.remove('disabled'); el.readOnly = false; }
         });
 
-        var methodWrap = document.getElementById('formMethodWrap');
+        const methodWrap = document.getElementById('formMethodWrap');
         if (methodWrap) { methodWrap.classList.remove('disabled'); }
 
-        var statusBadge = document.getElementById('formStatusBadge');
+        const statusBadge = document.getElementById('formStatusBadge');
         if (statusBadge) statusBadge.classList.remove('disabled');
 
-        var formCounters = document.getElementById('formCounters');
+        const formCounters = document.getElementById('formCounters');
         formCounters.classList.remove('hidden', 'disabled');
         document.querySelector('.form-partner-info').classList.remove('hidden');
     },
 
     onApplyTemplate: function(templateId) {
-        var template = PartnersState.cachedTemplates[templateId];
+        const template = PartnersState.cachedTemplates[templateId];
         if (!template || !template.fields) return;
 
         PartnersForms.removeDynamicFields();
 
-        var allowedTypes = ['text', 'email', 'tel', 'date', 'textarea'];
+        const allowedTypes = ['text', 'email', 'tel', 'date', 'textarea'];
         template.fields.forEach(function(field) {
-            var safeLabel = PartnersUtils.escapeHtml(field.label);
-            var safeId = PartnersUtils.escapeHtml(field.id);
-            var safeType = allowedTypes.indexOf(field.type) !== -1 ? field.type : 'text';
-            var fieldHtml = '<div class="form-group-inline" data-template-field="true">' +
+            const safeLabel = PartnersUtils.escapeHtml(field.label);
+            const safeId = PartnersUtils.escapeHtml(field.id);
+            const safeType = allowedTypes.indexOf(field.type) !== -1 ? field.type : 'text';
+            const fieldHtml = '<div class="form-group-inline" data-template-field="true">' +
                 '<label>' + safeLabel + ':</label>' +
                 (safeType === 'textarea'
-                    ? '<textarea id="' + safeId + '" placeholder="' + safeLabel + '" data-field-label="' + safeLabel + '"></textarea>'
-                    : '<input type="' + safeType + '" id="' + safeId + '" placeholder="' + safeLabel + '" data-field-label="' + safeLabel + '">'
+                    ? '<textarea class="form-textarea" id="' + safeId + '" placeholder="' + safeLabel + '" data-field-label="' + safeLabel + '"></textarea>'
+                    : '<input type="' + safeType + '" class="form-input" id="' + safeId + '" placeholder="' + safeLabel + '" data-field-label="' + safeLabel + '">'
                 ) + '</div>';
             document.getElementById('formBody').insertAdjacentHTML('beforeend', fieldHtml);
         });
@@ -155,15 +155,15 @@ var PartnersTemplates = SharedTemplates.create({
 
 // Приватный хелпер: создаёт HTML поля и навешивает слушатели
 PartnersTemplates._addFieldWithListeners = function(field, self) {
-    var safeLabel = PartnersUtils.escapeHtml(field.label || '');
-    var safeId = PartnersUtils.escapeHtml(field.id);
-    var allowedTypes = ['text', 'email', 'tel', 'date', 'textarea'];
-    var safeType = allowedTypes.indexOf(field.type) !== -1 ? field.type : 'text';
-    var fieldHtml = '<div class="template-field-row" data-field-id="' + safeId + '">' +
+    const safeLabel = PartnersUtils.escapeHtml(field.label || '');
+    const safeId = PartnersUtils.escapeHtml(field.id);
+    const allowedTypes = ['text', 'email', 'tel', 'date', 'textarea'];
+    const safeType = allowedTypes.indexOf(field.type) !== -1 ? field.type : 'text';
+    const fieldHtml = '<div class="template-field-row" data-field-id="' + safeId + '">' +
         '<div class="form-field"><label>Название поля</label>' +
-        '<input type="text" class="template-field-input" placeholder="Например: Telegram" value="' + safeLabel + '" data-field-id="' + safeId + '"></div>' +
+        '<input type="text" class="form-input template-field-input" placeholder="Например: Telegram" value="' + safeLabel + '" data-field-id="' + safeId + '"></div>' +
         '<div class="form-field"><label>Тип</label>' +
-        '<select class="template-field-type" data-field-id="' + safeId + '">' +
+        '<select class="form-select template-field-type" data-field-id="' + safeId + '">' +
         '<option value="text"' + (safeType === 'text' ? ' selected' : '') + '>Текст</option>' +
         '<option value="email"' + (safeType === 'email' ? ' selected' : '') + '>Email</option>' +
         '<option value="tel"' + (safeType === 'tel' ? ' selected' : '') + '>Телефон</option>' +
@@ -175,10 +175,10 @@ PartnersTemplates._addFieldWithListeners = function(field, self) {
 
     document.getElementById('templateFieldsList').insertAdjacentHTML('beforeend', fieldHtml);
 
-    var fieldRow = document.querySelector('[data-field-id="' + field.id + '"]');
+    const fieldRow = document.querySelector('[data-field-id="' + field.id + '"]');
     if (fieldRow) {
-        var inputField = fieldRow.querySelector('.template-field-input');
-        var selectField = fieldRow.querySelector('.template-field-type');
+        const inputField = fieldRow.querySelector('.template-field-input');
+        const selectField = fieldRow.querySelector('.template-field-type');
         if (inputField) {
             inputField.addEventListener('change', function(e) { self.updateTemplateFieldLabel(field.id, e.target.value); });
             if (!field.label) inputField.focus();
@@ -198,9 +198,9 @@ PartnersTemplates.resetToDefaultFields = function() {
 PartnersTemplates.createTemplateFieldHtml = function(fieldId, label, type) {
     return '<div class="template-field-row" data-field-id="' + fieldId + '">' +
         '<div class="form-field"><label>Название поля</label>' +
-        '<input type="text" class="template-field-input" placeholder="Например: Telegram" value="' + PartnersUtils.escapeHtml(label || '') + '" data-field-id="' + fieldId + '"></div>' +
+        '<input type="text" class="form-input template-field-input" placeholder="Например: Telegram" value="' + PartnersUtils.escapeHtml(label || '') + '" data-field-id="' + fieldId + '"></div>' +
         '<div class="form-field"><label>Тип</label>' +
-        '<select class="template-field-type" data-field-id="' + fieldId + '">' +
+        '<select class="form-select template-field-type" data-field-id="' + fieldId + '">' +
         '<option value="text"' + (type === 'text' ? ' selected' : '') + '>Текст</option>' +
         '<option value="email"' + (type === 'email' ? ' selected' : '') + '>Email</option>' +
         '<option value="tel"' + (type === 'tel' ? ' selected' : '') + '>Телефон</option>' +

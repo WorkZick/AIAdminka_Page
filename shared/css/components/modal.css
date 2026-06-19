@@ -1,5 +1,7 @@
+@layer shared {
 /* ============================================================
    AIAdminka Design System - Modal
+   Phase 26-06 (CSS-02): refactored to native CSS Nesting Level 1.
    ============================================================ */
 
 /* ==================== MODAL WRAPPER ==================== */
@@ -8,32 +10,42 @@
     display: contents;
 }
 
+/* Hide app-modal light DOM before upgrade and whenever the host is closed. */
+app-modal:not([open]) {
+    display: none;
+}
+
 /* ==================== MODAL OVERLAY ==================== */
+/* BFIX (audit 2026-05-20): убран backdrop-filter с overlay — был DOUBLE blur
+   (overlay + dialog) что killер для GPU compositing. Плотная rgba(0,0,0,0.7)
+   уже скрывает фон достаточно. Особенно тормозило при поверх других открытых
+   модалок (тройной blur composite). */
 .modal {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.7);
     display: none;
     align-items: center;
     justify-content: center;
     z-index: var(--z-modal);
     padding: 20px;
-}
 
-.modal.active {
-    display: flex;
+    &.active {
+        display: flex;
+    }
 }
 
 /* ==================== MODAL DIALOG ==================== */
+/* BFIX (audit 2026-05-20): blur снижен с 24px (--glass-blur-strong) до 12px.
+   На слабых GPU 24px blur per modal × N nested modals = заметный jank.
+   12px даёт тот же visual эффект (glass effect остаётся), но в 4x дешевле. */
 .modal-dialog {
-    background: rgba(30, 30, 30, 0.85);
-    backdrop-filter: blur(var(--glass-blur-strong));
-    -webkit-backdrop-filter: blur(var(--glass-blur-strong));
+    background: rgba(30, 30, 30, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--radius-2xl);
     width: 100%;
@@ -43,24 +55,24 @@
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-lg);
-}
 
-/* Size variants */
-.modal-dialog.modal-sm {
-    max-width: 320px;
-}
+    /* Size variants */
+    &.modal-sm {
+        max-width: 320px;
+    }
 
-.modal-dialog.modal-lg {
-    max-width: 560px;
-}
+    &.modal-lg {
+        max-width: 560px;
+    }
 
-.modal-dialog.modal-xl {
-    max-width: 800px;
-}
+    &.modal-xl {
+        max-width: 800px;
+    }
 
-.modal-dialog.modal-full {
-    max-width: 95%;
-    max-height: 95vh;
+    &.modal-full {
+        max-width: 95%;
+        max-height: 95vh;
+    }
 }
 
 /* ==================== MODAL HEADER ==================== */
@@ -92,16 +104,16 @@
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: background var(--transition-fast);
-}
 
-.modal-close:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
+    &:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
 
-.modal-close img {
-    width: 16px;
-    height: 16px;
-    filter: brightness(0) invert(1);
+    & img {
+        width: 16px;
+        height: 16px;
+        filter: brightness(0) invert(1);
+    }
 }
 
 /* ==================== MODAL BODY ==================== */
@@ -109,22 +121,40 @@
     flex: 1;
     overflow-y: auto;
     padding: 24px;
-}
 
-.modal-body p {
-    font-size: var(--font-size-base);
-    color: var(--white);
-    line-height: 1.6;
-    margin-bottom: 12px;
-}
+    & p {
+        font-size: var(--font-size-base);
+        color: var(--white);
+        line-height: 1.6;
+        margin-bottom: 12px;
 
-.modal-body p:last-child {
-    margin-bottom: 0;
-}
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
 
-.modal-body a {
-    color: var(--accent);
-    word-break: break-all;
+    & a {
+        color: var(--accent);
+        word-break: break-all;
+    }
+
+    /* ==================== SCROLLBAR IN MODAL ==================== */
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: var(--radius-sm);
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+    }
 }
 
 /* ==================== MODAL FOOTER ==================== */
@@ -137,47 +167,53 @@
     flex-shrink: 0;
 }
 
-.modal-footer-left {
-    justify-content: flex-start;
-}
-
 .modal-footer-center {
     justify-content: center;
 }
 
+/* v2.27 FIXES-VISUAL-05: modal-footer-between используется как wrapper div ВНУТРИ
+   slot="footer" (app-modal оборачивает его в .modal-footer). Без display:flex +
+   width:100% wrapper становится inline child и кнопка "Удалить" + ".modal-actions"
+   расползаются по разным flex-линиям. */
 .modal-footer-between {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: var(--spacing-md);
+    width: 100%;
 }
 
 /* ==================== CONFIRM MODAL ==================== */
-.modal-confirm .modal-body {
-    text-align: center;
-    padding: 32px 24px;
-}
+.modal-confirm {
+    & .modal-body {
+        text-align: center;
+        padding: 32px 24px;
+    }
 
-.modal-confirm .modal-icon {
-    width: 48px;
-    height: 48px;
-    margin: 0 auto 16px;
-}
+    & .modal-icon {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 16px;
 
-.modal-confirm .modal-icon.warning {
-    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
-}
+        &.warning {
+            filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
+        }
 
-.modal-confirm .modal-icon.danger {
-    filter: brightness(0) saturate(100%) invert(60%) sepia(50%) saturate(700%) hue-rotate(320deg);
-}
+        &.danger {
+            filter: brightness(0) saturate(100%) invert(60%) sepia(50%) saturate(700%) hue-rotate(320deg);
+        }
+    }
 
-.modal-confirm .modal-message {
-    font-size: var(--font-size-md);
-    color: var(--white);
-    margin-bottom: 8px;
-}
+    & .modal-message {
+        font-size: var(--font-size-md);
+        color: var(--white);
+        margin-bottom: 8px;
+    }
 
-.modal-confirm .modal-description {
-    font-size: var(--font-size-base);
-    color: var(--gray);
+    & .modal-description {
+        font-size: var(--font-size-base);
+        color: var(--gray);
+    }
 }
 
 /* ==================== PROMPT MODAL INPUT ==================== */
@@ -194,32 +230,14 @@
     outline: none;
     transition: border-color var(--transition-fast);
     box-sizing: border-box;
-}
 
-.prompt-modal-input:focus {
-    border-color: var(--accent-muted);
-}
+    &:focus {
+        border-color: var(--accent-muted);
+    }
 
-.prompt-modal-input::placeholder {
-    color: rgba(255, 255, 255, 0.35);
-}
-
-/* ==================== SCROLLBAR IN MODAL ==================== */
-.modal-body::-webkit-scrollbar {
-    width: 6px;
-}
-
-.modal-body::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.modal-body::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 3px;
-}
-
-.modal-body::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
+    &::placeholder {
+        color: rgba(255, 255, 255, 0.35);
+    }
 }
 
 /* ==================== RESPONSIVE ==================== */
@@ -230,10 +248,11 @@
 
     .modal-dialog {
         max-width: none;
-    }
 
-    .modal-dialog.modal-lg,
-    .modal-dialog.modal-xl {
-        max-width: none;
+        &.modal-lg,
+        &.modal-xl {
+            max-width: none;
+        }
     }
+}
 }

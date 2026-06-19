@@ -252,15 +252,7 @@ const SidebarController = {
     }
 };
 
-/**
- * Глобальная функция для onclick в HTML
- */
-function toggleSidebar() {
-    SidebarController.toggle();
-}
-
 // Экспорт для использования
 if (typeof window !== 'undefined') {
     window.SidebarController = SidebarController;
-    window.toggleSidebar = toggleSidebar;
 }

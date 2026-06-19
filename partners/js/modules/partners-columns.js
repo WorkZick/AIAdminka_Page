@@ -80,7 +80,21 @@ const PartnersColumns = {
 
     toggleColumnsMenu() {
         const menu = document.getElementById('columnsMenu');
-        menu.classList.toggle('active');
+        if (!menu) return;
+
+        if (!menu.classList.contains('active')) {
+            // Открываем — позиционируем fixed-меню под кнопкой-шестерёнкой
+            const btn = document.querySelector('[data-action="partners-toggleColumnsMenu"]');
+            if (btn) {
+                const r = btn.getBoundingClientRect();
+                menu.style.top = r.bottom + 'px';
+                menu.style.right = (window.innerWidth - r.right) + 'px';
+                menu.style.left = 'auto';
+            }
+            menu.classList.add('active');
+        } else {
+            menu.classList.remove('active');
+        }
     },
 
     closeColumnsMenu() {
@@ -235,7 +249,11 @@ const PartnersColumns = {
             }
         });
 
-        html += '<th></th>';
+        html += `<th class="col-arrow">
+            <button class="columns-btn" data-action="partners-toggleColumnsMenu" title="Настройка колонок">
+                <img src="../shared/icons/settings.svg" width="14" height="14" alt="Колонки">
+            </button>
+        </th>`;
         html += '</tr>';
 
         thead.innerHTML = html;
@@ -269,7 +287,7 @@ const PartnersColumns = {
 
         if (saved) {
             try {
-                let columns = JSON.parse(saved);
+                const columns = JSON.parse(saved);
                 const customFieldNames = PartnersColumns.collectCustomFieldNames();
 
                 const cleanedColumns = columns.filter(col => {

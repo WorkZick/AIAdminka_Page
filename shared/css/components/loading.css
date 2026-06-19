@@ -1,3 +1,4 @@
+@layer shared {
 /* ============================================================
    Loading & Empty States
    Спиннер загрузки + пустое состояние (общие для всех модулей)
@@ -13,6 +14,13 @@
     text-align: center;
 }
 
+.empty-state > svg {
+    width: 64px;
+    height: 64px;
+    opacity: 0.2;
+    margin-bottom: var(--spacing-xl);
+}
+
 .empty-state-icon {
     width: 64px;
     height: 64px;
@@ -24,7 +32,7 @@
 .empty-state-title {
     font-size: var(--font-size-xl);
     font-weight: 700;
-    color: var(--white);
+    color: var(--gray-light);
     margin-bottom: var(--spacing-sm);
 }
 
@@ -72,11 +80,15 @@
     border-top-color: var(--black);
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
 .loading-text {
     color: var(--gray);
     font-size: var(--font-size-md);
+}
+}
+
+/* @keyframes ВНЕ @layer — Phase 44 fix: внутри @layer keyframes lookup
+   может failить при cross-layer animation references (e.g. .request-row.row-loading::after
+   в @layer module ссылается на этот spin). Top-level — гарантированно глобальный scope. */
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }

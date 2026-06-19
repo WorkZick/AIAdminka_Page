@@ -4,12 +4,15 @@
  */
 
 const WaitingInvite = {
-    REFRESH_INTERVAL: 30000,
+    // Phase 67 SYNC-FIX-05: cross-user polling — 10s для быстрого
+    // обнаружения admin approval / invite. Раньше 30s — пользователь
+    // мог несколько раз нажать "Обновить" пока polling сработает.
+    REFRESH_INTERVAL: 10000,
 
     _refreshIntervalId: null,
     _clickHandler: null,
     _beforeUnloadHandler: null,
-    _keydownHandler: null,
+    _modalCloseHandler: null,
     _visibilityHandler: null,
     _confirmResolve: null,
     isLoading: false,
@@ -54,12 +57,8 @@ const WaitingInvite = {
 
     _bindEvents() {
         this._clickHandler = (e) => {
-            // Backdrop click — close confirm modal
-            if (e.target.id === 'confirmModal') {
-                this._resolveConfirm(false);
-                return;
-            }
-
+            // Phase 35 ROLLOUT-03: <app-modal> handles backdrop click + Escape internally
+            // (focus trap + body.overflow lock + X close button baked in).
             const btn = e.target.closest('[data-action]');
             if (!btn) return;
 
@@ -77,10 +76,11 @@ const WaitingInvite = {
         };
         document.addEventListener('click', this._clickHandler);
 
-        this._keydownHandler = (e) => {
-            if (e.key === 'Escape') this._resolveConfirm(false);
-        };
-        document.addEventListener('keydown', this._keydownHandler);
+        // Phase 35 ROLLOUT-03: <app-modal> dispatches 'close' on Escape / backdrop / X button
+        // → resolve pending confirm Promise as false (cancel).
+        this._modalCloseHandler = () => this._resolveConfirm(false);
+        const confirmModal = document.getElementById('confirmModal');
+        if (confirmModal) confirmModal.addEventListener('close', this._modalCloseHandler);
 
         this._beforeUnloadHandler = () => this.destroy();
         window.addEventListener('beforeunload', this._beforeUnloadHandler);
@@ -103,9 +103,10 @@ const WaitingInvite = {
             document.removeEventListener('click', this._clickHandler);
             this._clickHandler = null;
         }
-        if (this._keydownHandler) {
-            document.removeEventListener('keydown', this._keydownHandler);
-            this._keydownHandler = null;
+        if (this._modalCloseHandler) {
+            const confirmModal = document.getElementById('confirmModal');
+            if (confirmModal) confirmModal.removeEventListener('close', this._modalCloseHandler);
+            this._modalCloseHandler = null;
         }
         if (this._beforeUnloadHandler) {
             window.removeEventListener('beforeunload', this._beforeUnloadHandler);
@@ -157,7 +158,7 @@ const WaitingInvite = {
         this._showLoading(true);
 
         try {
-            const result = await CloudStorage.callApi('getInvites');
+            const result = await CloudStorage.getInvites();
 
             if (result.success) {
                 this.invites = result.invites || [];
@@ -233,16 +234,8 @@ const WaitingInvite = {
 
     _renderInviteCard(invite) {
         const expiresDate = new Date(invite.expiresDate);
-        const daysLeft = Math.ceil((expiresDate - new Date()) / (1000 * 60 * 60 * 24));
-        const isExpired = daysLeft <= 0;
-        const isExpiringSoon = daysLeft <= 2;
+        const isExpired = expiresDate <= new Date();
         const id = this._escapeHtml(invite.inviteId);
-
-        const expiresText = isExpired
-            ? 'Срок истёк'
-            : daysLeft === 1
-                ? 'Истекает завтра'
-                : `Истекает через ${daysLeft} дн.`;
 
         return `
             <div class="invite-card${isExpired ? ' expired' : ''}" data-invite-id="${id}">
@@ -259,16 +252,13 @@ const WaitingInvite = {
                         <span class="label">Дата:</span>
                         <span class="value">${this._escapeHtml(Utils.formatDate(invite.createdDate))}</span>
                     </div>
-                    <div class="invite-expires ${isExpired ? 'expired' : isExpiringSoon ? 'expiring-soon' : ''}">
-                        ${expiresText}
-                    </div>
                 </div>
                 <div class="invite-actions">
-                    <button class="btn btn-primary" data-action="accept" data-invite-id="${id}"${isExpired ? ' disabled' : ''}>
-                        ${isExpired ? 'Истекло' : 'Принять'}
-                    </button>
                     <button class="btn btn-danger" data-action="reject" data-invite-id="${id}">
                         Отклонить
+                    </button>
+                    <button class="btn btn-primary" data-action="accept" data-invite-id="${id}"${isExpired ? ' disabled' : ''}>
+                        ${isExpired ? 'Истекло' : 'Принять'}
                     </button>
                 </div>
             </div>`;
@@ -298,20 +288,22 @@ const WaitingInvite = {
                 descEl.classList.toggle('hidden', !description);
             }
             if (okBtn) {
-                okBtn.className = `btn-sm ${btnClass || 'btn-primary'}`;
+                okBtn.className = `btn btn-sm ${btnClass || 'btn-primary'}`;
             }
-            if (modal) modal.classList.add('active');
+            // Phase 35 ROLLOUT-03: <app-modal> uses boolean property API (focus trap + Escape baked in)
+            if (modal) modal.open = true;
         });
     },
 
     _resolveConfirm(result) {
+        // Phase 35 ROLLOUT-03: gate on pending Promise (NOT modal.open) — <app-modal> close event
+        // fires AFTER modal.open already toggled to false (Escape/backdrop/X button), so the
+        // pending _confirmResolve is the only reliable signal that a confirm is in-flight.
+        if (!this._confirmResolve) return;
         const modal = document.getElementById('confirmModal');
-        if (!modal || !modal.classList.contains('active')) return;
-        modal.classList.remove('active');
-        if (this._confirmResolve) {
-            this._confirmResolve(result);
-            this._confirmResolve = null;
-        }
+        if (modal) modal.open = false;
+        this._confirmResolve(result);
+        this._confirmResolve = null;
     },
 
     async _acceptInvite(inviteId) {
@@ -327,7 +319,7 @@ const WaitingInvite = {
         this._setInviteButtonsDisabled(inviteId, true);
 
         try {
-            const result = await CloudStorage.callApi('acceptInvite', { inviteId });
+            const result = await CloudStorage.acceptInvite(inviteId);
 
             if (result.success) {
                 Toast.success('Приглашение принято! Добро пожаловать в команду!');
@@ -363,7 +355,7 @@ const WaitingInvite = {
         this._setInviteButtonsDisabled(inviteId, true);
 
         try {
-            const result = await CloudStorage.callApi('rejectInvite', { inviteId });
+            const result = await CloudStorage.rejectInvite(inviteId);
 
             if (!result.success) {
                 throw new Error(result.error || 'Ошибка отклонения приглашения');

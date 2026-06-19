@@ -1,3 +1,4 @@
+@layer shared {
 /* ============================================================
    AIAdminka Design System - Scrollbar
    ============================================================ */
@@ -14,7 +15,7 @@
 
 ::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -33,7 +34,7 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
 }
 
 /* ==================== HIDDEN SCROLLBAR ==================== */
@@ -67,4 +68,5 @@
 
 .scrollbar-auto:hover::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.25);
+}
 }

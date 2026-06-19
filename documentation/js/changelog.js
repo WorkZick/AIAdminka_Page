@@ -17,10 +17,11 @@ const changelog = {
     checkVersionSync() {
         if (!this.data || !this.fallbackData) return;
 
-        const jsonVersion = this.data.version;
-        const fallbackVersion = this.fallbackData.version;
+        // Версия берётся из первого элемента updates (единый источник правды)
+        const jsonVersion = this.data.updates && this.data.updates[0] && this.data.updates[0].version;
+        const fallbackVersion = this.fallbackData.updates && this.fallbackData.updates[0] && this.fallbackData.updates[0].version;
 
-        if (jsonVersion !== fallbackVersion) {
+        if (jsonVersion && fallbackVersion && jsonVersion !== fallbackVersion) {
             // Versions not synchronized - fallbackData in changelog.js needs update
         }
     },
@@ -29,8 +30,30 @@ const changelog = {
     // Эти данные используются только если не удалось загрузить JSON
     // ВАЖНО: При обновлении changelog.json нужно также обновить эти данные!
     fallbackData: {
-        "version": "2.23.0",
+        "version": "2.26.0",
         "updates": [
+            {
+                "version": "2.26.0",
+                "date": "2026-03-20",
+                "categories": [
+                    {
+                        "name": "Улучшено",
+                        "items": [
+                            "Рефакторинг модуля «Заведение партнёра»: создан OnboardingUtils (общие утилиты), FieldRenderer (единый рендеринг полей)",
+                            "Декларативная конфигурация шагов: getSubmitConfig, getViewDecision, CASCADE_FIELDS",
+                            "Устранено дублирование кода между form.js и review.js",
+                            "Улучшена безопасность: sanitizeDataUrl, MIME-валидация загрузки файлов"
+                        ]
+                    },
+                    {
+                        "name": "Исправлено",
+                        "items": [
+                            "Редирект на логин при истечении токена на страницах модулей (getBasePath)",
+                            "29+ багов логики, безопасности и масштабируемости"
+                        ]
+                    }
+                ]
+            },
             {
                 "version": "2.23.0",
                 "date": "2026-02-12",
@@ -2583,8 +2606,8 @@ const changelog = {
     }
 };
 
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', async () => {
+// JS-01: инициализация вызывается из documentation.js onInit (PageLifecycle единая точка входа)
+changelog.initPage = async function() {
     await changelog.init();
 
     // Event delegation для всех data-action атрибутов страницы
@@ -2620,5 +2643,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 break;
         }
     });
-});
+};
+
+// Глобальный экспорт fallback данных для version.js
+// Используется как fallback версии если changelog.json недоступен (file:// протокол)
+const ChangelogFallback = changelog.fallbackData;
 

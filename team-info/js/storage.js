@@ -31,6 +31,14 @@ const storage = {
     async _doLoadData() {
         try {
             const employees = await CloudStorage.getEmployees();
+            // Pending guard: don't overwrite in-flight optimistic changes
+            if (TeamState._optimistic && TeamState._optimistic.getPendingCount() > 0) {
+                const pendingIds = TeamState._optimistic.getPendingIds();
+                const pendingItems = this._employees.filter(e => pendingIds.includes(e.id));
+                const serverNonPending = (employees || []).filter(e => !pendingIds.includes(e.id));
+                this._employees = [...serverNonPending, ...pendingItems];
+                return this._employees;
+            }
             this._employees = employees || [];
             return this._employees;
         } catch (error) {

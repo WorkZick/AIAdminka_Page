@@ -333,9 +333,13 @@ const TokenManager = {
         this._refreshPopup = popup;
         // Polling: если popup закрыт без ответа — сброс (каждые 500мс)
         this._popupCheckInterval = setInterval(() => {
-            if (!this._refreshPopup || this._refreshPopup.closed) {
-                this._cleanupPopup();
-                this.warningShown = false;
+            try {
+                if (!this._refreshPopup || this._refreshPopup.closed) {
+                    this._cleanupPopup();
+                    this.warningShown = false;
+                }
+            } catch (e) {
+                // COOP блокирует доступ к popup.closed — ждём postMessage или timeout
             }
         }, 500);
         // Safety timeout: максимум 60 сек (на случай если polling пропустит)

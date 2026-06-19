@@ -367,7 +367,6 @@ const loginApp = {
         this._switchToWideCard();
         this._hideAllRight();
         document.getElementById('loginRegistration').classList.remove('hidden');
-        this._updateStatus('Регистрация', '');
     },
 
     async _submitRegistration(event) {
@@ -378,8 +377,8 @@ const loginApp = {
         const formData = new FormData(form);
         const reddyId = formData.get('reddyId').trim();
 
-        if (!reddyId || !/^\d{4,10}$/.test(reddyId)) {
-            Toast.warning('Введите корректный Reddy ID (4-10 цифр)');
+        if (!reddyId || !Utils.isValidReddyId(reddyId)) {
+            Toast.warning(Utils.REDDY_ID_ERROR);
             return;
         }
 
@@ -438,7 +437,6 @@ const loginApp = {
         this._switchToWideCard();
         this._hideAllRight();
         document.getElementById('loginChooseRole').classList.remove('hidden');
-        this._updateStatus('Выберите роль', 'success');
     },
 
     async _createTeam() {
@@ -465,8 +463,6 @@ const loginApp = {
             const descEl = pendingEl.querySelector('.waiting-description');
             if (descEl) descEl.innerHTML = 'Ваш аккаунт активен.<br>Руководитель пригласит вас в команду по Reddy ID.';
         }
-
-        this._updateStatus('Ожидание приглашения', 'pending');
     },
 
     // ============ STATUS CHECK ============
@@ -554,7 +550,6 @@ const loginApp = {
         // Show login form, hide loading
         document.getElementById('loginContent').classList.remove('hidden');
         document.getElementById('loginLoadingSimple').classList.add('hidden');
-        document.getElementById('loginStatus').classList.add('hidden');
     },
 
     /**
@@ -600,8 +595,6 @@ const loginApp = {
             if (descEl) descEl.innerHTML = 'Ваш запрос отправлен администратору.<br>Ожидайте одобрения.';
             pendingEl.classList.remove('hidden');
         }
-
-        this._updateStatus('Ожидание одобрения', 'pending');
     },
 
     _showAccessRejected() {
@@ -609,7 +602,6 @@ const loginApp = {
         this._switchToWideCard();
         this._hideAllRight();
         document.getElementById('loginAccessRejected').classList.remove('hidden');
-        this._updateStatus('Запрос отклонён', 'error');
     },
 
     _showAccessBlocked() {
@@ -617,21 +609,18 @@ const loginApp = {
         this._switchToWideCard();
         this._hideAllRight();
         document.getElementById('loginAccessBlocked').classList.remove('hidden');
-        this._updateStatus('Доступ заблокирован', 'error');
     },
 
     _showInitStorage() {
         this._switchToWideCard();
         this._hideAllRight();
         document.getElementById('loginActions').classList.remove('hidden');
-        this._updateStatus('Хранилище не найдено', '');
     },
 
     _showSuccess() {
         this._switchToWideCard();
         this._hideAllRight();
         document.getElementById('loginContinue').classList.remove('hidden');
-        this._updateStatus('Авторизация успешна', 'success');
 
         setTimeout(() => {
             // Проверяем, есть ли сохранённый URL для возврата
@@ -654,7 +643,6 @@ const loginApp = {
             this._hideAllRight();
             document.getElementById('loginError').classList.remove('hidden');
             document.getElementById('errorText').textContent = message;
-            this._updateStatus('Ошибка', 'error');
         } else {
             // Fallback for errors before login (shouldn't normally happen)
             this._showLoginForm();
@@ -708,13 +696,6 @@ const loginApp = {
         this._hideableElements.forEach(el => {
             el.classList.add('hidden');
         });
-    },
-
-    _updateStatus(text, type) {
-        const statusEl = document.getElementById('loginStatus');
-        statusEl.className = 'login-status' + (type ? ' ' + type : '');
-        statusEl.querySelector('.status-text').textContent = text;
-        statusEl.classList.remove('hidden');
     },
 
     _retry() {

@@ -5,14 +5,19 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <style>body{background:#0d0d0d}body:not(.lifecycle-ready) .main-wrapper{opacity:0}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- CSP: Разрешён Live Server script для разработки (hash добавлен) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts='; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com">
+    <!-- CSP: Разрешён Live Server script для разработки (hash добавлен) + jsDelivr для Lit/signals -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' 'sha256-8sMhKaZvp1SL2qx1Dq84c+e0UOH8/W/+D1xMSa4yLts=' 'sha384-QjwLundxB4NaHWOfxQoy8G+BY7T7kjRSxeKIjdPAUQ76EitE8bUlehJxnQEJquiL' 'sha384-cdYhdOlBc0MtESQfAGUIQ6Mf8mJZZ9E9VOP6SAR7sOvPVvRwQlwQ8UR6AjsGDSW3' 'sha384-/YOimVOt6Bq+nJVuTUHWt8a0+2GkUKsKQKq9P9jNkKqsupthdkM6WWQaaVIlnig/' 'sha384-wgqcWx+Dzs2/x1d1yYLKO34rUT5WhUT+OSqnt51rzc/Hi6CBs3tTpstly4/Hwv2y' 'sha384-sChJXbOWDzAc/w2cKkZyzzTmyVLtLgALn0PCewYcW4Nv4WHOMwANhSAqDFQyu3Iq' 'sha384-WO+CQNc5o8u/05JkylStFXt6f895hAovGF97PqyaWgflx6csiESfjnPzUJUrNAfk'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com https://cdn.jsdelivr.net">
     <title>AIAdminka</title>
     <link rel="icon" type="image/svg+xml" href="shared/icons/favicon.svg">
     <link rel="preload" as="font" href="shared/fonts/TTFirsNeue-Regular.woff2" type="font/woff2" crossorigin>
     <link rel="preload" as="font" href="shared/fonts/TTFirsNeue-Bold.woff2" type="font/woff2" crossorigin>
+    <!-- Phase 32 ROLLOUT-01: cascade order declaration FIRST (Phase 25 CSS-01) -->
+    <link rel="stylesheet" href="shared/css/_layers.css">
     <link rel="stylesheet" href="shared/css/design-system.css">
     <link rel="stylesheet" href="css/home.css">
+    <!-- Phase 32 ROLLOUT-01: cdn-deps (signals + Lit) + components aggregator (4 Lit custom elements) -->
+    <script type="module" src="shared/js/cdn-deps.js"></script>
+    <script type="module" src="shared/components/index.js"></script>
 </head>
 <body>
     <div class="app-container">

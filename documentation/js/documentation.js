@@ -8,15 +8,12 @@ const Documentation = {
     ],
 
     iconsUI: [
-        'alert-triangle', 'arrow-left', 'arrow-right', 'bar-chart', 'book-open',
-        'calculator', 'check', 'check-square', 'chevron-down', 'cloud',
-        'cloud-sync', 'download', 'edit', 'file-plus', 'file-spreadsheet',
-        'file-text', 'filter', 'folder-open', 'git-branch', 'grid-3x3',
-        'handshake', 'hash', 'help-circle', 'info', 'layout-grid',
-        'list', 'lock', 'menu', 'minus', 'mouse-pointer',
-        'play', 'plus', 'rotate-ccw', 'settings', 'trash-2',
-        'trending-up', 'type', 'unlock', 'upload', 'users',
-        'volume-2', 'x'
+        'add', 'alert-triangle', 'arrow-left', 'arrow-right', 'bar-chart',
+        'chevron-down', 'copy', 'done', 'done_black', 'download',
+        'download_photo_placeholder', 'edit', 'export', 'favicon', 'file-text',
+        'filter', 'handshake', 'import', 'info', 'minus',
+        'pen', 'photo', 'plus', 'search', 'settings',
+        'trash-2', 'upload'
     ],
 
     escapeHandler: null,
@@ -40,6 +37,9 @@ const Documentation = {
 
         // Load icons for design system
         this.loadIcons();
+
+        // Live button demos — click triggers loading state
+        this.setupLiveButtons();
 
         // Setup Escape handler for icons modal
         this.setupEscapeHandler();
@@ -190,6 +190,18 @@ const Documentation = {
         }
     },
 
+    setupLiveButtons() {
+        document.querySelectorAll('.ds-btn-live').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.classList.contains('btn-loading')) return;
+                btn.classList.add('btn-loading');
+                setTimeout(() => {
+                    btn.classList.remove('btn-loading');
+                }, 1500);
+            });
+        });
+    },
+
     showCopyFeedback(targetElement, message, isError = false) {
         const item = targetElement;
         if (item) {
@@ -198,7 +210,7 @@ const Documentation = {
                 const originalText = span.textContent;
                 span.textContent = message;
                 if (isError) {
-                    span.style.color = '#ff6b6b';
+                    span.style.color = 'var(--status-red)';
                 }
                 setTimeout(() => {
                     span.textContent = originalText;
@@ -218,7 +230,8 @@ window.Documentation = Documentation;
 PageLifecycle.init({
     module: 'documentation',
     needsCloudStorage: false,
-    onInit() {
+    async onInit() {
+        await changelog.initPage();  // JS-01: ранее в changelog.js DOMContentLoaded
         Documentation.initContent();
     },
     modals: {

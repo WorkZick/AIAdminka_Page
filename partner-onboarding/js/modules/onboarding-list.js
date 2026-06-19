@@ -3,16 +3,145 @@
 const OnboardingList = (() => {
     'use strict';
 
+    // Server pagination state
+    let _reqId = 0;
     let _currentPage = 1;
-    const _perPage = 30;
+    const _pageSize = 20;
+    let _totalCount = 0;
+    // Гарантирует что empty state ("Заявок нет") не мигает до завершения первой загрузки
+    let _initialLoadComplete = false;
+    // Счётчик retry первой загрузки (защита от бесконечного цикла)
+    let _firstLoadRetries = 0;
+    const _FIRST_LOAD_MAX_RETRIES = 2;
+
+    // Phase 31 BRIDGE-02: cleanup handles для direct OnboardingState subscriptions
+    // (signals-bridge удалён — OnboardingState.subscribe теперь возвращает unsubscribe из BRIDGE-01).
+    const _listCleanups = [];
 
     function _totalSteps() {
         return OnboardingConfig.getVisibleStepCount(OnboardingState.get('userRole'));
     }
 
     function init() {
-        OnboardingState.subscribe('filteredRequests', render);
-        OnboardingState.subscribe('loading', _toggleLoading);
+        // Phase 31 BRIDGE-02: direct subscribe (post-bridge migration).
+        // OnboardingState.subscribe() возвращает unsubscribe (BRIDGE-01) — tracked в _listCleanups.
+        // Pitfall C cleanup: unsubscribe handles invoked на module destroy для предотвращения
+        // stale callbacks на subsequent state mutations.
+        const ownershipUnsub = OnboardingState.subscribe('filters.ownership', () => {
+            if (typeof applyFilters === 'function') applyFilters();
+        });
+        const filteredUnsub = OnboardingState.subscribe('filteredRequests', render);
+        const loadingUnsub = OnboardingState.subscribe('loading', _toggleLoading);
+        _listCleanups.push(ownershipUnsub, filteredUnsub, loadingUnsub);
+        // Сразу показываем loading state чтобы empty state не мигал до первой загрузки
+        _renderSkeletonRows();
+    }
+
+    function destroy() {
+        _listCleanups.forEach(c => { try { if (typeof c === 'function') c(); } catch (_) { /* swallow */ } });
+        _listCleanups.length = 0;
+    }
+
+    /**
+     * @param {number} page
+     * @param {Object} [opts]
+     * @param {boolean} [opts.silent] — НЕ показывать Toast.error при failure
+     *   (используется background polling — транзитные ошибки обновления не должны
+     *   беспокоить пользователя, следующий poll скорее всего успешен).
+     */
+    async function goToOnboardingPage(page, opts) {
+        const silent = opts && opts.silent === true;
+        const reqId = ++_reqId;
+        _renderSkeletonRows();
+        try {
+            const filterStatus = OnboardingState.get('filters.status') || undefined;
+            const result = await CloudStorage.getOnboardingRequests({
+                page,
+                pageSize: _pageSize,
+                filterStatus,
+                sortBy: 'createdDate',
+                order: 'desc'
+            });
+            if (reqId !== _reqId) return; // stale discard
+            // Update state
+            OnboardingState.set('requests', result.requests || []);
+            OnboardingState.set('history', result.history || {});
+            _totalCount = result.totalCount || 0;
+            _currentPage = result.page || page;
+            // Apply local non-status filters (ownership, search) and render
+            _initialLoadComplete = true;
+            applyFilters();
+            _renderServerPagination();
+        } catch (error) {
+            if (reqId !== _reqId) return;
+            if (error && error._silentRedirect) return;
+            // BFIX (audit 2026-05-20): background polling errors silenced — log only.
+            // GAS backend иногда возвращает транзитный 500 (sheet lock contention после
+            // write, deploy в момент запроса, etc). Polling retry next interval скорее
+            // всего успешен. Беспокоить пользователя alarming toast'ом избыточно.
+            if (silent) {
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('[OnboardingList.goToOnboardingPage] silent polling error:',
+                        error && error.message);
+                }
+                return;
+            }
+            if (!_initialLoadComplete) {
+                // Первая загрузка упала: не показываем "Заявок нет" (вводит в заблуждение).
+                // Оставляем loading spinner и планируем retry (max _FIRST_LOAD_MAX_RETRIES).
+                if (!error._conflictHandled) Toast.error('Ошибка загрузки заявок: ' + error.message);
+                if (_firstLoadRetries < _FIRST_LOAD_MAX_RETRIES) {
+                    _firstLoadRetries++;
+                    const retryPage = page;
+                    setTimeout(() => {
+                        if (!_initialLoadComplete) {
+                            // Сбрасываем nsTs чтобы retry сделал полный запрос (bypass notModified)
+                            if (typeof CloudStorage !== 'undefined' && CloudStorage._lastKnownNsTs) {
+                                delete CloudStorage._lastKnownNsTs.onboardings;
+                            }
+                            if (typeof CloudStorage !== 'undefined' && CloudStorage.clearCacheNamespace) {
+                                CloudStorage.clearCacheNamespace('onboardingRequests');
+                            }
+                            goToOnboardingPage(retryPage);
+                        }
+                    }, 5000);
+                } else {
+                    // Исчерпаны retry — показываем empty state чтобы пользователь не ждал вечно
+                    _initialLoadComplete = true;
+                    applyFilters();
+                }
+                return;
+            }
+            // Повторная загрузка упала — рендерим с текущими (stale) данными
+            applyFilters();
+            if (!error._conflictHandled) Toast.error('Ошибка загрузки заявок: ' + error.message);
+        }
+    }
+
+    function _renderSkeletonRows() {
+        const container = document.getElementById('requestsList');
+        if (!container) return;
+        container.classList.add('hidden');
+        const emptyState = document.getElementById('listEmpty');
+        if (emptyState) emptyState.classList.add('hidden');
+        const loading = document.getElementById('listLoading');
+        if (loading) loading.classList.remove('hidden');
+    }
+
+    function _renderServerPagination() {
+        const container = document.getElementById('onboardingPagination');
+        if (!container) return;
+        if (_totalCount <= _pageSize) {
+            // Phase 54 LIT-FIN-02: empty clear — replaceChildren() вместо innerHTML=''
+            container.replaceChildren();
+            return;
+        }
+        PaginationHelper.render(container, {
+            page: _currentPage,
+            pageSize: _pageSize,
+            totalCount: _totalCount,
+            onPageChange: (p) => goToOnboardingPage(p)
+        });
     }
 
     function render() {
@@ -23,76 +152,46 @@ const OnboardingList = (() => {
 
         if (!container) return;
 
+        // До завершения первой загрузки оставляем loading state видимым
+        // (предотвращает мигание "Заявок нет" пока данные ещё грузятся)
+        if (!_initialLoadComplete) {
+            container.classList.add('hidden');
+            if (emptyState) emptyState.classList.add('hidden');
+            if (loading) loading.classList.remove('hidden');
+            return;
+        }
+
         if (loading) loading.classList.add('hidden');
 
         if (allRequests.length === 0) {
-            container.innerHTML = '';
+            // Phase 54 LIT-FIN-02: empty clear — replaceChildren() вместо innerHTML=''
+            container.replaceChildren();
             container.classList.add('hidden');
-            if (emptyState) emptyState.classList.remove('hidden');
+            if (emptyState) {
+                const hasFilter = !!OnboardingState.get('filters.status');
+                const titleEl = emptyState.querySelector('.empty-state-title');
+                const textEl = emptyState.querySelector('.empty-state-text');
+                if (titleEl) titleEl.textContent = hasFilter ? 'Нет заявок с этим статусом' : 'Заявок нет';
+                if (textEl) textEl.textContent = hasFilter ? 'Попробуйте выбрать другой фильтр' : 'Создайте первую заявку на заведение партнёра';
+                emptyState.classList.remove('hidden');
+            }
             _hideSelectionToolbar();
-            _renderPagination(0);
+            const paginationEl = document.getElementById('onboardingPagination');
+            // Phase 54 LIT-FIN-02: empty clear — replaceChildren() вместо innerHTML=''
+            if (paginationEl) paginationEl.replaceChildren();
             return;
         }
 
         if (emptyState) emptyState.classList.add('hidden');
         container.classList.remove('hidden');
 
-        // Pagination
-        const totalPages = Math.max(1, Math.ceil(allRequests.length / _perPage));
-        if (_currentPage > totalPages) _currentPage = totalPages;
-        const start = (_currentPage - 1) * _perPage;
-        const pagedRequests = allRequests.slice(start, start + _perPage);
-
         const total = _totalSteps();
-        container.innerHTML = pagedRequests.map(r => _renderRow(r, total)).join('');
+        container.innerHTML = allRequests.map(r => _renderRow(r, total)).join('');
         _updateSelectionToolbar();
-        _renderPagination(totalPages);
-    }
-
-    function _renderPagination(totalPages) {
-        const container = document.getElementById('onboardingPagination');
-        if (!container) return;
-        container.innerHTML = '';
-        if (totalPages <= 1) return;
-
-        const prevBtn = document.createElement('button');
-        prevBtn.className = 'page-btn';
-        prevBtn.textContent = '\u2190';
-        prevBtn.disabled = _currentPage === 1;
-        prevBtn.dataset.action = 'onb-goToPage';
-        prevBtn.dataset.value = _currentPage - 1;
-        container.appendChild(prevBtn);
-
-        for (let i = 1; i <= totalPages; i++) {
-            if (i === 1 || i === totalPages || (i >= _currentPage - 1 && i <= _currentPage + 1)) {
-                const pageBtn = document.createElement('button');
-                pageBtn.className = 'page-btn' + (i === _currentPage ? ' active' : '');
-                pageBtn.textContent = i;
-                pageBtn.dataset.action = 'onb-goToPage';
-                pageBtn.dataset.value = i;
-                container.appendChild(pageBtn);
-            } else if (i === _currentPage - 2 || i === _currentPage + 2) {
-                const dots = document.createElement('span');
-                dots.className = 'pagination-dots';
-                dots.textContent = '...';
-                container.appendChild(dots);
-            }
-        }
-
-        const nextBtn = document.createElement('button');
-        nextBtn.className = 'page-btn';
-        nextBtn.textContent = '\u2192';
-        nextBtn.disabled = _currentPage === totalPages;
-        nextBtn.dataset.action = 'onb-goToPage';
-        nextBtn.dataset.value = _currentPage + 1;
-        container.appendChild(nextBtn);
     }
 
     function goToPage(page) {
-        const p = parseInt(page);
-        if (isNaN(p) || p < 1) return;
-        _currentPage = p;
-        render();
+        goToOnboardingPage(parseInt(page));
     }
 
     function _renderRow(request, total) {
@@ -136,7 +235,10 @@ const OnboardingList = (() => {
             ? `<input type="checkbox" class="row-checkbox" data-action="onb-toggleSelect" data-value="${Utils.escapeHtml(request.id)}">`
             : '';
 
-        return `<div class="request-row ${isMyTurn ? 'my-turn' : ''} ${isAdmin ? 'has-checkbox' : ''}" data-action="onb-openRequest" data-value="${Utils.escapeHtml(request.id)}">
+        const pendingClass = request._pending ? ' item--pending' : '';
+        const errorClass = request._error ? ' item--error' : '';
+
+        return `<div class="request-row ${isMyTurn ? 'my-turn' : ''} ${isAdmin ? 'has-checkbox' : ''}${pendingClass}${errorClass}" data-action="onb-openRequest" data-value="${Utils.escapeHtml(request.id)}">
             ${checkboxHtml}
             <div class="row-progress">
                 <div class="progress-bar">${segments.join('')}</div>
@@ -152,17 +254,19 @@ const OnboardingList = (() => {
             </div>
             <div class="row-status">
                 ${executorDone
-                    ? '<span class="status-badge status--completed">Партнёр заведён</span>'
+                    ? '<span class="status-badge status-success">Партнёр заведён</span>'
                     : `<span class="status-badge ${Utils.escapeHtml(statusConf.cssClass || '')}">${Utils.escapeHtml(statusConf.label || request.status)}</span>`}
             </div>
             ${turnHtml}
+            <span class="row-spinner spinner spinner--sm" aria-hidden="true"></span>
         </div>`;
     }
 
     function applyFilters() {
-        _currentPage = 1;
+        // _currentPage НЕ сбрасываем — это локальные фильтры (search/ownership),
+        // применяются к уже загруженной странице. Смена статус-фильтра отдельно
+        // вызывает goToOnboardingPage(1) для server-side reset.
         const requests = OnboardingState.get('requests') || [];
-        const status = OnboardingState.get('filters.status');
         const search = (OnboardingState.get('filters.search') || '').toLowerCase();
 
         let filtered = requests;
@@ -178,12 +282,7 @@ const OnboardingList = (() => {
             );
         }
 
-        // Status filter
-        if (status) {
-            filtered = filtered.filter(r => r.status === status);
-        }
-
-        // Search
+        // Search (local, non-status)
         if (search) {
             filtered = filtered.filter(r => {
                 const contactName = (r.stageData && r.stageData[1] || {}).contact_name || '';
@@ -308,5 +407,7 @@ const OnboardingList = (() => {
         _updateSelectionToolbar();
     }
 
-    return { init, render, applyFilters, setupDefaultFilters, getSelectedIds, toggleSelectAll, updateSelection: _updateSelectionToolbar, goToPage };
+    function getCurrentPage() { return _currentPage; }
+
+    return { init, destroy, render, applyFilters, setupDefaultFilters, getSelectedIds, toggleSelectAll, updateSelection: _updateSelectionToolbar, goToPage, goToOnboardingPage, getCurrentPage };
 })();

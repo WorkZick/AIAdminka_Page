@@ -46,28 +46,28 @@ const SharedTemplates = {
             },
 
             restoreTemplateSelection() {
-                var targetId;
+                let targetId;
                 if (cfg.state.currentTemplateId !== undefined) {
                     targetId = cfg.state.currentTemplateId;
                 } else {
-                    var defaultTemplate = Object.values(cfg.storage.getAll()).find(function(t) { return t.isDefault; });
+                    const defaultTemplate = Object.values(cfg.storage.getAll()).find(function(t) { return t.isDefault; });
                     targetId = defaultTemplate ? defaultTemplate.id : '';
                 }
                 // Update hidden input
-                var input = document.getElementById('templateSelectValue');
+                const input = document.getElementById('templateSelectValue');
                 if (input) input.value = targetId || '';
                 // Update label and active state
-                var menu = document.getElementById('templateSelectMenu');
+                const menu = document.getElementById('templateSelectMenu');
                 if (menu) {
                     menu.querySelectorAll('.dropdown-item').forEach(function(item) {
                         item.classList.toggle('active', (item.dataset.value || '') === (targetId || ''));
                     });
                 }
-                var label = document.getElementById('templateSelectLabel');
-                var trigger = document.getElementById('templateSelectTrigger');
+                const label = document.getElementById('templateSelectLabel');
+                const trigger = document.getElementById('templateSelectTrigger');
                 if (targetId) {
-                    var templates = cfg.storage.getAll();
-                    var tmpl = templates[targetId];
+                    const templates = cfg.storage.getAll();
+                    const tmpl = templates[targetId];
                     if (label && tmpl) label.textContent = tmpl.name + (tmpl.isDefault ? ' (основной)' : '');
                     if (trigger) trigger.classList.remove('placeholder');
                 } else {
@@ -82,7 +82,7 @@ const SharedTemplates = {
              * @returns {object|null} { template, index } или null
              */
             async _pickTemplate(actionName) {
-                var templateList = Object.values(cfg.storage.getAll());
+                const templateList = Object.values(cfg.storage.getAll());
 
                 if (templateList.length === 0) {
                     Toast.warning('Нет шаблонов для ' + actionName);
@@ -90,21 +90,21 @@ const SharedTemplates = {
                     return null;
                 }
 
-                var optionsText = 'Выберите шаблон для ' + actionName + ':\n\n';
+                let optionsText = 'Выберите шаблон для ' + actionName + ':\n\n';
                 templateList.forEach(function(template, index) {
-                    var isDefault = template.isDefault ? ' (основной)' : '';
+                    const isDefault = template.isDefault ? ' (основной)' : '';
                     optionsText += (index + 1) + '. ' + template.name + isDefault + '\n';
                 });
                 optionsText += '\nВведите номер шаблона:';
 
-                var input = await cfg.dialog.prompt(optionsText, '');
+                const input = await cfg.dialog.prompt(optionsText, '');
 
                 if (!input) {
                     self.restoreTemplateSelection();
                     return null;
                 }
 
-                var index = parseInt(input) - 1;
+                const index = parseInt(input) - 1;
 
                 if (isNaN(index) || index < 0 || index >= templateList.length) {
                     Toast.warning('Неверный номер шаблона');
@@ -116,10 +116,10 @@ const SharedTemplates = {
             },
 
             async showDeleteTemplateDialog() {
-                var result = await self._pickTemplate('удаления');
+                const result = await self._pickTemplate('удаления');
                 if (!result) return;
 
-                var confirmed = await cfg.dialog.confirm('Удалить шаблон "' + result.template.name + '"?');
+                const confirmed = await cfg.dialog.confirm('Удалить шаблон "' + result.template.name + '"?');
                 if (!confirmed) {
                     self.restoreTemplateSelection();
                     return;
@@ -141,10 +141,10 @@ const SharedTemplates = {
             },
 
             async showRenameTemplateDialog() {
-                var result = await self._pickTemplate('переименования');
+                const result = await self._pickTemplate('переименования');
                 if (!result) return;
 
-                var newName = await cfg.dialog.prompt(
+                const newName = await cfg.dialog.prompt(
                     'Введите новое название для шаблона "' + result.template.name + '":',
                     result.template.name
                 );
@@ -154,7 +154,7 @@ const SharedTemplates = {
                     return;
                 }
 
-                var makeDefault = await cfg.dialog.confirm(
+                const makeDefault = await cfg.dialog.confirm(
                     'Установить этот шаблон как основной?'
                 );
 
@@ -171,7 +171,7 @@ const SharedTemplates = {
             },
 
             async showEditTemplateDialog() {
-                var result = await self._pickTemplate('редактирования');
+                const result = await self._pickTemplate('редактирования');
                 if (!result) return;
 
                 cfg.state.isTemplateMode = true;
@@ -184,25 +184,25 @@ const SharedTemplates = {
             },
 
             addTemplateField() {
-                var fieldId = 'templateField_' + Date.now();
-                var field = { id: fieldId, label: '', type: 'text' };
+                const fieldId = 'templateField_' + Date.now();
+                const field = { id: fieldId, label: '', type: 'text' };
                 cfg.state.templateFields.push(field);
                 cfg.addFieldToDOM(field, self);
             },
 
             updateTemplateFieldLabel(fieldId, label) {
-                var field = cfg.state.templateFields.find(function(f) { return f.id === fieldId; });
+                const field = cfg.state.templateFields.find(function(f) { return f.id === fieldId; });
                 if (field) field.label = label;
             },
 
             updateTemplateFieldType(fieldId, type) {
-                var field = cfg.state.templateFields.find(function(f) { return f.id === fieldId; });
+                const field = cfg.state.templateFields.find(function(f) { return f.id === fieldId; });
                 if (field) field.type = type;
             },
 
             removeTemplateField(fieldId) {
                 cfg.state.templateFields = cfg.state.templateFields.filter(function(f) { return f.id !== fieldId; });
-                var fieldElement = document.querySelector('[data-field-id="' + fieldId + '"]');
+                const fieldElement = document.querySelector('[data-field-id="' + fieldId + '"]');
                 if (fieldElement) fieldElement.remove();
             },
 
@@ -212,7 +212,7 @@ const SharedTemplates = {
             },
 
             async saveTemplate() {
-                var invalidFields = cfg.state.templateFields.filter(function(f) { return !f.label.trim(); });
+                const invalidFields = cfg.state.templateFields.filter(function(f) { return !f.label.trim(); });
                 if (invalidFields.length > 0) {
                     Toast.warning('Все поля должны иметь название');
                     return;
@@ -223,16 +223,16 @@ const SharedTemplates = {
                     return;
                 }
 
-                var existingName = cfg.state.editingTemplateId
+                const existingName = cfg.state.editingTemplateId
                     ? (cfg.storage.getAll()[cfg.state.editingTemplateId] || {}).name || ''
                     : '';
 
-                var templateName = await cfg.dialog.prompt('Введите название шаблона:', existingName);
+                const templateName = await cfg.dialog.prompt('Введите название шаблона:', existingName);
                 if (!templateName || !templateName.trim()) return;
 
                 if (cfg.loading) cfg.loading.show();
                 try {
-                    var templateData = {
+                    const templateData = {
                         id: cfg.state.editingTemplateId || ('template_' + Date.now()),
                         name: templateName.trim(),
                         fields: cfg.state.templateFields.map(function(f) {
@@ -257,24 +257,24 @@ const SharedTemplates = {
             },
 
             updateTemplateList() {
-                var menu = document.getElementById('templateSelectMenu');
-                var input = document.getElementById('templateSelectValue');
-                var label = document.getElementById('templateSelectLabel');
-                var trigger = document.getElementById('templateSelectTrigger');
+                const menu = document.getElementById('templateSelectMenu');
+                const input = document.getElementById('templateSelectValue');
+                const label = document.getElementById('templateSelectLabel');
+                const trigger = document.getElementById('templateSelectTrigger');
                 if (!menu) return;
 
-                var act = cfg.dropdownAction || 'partners-selectFormDropdown';
-                var templates = cfg.storage.getAll();
-                var defaultTemplate = Object.values(templates).find(function(t) { return t.isDefault; });
-                var html = '';
+                const act = cfg.dropdownAction || 'partners-selectFormDropdown';
+                const templates = cfg.storage.getAll();
+                const defaultTemplate = Object.values(templates).find(function(t) { return t.isDefault; });
+                let html = '';
 
                 if (Object.keys(templates).length === 0 || !defaultTemplate) {
                     html += '<div class="dropdown-item' + (!defaultTemplate ? ' active' : '') + '" data-action="' + act + '" data-value="">Шаблон</div>';
                 }
 
                 Object.values(templates).forEach(function(template) {
-                    var isDefault = template.isDefault ? ' (основной)' : '';
-                    var isActive = defaultTemplate && defaultTemplate.id === template.id ? ' active' : '';
+                    const isDefault = template.isDefault ? ' (основной)' : '';
+                    const isActive = defaultTemplate && defaultTemplate.id === template.id ? ' active' : '';
                     html += '<div class="dropdown-item' + isActive + '" data-action="' + act + '" data-value="' + Utils.escapeHtml(template.id) + '">' + Utils.escapeHtml(template.name) + isDefault + '</div>';
                 });
 

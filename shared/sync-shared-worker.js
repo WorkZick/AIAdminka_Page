@@ -71,6 +71,23 @@ function handleMessage(data, senderPort) {
             addToQueue(data.operations);
             break;
 
+        case 'TS_UPDATED':
+            // Phase 65 (MULTI-TAB-01): pure relay (NO logic) — broadcast to ALL OTHER tabs
+            // Shape: { type: 'TS_UPDATED', ns: 'partners', ts: 1747857600000 }
+            // Sender tab уже обновил свой _lastKnownNsTs locally; relay инвалидирует кэш других tabs
+            if (typeof data.ns === 'string' && typeof data.ts === 'number' && Number.isFinite(data.ts)) {
+                broadcastExceptSender({ type: 'TS_UPDATED', ns: data.ns, ts: data.ts }, senderPort);
+            }
+            break;
+
+        case 'NAMESPACE_INVALIDATE':
+            // Phase 65 (MULTI-TAB-01): pure relay — invalidate namespace без known new ts
+            // Shape: { type: 'NAMESPACE_INVALIDATE', ns: 'partners' }
+            if (typeof data.ns === 'string') {
+                broadcastExceptSender({ type: 'NAMESPACE_INVALIDATE', ns: data.ns }, senderPort);
+            }
+            break;
+
         case 'CANCEL':
             cancelSync();
             break;
@@ -79,6 +96,19 @@ function handleMessage(data, senderPort) {
 
 function broadcast(message) {
     ports.forEach(port => {
+        try {
+            port.postMessage(message);
+        } catch (e) {
+            ports.delete(port);
+        }
+    });
+}
+
+function broadcastExceptSender(message, senderPort) {
+    // Phase 65 (MULTI-TAB-01): send to ALL ports except the sender —
+    // sender already updated its own state, relay только OTHER tabs.
+    ports.forEach(port => {
+        if (port === senderPort) return;
         try {
             port.postMessage(message);
         } catch (e) {
@@ -134,7 +164,7 @@ async function processQueue() {
     broadcast({ type: 'SYNC_STARTED' });
 
     let processed = 0;
-    let errors = [];
+    const errors = [];
 
     while (queue.length > 0) {
         const operation = queue.shift();

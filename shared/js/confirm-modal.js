@@ -21,22 +21,22 @@ const ConfirmModal = {
      * @returns {Promise<boolean>} true если подтверждено
      */
     show(message, options) {
-        var opts = options || {};
-        var confirmText = opts.confirmText || 'Подтвердить';
-        var cancelText = opts.cancelText || 'Отмена';
-        var description = opts.description || '';
-        var isDanger = opts.danger || false;
+        const opts = options || {};
+        const confirmText = opts.confirmText || 'Подтвердить';
+        const cancelText = opts.cancelText || 'Отмена';
+        const description = opts.description || '';
+        const isDanger = opts.danger || false;
 
         return new Promise(function(resolve) {
             // Удаляем предыдущий диалог если есть
             ConfirmModal._remove();
 
             // Создаём overlay
-            var overlay = document.createElement('div');
+            const overlay = document.createElement('div');
             overlay.className = 'modal active';
             overlay.id = 'confirmModalOverlay';
 
-            var btnClass = isDanger ? 'btn-danger btn-sm' : 'btn-primary btn-sm';
+            const btnClass = isDanger ? 'btn-danger btn-sm' : 'btn-primary btn-sm';
 
             overlay.innerHTML =
                 '<div class="modal-dialog modal-sm modal-confirm">' +
@@ -54,12 +54,12 @@ const ConfirmModal = {
             document.body.appendChild(overlay);
 
             // Фокус на кнопку подтверждения
-            var confirmBtn = overlay.querySelector('[data-confirm="ok"]');
+            const confirmBtn = overlay.querySelector('[data-confirm="ok"]');
             if (confirmBtn) confirmBtn.focus();
 
             // Обработчики
             function handleClick(e) {
-                var action = e.target.getAttribute('data-confirm');
+                const action = e.target.getAttribute('data-confirm');
                 if (action === 'ok') {
                     cleanup();
                     resolve(true);
@@ -101,7 +101,7 @@ const ConfirmModal = {
 
     _escape: function(text) {
         if (!text) return '';
-        var div = document.createElement('div');
+        const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     },

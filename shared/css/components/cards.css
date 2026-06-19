@@ -1,5 +1,9 @@
+@layer shared {
 /* ============================================================
    AIAdminka Design System - Cards
+   Phase 26-06 (CSS-02): refactored to native CSS Nesting Level 1
+   Pattern: explicit `& .child` syntax (Level 1 requirement).
+   Browser floor: Safari/iOS 17.2+ (assumed confirmed per autonomous mode).
    ============================================================ */
 
 /* ==================== BASE CARD ==================== */
@@ -11,10 +15,10 @@
     border-radius: var(--radius-xl);
     overflow: hidden;
     transition: var(--transition-colors);
-}
 
-.card:hover {
-    border-color: var(--glass-border-hover);
+    &:hover {
+        border-color: var(--glass-border-hover);
+    }
 }
 
 .card-header {
@@ -57,12 +61,25 @@
     transition: var(--transition-colors), transform var(--transition-fast);
     text-decoration: none;
     border: 1px solid rgba(255, 255, 255, 0.1);
-}
 
-.module-card:hover {
-    background: rgba(50, 50, 50, 0.6);
-    border-color: var(--glass-border-hover);
-    transform: translateY(-4px);
+    &:hover {
+        background: rgba(50, 50, 50, 0.6);
+        border-color: var(--glass-border-hover);
+        transform: translateY(-4px);
+
+        & .module-icon {
+            background: var(--accent-bg);
+        }
+
+        & .module-icon img {
+            opacity: 1;
+            filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
+        }
+
+        & .module-title {
+            color: var(--accent);
+        }
+    }
 }
 
 .module-icon {
@@ -75,24 +92,15 @@
     border-radius: var(--radius-2xl);
     padding: 14px;
     transition: var(--transition-colors);
-}
 
-.module-card:hover .module-icon {
-    background: var(--accent-bg);
-}
-
-.module-icon img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    filter: brightness(0) invert(1);
-    opacity: 0.8;
-    transition: opacity var(--transition-normal), filter var(--transition-normal), color var(--transition-normal);
-}
-
-.module-card:hover .module-icon img {
-    opacity: 1;
-    filter: brightness(0) saturate(100%) invert(79%) sepia(54%) saturate(1000%) hue-rotate(358deg) brightness(97%);
+    & img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: brightness(0) invert(1);
+        opacity: 0.8;
+        transition: opacity var(--transition-normal), filter var(--transition-normal), color var(--transition-normal);
+    }
 }
 
 .module-title {
@@ -101,10 +109,6 @@
     color: var(--white);
     text-align: center;
     transition: color var(--transition-normal);
-}
-
-.module-card:hover .module-title {
-    color: var(--accent);
 }
 
 .module-desc {
@@ -117,22 +121,22 @@
 /* Module card variants */
 .module-card-admin {
     border: 1px solid rgba(255, 107, 107, 0.25);
-}
 
-.module-card-admin .module-icon {
-    background: rgba(255, 107, 107, 0.12);
-}
+    & .module-icon {
+        background: rgba(255, 107, 107, 0.12);
 
-.module-card-admin .module-icon img {
-    filter: brightness(0) saturate(100%) invert(59%) sepia(94%) saturate(1500%) hue-rotate(324deg) brightness(100%) contrast(100%);
-}
+        & img {
+            filter: brightness(0) saturate(100%) invert(59%) sepia(94%) saturate(1500%) hue-rotate(324deg) brightness(100%) contrast(100%);
+        }
+    }
 
-.module-card-admin:hover {
-    border-color: rgba(255, 107, 107, 0.4);
-}
+    &:hover {
+        border-color: rgba(255, 107, 107, 0.4);
 
-.module-card-admin:hover .module-icon {
-    background: rgba(255, 107, 107, 0.2);
+        & .module-icon {
+            background: rgba(255, 107, 107, 0.2);
+        }
+    }
 }
 
 /* ==================== SETTINGS CARD ==================== */
@@ -143,6 +147,14 @@
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     padding: 20px;
+
+    &.card-danger {
+        border-color: rgba(255, 107, 107, 0.3);
+
+        & .settings-card-title {
+            color: var(--status-red);
+        }
+    }
 }
 
 .settings-card-title {
@@ -152,14 +164,6 @@
     margin-bottom: 16px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--glass-border);
-}
-
-.settings-card.card-danger {
-    border-color: rgba(255, 107, 107, 0.3);
-}
-
-.settings-card.card-danger .settings-card-title {
-    color: var(--status-red);
 }
 
 /* ==================== STAT CARD ==================== */
@@ -172,6 +176,18 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+
+    &.stat-green .stat-card-value {
+        color: var(--status-green);
+    }
+
+    &.stat-red .stat-card-value {
+        color: var(--status-red);
+    }
+
+    &.stat-yellow .stat-card-value {
+        color: var(--status-yellow);
+    }
 }
 
 .stat-card-value {
@@ -183,18 +199,6 @@
 .stat-card-label {
     font-size: var(--font-size-sm);
     color: var(--gray);
-}
-
-.stat-card.stat-green .stat-card-value {
-    color: var(--status-green);
-}
-
-.stat-card.stat-red .stat-card-value {
-    color: var(--status-red);
-}
-
-.stat-card.stat-yellow .stat-card-value {
-    color: var(--status-yellow);
 }
 
 /* ==================== INFO CARD ==================== */
@@ -210,10 +214,10 @@
     justify-content: space-between;
     padding: 8px 0;
     border-bottom: 1px solid var(--glass-border);
-}
 
-.info-card-row:last-child {
-    border-bottom: none;
+    &:last-child {
+        border-bottom: none;
+    }
 }
 
 .info-card-label {
@@ -251,4 +255,65 @@
     .module-card {
         padding: 24px 20px;
     }
+}
+
+/* ============================================================
+   Phase 26-04 CSS-05: card-glass variants (consolidated)
+   Заменяет дубли glassmorphism в module CSS (~12 sites).
+   Использует только --glass-* и --spacing-* tokens (Pitfall #11+#12).
+   Phase 26-06: refactored to native CSS Nesting Level 1.
+   ============================================================ */
+
+.card-glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-lg);
+    transition: var(--transition-colors);
+
+    &:hover {
+        background: var(--glass-bg-hover);
+        border-color: var(--glass-border-hover);
+    }
+
+    &.card-glass--dense {
+        padding: var(--spacing-md);
+        border-radius: var(--radius-lg);
+    }
+
+    &.card-glass--clickable {
+        cursor: pointer;
+        transition: var(--transition-colors), transform var(--transition-fast);
+
+        &:hover {
+            background: var(--glass-bg-hover);
+            border-color: var(--glass-border-hover);
+            transform: translateY(-1px);
+        }
+
+        &:active {
+            transform: translateY(0);
+        }
+    }
+
+    &.card-glass--list-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-radius: var(--radius-lg);
+    }
+
+    /* ==================== Phase 26-05 CSS-06 :has() bounded subtree ==================== */
+    /* optimistic UI pending indicator: card получает opacity + pointer-events когда
+       ребёнок имеет .item--pending (OptimisticManager.applyOptimistic() pattern).
+       Bounded subtree (card ≤20 children) — Safari iOS scroll jank avoidance.
+       JS class-toggle (.pending) остаётся для backward compat — Phase 27 cleanup scope. */
+    &:has(.item--pending) {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+}
 }

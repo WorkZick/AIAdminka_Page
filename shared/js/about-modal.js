@@ -64,23 +64,7 @@ const AboutModal = {
     }
 };
 
-// Глобальные функции для обратной совместимости
-function showAboutModal() {
-    AboutModal.show();
-}
-
-function closeAboutModal() {
-    AboutModal.close();
-}
-
-function initAboutModal() {
-    AboutModal.init();
-}
-
 // Экспорт для использования
 if (typeof window !== 'undefined') {
     window.AboutModal = AboutModal;
-    window.showAboutModal = showAboutModal;
-    window.closeAboutModal = closeAboutModal;
-    window.initAboutModal = initAboutModal;
 }

@@ -5,25 +5,26 @@
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ожидание приглашения - AIAdminka</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha384-QjwLundxB4NaHWOfxQoy8G+BY7T7kjRSxeKIjdPAUQ76EitE8bUlehJxnQEJquiL' 'sha384-cdYhdOlBc0MtESQfAGUIQ6Mf8mJZZ9E9VOP6SAR7sOvPVvRwQlwQ8UR6AjsGDSW3' 'sha384-/YOimVOt6Bq+nJVuTUHWt8a0+2GkUKsKQKq9P9jNkKqsupthdkM6WWQaaVIlnig/' 'sha384-wgqcWx+Dzs2/x1d1yYLKO34rUT5WhUT+OSqnt51rzc/Hi6CBs3tTpstly4/Hwv2y' 'sha384-sChJXbOWDzAc/w2cKkZyzzTmyVLtLgALn0PCewYcW4Nv4WHOMwANhSAqDFQyu3Iq' 'sha384-WO+CQNc5o8u/05JkylStFXt6f895hAovGF97PqyaWgflx6csiESfjnPzUJUrNAfk'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://accounts.google.com https://www.googleapis.com https://cdn.jsdelivr.net">
     <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Regular.woff2" type="font/woff2" crossorigin>
     <link rel="preload" as="font" href="../shared/fonts/TTFirsNeue-Bold.woff2" type="font/woff2" crossorigin>
     <link rel="icon" type="image/svg+xml" href="../shared/icons/favicon.svg">
+    <!-- Phase 35 ROLLOUT-03: cascade order declaration FIRST (Phase 25 CSS-01) -->
+    <link rel="stylesheet" href="../shared/css/_layers.css">
     <link rel="stylesheet" href="../shared/css/design-system-login.css">
     <link rel="stylesheet" href="css/login.css">
     <link rel="stylesheet" href="css/waiting-invite.css">
+    <!-- Phase 35 ROLLOUT-03: cdn-deps (signals + Lit) + components aggregator (registers <app-modal>) -->
+    <script type="module" src="../shared/js/cdn-deps.js"></script>
+    <script type="module" src="../shared/components/index.js"></script>
 </head>
 <body>
     <div class="login-container">
-        <div class="waiting-card">
+        <div class="login-card-wide">
             <!-- Left: User Info Panel -->
-            <div class="waiting-left">
+            <div class="login-card-left">
                 <div class="login-logo">
                     <h1>AIAdminka</h1>
-                </div>
-
-                <div class="login-status pending" id="waitingStatus">
-                    <span class="status-text">Ожидание приглашения</span>
                 </div>
 
                 <div class="login-user" id="userInfo">
@@ -37,16 +38,16 @@
                     </div>
                 </div>
 
-                <div class="waiting-actions">
-                    <button class="refresh-button" id="btnRefresh" data-action="refresh">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <div class="login-card-actions">
+                    <button class="btn btn--ghost btn-sm" id="btnRefresh" data-action="refresh">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                             <path d="M23 4v6h-6"/>
                             <path d="M1 20v-6h6"/>
                             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
                         </svg>
                         <span>Обновить</span>
                     </button>
-                    <button class="logout-button-full" data-action="logout">
+                    <button class="btn btn-danger" data-action="logout">
                         Выйти из аккаунта
                     </button>
                 </div>
@@ -57,7 +58,7 @@
             </div>
 
             <!-- Right: Content Panel -->
-            <div class="waiting-right">
+            <div class="login-card-right">
                 <!-- Waiting Content (default state) -->
                 <div class="waiting-content" id="waitingContent">
                     <div class="waiting-icon">
@@ -97,7 +98,7 @@
                         </svg>
                     </div>
                     <p>У вас пока нет приглашений</p>
-                    <span class="no-invites-hint">Руководитель команды пригласит вас в ближайшее время</span>
+                    <span class="no-invites-hint">Сообщите руководителю команды, чтобы отправил вам приглашение.</span>
                 </div>
 
                 <!-- Loading State -->
@@ -109,19 +110,15 @@
         </div>
     </div>
 
-    <!-- Confirm Modal -->
-    <div class="modal" id="confirmModal">
-        <div class="modal-dialog modal-sm modal-confirm">
-            <div class="modal-body">
-                <p class="modal-message" id="confirmMessage"></p>
-                <p class="modal-description" id="confirmDescription"></p>
-            </div>
-            <div class="modal-footer modal-footer-center">
-                <button class="btn-secondary btn-sm" data-action="confirm-cancel">Отмена</button>
-                <button class="btn-primary btn-sm" id="confirmAcceptBtn" data-action="confirm-ok">Подтвердить</button>
-            </div>
+    <!-- Confirm Modal — Phase 35 ROLLOUT-03: <app-modal> (focus trap + Escape + body.overflow + X close button baked in) -->
+    <app-modal id="confirmModal" title="Подтверждение" size="sm">
+        <p id="confirmMessage"></p>
+        <p id="confirmDescription" class="hidden"></p>
+        <div slot="footer">
+            <button class="btn btn-secondary btn-sm" data-action="confirm-cancel">Отмена</button>
+            <button class="btn btn-primary btn-sm" id="confirmAcceptBtn" data-action="confirm-ok">Подтвердить</button>
         </div>
-    </div>
+    </app-modal>
 
     <script defer src="../shared/js/toast.js"></script>
     <script defer src="../shared/js/error-handler.js"></script>

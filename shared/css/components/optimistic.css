@@ -1,0 +1,74 @@
+@layer shared {
+/* ============================================================
+   Optimistic UI States
+   Visual feedback for pending/error/confirmed operations
+   ============================================================ */
+
+/* --- Pending state --- */
+/* Applied to rows/cards during async server call */
+.item--pending {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+    transition: opacity var(--transition-fast);
+}
+
+/* Small spinner indicator next to pending item */
+.item--pending::after {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: optimistic-spin 0.8s linear infinite;
+    position: absolute;
+    top: 50%;
+    right: var(--spacing-sm);
+    transform: translateY(-50%);
+}
+
+
+
+/* --- Error state --- */
+/* Applied after rollback -- item returned but marked as failed */
+.item--error {
+    border-left: 3px solid var(--status-red);
+    animation: optimistic-shake 0.4s ease;
+}
+
+
+
+/* --- Confirmed state --- */
+/* Brief green flash on successful server confirm */
+.item--confirmed {
+    animation: optimistic-confirm 0.6s ease forwards;
+}
+}
+
+/* @keyframes ВНЕ @layer — Phase 44 fix: keyframes lookup may fail across layers */
+
+/* BFIX (audit 2026-05-19): explicit `from` обязателен. Статический `transform: translateY(-50%)`
+   и `to: translateY(-50%) rotate(360deg)` имеют разную структуру функций → браузер делает
+   matrix-интерполяцию. Но матрицы translate(0,-50%) и translate(0,-50%)*rotate(360deg)
+   математически идентичны (rotate(360deg) = identity), → нулевая разница → вращения НЕ видно.
+   Решение: explicit from + to с одинаковым transform-function-list — линейная интерполяция
+   через промежуточные углы 0°→90°→180°→270°→360° работает корректно. */
+@keyframes optimistic-spin {
+    from { transform: translateY(-50%) rotate(0deg); }
+    to { transform: translateY(-50%) rotate(360deg); }
+}
+
+@keyframes optimistic-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-2px); }
+    80% { transform: translateX(2px); }
+}
+
+@keyframes optimistic-confirm {
+    0% { background-color: rgba(81, 207, 102, 0.15); }
+    100% { background-color: transparent; }
+}

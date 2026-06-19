@@ -1,32 +1,105 @@
-// Partners Methods - methods management
+// Partners Methods - inline dropdown method management
 const PartnersMethods = {
     async loadMethods() {
         PartnersState.cachedMethods = await CloudStorage.getMethods();
         return PartnersState.cachedMethods;
     },
 
-    showMethodsDialog() {
-        document.getElementById('methodsModal').classList.add('active');
-        document.getElementById('newMethodInput').value = '';
-        PartnersMethods.renderMethodsList();
-        PartnersMethods.updateMethodsCount();
+    /**
+     * Populate methods dropdown with inline add/edit/delete controls.
+     * Each method item has hover icons for edit/delete.
+     * Bottom has "+ Добавить метод" action row.
+     */
+    populateMethodsSelect(selectedValue = '') {
+        const menu = document.getElementById('formMethodMenu');
+        const input = document.getElementById('formMethodValue');
+        const label = document.getElementById('formMethodLabel');
+        const trigger = document.getElementById('formMethodTrigger');
+        if (!menu) return;
+
+        const methods = PartnersState.getMethods();
+        let html = '';
+
+        // "Выберите метод" placeholder item
+        html += '<div class="dropdown-item' + (!selectedValue ? ' active' : '') + '" data-action="partners-selectFormDropdown" data-value="">Выберите метод</div>';
+
+        // Method items with inline actions
+        methods.forEach(method => {
+            const isActive = method.name === selectedValue ? ' active' : '';
+            const escapedName = Utils.escapeHtml(method.name);
+            html += '<div class="dropdown-item dropdown-item--method' + isActive + '" data-action="partners-selectFormDropdown" data-value="' + escapedName + '">'
+                + '<span class="method-item-name">' + escapedName + '</span>'
+                + '<div class="method-inline-actions">'
+                + '<button class="method-inline-edit" data-action="partners-startEditMethodInline" data-method-id="' + method.id + '" title="Редактировать">'
+                + '<img src="../shared/icons/pen.svg" width="14" height="14" alt="Ред.">'
+                + '</button>'
+                + '<button class="method-inline-delete" data-action="partners-deleteMethodInline" data-method-id="' + method.id + '" title="Удалить">'
+                + '<img src="../shared/icons/cross.svg" width="14" height="14" alt="Уд.">'
+                + '</button>'
+                + '</div>'
+                + '</div>';
+        });
+
+        // Divider + add row
+        html += '<div class="dropdown-divider"></div>';
+        html += '<div class="dropdown-item dropdown-item--action" id="methodAddRow" data-action="partners-showAddMethodInput">+ Добавить метод</div>';
+
+        menu.innerHTML = html;
+        if (input) input.value = selectedValue;
+        if (label) label.textContent = selectedValue || 'Выберите метод';
+        if (trigger) trigger.classList.toggle('placeholder', !selectedValue);
     },
 
-    closeMethodsDialog() {
-        document.getElementById('methodsModal').classList.remove('active');
-        PartnersMethods.populateMethodsSelect();
+    /** Get current selected method value */
+    _getSelectedValue() {
+        const input = document.getElementById('formMethodValue');
+        return input ? input.value : '';
     },
 
-    updateMethodsCount() {
-        const badge = document.getElementById('methodsCountBadge');
-        if (badge) {
-            badge.textContent = PartnersState.getMethods().length;
+    /** Keep dropdown open after inline operations */
+    _keepDropdownOpen() {
+        const menu = document.getElementById('formMethodMenu');
+        if (menu) menu.classList.remove('hidden');
+    },
+
+    /**
+     * Replace "+ Добавить метод" row with inline input form.
+     */
+    showAddMethodInput() {
+        const addRow = document.getElementById('methodAddRow');
+        if (!addRow) return;
+
+        addRow.removeAttribute('data-action');
+        addRow.className = 'dropdown-item--add-form';
+        addRow.innerHTML = '<input type="text" class="form-input method-inline-input" id="inlineMethodInput" placeholder="Новый метод...">'
+            + '<button class="method-inline-add-btn" data-action="partners-addMethodInline">'
+            + '<img src="../shared/icons/add.svg" width="14" height="14" alt="+">'
+            + '</button>';
+
+        const inp = document.getElementById('inlineMethodInput');
+        if (inp) {
+            inp.focus();
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    PartnersMethods.addMethodInline();
+                } else if (e.key === 'Escape') {
+                    e.stopPropagation();
+                    PartnersMethods.populateMethodsSelect(PartnersMethods._getSelectedValue());
+                    PartnersMethods._keepDropdownOpen();
+                }
+            });
         }
     },
 
-    async addMethod() {
-        const input = document.getElementById('newMethodInput');
-        const name = input.value.trim();
+    /**
+     * Add method from inline input inside dropdown.
+     */
+    async addMethodInline() {
+        const inp = document.getElementById('inlineMethodInput');
+        if (!inp) return;
+        const name = inp.value.trim();
 
         if (!name) {
             Toast.warning('Введите название метода');
@@ -34,46 +107,59 @@ const PartnersMethods = {
         }
 
         const methods = PartnersState.getMethods();
-        if (methods.some(m => m.name.toLowerCase() === name.toLowerCase())) {
+        if (methods.some(m => String(m.name || '').toLowerCase() === name.toLowerCase())) {
             Toast.warning('Метод с таким названием уже существует');
             return;
         }
 
-        const btn = document.querySelector('[data-action="partners-addMethod"]');
-        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
-
+        inp.disabled = true;
         try {
             const result = await CloudStorage.addMethod({ name: name });
             PartnersState.cachedMethods.push({ id: result.id, name: name });
-            input.value = '';
-            PartnersMethods.renderMethodsList();
-            PartnersMethods.updateMethodsCount();
-            input.focus();
+            // Re-render dropdown keeping it open, then show add input again
+            PartnersMethods.populateMethodsSelect(PartnersMethods._getSelectedValue());
+            PartnersMethods._keepDropdownOpen();
+            PartnersMethods.showAddMethodInput();
         } catch (error) {
             PartnersUtils.showError('Ошибка добавления метода: ' + error.message);
-        } finally {
-            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
+            if (inp) inp.disabled = false;
         }
     },
 
-    async deleteMethod(methodId) {
-        const btn = document.querySelector(`[data-action="partners-deleteMethod"][data-method-id="${methodId}"]`);
-        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
+    /**
+     * Delete method from inline dropdown icon click.
+     */
+    async deleteMethodInline(methodId) {
+        const menu = document.getElementById('formMethodMenu');
+        if (menu) {
+            const items = menu.querySelectorAll('.dropdown-item--method');
+            items.forEach(item => {
+                const btn = item.querySelector('[data-method-id="' + methodId + '"].method-inline-delete');
+                if (btn) {
+                    const actions = item.querySelector('.method-inline-actions');
+                    if (actions) { actions.innerHTML = '<span class="spinner spinner--sm"></span>'; }
+                }
+            });
+        }
 
         try {
             await CloudStorage.deleteMethod(methodId);
             PartnersState.cachedMethods = PartnersState.cachedMethods.filter(m => m.id !== methodId);
-            PartnersMethods.renderMethodsList();
-            PartnersMethods.updateMethodsCount();
+
+            // If deleted method was currently selected, clear selection
+            const currentValue = PartnersMethods._getSelectedValue();
+            const deletedMethod = !PartnersState.getMethods().some(m => m.name === currentValue);
+            const selectedValue = deletedMethod ? '' : currentValue;
+
+            PartnersMethods.populateMethodsSelect(selectedValue);
+            PartnersMethods._keepDropdownOpen();
             Toast.success('Метод удален');
         } catch (error) {
-            // Если метод не найден на сервере, обновляем кеш из облака
-            if (error.message.includes('Method not found') || error.message.includes('not found')) {
+            if (error.message.includes('not found')) {
                 try {
-                    // Обновляем список методов из облака
                     PartnersState.cachedMethods = await CloudStorage.getMethods(false);
-                    PartnersMethods.renderMethodsList();
-                    PartnersMethods.updateMethodsCount();
+                    PartnersMethods.populateMethodsSelect(PartnersMethods._getSelectedValue());
+                    PartnersMethods._keepDropdownOpen();
                     Toast.warning('Метод уже был удален. Список обновлен.');
                 } catch (refreshError) {
                     PartnersUtils.showError('Ошибка обновления списка методов: ' + refreshError.message);
@@ -81,47 +167,85 @@ const PartnersMethods = {
             } else {
                 PartnersUtils.showError('Ошибка удаления метода: ' + error.message);
             }
-        } finally {
-            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
     },
 
-    startEditMethod(methodId) {
+    /**
+     * Start inline edit of a method inside dropdown.
+     */
+    startEditMethodInline(methodId) {
         const methods = PartnersState.getMethods();
         const method = methods.find(m => m.id === methodId);
         if (!method) return;
 
-        const item = document.querySelector(`[data-method-id="${methodId}"]`);
-        if (!item) return;
-
-        item.classList.add('editing');
-        item.innerHTML = `
-            <input type="text" class="method-item-input" id="editMethodInput_${methodId}"
-                   value="${PartnersUtils.escapeHtml(method.name)}">
-            <div class="method-edit-actions">
-                <button class="method-edit-btn save" data-action="partners-saveEditMethod" data-method-id="${methodId}" title="Сохранить">
-                    <img src="../shared/icons/done.svg" alt="Сохранить">
-                </button>
-                <button class="method-edit-btn cancel" data-action="partners-cancelEditMethod" title="Отмена">
-                    <img src="../shared/icons/cross.svg" alt="Отмена">
-                </button>
-            </div>
-        `;
-
-        const input = document.getElementById(`editMethodInput_${methodId}`);
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') PartnersMethods.saveEditMethod(methodId);
+        // Find the dropdown item for this method
+        const menu = document.getElementById('formMethodMenu');
+        if (!menu) return;
+        const items = menu.querySelectorAll('.dropdown-item--method');
+        let targetItem = null;
+        items.forEach(item => {
+            const editBtn = item.querySelector('[data-method-id="' + methodId + '"]');
+            if (editBtn) targetItem = item;
         });
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') PartnersMethods.renderMethodsList();
-        });
-        input.focus();
-        input.select();
+        if (!targetItem) return;
+
+        targetItem.classList.add('editing');
+        targetItem.removeAttribute('data-action');
+        // Phase 25 LIT-06: безопасный DOM construct (Pitfall #6 — XSS-proof)
+        // createElement + value property setter (auto-safe replacement)
+        targetItem.textContent = '';
+        const editInput = document.createElement('input');
+        editInput.type = 'text';
+        editInput.className = 'form-input method-inline-input';
+        editInput.id = 'editMethodInlineInput_' + methodId;
+        editInput.value = method.name; // value property setter — XSS-safe (browser sanitizes)
+        targetItem.appendChild(editInput);
+
+        const saveBtn = document.createElement('button');
+        saveBtn.dataset.action = 'partners-saveEditMethodInline';
+        saveBtn.dataset.methodId = methodId;
+        const saveImg = document.createElement('img');
+        saveImg.src = '../shared/icons/done.svg';
+        saveImg.width = 14;
+        saveImg.height = 14;
+        saveImg.alt = 'OK';
+        saveBtn.appendChild(saveImg);
+        targetItem.appendChild(saveBtn);
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.dataset.action = 'partners-cancelEditMethodInline';
+        const cancelImg = document.createElement('img');
+        cancelImg.src = '../shared/icons/cross.svg';
+        cancelImg.width = 14;
+        cancelImg.height = 14;
+        cancelImg.alt = 'X';
+        cancelBtn.appendChild(cancelImg);
+        targetItem.appendChild(cancelBtn);
+
+        const inp = document.getElementById('editMethodInlineInput_' + methodId);
+        if (inp) {
+            inp.focus();
+            inp.select();
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    PartnersMethods.saveEditMethodInline(methodId);
+                } else if (e.key === 'Escape') {
+                    e.stopPropagation();
+                    PartnersMethods.cancelEditMethodInline();
+                }
+            });
+        }
     },
 
-    async saveEditMethod(methodId) {
-        const input = document.getElementById(`editMethodInput_${methodId}`);
-        const newName = input.value.trim();
+    /**
+     * Save inline edit of a method.
+     */
+    async saveEditMethodInline(methodId) {
+        const inp = document.getElementById('editMethodInlineInput_' + methodId);
+        if (!inp) return;
+        const newName = inp.value.trim();
 
         if (!newName) {
             Toast.warning('Название не может быть пустым');
@@ -132,21 +256,23 @@ const PartnersMethods = {
         const methodIndex = methods.findIndex(m => m.id === methodId);
         if (methodIndex === -1) return;
 
-        if (methods.some((m, i) => i !== methodIndex && m.name.toLowerCase() === newName.toLowerCase())) {
+        if (methods.some((m, i) => i !== methodIndex && String(m.name || '').toLowerCase() === newName.toLowerCase())) {
             Toast.warning('Метод с таким названием уже существует');
             return;
         }
 
-        const btn = document.querySelector(`[data-action="partners-saveEditMethod"][data-method-id="${methodId}"]`);
-        if (btn) { btn.classList.add('btn-loading'); btn.disabled = true; }
-        PartnersUtils.showLoading(true);
+        inp.disabled = true;
+        const editItem = inp.closest('.dropdown-item--method');
+        const btns = editItem ? editItem.querySelectorAll('button') : [];
+        btns.forEach(b => { b.style.display = 'none'; });
+        if (editItem) editItem.insertAdjacentHTML('beforeend', '<span class="spinner spinner--sm"></span>');
 
         try {
             const oldName = methods[methodIndex].name;
             await CloudStorage.updateMethod(methodId, { id: methodId, name: newName });
             PartnersState.cachedMethods[methodIndex].name = newName;
 
-            // Update partners with this method (parallel — safe for typical batch sizes)
+            // Update partners with this method
             const partners = PartnersState.getPartners();
             const updatePromises = partners
                 .filter(p => p.method === oldName)
@@ -159,15 +285,21 @@ const PartnersMethods = {
             // Refresh partners cache
             PartnersState.cachedPartners = await CloudStorage.getPartners(false);
             PartnersForms.syncPartnersToLocalStorage();
-            PartnersMethods.renderMethodsList();
+
+            // If renamed method was selected, update selection
+            const currentValue = PartnersMethods._getSelectedValue();
+            const selectedValue = (currentValue === oldName) ? newName : currentValue;
+
+            PartnersMethods.populateMethodsSelect(selectedValue);
+            PartnersMethods._keepDropdownOpen();
             PartnersRenderer.render();
             Toast.success('Метод обновлен');
         } catch (error) {
-            // Если метод не найден на сервере, обновляем кеш из облака
-            if (error.message.includes('Method not found') || error.message.includes('not found')) {
+            if (error.message.includes('not found')) {
                 try {
                     PartnersState.cachedMethods = await CloudStorage.getMethods(false);
-                    PartnersMethods.renderMethodsList();
+                    PartnersMethods.populateMethodsSelect(PartnersMethods._getSelectedValue());
+                    PartnersMethods._keepDropdownOpen();
                     Toast.warning('Метод не найден. Список обновлен.');
                 } catch (refreshError) {
                     PartnersUtils.showError('Ошибка обновления списка методов: ' + refreshError.message);
@@ -175,64 +307,14 @@ const PartnersMethods = {
             } else {
                 PartnersUtils.showError('Ошибка сохранения метода: ' + error.message);
             }
-        } finally {
-            if (btn) { btn.classList.remove('btn-loading'); btn.disabled = false; }
-            PartnersUtils.showLoading(false);
         }
     },
 
-    cancelEditMethod() {
-        PartnersMethods.renderMethodsList();
-    },
-
-    renderMethodsList() {
-        const container = document.getElementById('methodsList');
-        const methods = PartnersState.getMethods();
-
-        if (methods.length === 0) {
-            container.innerHTML = `
-                <div class="methods-empty">
-                    <img class="methods-empty-icon" src="../shared/icons/partners.svg" alt="">
-                    <span class="methods-empty-text">Нет методов</span>
-                    <span class="methods-empty-hint">Добавьте первый метод выше</span>
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = methods.map(method => `
-            <div class="method-item" data-method-id="${method.id}">
-                <span class="method-item-name">${PartnersUtils.escapeHtml(method.name)}</span>
-                <div class="method-item-actions">
-                    <button class="method-action-btn" data-action="partners-startEditMethod" data-method-id="${method.id}" title="Редактировать">
-                        <img src="../shared/icons/pen.svg" alt="Редактировать">
-                    </button>
-                    <button class="method-action-btn delete" data-action="partners-deleteMethod" data-method-id="${method.id}" title="Удалить">
-                        <img src="../shared/icons/cross.svg" alt="Удалить">
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    },
-
-    populateMethodsSelect(selectedValue = '') {
-        const menu = document.getElementById('formMethodMenu');
-        const input = document.getElementById('formMethodValue');
-        const label = document.getElementById('formMethodLabel');
-        const trigger = document.getElementById('formMethodTrigger');
-        if (!menu) return;
-
-        const methods = PartnersState.getMethods();
-        let html = '<div class="dropdown-item' + (!selectedValue ? ' active' : '') + '" data-action="partners-selectFormDropdown" data-value="">Выберите метод</div>';
-
-        methods.forEach(method => {
-            const isActive = method.name === selectedValue ? ' active' : '';
-            html += '<div class="dropdown-item' + isActive + '" data-action="partners-selectFormDropdown" data-value="' + Utils.escapeHtml(method.name) + '">' + Utils.escapeHtml(method.name) + '</div>';
-        });
-
-        menu.innerHTML = html;
-        if (input) input.value = selectedValue;
-        if (label) label.textContent = selectedValue || 'Выберите метод';
-        if (trigger) trigger.classList.toggle('placeholder', !selectedValue);
+    /**
+     * Cancel inline edit — re-render dropdown.
+     */
+    cancelEditMethodInline() {
+        PartnersMethods.populateMethodsSelect(PartnersMethods._getSelectedValue());
+        PartnersMethods._keepDropdownOpen();
     }
 };

@@ -1,0 +1,277 @@
+@layer shared {
+/* ============================================================
+   Detail Panel — shared card & form styles for right panel
+   Used by: partners, team-info
+   ============================================================ */
+
+/* ===========================================
+   Card Component (view mode)
+   =========================================== */
+
+/* card-close-btn: позиционирование поверх card-header, стили кнопки из shared modal-close */
+.card-close-btn {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    z-index: 10;
+}
+
+.card-header {
+    display: flex;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-2xl);
+    background: var(--gray-medium);
+}
+
+.card-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-lg);
+    background: var(--gray-medium);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.card-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-avatar-placeholder img {
+    width: 32px;
+    height: 32px;
+    filter: brightness(0) invert(1);
+    opacity: 0.3;
+}
+
+.card-info-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.card-name {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.3;
+}
+
+.card-position {
+    font-size: var(--font-size-base);
+    color: var(--gray-light);
+}
+
+.card-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-xl);
+}
+
+.card-footer {
+    display: flex;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    background: var(--glass-bg-heavy);
+    border-top: 1px solid var(--glass-border);
+}
+
+.card-footer .btn {
+    flex: 1;
+}
+
+/* ===========================================
+   Form Component (edit/create mode)
+   =========================================== */
+
+.form-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-lg) var(--spacing-xl);
+    background: var(--glass-bg-heavy);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.form-title {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--white);
+    margin: 0;
+}
+
+.form-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px dashed var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition-colors);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.form-avatar:hover {
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.form-avatar.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.form-avatar-placeholder {
+    width: 24px;
+    height: 24px;
+    filter: brightness(0) invert(1);
+    opacity: 0.4;
+}
+
+.form-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+}
+
+.form-info-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    min-width: 0;
+}
+
+.form-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-xl);
+}
+
+.form-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    background: var(--glass-bg-heavy);
+    border-top: 1px solid var(--glass-border);
+}
+
+.form-section {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.form-section-title {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--spacing-md);
+}
+
+.form-row {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.form-row:last-child {
+    margin-bottom: 0;
+}
+
+.form-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.form-field.full-width {
+    flex-basis: 100%;
+}
+
+.form-field label {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+}
+
+/* ===========================================
+   Info Rows (card body content)
+   =========================================== */
+
+.info-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.info-group:last-child {
+    border-bottom: none;
+}
+
+.info-group.vertical {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--spacing-sm);
+    border-bottom: none;
+    padding-top: var(--spacing-lg);
+}
+
+.info-label {
+    font-size: var(--font-size-sm);
+    color: var(--gray);
+}
+
+.info-value {
+    font-size: var(--font-size-base);
+    color: var(--white);
+    font-weight: 600;
+    text-align: right;
+    word-break: break-word;
+    max-width: 60%;
+}
+
+.info-value.textarea-style {
+    padding: var(--spacing-md);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    min-height: 48px;
+    font-weight: 400;
+    font-size: var(--font-size-sm);
+    white-space: pre-wrap;
+    text-align: left;
+    max-width: 100%;
+}
+
+.info-value.placeholder {
+    color: var(--gray);
+    font-weight: 400;
+}
+}

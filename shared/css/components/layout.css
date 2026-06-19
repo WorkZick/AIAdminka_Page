@@ -1,3 +1,4 @@
+@layer shared {
 /* ============================================================
    AIAdminka Design System - Layout
    ============================================================ */
@@ -86,20 +87,8 @@
     overflow: hidden;
 }
 
-.section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    background: rgba(25, 25, 25, 0.8);
-    border-bottom: 1px solid var(--glass-border);
-}
-
-.section-title {
-    font-size: var(--font-size-md);
-    font-weight: 700;
-    color: var(--white);
-}
+/* .section-header — перенесён в shared/css/components/section-header.css (Phase 26 CSS-04) */
+/* .section-title — перенесён в shared/css/components/section-header.css (covers по combined selector) */
 
 .section-body {
     padding: 20px;
@@ -186,7 +175,7 @@
     height: 20px;
     padding: 0 6px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     font-size: var(--font-size-sm);
     font-weight: 700;
 }
@@ -277,4 +266,5 @@
         padding: 12px 16px;
         gap: 12px;
     }
+}
 }

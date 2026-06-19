@@ -31,7 +31,14 @@ const TeamAvatars = {
 
         const cropImage = document.getElementById('cropImage');
         const cropPreview = document.getElementById('cropPreview');
+        const cropSlider = document.getElementById('cropSlider');
+        const cropZoomValue = document.getElementById('cropZoomValue');
+
         cropImage.src = imageData;
+
+        // Инициализация слайдера
+        cropSlider.value = 100;
+        cropZoomValue.textContent = '1.0x';
 
         cropImage.onload = () => {
             this.updateCropPreview();
@@ -64,8 +71,63 @@ const TeamAvatars = {
         const handleWheel = (e) => {
             e.preventDefault();
             const delta = e.deltaY > 0 ? -0.1 : 0.1;
-            TeamState.cropSettings.scale = Math.max(0.5, Math.min(3, TeamState.cropSettings.scale + delta));
+            TeamState.cropSettings.scale = Math.max(1, Math.min(3, TeamState.cropSettings.scale + delta));
+            // Sync slider
+            cropSlider.value = Math.round(TeamState.cropSettings.scale * 100);
+            cropZoomValue.textContent = TeamState.cropSettings.scale.toFixed(1) + 'x';
             this.updateCropPreview();
+        };
+
+        // Slider zoom handler
+        const handleSliderInput = () => {
+            TeamState.cropSettings.scale = parseInt(cropSlider.value) / 100;
+            cropZoomValue.textContent = TeamState.cropSettings.scale.toFixed(1) + 'x';
+            this.updateCropPreview();
+        };
+
+        // Touch handlers
+        let lastTouchDistance = 0;
+
+        const handleTouchStart = (e) => {
+            if (e.touches.length === 1) {
+                TeamState.isDragging = true;
+                TeamState.dragStart = {
+                    x: e.touches[0].clientX - TeamState.cropSettings.posX,
+                    y: e.touches[0].clientY - TeamState.cropSettings.posY
+                };
+            } else if (e.touches.length === 2) {
+                lastTouchDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+            e.preventDefault();
+        };
+
+        const handleTouchMove = (e) => {
+            if (e.touches.length === 1 && TeamState.isDragging) {
+                TeamState.cropSettings.posX = e.touches[0].clientX - TeamState.dragStart.x;
+                TeamState.cropSettings.posY = e.touches[0].clientY - TeamState.dragStart.y;
+                this.updateCropPreview();
+            } else if (e.touches.length === 2) {
+                const newDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                const delta = (newDist - lastTouchDistance) * 0.01;
+                TeamState.cropSettings.scale = Math.max(1, Math.min(3, TeamState.cropSettings.scale + delta));
+                lastTouchDistance = newDist;
+                // Sync slider
+                cropSlider.value = Math.round(TeamState.cropSettings.scale * 100);
+                cropZoomValue.textContent = TeamState.cropSettings.scale.toFixed(1) + 'x';
+                this.updateCropPreview();
+            }
+            e.preventDefault();
+        };
+
+        const handleTouchEnd = () => {
+            TeamState.isDragging = false;
+            lastTouchDistance = 0;
         };
 
         // Сохранить ссылки на handlers для очистки
@@ -73,7 +135,11 @@ const TeamAvatars = {
             handleMouseDown,
             handleMouseMove,
             handleMouseUp,
-            handleWheel
+            handleWheel,
+            handleSliderInput,
+            handleTouchStart,
+            handleTouchMove,
+            handleTouchEnd
         };
 
         // Удалить старые listeners
@@ -82,6 +148,10 @@ const TeamAvatars = {
             document.removeEventListener('mousemove', TeamState.oldCropHandlers.handleMouseMove);
             document.removeEventListener('mouseup', TeamState.oldCropHandlers.handleMouseUp);
             cropPreview.removeEventListener('wheel', TeamState.oldCropHandlers.handleWheel);
+            cropSlider.removeEventListener('input', TeamState.oldCropHandlers.handleSliderInput);
+            cropPreview.removeEventListener('touchstart', TeamState.oldCropHandlers.handleTouchStart);
+            cropPreview.removeEventListener('touchmove', TeamState.oldCropHandlers.handleTouchMove);
+            cropPreview.removeEventListener('touchend', TeamState.oldCropHandlers.handleTouchEnd);
         }
 
         // Добавить новые listeners
@@ -89,10 +159,17 @@ const TeamAvatars = {
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
         cropPreview.addEventListener('wheel', handleWheel, { passive: false });
+        cropSlider.addEventListener('input', handleSliderInput);
+        cropPreview.addEventListener('touchstart', handleTouchStart, { passive: false });
+        cropPreview.addEventListener('touchmove', handleTouchMove, { passive: false });
+        cropPreview.addEventListener('touchend', handleTouchEnd);
 
         TeamState.oldCropHandlers = TeamState.cropHandlers;
 
-        document.getElementById('cropModal').classList.add('active');
+        // Phase 28 LIT-MIG-02: <app-modal> Lit component использует boolean attribute API
+        const m = document.getElementById('cropModal');
+        if (m.tagName === 'APP-MODAL') m.setAttribute('open', '');
+        else m.classList.add('active');
     },
 
     /**
@@ -131,21 +208,35 @@ const TeamAvatars = {
      * Закрыть модальное окно обрезки
      */
     closeCropModal() {
-        document.getElementById('cropModal').classList.remove('active');
+        // Phase 28 LIT-MIG-02: <app-modal> compat
+        const m = document.getElementById('cropModal');
+        if (m.tagName === 'APP-MODAL') m.removeAttribute('open');
+        else m.classList.remove('active');
         TeamState.tempImageData = null;
         TeamState.cropSettings = { scale: 1, posX: 0, posY: 0 };
         TeamState.isDragging = false;
 
         // Удалить event listeners
         const cropPreview = document.getElementById('cropPreview');
+        const cropSlider = document.getElementById('cropSlider');
+        const cropZoomValue = document.getElementById('cropZoomValue');
+
         if (TeamState.cropHandlers) {
             cropPreview.removeEventListener('mousedown', TeamState.cropHandlers.handleMouseDown);
             document.removeEventListener('mousemove', TeamState.cropHandlers.handleMouseMove);
             document.removeEventListener('mouseup', TeamState.cropHandlers.handleMouseUp);
             cropPreview.removeEventListener('wheel', TeamState.cropHandlers.handleWheel);
+            cropSlider.removeEventListener('input', TeamState.cropHandlers.handleSliderInput);
+            cropPreview.removeEventListener('touchstart', TeamState.cropHandlers.handleTouchStart);
+            cropPreview.removeEventListener('touchmove', TeamState.cropHandlers.handleTouchMove);
+            cropPreview.removeEventListener('touchend', TeamState.cropHandlers.handleTouchEnd);
             TeamState.cropHandlers = null;
             TeamState.oldCropHandlers = null;
         }
+
+        // Сброс слайдера
+        if (cropSlider) cropSlider.value = 100;
+        if (cropZoomValue) cropZoomValue.textContent = '1.0x';
 
         document.getElementById('formAvatarInput').value = '';
     },
@@ -154,12 +245,11 @@ const TeamAvatars = {
      * Применить обрезку и сохранить аватар
      */
     applyCrop() {
-        const cropImage = document.getElementById('cropImage');
         const cropPreview = document.getElementById('cropPreview');
 
         const canvas = document.createElement('canvas');
-        canvas.width = 120;
-        canvas.height = 120;
+        canvas.width = 200;
+        canvas.height = 200;
         const ctx = canvas.getContext('2d');
 
         const img = new Image();
@@ -188,33 +278,18 @@ const TeamAvatars = {
             const imgLeft = previewWidth / 2 - displayedWidth / 2 + translateX;
             const imgTop = previewHeight / 2 - displayedHeight / 2 + translateY;
 
-            // Вычисление видимой части оригинального изображения в preview
-            const visibleLeft = Math.max(0, -imgLeft);
-            const visibleTop = Math.max(0, -imgTop);
-            const visibleRight = Math.min(displayedWidth, previewWidth - imgLeft);
-            const visibleBottom = Math.min(displayedHeight, previewHeight - imgTop);
+            // Размер маски — 80% от preview (квадратный preview -> маска тоже квадрат)
+            const maskSize = previewWidth * 0.8;
+            const maskLeft = (previewWidth - maskSize) / 2;
+            const maskTop = (previewHeight - maskSize) / 2;
 
-            const visibleWidth = visibleRight - visibleLeft;
-            const visibleHeight = visibleBottom - visibleTop;
+            // Source rect в координатах оригинального изображения
+            const srcX = (maskLeft - imgLeft) / (scaleToFit * scale);
+            const srcY = (maskTop - imgTop) / (scaleToFit * scale);
+            const srcW = maskSize / (scaleToFit * scale);
+            const srcH = maskSize / (scaleToFit * scale);
 
-            // Преобразование видимой области обратно в координаты оригинального изображения
-            const sourceX = (visibleLeft / displayedWidth) * imgWidth;
-            const sourceY = (visibleTop / displayedHeight) * imgHeight;
-            const sourceWidth = (visibleWidth / displayedWidth) * imgWidth;
-            const sourceHeight = (visibleHeight / displayedHeight) * imgHeight;
-
-            // Отрисовка видимой части для заполнения всего canvas (растягивание до квадрата)
-            ctx.drawImage(
-                img,
-                sourceX,
-                sourceY,
-                sourceWidth,
-                sourceHeight,
-                0,
-                0,
-                canvas.width,
-                canvas.height
-            );
+            ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, canvas.width, canvas.height);
 
             TeamState.currentAvatar = canvas.toDataURL('image/jpeg', 0.9);
 

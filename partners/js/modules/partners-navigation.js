@@ -75,8 +75,7 @@ const PartnersNavigation = {
         r.cardPosition.textContent = partner.subagentId || '-';
 
         const status = partner.status || 'Открыт';
-        r.cardStatusText.textContent = status;
-        r.cardStatusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
+        this._updateStatusBadge('cardStatusText', status);
 
         r.cardBody.innerHTML = PartnersNavigation.generateCardInfo(partner);
     },
@@ -140,9 +139,17 @@ const PartnersNavigation = {
     },
 
     _updateStatusBadge(textId, status) {
-        const statusText = document.getElementById(textId);
-        statusText.textContent = status;
-        statusText.className = 'status-badge ' + PartnersUtils.getStatusColor(status);
+        const el = document.getElementById(textId);
+        if (!el) return;
+        const colorMap = { 'Открыт': 'var(--status-green)', 'Закрыт': 'var(--status-red)' };
+        const color = colorMap[status] || 'var(--status-green)';
+        // Phase 25 LIT-06: safe DOM construction (Pitfall #6 — XSS-proof)
+        // textContent + appendChild — XSS невозможна even если status comes from user input
+        el.textContent = status + ' ';
+        const dot = document.createElement('span');
+        dot.className = 'status-dot';
+        dot.style.background = color;
+        el.appendChild(dot);
     },
 
     toggleStatusDropdown() {
