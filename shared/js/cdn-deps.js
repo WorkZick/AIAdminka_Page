@@ -32,51 +32,49 @@
 //   window.addEventListener('lit-ready', () => { /* Lit + 4 directives доступны */ });
 // Eager consumers могут проверить window.__SIGNALS_LOADED__ / window.__LIT_LOADED__ markers.
 
-const SIGNALS_URL = 'https://cdn.jsdelivr.net/npm/@preact/signals-core@1.14.1/+esm';
+// Phase 24 SIG-01: signals — СТАТИЧЕСКИЙ top-level import (NO top-level await).
+// Статический import = часть module-графа: fetch+link выполняются ДО синхронного Execute-шага
+// этого модуля, поэтому window.signal гарантированно установлен прежде чем более поздние
+// <script defer> потребители (state-manager.js, module-factory.js) запустятся в общем
+// deferred-list порядке.
+// (Quick 260619-na5: исправляет прод-гонку load-order; динамический `await import` позволял
+//  defer-потребителям выполняться во время паузы на await при медленном CDN — см. RESEARCH.md.)
+import { signal, computed, effect, batch, untracked }
+    from 'https://cdn.jsdelivr.net/npm/@preact/signals-core@1.14.1/+esm';
 
+// Re-export to window для vanilla JS consumers (синхронно, без try/catch — статический import нельзя
+// оборачивать; если CDN недоступен, провал module-eval и так катастрофичен)
+window.signal = signal;
+window.computed = computed;
+window.effect = effect;
+window.batch = batch;
+window.untracked = untracked;
+
+// Loading verification marker
+window.__SIGNALS_LOADED__ = true;
+
+// Custom event для late-binding consumers
+window.dispatchEvent(new CustomEvent('signals-ready'));
+
+// Phase 25 LIT-01: Lit core + 4 directives — динамический import, NO top-level await.
+// Lit-потребители используют late-binding (window.litHtml / событие `lit-ready`) — eager-доступность
+// не нужна. Использовать `await` здесь НЕЛЬЗЯ — любой TLA снова сломает порядок загрузки.
 const LIT_URL = 'https://cdn.jsdelivr.net/npm/lit@3.3.2/+esm';
 const LIT_REPEAT_URL = 'https://cdn.jsdelivr.net/npm/lit@3.3.2/directives/repeat.js/+esm';
 const LIT_CLASS_MAP_URL = 'https://cdn.jsdelivr.net/npm/lit@3.3.2/directives/class-map.js/+esm';
 const LIT_IF_DEFINED_URL = 'https://cdn.jsdelivr.net/npm/lit@3.3.2/directives/if-defined.js/+esm';
 const LIT_STYLE_MAP_URL = 'https://cdn.jsdelivr.net/npm/lit@3.3.2/directives/style-map.js/+esm';
 
-// Phase 24 SIG-01: signals
-try {
-    const { signal, computed, effect, batch, untracked } = await import(SIGNALS_URL);
-
-    // Re-export to window для vanilla JS consumers
-    window.signal = signal;
-    window.computed = computed;
-    window.effect = effect;
-    window.batch = batch;
-    window.untracked = untracked;
-
-    // Loading verification marker
-    window.__SIGNALS_LOADED__ = true;
-
-    // Custom event для late-binding consumers
-    window.dispatchEvent(new CustomEvent('signals-ready'));
-} catch (e) {
-    console.error('[cdn-deps] Failed to load @preact/signals-core:', e);
-    window.__SIGNALS_LOADED__ = false;
-}
-
-// Phase 25 LIT-01: Lit core + 4 directives (parallel — Promise.all для скорости)
-try {
-    const [
-        { LitElement, html, css, render },
-        { repeat },
-        { classMap },
-        { ifDefined },
-        { styleMap }
-    ] = await Promise.all([
-        import(LIT_URL),
-        import(LIT_REPEAT_URL),
-        import(LIT_CLASS_MAP_URL),
-        import(LIT_IF_DEFINED_URL),
-        import(LIT_STYLE_MAP_URL)
-    ]);
-
+Promise.all([
+    import(LIT_URL),
+    import(LIT_REPEAT_URL),
+    import(LIT_CLASS_MAP_URL),
+    import(LIT_IF_DEFINED_URL),
+    import(LIT_STYLE_MAP_URL)
+]).then(([
+    { LitElement, html, css, render },
+    { repeat }, { classMap }, { ifDefined }, { styleMap }
+]) => {
     // Re-export to window — namespaced (collision-safe per RESEARCH Open Q #1):
     // — `litHtml` НЕ `html` (избегаем коллизии с потенциальными user defines)
     window.LitElement = LitElement;
@@ -93,7 +91,7 @@ try {
 
     // Custom event для late-binding consumers
     window.dispatchEvent(new CustomEvent('lit-ready'));
-} catch (e) {
+}).catch((e) => {
     console.error('[cdn-deps] Failed to load Lit:', e);
     window.__LIT_LOADED__ = false;
-}
+});
