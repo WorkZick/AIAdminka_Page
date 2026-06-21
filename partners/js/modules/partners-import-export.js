@@ -717,6 +717,7 @@ const PartnersImportExport = {
 
             // Закрываем диалог и обновляем UI мгновенно
             PartnersImportExport.closeImportDialog();
+            PartnersColumns.invalidateColumnsCache();
             PartnersColumns.renderColumnsMenu();
             PartnersColumns.renderTableHeader();
             PartnersRenderer.render();
@@ -855,6 +856,7 @@ const PartnersImportExport = {
                 try {
                     await CloudStorage.deletePartner(id);
                     PartnersState.cachedPartners = PartnersState.cachedPartners.filter(p => p.id !== id);
+                    PartnersColumns.invalidateColumnsCache();
                     deleted++;
                 } catch (e) {
                     // Failed to delete duplicate, continue with next

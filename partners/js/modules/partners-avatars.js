@@ -1,5 +1,9 @@
 // Partners Avatars - avatar upload, crop, compress
 const PartnersAvatars = {
+    _cropPreviewW: 0,
+    _cropPreviewH: 0,
+    _rafPending: false,
+
     avatarClick() {
         document.getElementById('formAvatarInput').click();
     },
@@ -12,6 +16,13 @@ const PartnersAvatars = {
         reader.onload = (e) => {
             PartnersState.cropData.originalSrc = e.target.result;
             PartnersAvatars.showCropModal(e.target.result);
+            // Освобождаем ссылку на замыкание FileReader после срабатывания
+            reader.onload = null;
+            reader.onerror = null;
+        };
+        reader.onerror = () => {
+            reader.onload = null;
+            reader.onerror = null;
         };
         reader.readAsDataURL(file);
     },
@@ -37,6 +48,10 @@ const PartnersAvatars = {
         if (cropZoomValue) cropZoomValue.textContent = '1.0x';
 
         cropImage.onload = () => {
+            // Cache preview geometry once — fixed during crop session
+            const cropPreview = document.getElementById('cropPreview');
+            PartnersAvatars._cropPreviewW = cropPreview.clientWidth;
+            PartnersAvatars._cropPreviewH = cropPreview.clientHeight;
             PartnersAvatars.updateCropTransform();
         };
 
@@ -46,6 +61,20 @@ const PartnersAvatars = {
     closeCropModal() {
         document.getElementById('cropModal').classList.remove('active');
         document.getElementById('formAvatarInput').value = '';
+        PartnersAvatars._cropPreviewW = 0;
+        PartnersAvatars._cropPreviewH = 0;
+        PartnersAvatars._rafPending = false;
+
+        // Освобождаем DataURL из cropImage (может удерживать несколько МБ)
+        const cropImage = document.getElementById('cropImage');
+        if (cropImage) {
+            cropImage.src = '';
+            cropImage.onload = null;
+        }
+
+        // Освобождаем originalSrc из cropData (он уже скопирован в dataset.originalSrc в applyCrop,
+        // или при отмене он не нужен)
+        PartnersState.cropData.originalSrc = null;
 
         // Reset slider
         const cropSlider = document.getElementById('cropSlider');
@@ -119,23 +148,25 @@ const PartnersAvatars = {
 
     updateCropTransform() {
         const cropImage = document.getElementById('cropImage');
-        const cropPreview = document.getElementById('cropPreview');
         if (!cropImage || !cropImage.complete) return;
 
         const scale = PartnersState.cropData.scale;
         const translateX = PartnersState.cropData.offsetX;
         const translateY = PartnersState.cropData.offsetY;
 
-        const previewWidth = cropPreview.clientWidth;
-        const previewHeight = cropPreview.clientHeight;
-        const imgWidth = cropImage.naturalWidth;
-        const imgHeight = cropImage.naturalHeight;
-
-        const scaleToFit = Math.max(previewWidth / imgWidth, previewHeight / imgHeight);
-
-        cropImage.style.width = imgWidth * scaleToFit + 'px';
-        cropImage.style.height = imgHeight * scaleToFit + 'px';
-        cropImage.style.transform = `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(${scale})`;
+        if (PartnersAvatars._rafPending) return;
+        PartnersAvatars._rafPending = true;
+        requestAnimationFrame(() => {
+            PartnersAvatars._rafPending = false;
+            const previewWidth = PartnersAvatars._cropPreviewW || cropImage.parentElement.clientWidth;
+            const previewHeight = PartnersAvatars._cropPreviewH || cropImage.parentElement.clientHeight;
+            const imgWidth = cropImage.naturalWidth;
+            const imgHeight = cropImage.naturalHeight;
+            const scaleToFit = Math.max(previewWidth / imgWidth, previewHeight / imgHeight);
+            cropImage.style.width = imgWidth * scaleToFit + 'px';
+            cropImage.style.height = imgHeight * scaleToFit + 'px';
+            cropImage.style.transform = `translate(calc(-50% + ${PartnersState.cropData.offsetX}px), calc(-50% + ${PartnersState.cropData.offsetY}px)) scale(${PartnersState.cropData.scale})`;
+        });
     },
 
     applyCrop() {

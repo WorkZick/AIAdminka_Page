@@ -33,10 +33,15 @@ const TrafficRenderer = {
             if (partnersPreview) partnersPreview.classList.remove('hidden');
         }
 
-        document.getElementById('selectedCount').textContent = selected.length;
-
         if (selected.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Партнеры не выбраны</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="5" class="tc-empty-cell">
+                <div class="empty-state">
+                    <img class="empty-state-icon" src="../shared/icons/partners.svg" alt="">
+                    <div class="empty-state-title">Партнёры не выбраны</div>
+                    <div class="empty-state-text">Выберите партнёров через дропдаун выше</div>
+                </div>
+            </td></tr>`;
+            if (partnersPreview) partnersPreview.classList.add('tc-empty');
             // Отключаем кнопку "Далее" на шаге 1
             const nextBtn = document.getElementById('step1NextBtn');
             if (nextBtn) nextBtn.disabled = true;
@@ -46,16 +51,24 @@ const TrafficRenderer = {
             return;
         }
 
+        if (partnersPreview) partnersPreview.classList.remove('tc-empty');
+
         tbody.innerHTML = selected.map(partner => {
-            const statusClass = partner.status === 'новый' ? 'status-active' : partner.status === 'старый' ? 'status-pending' : 'status-inactive';
-            const statusText = partner.status === 'новый' ? 'Новый' : partner.status === 'старый' ? 'Старый' : 'Закрыт';
+            const statusText = partner.realStatus || 'Открыт';
+            const statusClass = statusText === 'Закрыт' ? 'status-closed' : 'status-open';
 
             return `
                 <tr>
                     <td>${Utils.escapeHtml(partner.method)}</td>
                     <td>${Utils.escapeHtml(partner.subagent)}</td>
                     <td>${Utils.escapeHtml(partner.subagentId)}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td><span class="status-badge ${statusClass}">${Utils.escapeHtml(statusText)}</span></td>
+                    <td class="table-actions">
+                        <button class="btn-icon btn-reject" data-action="traffic-removeSelectedPartner"
+                                data-partner-id="${Utils.escapeHtml(partner.id)}" title="Убрать из выбора">
+                            <img src="../shared/icons/cross.svg" alt="Убрать">
+                        </button>
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -70,8 +83,21 @@ const TrafficRenderer = {
         TrafficNavigation.updateStepsIndicator(TrafficState.currentStep);
     },
 
+    // Toggle дропдауна выбора партнёров
+    toggleSelectMenu() {
+        const menu = document.getElementById('selectPartnersMenu');
+        if (menu) menu.classList.toggle('hidden');
+    },
+
+    // Закрыть дропдаун выбора партнёров
+    closeSelectMenu() {
+        const menu = document.getElementById('selectPartnersMenu');
+        if (menu) menu.classList.add('hidden');
+    },
+
     // Выбор всех партнеров
     selectAll() {
+        TrafficRenderer.closeSelectMenu();
         const partners = storage.getPartners();
         TrafficState.selectedPartners = partners.map(p => p.id);
         TrafficRenderer.updateSelectedPartnersView();
@@ -86,9 +112,8 @@ const TrafficRenderer = {
 
     // Показать выбор по методу
     showMethodSelection() {
+        TrafficRenderer.closeSelectMenu();
         TrafficRenderer.hideAllPanels();
-        const panel = document.getElementById('methodSelectionPanel');
-        panel.classList.remove('hidden');
 
         TrafficState.availableMethods = storage.getMethods();
         const container = document.getElementById('methodCheckboxes');
@@ -99,6 +124,9 @@ const TrafficRenderer = {
                 ${Utils.escapeHtml(method)}
             </label>
         `).join('');
+
+        const modal = document.getElementById('methodSelectionModal');
+        if (modal) modal.open = true;
     },
 
     // Применить выбор по методу
@@ -123,9 +151,8 @@ const TrafficRenderer = {
 
     // Показать ручной выбор
     showManualSelection() {
+        TrafficRenderer.closeSelectMenu();
         TrafficRenderer.hideAllPanels();
-        const panel = document.getElementById('manualSelectionPanel');
-        panel.classList.remove('hidden');
 
         const partners = storage.getPartners();
         const container = document.getElementById('partnerCheckboxes');
@@ -137,6 +164,9 @@ const TrafficRenderer = {
                 ${Utils.escapeHtml(partner.subagent)} (${Utils.escapeHtml(partner.method)})
             </label>
         `).join('');
+
+        const modal = document.getElementById('manualSelectionModal');
+        if (modal) modal.open = true;
     },
 
     // Применить ручной выбор
@@ -153,10 +183,12 @@ const TrafficRenderer = {
         TrafficRenderer.hideAllPanels();
     },
 
-    // Скрыть все панели выбора
+    // Скрыть все панели выбора (закрыть модалки)
     hideAllPanels() {
-        document.getElementById('methodSelectionPanel').classList.add('hidden');
-        document.getElementById('manualSelectionPanel').classList.add('hidden');
+        const m1 = document.getElementById('methodSelectionModal');
+        if (m1) m1.open = false;
+        const m2 = document.getElementById('manualSelectionModal');
+        if (m2) m2.open = false;
     },
 
     // Отображение партнеров
@@ -312,15 +344,15 @@ const TrafficRenderer = {
         const tbody = document.getElementById('reportTableBody');
         tbody.innerHTML = reportData.map(partner => {
             const date = new Date(partner.dateAdded).toLocaleDateString('ru-RU');
-            const statusClass = partner.status === 'новый' ? 'status-active' : partner.status === 'старый' ? 'status-pending' : 'status-inactive';
-            const statusText = partner.status === 'новый' ? 'Новый' : partner.status === 'старый' ? 'Старый' : 'Закрыт';
+            const statusText = partner.realStatus || 'Открыт';
+            const statusClass = statusText === 'Закрыт' ? 'status-closed' : 'status-open';
 
             return `
                 <tr>
                     <td>${Utils.escapeHtml(partner.method)}</td>
                     <td>${Utils.escapeHtml(partner.subagent)}</td>
                     <td>${Utils.escapeHtml(partner.subagentId)}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td><span class="status-badge ${statusClass}">${Utils.escapeHtml(statusText)}</span></td>
                     <td>${date}</td>
                     <td>${Number(partner.backCount) || 0}</td>
                     <td>${Number(partner.cringeCount) || 0}</td>
@@ -504,5 +536,11 @@ const TrafficRenderer = {
     closeEditModal() {
         document.getElementById('editModal').classList.remove('show');
         TrafficState.editingPartnerId = null;
+    },
+
+    // Убрать партнёра из выбора по id (кнопка удаления в строке таблицы)
+    removeSelectedPartner(id) {
+        TrafficState.selectedPartners = TrafficState.selectedPartners.filter(pid => pid !== id);
+        TrafficRenderer.updateSelectedPartnersView();
     }
 };

@@ -1196,6 +1196,7 @@ window.TEMPLATE_COMBINED_REPORT = {
                 };
 
                 const productTypes = ['Slot', '1xGames', 'Live Casino'];
+                const productTypesSet = new Set(productTypes);
                 const groupedData = {};
                 let otherTypesUsers = 0, otherTypesOperations = 0;
 
@@ -1208,7 +1209,7 @@ window.TEMPLATE_COMBINED_REPORT = {
                     const usersCount = parseFloat(row[colsT9.usersCount]) || 0;
                     const operationsCount = parseFloat(row[colsT9.operationsCount]) || 0;
 
-                    if (productTypes.includes(productType)) {
+                    if (productTypesSet.has(productType)) {
                         if (product === '') continue;
                         if (!groupedData[productType]) groupedData[productType] = {};
                         if (!groupedData[productType][product]) groupedData[productType][product] = { users: 0, operations: 0 };

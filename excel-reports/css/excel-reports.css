@@ -458,6 +458,7 @@
     right: var(--spacing-2xl);
     width: 48px;
     height: 48px;
+    padding: 0;
     border-radius: 50%;
     z-index: 1000;
     backdrop-filter: blur(var(--glass-blur));
@@ -475,6 +476,8 @@
 }
 
 .log-toggle-btn img {
+    width: 22px;
+    height: 22px;
     filter: brightness(0) invert(1);
     opacity: 0.7;
     transition: opacity var(--transition-fast);
@@ -525,73 +528,6 @@
 }
 
 /* .btn-clear, .log-drawer-close → .btn .btn-sm .btn--ghost (DS) */
-
-/* Inline Loader - неблокирующий индикатор загрузки */
-.inline-loader {
-    padding: var(--spacing-lg) var(--spacing-xl);
-    background: var(--glass-border);
-    border: 1px solid var(--white-a20);
-    border-radius: var(--radius-lg);
-    margin-top: var(--spacing-md);
-}
-
-.inline-loader-content {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md-sm);
-}
-
-.inline-loader-header {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-}
-
-/* .inline-loader-spinner → DS .spinner .spinner--sm (loading.css) */
-
-.inline-loader-text {
-    font-size: var(--font-size-base);
-    color: var(--accent);
-    font-weight: 600;
-}
-
-.inline-loader-progress {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-}
-
-.progress-bar {
-    flex: 1;
-    height: var(--spacing-2xs);
-    background: var(--white-a10);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
-    border-radius: var(--radius-sm);
-    transition: width var(--transition-normal);
-    width: var(--progress-width, 0%);
-}
-
-.progress-percent {
-    font-size: var(--font-size-caption);
-    color: var(--gray-light);
-    min-width: 36px;
-    text-align: right;
-}
-
-.inline-loader-filename {
-    font-size: var(--font-size-sm);
-    color: var(--gray-light);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    opacity: 0.8;
-}
 
 /* SubFile loading state */
 .sub-file-card.loading {
@@ -678,41 +614,6 @@
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-/* Step Header Navigation */
-.step-header-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-xl);
-    margin-bottom: var(--spacing-lg);
-}
-
-.step-header-nav h2 {
-    font-size: var(--font-size-h2);
-    font-weight: 700;
-    color: var(--white);
-    flex: 1;
-    text-align: center;
-    margin: 0;
-}
-
-.nav-left,
-.nav-right {
-    flex: 0 0 auto;
-    display: flex;
-    gap: var(--spacing-sm);
-}
-
-.nav-left {
-    justify-content: flex-start;
-    min-width: 120px;
-}
-
-.nav-right {
-    justify-content: flex-end;
-    min-width: 120px;
 }
 
 .step-content h2 {

@@ -60,7 +60,19 @@ const PartnersRenderer = {
         if (emptyState) emptyState.classList.add('hidden');
         if (table) table.classList.remove('hidden');
 
-        const pagedData = PartnersState.cachedPartners;
+        const all = PartnersState.cachedPartners;
+        const pageSize = PartnersState.pageSize;
+        // Если массив длиннее pageSize — сервер НЕ нарезал страницу (batch-путь),
+        // делаем client-side slice окна текущей страницы (fallback, как в onboarding).
+        // Если массив ≤ pageSize — сервер уже вернул страницу, slice 20→20 безвреден.
+        let pagedData = all;
+        let effectiveTotal = PartnersState.totalCount;
+        if (all.length > pageSize) {
+            const page = Math.max(1, PartnersState.currentPage || 1);
+            const start = (page - 1) * pageSize;
+            pagedData = all.slice(start, start + pageSize);
+            effectiveTotal = all.length; // totalCount для пагинации = длина всего массива
+        }
         const columns = PartnersColumns.getColumnsConfig();
         const visibleColumns = columns.filter(c => c.visible);
         const selectedId = PartnersState.selectedPartnerId;
@@ -129,7 +141,7 @@ const PartnersRenderer = {
             PaginationHelper.render(paginationContainer, {
                 page: PartnersState.currentPage,
                 pageSize: PartnersState.pageSize,
-                totalCount: PartnersState.totalCount,
+                totalCount: effectiveTotal,
                 onPageChange: (newPage) => PartnersForms.goToPage(newPage)
             });
         }

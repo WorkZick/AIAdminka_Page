@@ -231,18 +231,38 @@ window.TEMPLATE_REGISTRATIONS = {
         result.sheets['T3.1'].merges.push(`C${t31DataStart}:C${t31CurrentRow - 1}`);
         result.sheets['T3.1'].styles.push({ cell: `C${t31DataStart}`, ...separatorStyle });
 
-        // ===== ЧАСТЬ 2: СУММИРОВАНИЕ ПО ИСТОЧНИКУ ТРАФИКА =====
+        // ===== ЧАСТИ 2/3/4: СУММИРОВАНИЕ — единый проход по data =====
+        // Аккумуляторы Части 2 (trafficSums), Части 3 (regTypes) и Части 4 (devices)
+        // объявлены до цикла; все три независимы (читают разные cols.*, пишут в разные объекты)
         const trafficSums = {
             affilate: { totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
             organic: { totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 }
         };
 
+        const regTypes = {
+            full: { name: 'Full', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
+            oneclick: { name: 'OneClick', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
+            phone: { name: 'Phone', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
+            social: { name: 'SocialNetworks', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 }
+        };
+
+        const devices = {
+            android: { name: 'Android', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
+            ios: { name: 'iOS', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
+            winclient: { name: 'WinClient', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
+            webnewdesign: { name: 'Web (новый дизайн)', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
+            mobilev3: { name: 'Моб. версия сайта v3', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
+            mobilenewdesign: { name: 'Моб. версия сайта (новый дизайн)', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
+            webv3: { name: 'Web v3', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 }
+        };
+
         for (let i = 1; i < data.length; i++) {
             const row = data[i];
             if (!row || row.length === 0) continue;
-            
+
+            // Блок Части 2: trafficSource → trafficSums
             const trafficSource = (row[cols.trafficSource] || '').toString().trim().toLowerCase();
-            
+
             if (trafficSource.includes('affilate') || trafficSource.includes('affiliate')) {
                 trafficSums.affilate.totalReg += getNumber(row[cols.totalRegistrations]);
                 trafficSums.affilate.firstDep += getNumber(row[cols.firstDeposit]);
@@ -251,7 +271,7 @@ window.TEMPLATE_REGISTRATIONS = {
                 trafficSums.affilate.deposits += getNumber(row[cols.allDeposits]);
                 trafficSums.affilate.bets += getNumber(row[cols.allBets]);
             }
-            
+
             if (trafficSource.includes('organic')) {
                 trafficSums.organic.totalReg += getNumber(row[cols.totalRegistrations]);
                 trafficSums.organic.firstDep += getNumber(row[cols.firstDeposit]);
@@ -259,6 +279,57 @@ window.TEMPLATE_REGISTRATIONS = {
                 trafficSums.organic.players += getNumber(row[cols.playersWithDeposit]);
                 trafficSums.organic.deposits += getNumber(row[cols.allDeposits]);
                 trafficSums.organic.bets += getNumber(row[cols.allBets]);
+            }
+
+            // Блок Части 3: registrationType → regTypes
+            const regType = (row[cols.registrationType] || '').toString().trim().toLowerCase();
+
+            let regTarget = null;
+            if (regType.includes('full')) regTarget = regTypes.full;
+            else if (regType.includes('oneclick') || regType.includes('oneсlick')) regTarget = regTypes.oneclick;
+            else if (regType.includes('phone')) regTarget = regTypes.phone;
+            else if (regType.includes('social')) regTarget = regTypes.social;
+
+            if (regTarget) {
+                regTarget.totalReg += getNumber(row[cols.totalRegistrations]);
+                regTarget.firstDep += getNumber(row[cols.firstDeposit]);
+                regTarget.fastDep += getNumber(row[cols.fastDeposit]);
+                regTarget.players += getNumber(row[cols.playersWithDeposit]);
+                regTarget.deposits += getNumber(row[cols.allDeposits]);
+                regTarget.bets += getNumber(row[cols.allBets]);
+            }
+
+            // Блок Части 4: device → devices (substring .includes — Set неприменим, приоритет веток сохранён)
+            const deviceName = (row[cols.device] || '').toString().trim().toLowerCase();
+
+            let devTarget = null;
+
+            if (deviceName.includes('android') || deviceName.includes('андроид')) {
+                devTarget = devices.android;
+            } else if (deviceName.includes('ios') || deviceName.includes('айос')) {
+                devTarget = devices.ios;
+            } else if (deviceName.includes('winclient') || deviceName.includes('винклиент')) {
+                devTarget = devices.winclient;
+            } else if (deviceName.includes('web v3') || deviceName.includes('веб v3')) {
+                devTarget = devices.webv3;
+            } else if ((deviceName.includes('мобильная') || deviceName.includes('mobile') || deviceName.includes('моб')) &&
+                       (deviceName.includes('v3') || deviceName.includes('версия сайта v3'))) {
+                devTarget = devices.mobilev3;
+            } else if ((deviceName.includes('web') || deviceName.includes('веб')) &&
+                       (deviceName.includes('новый дизайн') || deviceName.includes('new design'))) {
+                devTarget = devices.webnewdesign;
+            } else if ((deviceName.includes('мобильная') || deviceName.includes('mobile') || deviceName.includes('моб')) &&
+                       (deviceName.includes('новый дизайн') || deviceName.includes('new design'))) {
+                devTarget = devices.mobilenewdesign;
+            }
+
+            if (devTarget) {
+                devTarget.totalReg += getNumber(row[cols.totalRegistrations]);
+                devTarget.firstDep += getNumber(row[cols.firstDeposit]);
+                devTarget.fastDep += getNumber(row[cols.fastDeposit]);
+                devTarget.players += getNumber(row[cols.playersWithDeposit]);
+                devTarget.deposits += getNumber(row[cols.allDeposits]);
+                devTarget.bets += getNumber(row[cols.allBets]);
             }
         }
 
@@ -307,36 +378,6 @@ window.TEMPLATE_REGISTRATIONS = {
         // Жёлтый разделитель для T3.2
         result.sheets['T3.2'].merges.push(`C${t32DataStart}:C${t32CurrentRow - 1}`);
         result.sheets['T3.2'].styles.push({ cell: `C${t32DataStart}`, ...separatorStyle });
-
-        // ===== ЧАСТЬ 3: СУММИРОВАНИЕ ПО ТИПАМ РЕГИСТРАЦИИ =====
-        const regTypes = {
-            full: { name: 'Full', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
-            oneclick: { name: 'OneClick', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
-            phone: { name: 'Phone', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
-            social: { name: 'SocialNetworks', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 }
-        };
-
-        for (let i = 1; i < data.length; i++) {
-            const row = data[i];
-            if (!row || row.length === 0) continue;
-            
-            const regType = (row[cols.registrationType] || '').toString().trim().toLowerCase();
-            
-            let target = null;
-            if (regType.includes('full')) target = regTypes.full;
-            else if (regType.includes('oneclick') || regType.includes('oneсlick')) target = regTypes.oneclick;
-            else if (regType.includes('phone')) target = regTypes.phone;
-            else if (regType.includes('social')) target = regTypes.social;
-            
-            if (target) {
-                target.totalReg += getNumber(row[cols.totalRegistrations]);
-                target.firstDep += getNumber(row[cols.firstDeposit]);
-                target.fastDep += getNumber(row[cols.fastDeposit]);
-                target.players += getNumber(row[cols.playersWithDeposit]);
-                target.deposits += getNumber(row[cols.allDeposits]);
-                target.bets += getNumber(row[cols.allBets]);
-            }
-        }
 
         // Заполнение T6 (показатели в строках, типы регистрации в колонках)
         // Заголовки (3 строки: "Показатель" объединен A1:A3, "Месяц" объединен B1:E2, типы в строке 3)
@@ -406,54 +447,6 @@ window.TEMPLATE_REGISTRATIONS = {
         // Жёлтый разделитель для T6
         result.sheets['T6'].merges.push(`F${t6DataStart}:F${t6CurrentRow - 1}`);
         result.sheets['T6'].styles.push({ cell: `F${t6DataStart}`, ...separatorStyle });
-
-        // ===== ЧАСТЬ 4: СУММИРОВАНИЕ ПО УСТРОЙСТВАМ =====
-        const devices = {
-            android: { name: 'Android', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
-            ios: { name: 'iOS', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
-            winclient: { name: 'WinClient', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
-            webnewdesign: { name: 'Web (новый дизайн)', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
-            mobilev3: { name: 'Моб. версия сайта v3', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
-            mobilenewdesign: { name: 'Моб. версия сайта (новый дизайн)', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 },
-            webv3: { name: 'Web v3', totalReg: 0, firstDep: 0, fastDep: 0, players: 0, deposits: 0, bets: 0 }
-        };
-
-        for (let i = 1; i < data.length; i++) {
-            const row = data[i];
-            if (!row || row.length === 0) continue;
-            
-            const deviceName = (row[cols.device] || '').toString().trim().toLowerCase();
-            
-            let target = null;
-            
-            if (deviceName.includes('android') || deviceName.includes('андроид')) {
-                target = devices.android;
-            } else if (deviceName.includes('ios') || deviceName.includes('айос')) {
-                target = devices.ios;
-            } else if (deviceName.includes('winclient') || deviceName.includes('винклиент')) {
-                target = devices.winclient;
-            } else if (deviceName.includes('web v3') || deviceName.includes('веб v3')) {
-                target = devices.webv3;
-            } else if ((deviceName.includes('мобильная') || deviceName.includes('mobile') || deviceName.includes('моб')) && 
-                       (deviceName.includes('v3') || deviceName.includes('версия сайта v3'))) {
-                target = devices.mobilev3;
-            } else if ((deviceName.includes('web') || deviceName.includes('веб')) && 
-                       (deviceName.includes('новый дизайн') || deviceName.includes('new design'))) {
-                target = devices.webnewdesign;
-            } else if ((deviceName.includes('мобильная') || deviceName.includes('mobile') || deviceName.includes('моб')) && 
-                       (deviceName.includes('новый дизайн') || deviceName.includes('new design'))) {
-                target = devices.mobilenewdesign;
-            }
-            
-            if (target) {
-                target.totalReg += getNumber(row[cols.totalRegistrations]);
-                target.firstDep += getNumber(row[cols.firstDeposit]);
-                target.fastDep += getNumber(row[cols.fastDeposit]);
-                target.players += getNumber(row[cols.playersWithDeposit]);
-                target.deposits += getNumber(row[cols.allDeposits]);
-                target.bets += getNumber(row[cols.allBets]);
-            }
-        }
 
         // Заполнение T7 (показатели в строках, устройства в колонках с группировкой)
         // Заголовки (3 строки с группами: Mobile, Other, Web)

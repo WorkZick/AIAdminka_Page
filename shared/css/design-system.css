@@ -29,6 +29,7 @@
 @import 'components/role-guard.css';
 @import 'components/lifecycle.css';
 @import 'components/loading.css';
+@import 'components/inline-loader.css';
 @import 'components/sub-tabs.css';
 @import 'components/dropdown.css';
 @import 'components/datepicker.css';

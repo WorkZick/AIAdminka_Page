@@ -345,7 +345,6 @@ body:has(#columnsMenu.active) .columns-btn {
     cursor: pointer;
     transition: background var(--transition-fast);
     contain: layout style paint;
-    will-change: background;
 }
 
 .partners-table tbody tr:hover {

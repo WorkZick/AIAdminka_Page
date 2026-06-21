@@ -143,6 +143,37 @@ const OnboardingForm = (() => {
         } catch (_) { /* silent */ }
     }
 
+    // TTL-GC черновиков: удаляет осиротевшие onb-draft:* записи старше 7 дней.
+    // Вызывается один раз при загрузке страницы — безопасно, не трогает активные черновики.
+    function _gcOrphanedDrafts() {
+        const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 дней
+        const now = Date.now();
+        try {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key || key.indexOf(DRAFT_KEY_PREFIX + ':') !== 0) continue;
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) continue;
+                    const envelope = JSON.parse(raw);
+                    // Удаляем если нет savedAt (некорректная запись) или старше TTL
+                    if (!envelope || typeof envelope.savedAt !== 'number' || (now - envelope.savedAt) > TTL_MS) {
+                        keysToRemove.push(key);
+                    }
+                } catch (_) {
+                    keysToRemove.push(key); // битый JSON — тоже удаляем
+                }
+            }
+            keysToRemove.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+        } catch (_) { /* localStorage недоступен — молчим */ }
+    }
+
+    // Запускаем GC один раз при загрузке (через setTimeout чтобы не блокировать init)
+    if (typeof setTimeout !== 'undefined') {
+        setTimeout(_gcOrphanedDrafts, 0);
+    }
+
     function _ensureDirtyListener() {
         if (_dirtyListenerAttached) return;
         const formFields = document.getElementById('formFields');
@@ -1189,8 +1220,10 @@ const OnboardingForm = (() => {
     }
 
     function _autoResize(ta) {
-        ta.style.height = 'auto';
-        ta.style.height = ta.scrollHeight + 'px';
+        requestAnimationFrame(() => {
+            ta.style.height = 'auto';
+            ta.style.height = ta.scrollHeight + 'px';
+        });
     }
 
     function toggleChecklistComment(fieldId, idx) {

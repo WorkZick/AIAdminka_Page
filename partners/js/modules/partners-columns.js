@@ -10,7 +10,19 @@ const PartnersColumns = {
 
     maxVisibleColumns: 5,
 
+    // Кеш результата getColumnsConfig(). Инвалидируется при мутациях cachedPartners
+    // и при изменениях localStorage-конфига (saveColumnsConfig/resetColumnsConfig).
+    _columnsCache: null,
+
+    invalidateColumnsCache() {
+        PartnersColumns._columnsCache = null;
+    },
+
     getColumnsConfig() {
+        if (PartnersColumns._columnsCache !== null) {
+            return PartnersColumns._columnsCache;
+        }
+
         let columns = [];
         const saved = localStorage.getItem('partnersColumnsConfig');
 
@@ -47,6 +59,7 @@ const PartnersColumns = {
             return true;
         });
 
+        PartnersColumns._columnsCache = columns;
         return columns;
     },
 
@@ -69,10 +82,12 @@ const PartnersColumns = {
 
     saveColumnsConfig(columns) {
         localStorage.setItem('partnersColumnsConfig', JSON.stringify(columns));
+        PartnersColumns.invalidateColumnsCache();
     },
 
     resetColumnsConfig() {
         localStorage.removeItem('partnersColumnsConfig');
+        PartnersColumns.invalidateColumnsCache();
         PartnersColumns.renderColumnsMenu();
         PartnersColumns.renderTableHeader();
         PartnersRenderer.render();
@@ -103,7 +118,8 @@ const PartnersColumns = {
     },
 
     toggleColumn(columnId) {
-        const columns = PartnersColumns.getColumnsConfig();
+        // Работаем на мелкой копии, чтобы не мутировать кешированный массив
+        const columns = PartnersColumns.getColumnsConfig().map(c => ({ ...c }));
         const column = columns.find(c => c.id === columnId);
         if (!column) return;
 
@@ -144,7 +160,8 @@ const PartnersColumns = {
         const targetIndex = parseInt(targetItem.dataset.index);
         if (PartnersState.draggedColumnIndex === targetIndex) return;
 
-        const columns = PartnersColumns.getColumnsConfig();
+        // Работаем на мелкой копии, чтобы не мутировать кешированный массив
+        const columns = [...PartnersColumns.getColumnsConfig()];
         const [movedColumn] = columns.splice(PartnersState.draggedColumnIndex, 1);
         columns.splice(targetIndex, 0, movedColumn);
 
@@ -300,10 +317,18 @@ const PartnersColumns = {
 
                 if (cleanedColumns.length !== columns.length) {
                     PartnersColumns.saveColumnsConfig(cleanedColumns);
+                } else {
+                    // Набор custom-полей мог измениться (добавились новые поля),
+                    // поэтому инвалидируем кеш даже если длина не изменилась
+                    PartnersColumns.invalidateColumnsCache();
                 }
             } catch (e) {
                 console.warn('Ошибка миграции конфигурации колонок:', e);
+                PartnersColumns.invalidateColumnsCache();
             }
+        } else {
+            // Нет сохранённого конфига — кеш всё равно должен учитывать свежий cachedPartners
+            PartnersColumns.invalidateColumnsCache();
         }
 
         // Всегда обновляем UI колонок

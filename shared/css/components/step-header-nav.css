@@ -1,0 +1,46 @@
+@layer module {
+/* ============================================================
+   AIAdminka Design System - Step Header Navigation (Quick 260621-2lz)
+   Shared-компонент: центрированный заголовок шага с навигацией
+   Назад/Далее по паттерну excel-reports.
+   Использование: traffic-calculation, excel-reports.
+   Слой: @layer module (исторически — блок жил в @layer module
+   excel-reports.css, смена слоя изменила бы каскад).
+   ============================================================ */
+
+/* Step Header Navigation */
+.step-header-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-lg);
+}
+
+.step-header-nav h2 {
+    font-size: var(--font-size-h2);
+    font-weight: 700;
+    color: var(--white);
+    flex: 1;
+    text-align: center;
+    margin: 0;
+}
+
+.nav-left,
+.nav-right {
+    flex: 0 0 auto;
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.nav-left {
+    justify-content: flex-start;
+    min-width: 120px;
+}
+
+.nav-right {
+    justify-content: flex-end;
+    min-width: 120px;
+}
+
+} /* end @layer module */

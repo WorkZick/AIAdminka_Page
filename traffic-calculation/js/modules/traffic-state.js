@@ -12,6 +12,7 @@ const TrafficState = {
         percent: false
     },
     ourPartnerIds: [],
+    ourPartnerIdSet: null,
     currentSelectedPartnerId: null,
     currentSelectedPartnerId6: null,
     allPartnersListForStep5: [],

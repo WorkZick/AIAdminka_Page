@@ -305,11 +305,12 @@ const excelApp = {
                 return;
             }
 
-            // Сохраняем данные в состояние
+            // Сохраняем данные в состояние (setStepData сохраняет данные; markStepCompleted
+            // вызывается без дублирования data-ссылки — данные уже в state через setStepData)
             const mergedData = this.fileProcessor.mergeFileData(results);
             this.state.setStepData(stepId, mergedData);
             this.state.setStepFiles(stepId, Array.from(files).map(f => f.name));
-            this.state.markStepCompleted(stepId, mergedData);
+            this.state.markStepCompleted(stepId);
 
             // Логируем успех
             const stats = this.fileProcessor.getLoadStats(results);
@@ -385,7 +386,8 @@ const excelApp = {
             });
 
             if (allLoaded) {
-                this.state.markStepCompleted(stepId, allSubFilesData);
+                // setStepData(stepId, allSubFilesData) уже вызван выше — не дублируем data-ссылку
+                this.state.markStepCompleted(stepId);
             }
 
             // Логируем успех
@@ -655,6 +657,21 @@ const excelApp = {
             this.uiRenderer.hideLoadingSpinner();
             Toast.success('Файл успешно сохранён');
             logger.log('✓ Файл успешно экспортирован', 'success');
+
+            // Освобождаем промежуточные данные шагов (могут занимать десятки МБ).
+            // Вызывается ПОСЛЕ успешного скачивания файла — все читатели уже отработали.
+            // Повторная генерация (reset → selectTemplate) всегда загружает новые файлы.
+            if (template && template.filesConfig) {
+                const fileStepIds = Object.keys(template.filesConfig);
+                fileStepIds.forEach(sid => {
+                    this.state.setStepData(sid, null);
+                    // sub-file данные
+                    const stepConfig = template.filesConfig[sid];
+                    if (stepConfig && stepConfig.subFiles) {
+                        stepConfig.subFiles.forEach(sf => this.state.setStepData(`${sid}_${sf.id}`, null));
+                    }
+                });
+            }
 
         } catch (error) {
             this.uiRenderer.hideLoadingSpinner();

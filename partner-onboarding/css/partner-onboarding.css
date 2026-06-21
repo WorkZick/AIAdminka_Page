@@ -589,7 +589,6 @@
     transition: var(--transition-colors);
     min-height: 40px;
     contain: layout style paint;
-    will-change: background;
     content-visibility: auto;
     contain-intrinsic-size: auto 40px;
 }

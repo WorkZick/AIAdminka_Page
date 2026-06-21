@@ -40,6 +40,7 @@ const storage = {
                 subagent: p.subagent || '',
                 subagentId: p.subagentId || '',
                 status: this.mapStatus(p.status),
+                realStatus: p.status,
                 dateAdded: p.createdAt || new Date().toISOString(),
                 backCount: analytics.backCount || 0,
                 cringeCount: analytics.cringeCount || 0,

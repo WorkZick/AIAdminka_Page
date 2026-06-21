@@ -425,6 +425,9 @@ const OnboardingSource = (() => {
             const hashes = new Set(freshSource ? freshSource.importedRowHashes || [] : []);
             let imported = 0;
 
+            // Строим индекс существующих заявок ОДИН РАЗ до цикла (O(R·F) предобработка)
+            const dupIndex = _buildDuplicateIndex(OnboardingState.get('requests') || []);
+
             for (const row of rows) {
                 const lead = _mapRowToLead(row, headers);
                 if (!lead.contact_name && !lead.phone && !lead.tg_username && !lead.email) continue;
@@ -432,8 +435,8 @@ const OnboardingSource = (() => {
                 const hash = _hashLead(lead);
                 if (hashes.has(hash)) continue;
 
-                // Secondary dedup: check existing requests
-                if (_isDuplicateRequest(lead)) {
+                // Secondary dedup: check existing requests via pre-built index
+                if (_isDuplicate(lead, dupIndex)) {
                     hashes.add(hash);
                     continue;
                 }
@@ -565,15 +568,56 @@ const OnboardingSource = (() => {
         return 'h' + Math.abs(hash).toString(36);
     }
 
-    function _isDuplicateRequest(lead) {
-        const requests = OnboardingState.get('requests') || [];
-        const fields = ['contact_name', 'phone', 'email', 'tg_username'];
-        const nonEmpty = fields.filter(f => lead[f]);
-        if (nonEmpty.length === 0) return false;
-        return requests.some(r => {
+    // Поля для дедупликации заявок при импорте
+    const _DEDUP_FIELDS = ['contact_name', 'phone', 'email', 'tg_username'];
+
+    /**
+     * Строит инвертированный индекс существующих заявок для быстрого дедупа.
+     * index: Map<"field value" → Set<r>> — для каждой (поле, значение) — набор заявок с этим значением.
+     * Предобработка O(R·F), затем поиск O(F · |кандидатов по первому полю|) — на практике крошечно.
+     */
+    function _buildDuplicateIndex(requests) {
+        const index = new Map();
+        for (const r of requests) {
             const d = (r.stageData && r.stageData[1]) || {};
-            return nonEmpty.every(f => d[f] === lead[f]);
-        });
+            for (const f of _DEDUP_FIELDS) {
+                if (d[f]) {
+                    const key = f + '\x00' + d[f];
+                    let set = index.get(key);
+                    if (!set) { set = new Set(); index.set(key, set); }
+                    set.add(r);
+                }
+            }
+        }
+        return index;
+    }
+
+    /**
+     * Проверяет, является ли лид дубликатом существующей заявки.
+     * Семантика идентична _isDuplicateRequest: дубликат ⟺ существует заявка r,
+     * у которой по ВСЕМ непустым полям лида (nonEmpty) значения совпадают одновременно.
+     * Реализация: берём кандидатов по первому полю через index, затем пересекаем
+     * с кандидатами по остальным полям (прямая проверка d[f]===lead[f]).
+     */
+    function _isDuplicate(lead, index) {
+        const nonEmpty = _DEDUP_FIELDS.filter(f => lead[f]);
+        if (nonEmpty.length === 0) return false;
+
+        // Стартуем с набором кандидатов по первому непустому полю
+        const firstKey = nonEmpty[0] + '\x00' + lead[nonEmpty[0]];
+        const firstSet = index.get(firstKey);
+        if (!firstSet || firstSet.size === 0) return false;
+
+        // Проверяем каждого кандидата на совпадение по ВСЕМ остальным nonEmpty-полям
+        for (const r of firstSet) {
+            const d = (r.stageData && r.stageData[1]) || {};
+            let match = true;
+            for (let i = 1; i < nonEmpty.length; i++) {
+                if (d[nonEmpty[i]] !== lead[nonEmpty[i]]) { match = false; break; }
+            }
+            if (match) return true;
+        }
+        return false;
     }
 
     // ── Helpers ──

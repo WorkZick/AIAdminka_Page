@@ -4,6 +4,10 @@
  */
 
 const TeamAvatars = {
+    _cropPreviewW: 0,
+    _cropPreviewH: 0,
+    _rafPending: false,
+
     /**
      * Обработка загрузки файла аватара
      * @param {Event} event - Event объект от input file
@@ -14,6 +18,13 @@ const TeamAvatars = {
             const reader = new FileReader();
             reader.onload = (e) => {
                 this.showCropModal(e.target.result);
+                // Освобождаем ссылку на замыкание FileReader после срабатывания
+                reader.onload = null;
+                reader.onerror = null;
+            };
+            reader.onerror = () => {
+                reader.onload = null;
+                reader.onerror = null;
             };
             reader.readAsDataURL(file);
         }
@@ -41,6 +52,9 @@ const TeamAvatars = {
         cropZoomValue.textContent = '1.0x';
 
         cropImage.onload = () => {
+            // Cache preview geometry once — fixed during crop session
+            TeamAvatars._cropPreviewW = cropPreview.clientWidth;
+            TeamAvatars._cropPreviewH = cropPreview.clientHeight;
             this.updateCropPreview();
         };
 
@@ -177,31 +191,21 @@ const TeamAvatars = {
      */
     updateCropPreview() {
         const cropImage = document.getElementById('cropImage');
-        const cropPreview = document.getElementById('cropPreview');
-
         if (!cropImage.complete) return;
 
-        const scale = TeamState.cropSettings.scale;
-        const translateX = TeamState.cropSettings.posX;
-        const translateY = TeamState.cropSettings.posY;
-
-        // Вычисление начального размера для покрытия контейнера (как background-size: cover)
-        const previewWidth = cropPreview.clientWidth;
-        const previewHeight = cropPreview.clientHeight;
-        const imgWidth = cropImage.naturalWidth;
-        const imgHeight = cropImage.naturalHeight;
-
-        const scaleToFit = Math.max(
-            previewWidth / imgWidth,
-            previewHeight / imgHeight
-        );
-
-        // Установка базового размера для покрытия контейнера
-        cropImage.style.width = imgWidth * scaleToFit + 'px';
-        cropImage.style.height = imgHeight * scaleToFit + 'px';
-
-        // Применение transform: центрирование + смещение пользователя + масштаб пользователя
-        cropImage.style.transform = `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(${scale})`;
+        if (TeamAvatars._rafPending) return;
+        TeamAvatars._rafPending = true;
+        requestAnimationFrame(() => {
+            TeamAvatars._rafPending = false;
+            const previewWidth = TeamAvatars._cropPreviewW || cropImage.parentElement.clientWidth;
+            const previewHeight = TeamAvatars._cropPreviewH || cropImage.parentElement.clientHeight;
+            const imgWidth = cropImage.naturalWidth;
+            const imgHeight = cropImage.naturalHeight;
+            const scaleToFit = Math.max(previewWidth / imgWidth, previewHeight / imgHeight);
+            cropImage.style.width = imgWidth * scaleToFit + 'px';
+            cropImage.style.height = imgHeight * scaleToFit + 'px';
+            cropImage.style.transform = `translate(calc(-50% + ${TeamState.cropSettings.posX}px), calc(-50% + ${TeamState.cropSettings.posY}px)) scale(${TeamState.cropSettings.scale})`;
+        });
     },
 
     /**
@@ -215,6 +219,9 @@ const TeamAvatars = {
         TeamState.tempImageData = null;
         TeamState.cropSettings = { scale: 1, posX: 0, posY: 0 };
         TeamState.isDragging = false;
+        TeamAvatars._cropPreviewW = 0;
+        TeamAvatars._cropPreviewH = 0;
+        TeamAvatars._rafPending = false;
 
         // Удалить event listeners
         const cropPreview = document.getElementById('cropPreview');
@@ -233,6 +240,15 @@ const TeamAvatars = {
             TeamState.cropHandlers = null;
             TeamState.oldCropHandlers = null;
         }
+
+        // Освобождаем DataURL из cropImage (может удерживать несколько МБ)
+        const cropImage = document.getElementById('cropImage');
+        if (cropImage) {
+            cropImage.src = '';
+            cropImage.onload = null;
+        }
+
+        // tempImageData уже обнулён выше (TeamState.tempImageData = null)
 
         // Сброс слайдера
         if (cropSlider) cropSlider.value = 100;

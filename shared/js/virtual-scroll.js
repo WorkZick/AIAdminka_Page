@@ -64,6 +64,11 @@ const VirtualScroller = (() => {
         let _fetchPending = false;
         let _initialized = false;
 
+        // DOM recycling skip-gate: tracks startIndex of the last completed render.
+        // -1 means "force full redraw on next _render call" (used after data changes).
+        // Skip-gate fires ONLY when startIndex is unchanged AND data has NOT changed.
+        let _prevStartIndex = -1;
+
         // Spacer row references
         let _spacerTop = null;
         let _spacerBottom = null;
@@ -119,10 +124,10 @@ const VirtualScroller = (() => {
         }
 
         // -------------------------------------------------------
-        // ARIA attributes
+        // ARIA attributes — receives pre-queried rows to avoid extra querySelectorAll
         // -------------------------------------------------------
 
-        function _updateAria(startIndex, visibleCount) {
+        function _updateAria(startIndex, rows) {
             const table = tbody.closest('table');
             if (table) {
                 table.setAttribute('aria-rowcount', String(_totalCount));
@@ -130,7 +135,6 @@ const VirtualScroller = (() => {
                     table.setAttribute('role', 'grid');
                 }
             }
-            const rows = tbody.querySelectorAll('tr:not(.vs-spacer)');
             for (let i = 0; i < rows.length; i++) {
                 rows[i].setAttribute('aria-rowindex', String(startIndex + i + 2)); // +2: header row is 1
             }
@@ -157,7 +161,7 @@ const VirtualScroller = (() => {
             _setSpacerHeight(_spacerTop, startIndex * _rowHeight);
             _setSpacerHeight(_spacerBottom, Math.max(0, (totalRows - endIndex - 1) * _rowHeight));
 
-            // Get existing real rows (excluding spacers)
+            // Get existing real rows once — reuse this list throughout the function
             const existingRows = Array.from(tbody.querySelectorAll('tr:not(.vs-spacer)'));
 
             // Recycle: add rows if needed
@@ -176,29 +180,69 @@ const VirtualScroller = (() => {
                 }
             }
 
-            // Update content of existing rows
-            const currentRows = tbody.querySelectorAll('tr:not(.vs-spacer)');
-            for (let i = 0; i < currentRows.length; i++) {
-                const itemIndex = startIndex + i;
-                if (itemIndex < _items.length) {
-                    const freshRow = renderRow(_items[itemIndex], itemIndex);
-                    freshRow.setAttribute('tabindex', '-1');
-                    // Copy attributes and children from fresh row
-                    currentRows[i].replaceWith(freshRow);
+            // DOM recycling skip-gate:
+            // If startIndex has not changed AND _prevStartIndex is not -1 (forced redraw),
+            // all existing tr elements already display the correct items — skip renderRow/replaceWith.
+            // This is the main performance win: pure scroll within the same window costs zero DOM ops.
+            //
+            // INVARIANT: _prevStartIndex is reset to -1 by setItems() and refresh() so that any
+            // data change (fetchChunk resolve, optimistic confirm/rollback) always triggers a full
+            // redraw even when scrollTop has not moved. Without this, stale rows would remain.
+            if (startIndex !== _prevStartIndex) {
+                // Window has shifted — update only rows whose itemIndex changed.
+                // We use approach (A): transfer children/class/data from a fresh renderRow()
+                // result into the existing DOM node, preserving the node's identity
+                // (no detach+reattach = no layout thrash for unchanged rows).
+                for (let i = 0; i < existingRows.length; i++) {
+                    const itemIndex = startIndex + i;
+                    if (itemIndex >= _items.length) break;
+                    const existing = existingRows[i];
+                    const fresh = renderRow(_items[itemIndex], itemIndex);
+
+                    // Sync className (e.g. optimistic highlight classes)
+                    existing.className = fresh.className;
+
+                    // Sync data-* attributes from fresh row
+                    // Remove attributes from existing that are not on fresh (except tabindex/aria-rowindex
+                    // which are managed separately below)
+                    const freshAttrs = fresh.attributes;
+                    const existingAttrs = existing.attributes;
+                    // Apply all attributes from fresh (except tabindex and aria-rowindex)
+                    for (let a = 0; a < freshAttrs.length; a++) {
+                        const name = freshAttrs[a].name;
+                        if (name === 'tabindex' || name === 'aria-rowindex') continue;
+                        existing.setAttribute(name, freshAttrs[a].value);
+                    }
+                    // Remove attributes on existing not present on fresh (except managed ones)
+                    for (let a = existingAttrs.length - 1; a >= 0; a--) {
+                        const name = existingAttrs[a].name;
+                        if (name === 'tabindex' || name === 'aria-rowindex') continue;
+                        if (!fresh.hasAttribute(name)) {
+                            existing.removeAttribute(name);
+                        }
+                    }
+
+                    // Transfer cell content (replaces children without detaching the row node)
+                    existing.replaceChildren(...Array.from(fresh.childNodes));
+
+                    // Reset tabindex before roving-tabindex phase below
+                    existing.setAttribute('tabindex', '-1');
                 }
             }
+            // When startIndex === _prevStartIndex (pure scroll, same window), the existing rows
+            // already show the correct items — no renderRow calls needed.
 
-            // Re-query after replace
-            const renderedRows = tbody.querySelectorAll('tr:not(.vs-spacer)');
+            // Record current startIndex for next render's skip-gate comparison
+            _prevStartIndex = startIndex;
 
-            // Roving tabindex: focused row gets tabindex=0
-            for (let i = 0; i < renderedRows.length; i++) {
+            // Roving tabindex: focused row gets tabindex=0 (applied after content update)
+            for (let i = 0; i < existingRows.length; i++) {
                 const rowIndex = startIndex + i;
-                renderedRows[i].setAttribute('tabindex', rowIndex === _focusedIndex ? '0' : '-1');
+                existingRows[i].setAttribute('tabindex', rowIndex === _focusedIndex ? '0' : '-1');
             }
 
-            // Update ARIA
-            _updateAria(startIndex, renderedRows.length);
+            // Update ARIA (reuse existingRows, no extra querySelectorAll)
+            _updateAria(startIndex, existingRows);
 
             // Trigger fetchChunk if near buffer end
             if (_fetchChunk && !_fetchPending) {
@@ -231,6 +275,7 @@ const VirtualScroller = (() => {
             _focusedIndex = 0;
             _fetchPending = false;
             _initialized = true;
+            _prevStartIndex = -1; // Force full redraw on first _render call
 
             // Add vs-container class for CSS containment
             container.classList.add('vs-container');
@@ -251,7 +296,8 @@ const VirtualScroller = (() => {
             // Measure row height after first render
             _measureRowHeight();
 
-            // Re-render with measured height
+            // Re-render with measured height (force redraw via _prevStartIndex reset)
+            _prevStartIndex = -1;
             _render(container.scrollTop);
 
             // Attach scroll listener (rAF throttle, passive)
@@ -287,10 +333,13 @@ const VirtualScroller = (() => {
 
         /**
          * Update buffer after fetchChunk resolves, re-render current window.
+         * Resets _prevStartIndex to -1 to force full redraw regardless of scroll position,
+         * preventing stale rows when new data arrives without scrolling.
          * @param {Array} items  Updated items buffer.
          */
         function setItems(items) {
             _items = items;
+            _prevStartIndex = -1; // Force redraw: data changed, skip-gate must not fire
             _render(container.scrollTop);
         }
 
@@ -300,9 +349,12 @@ const VirtualScroller = (() => {
 
         /**
          * Re-render current visible window from current items buffer.
+         * Resets _prevStartIndex to -1 to force full redraw regardless of scroll position,
+         * preventing stale optimistic state after confirm() or rollback().
          * Call after OptimisticManager confirm() or rollback().
          */
         function refresh() {
+            _prevStartIndex = -1; // Force redraw: item content may have changed in place
             _render(container.scrollTop);
         }
 
@@ -318,6 +370,7 @@ const VirtualScroller = (() => {
             container.scrollTop = 0;
             _startIndex = 0;
             _focusedIndex = 0;
+            _prevStartIndex = -1; // Force redraw from scratch after reset
             _render(0);
         }
 
@@ -376,6 +429,7 @@ const VirtualScroller = (() => {
             _rafPending = false;
             _fetchPending = false;
             _initialized = false;
+            _prevStartIndex = -1;
         }
 
         return { init, setItems, refresh, reset, scrollTo, destroy };

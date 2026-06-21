@@ -3,8 +3,8 @@
 
 body {
     font-family: 'TT Firs Neue', 'Segoe UI', sans-serif;
-    background: var(--bg-black);
-    color: var(--white);
+    background: #0d0d0d;
+    color: #f2f2f2;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -19,11 +19,11 @@ body {
 .spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid var(--glass-border);
-    border-top-color: var(--accent);
+    border: 3px solid rgba(255, 255, 255, 0.08);
+    border-top-color: #fdbe2f;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin: 0 auto var(--spacing-xl);
+    margin: 0 auto 20px;
 }
 
 @keyframes spin {
@@ -31,23 +31,23 @@ body {
 }
 
 .message {
-    font-size: var(--font-size-lg);
-    margin-bottom: var(--spacing-sm);
+    font-size: 16px;
+    margin-bottom: 8px;
 }
 
 .sub {
-    font-size: var(--font-size-caption);
-    color: var(--gray-light);
+    font-size: 13px;
+    color: #a0a0a0;
 }
 
 .error {
-    color: var(--status-red);
+    color: #ff6b6b;
 }
 
 .success {
-    color: var(--status-green);
+    color: #51cf66;
 }
 
 .error-link {
-    color: var(--white);
+    color: #f2f2f2;
 }

@@ -38,31 +38,12 @@
     flex-direction: column;
 }
 
-/* Main section - Glassmorphism */
+/* Main section — плоский (glass-карточка убрана, как excel-reports .step-content) */
 .main-section {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
-}
-
-/* Section header — module-specific override (header-strip внутри .main-section card)
-   Канонический shared/css/components/section-header.css оформляет .section-header
-   как standalone glass panel; traffic-calc уникален: header — это полоса ВНУТРИ
-   .main-section (с rounded top-corners и border-bottom). Scoped селектор
-   .main-section > .section-header перекрывает canonical только для traffic-calc.
-   .section-title + .section-actions — перенесены в shared canonical (identical). */
-.main-section > .section-header {
-    padding: var(--spacing-lg) var(--spacing-xl);
-    background: var(--glass-bg-medium);
-    border: none;
-    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
-    border-bottom: 1px solid var(--glass-border);
 }
 
 /* Section body */
@@ -90,10 +71,7 @@
     min-height: 0;
 }
 
-/* Step 7 использует абсолютное позиционирование */
-#step7.active {
-    display: block;
-}
+/* Step 7: flex как все шаги (убран display:block, чтоб flex-1-column работал) */
 
 /* Form styles - Dark Glassmorphism */
 .form-container {
@@ -105,53 +83,7 @@
 
 /* Form groups: base styles from shared/css/components/forms.css (.form-group/.form-input/.form-select) */
 
-/* Table styles - Dark Glassmorphism (module-specific, avoids DS .table-container override) */
-.tc-table-container {
-    flex: 1;
-    overflow: auto;
-    background: var(--glass-bg-medium-half);
-    border-radius: var(--radius-lg);
-    contain: layout style;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--font-size-base);
-}
-
-.data-table thead {
-    position: sticky;
-    top: 0;
-    background: var(--glass-bg-overlay);
-    z-index: 10;
-}
-
-.data-table th {
-    padding: var(--spacing-md) var(--spacing-md-sm);
-    text-align: left;
-    font-size: var(--font-size-sm);
-    font-weight: 400;
-    color: var(--gray-light);
-    white-space: nowrap;
-    border-bottom: 1px solid var(--glass-border);
-}
-
-.data-table tbody tr {
-    border-bottom: 1px solid var(--glass-border);
-    contain: layout style paint;
-    transition: background var(--transition-fast);
-    will-change: background;
-}
-
-.data-table tbody tr:hover {
-    background: var(--glass-bg-hover);
-}
-
-.data-table td {
-    padding: var(--spacing-md-sm);
-    color: var(--white);
-}
+/* Таблицы трафика используют shared .table (.table-container из DS) */
 
 /* Status badges use DS classes from shared/css/components/badges.css:
    status-active (green), status-pending (yellow), status-inactive (red) */
@@ -189,18 +121,20 @@
     font-weight: 700;
 }
 
-/* Selection toolbar - Glassmorphism */
+/* Заголовок шага строго по центру: боковые зоны равной ширины (flex:1),
+   тогда h2 (flex:1) центрируется по странице независимо от ширины тулбара/«Далее».
+   Scoped под traffic (.analytics-step) — shared .step-header-nav / excel-reports не затронуты. */
+.analytics-step .step-header-nav .nav-left,
+.analytics-step .step-header-nav .nav-right {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* Selection toolbar — компактный inline-блок в шапке шага (nav-left) */
 .selection-toolbar {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-md) var(--spacing-lg);
-    background: var(--glass-bg-slate);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--spacing-lg);
     gap: var(--spacing-md);
-    flex-wrap: wrap;
 }
 
 .toolbar-group {
@@ -217,46 +151,6 @@
 }
 
 /* Toolbar buttons: base styles from .btn .btn-sm .btn-secondary / .btn-danger */
-
-/* Selection panels - Glassmorphism */
-.selection-panel-modern {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
-    margin-bottom: var(--spacing-md);
-    overflow: hidden;
-}
-
-.panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-md) var(--spacing-lg);
-    background: var(--glass-bg-medium);
-    border-bottom: 1px solid var(--glass-border);
-}
-
-.panel-header h3 {
-    margin: 0;
-    font-size: var(--font-size-base);
-    font-weight: 700;
-    color: var(--white);
-}
-
-/* Panel close: base styles from .btn .btn--ghost, keep sizing */
-.panel-close {
-    width: 28px;
-    height: 28px;
-    padding: 0;
-}
-
-.panel-close img {
-    width: var(--spacing-md);
-    height: var(--spacing-md);
-    filter: brightness(0) invert(1);
-}
 
 .checkbox-grid {
     display: grid;
@@ -294,15 +188,6 @@
     accent-color: var(--accent);
 }
 
-.panel-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-md) var(--spacing-lg);
-    background: var(--glass-bg-medium-half);
-    border-top: 1px solid var(--glass-border);
-}
-
 /* Partners preview */
 .partners-preview {
     flex: 1;
@@ -311,44 +196,70 @@
     min-height: 0;
 }
 
-.preview-header {
+/* Пустое состояние выбора партнёров — центрировано в контейнере таблицы */
+.partners-preview .table-container {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* Step 1: горизонт. края контента совпадают со .steps-indicator (убираем доп. padding section-body) */
+#step1 .section-body {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Step 7: горизонт. края таблицы вровень со степпером (flush как step1) */
+#step7 .section-body {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Step 8: горизонт. края таблицы вровень со степпером (flush как step1) */
+#step8 .section-body {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Step 9: горизонт. края таблицы вровень со степпером (flush как step1) */
+#step9 .section-body {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Step 7: широкая таблица (23 колонки) — горизонтальный скролл через shared .table-container */
+#step7 .table-container .table {
+    min-width: 1800px;
+}
+
+/* Empty-state без thead: скрыть шапку таблицы и центрировать контейнер */
+.partners-preview.tc-empty thead {
+    display: none;
+}
+
+.partners-preview.tc-empty .table-container {
     display: flex;
-    align-items: center;
-    gap: var(--spacing-md-sm);
-    margin-bottom: var(--spacing-md-sm);
-}
-
-.preview-title {
-    font-size: var(--font-size-base);
-    font-weight: 700;
-    color: var(--white);
-}
-
-.partner-count-badge {
-    display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 24px;
-    height: 24px;
-    padding: 0 var(--spacing-sm);
-    background: var(--accent);
-    color: var(--black);
-    font-size: var(--font-size-sm);
-    font-weight: 700;
-    border-radius: var(--radius-xl);
 }
 
-/* Step navigation - Glassmorphism */
-.step-navigation-modern {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-lg) var(--spacing-xl);
-    margin-top: auto;
-    border-top: 1px solid var(--glass-border);
-    background: var(--glass-bg-medium-half);
-    flex-shrink: 0;
-    border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
+.partners-preview.tc-empty .tc-empty-cell {
+    height: auto;
+}
+
+/* Пустое состояние: без нижней полоски ячейки и без hover-подсветки */
+.partners-preview.tc-empty .table td {
+    border-bottom: none;
+}
+
+.partners-preview.tc-empty .table tr:hover {
+    background: transparent;
+}
+
+.tc-empty-cell {
+    height: 320px;
+    text-align: center;
+    vertical-align: middle;
 }
 
 .nav-btn {
@@ -423,51 +334,12 @@
     filter: brightness(1.1);
 }
 
-/* Upload zone - Glassmorphism */
-.upload-zone {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spacing-page-h);
-    border: 2px dashed var(--glass-border);
-    border-radius: var(--radius-2xl);
-    background: var(--glass-bg);
-    cursor: pointer;
-    transition: var(--transition-colors);
-    text-align: center;
-    min-height: 180px;
-}
-
-.upload-zone:hover {
-    border-color: var(--accent);
-    background: var(--glass-bg-light);
-}
-
-.upload-zone.dragover {
-    border-color: var(--accent);
-    background: var(--glass-border);
-    transform: scale(1.01);
-}
-
-.upload-zone-icon {
-    width: 48px;
-    height: 48px;
-    margin-bottom: var(--spacing-lg);
-    opacity: 0.5;
-    filter: brightness(0) invert(1);
-}
-
-.upload-zone-text {
-    font-size: var(--font-size-md);
-    color: var(--white);
-    font-weight: 600;
-    margin-bottom: var(--spacing-2xs);
-}
-
-.upload-zone-hint {
+/* Inline-результат под зоной (как excel-reports .file-info-compact) */
+.file-info-compact {
+    margin-top: var(--spacing-sm);
     font-size: var(--font-size-caption);
-    color: var(--gray);
+    color: var(--gray-light);
+    text-align: center;
 }
 
 .upload-zone-btn {
@@ -616,11 +488,13 @@
     opacity: 0.9;
 }
 
-/* Worktime layout - Glassmorphism */
+/* Worktime layout - 2-кол grid (Quick 260621-wfi): 300px селектор + ограниченная форма */
 .worktime-layout {
     display: grid;
-    grid-template-columns: 240px 1fr;
-    gap: var(--spacing-lg);
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: var(--spacing-xl);
+    align-items: stretch;
+    width: 100%;
     flex: 1;
     min-height: 0;
 }
@@ -629,10 +503,10 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-lg);
     min-height: 0;
 }
 
@@ -644,9 +518,9 @@
 }
 
 .worktime-selector .form-group:last-child {
-    flex: 1;
     display: flex;
     flex-direction: column;
+    flex: 1;
     min-height: 0;
 }
 
@@ -660,51 +534,56 @@
 
 .worktime-selector input[type="text"] {
     padding: var(--spacing-md-sm) var(--spacing-md);
+    background: var(--glass-bg);
 }
 
-.worktime-selector select {
+.subagent-list {
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 0;
-    padding: 0;
-    background: var(--glass-bg-medium);
     overflow-y: auto;
 }
 
-.worktime-selector select option {
+.subagent-item {
     padding: var(--spacing-md-sm) var(--spacing-md);
-    background: transparent;
     color: var(--white);
-    border-bottom: 1px solid var(--glass-border);
     cursor: pointer;
-    transition: background 0.15s ease;
+    border-bottom: 1px solid var(--glass-border);
+    border-left: 3px solid transparent;
+    transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.worktime-selector select option:hover {
+.subagent-item:hover {
     background: var(--glass-bg-hover);
 }
 
-.worktime-selector select option:checked,
-.worktime-selector select option:focus {
-    background: linear-gradient(90deg, var(--accent-bg-hover) 0%, var(--glass-border) 100%);
+.subagent-item.active {
+    background: var(--accent-bg);
     color: var(--accent);
     font-weight: 500;
+    border-left-color: var(--accent);
+}
+
+.subagent-empty {
+    padding: var(--spacing-md-sm) var(--spacing-md);
+    color: var(--gray-light);
+    font-size: var(--font-size-sm);
 }
 
 .worktime-form-container {
     display: flex;
     flex-direction: column;
-    padding: var(--spacing-lg) var(--spacing-xl);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
     min-height: 0;
 }
 
 .worktime-form-container > div {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
 }
 
 .worktime-form-header {
@@ -733,23 +612,18 @@
     display: flex;
     gap: var(--spacing-xl);
     flex-shrink: 0;
+    justify-content: center;
 }
 
 .worktime-item {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md-sm);
-    padding: var(--spacing-xl) var(--spacing-2xl);
-    background: var(--white-a03);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    transition: var(--transition-colors);
-}
-
-.worktime-item:hover {
-    background: var(--white-a05);
-    border-color: var(--glass-border-hover);
+    gap: var(--spacing-sm);
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
 }
 
 .worktime-label {
@@ -796,11 +670,13 @@
     color: var(--white);
 }
 
-/* Violations layout - Glassmorphism */
+/* Violations layout - 2-кол grid (Quick 260621-wfi): 300px селектор + широкая форма (3 колонки нарушений) */
 .violations-layout {
     display: grid;
-    grid-template-columns: 240px 1fr;
-    gap: var(--spacing-lg);
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: var(--spacing-xl);
+    align-items: stretch;
+    width: 100%;
     flex: 1;
     min-height: 0;
 }
@@ -809,17 +685,17 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-lg);
     min-height: 0;
 }
 
 .violations-selector .form-group:last-child {
-    flex: 1;
     display: flex;
     flex-direction: column;
+    flex: 1;
     min-height: 0;
 }
 
@@ -840,52 +716,24 @@
 
 .violations-selector input[type="text"] {
     padding: var(--spacing-md-sm) var(--spacing-md);
+    background: var(--glass-bg);
 }
 
-.violations-selector select {
-    flex: 1;
-    padding: 0;
-    background: var(--glass-bg-medium);
-    overflow-y: auto;
-    min-height: 0;
-}
-
-.violations-selector select option {
-    padding: var(--spacing-md-sm) var(--spacing-md);
-    background: transparent;
-    color: var(--white);
-    border-bottom: 1px solid var(--glass-border);
-    cursor: pointer;
-    transition: background 0.15s ease;
-}
-
-.violations-selector select option:hover {
-    background: var(--glass-bg-hover);
-}
-
-.violations-selector select option:checked,
-.violations-selector select option:focus {
-    background: linear-gradient(90deg, var(--accent-bg-hover) 0%, var(--glass-border) 100%);
-    color: var(--accent);
-    font-weight: 500;
-}
 
 .violations-form-container {
     display: flex;
     flex-direction: column;
-    padding: var(--spacing-lg) var(--spacing-xl);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .violations-form-container > div {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
 }
 
 .violations-form-header {
@@ -916,28 +764,25 @@
     gap: var(--spacing-md-sm);
     margin-bottom: var(--spacing-lg);
     flex-shrink: 0;
+    justify-items: stretch;
 }
 
 .violation-item {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto;
     align-items: center;
-    padding: var(--spacing-md) var(--spacing-md-lg);
-    background: var(--white-a03);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    transition: var(--transition-colors);
-}
-
-.violation-item:hover {
-    background: var(--white-a05);
-    border-color: var(--glass-border-hover);
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
 }
 
 .violation-label {
     font-size: var(--font-size-caption);
     color: var(--white);
     font-weight: 400;
+    text-align: right;
 }
 
 .violation-item .number-input-group {
@@ -1108,14 +953,6 @@
     max-width: 400px;
 }
 
-.report-generated {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-    flex: 1;
-    min-height: 0;
-}
-
 /* ========== Step 7: Отчёт с таблицей ========== */
 #step7 {
     position: relative;
@@ -1131,7 +968,7 @@
     flex-direction: column;
 }
 
-#step7 .section-header {
+#step7 .step-header-nav {
     flex-shrink: 0;
 }
 
@@ -1140,32 +977,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-#step7 .step7-table-wrapper {
-    flex: 1;
-    position: relative;
-    margin: 0 var(--spacing-xl) var(--spacing-lg) var(--spacing-xl);
-    min-height: 0;
-}
-
-#step7 .step7-table-scroll {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    overflow: scroll;
-    background: var(--glass-bg-medium-half);
-    border-radius: var(--radius-lg);
-}
-
-#step7 .step7-table-scroll .data-table {
-    min-width: 1800px;
-}
-
-#step7 .step-navigation-modern {
-    flex-shrink: 0;
 }
 
 .results-actions {
@@ -1253,41 +1064,6 @@
     font-size: var(--font-size-caption);
 }
 
-/* Traffic legend */
-.traffic-legend {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xl);
-    padding: var(--spacing-md) var(--spacing-lg);
-    background: rgba(25, 25, 25, 0.8); /* one-off: dark overlay not in token map (≠ --glass-bg-overlay 0.98) */
-    border-radius: var(--radius-md);
-    margin-bottom: var(--spacing-md);
-    font-size: var(--font-size-sm);
-}
-
-.traffic-legend-title {
-    color: var(--gray);
-    font-weight: 500;
-}
-
-.traffic-legend-item {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2xs);
-    color: var(--white);
-}
-
-.traffic-legend-dot {
-    width: var(--spacing-md);
-    height: var(--spacing-md);
-    border-radius: 50%;
-}
-
-.traffic-legend-dot.good { background: var(--status-green); }
-.traffic-legend-dot.normal { background: var(--status-blue); }
-.traffic-legend-dot.bad { background: var(--status-yellow); }
-.traffic-legend-dot.terrible { background: var(--status-red); }
-
 /* Traffic settings form */
 .traffic-settings-form {
     display: flex;
@@ -1295,223 +1071,179 @@
     gap: var(--spacing-2xs);
 }
 
-.traffic-param-section {
-    background: rgba(25, 25, 25, 0.8); /* one-off: dark overlay not in token map (≠ --glass-bg-overlay 0.98) */
-    border-radius: var(--radius-md);
-    padding: var(--spacing-md) var(--spacing-md-lg);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-lg);
+/* Step 8: горизонтальный скролл для широкой таблицы настроек */
+#trafficSettingsForm {
+    overflow-x: auto;
 }
 
-.traffic-param-header {
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--white);
-    width: 180px;
-    min-width: 180px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    margin: 0;
+/* === Таблица настроек шага 8 (.ts-table) === */
+.ts-table {
+    display: grid;
+    grid-template-columns: minmax(160px, 1.4fr) repeat(12, minmax(46px, 1fr));
+    align-items: stretch;
+    min-width: 700px;
 }
 
-.traffic-param-header img {
-    display: none;
+/* Липкая шапка */
+.ts-head-param,
+.ts-head-group,
+.ts-head-sub {
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
-.traffic-param-grid {
-    display: flex;
-    gap: var(--spacing-sm);
-    flex: 1;
+.ts-head-group {
+    grid-column: span 3;
+    text-align: center;
+    font-weight: 600;
+    font-size: var(--font-size-xs);
+    padding: var(--spacing-2xs) var(--spacing-xs);
+    border-bottom: 2px solid;
 }
 
-.traffic-level-card {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-2xs) var(--spacing-md-sm);
-    background: rgba(40, 40, 40, 0.8); /* one-off: mid-dark overlay not in token map */
-    border-radius: var(--radius-sm);
-    border-left: 3px solid transparent;
+.ts-head-group.good {
+    color: var(--status-green);
+    border-bottom-color: var(--status-green);
+    background: var(--status-green-tint-strong);
 }
 
-.traffic-level-card.good { border-left-color: var(--status-green); }
-.traffic-level-card.normal { border-left-color: var(--status-blue); }
-.traffic-level-card.bad { border-left-color: var(--status-yellow); }
-.traffic-level-card.terrible { border-left-color: var(--status-red); }
-
-.traffic-level-card::before { display: none; }
-.traffic-level-title { display: none; }
-
-.traffic-range-group {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    margin: 0;
-    padding: 0;
+.ts-head-group.normal {
+    color: var(--status-blue);
+    border-bottom-color: var(--status-blue);
+    background: rgba(116, 192, 252, 0.2); /* one-off: status-blue 0.2 tint (no token for this alpha) */
 }
 
-.traffic-range-group span {
+.ts-head-group.bad {
+    color: var(--status-yellow);
+    border-bottom-color: var(--status-yellow);
+    background: rgba(253, 190, 47, 0.18); /* one-off: status-yellow 0.18 tint (консистентно с good/normal/terrible) */
+}
+
+.ts-head-group.terrible {
+    color: var(--status-red);
+    border-bottom-color: var(--status-red);
+    background: rgba(255, 107, 107, 0.2); /* one-off: status-red 0.2 tint (no token for this alpha) */
+}
+
+.ts-head-sub {
+    text-align: center;
     font-size: var(--font-size-xs);
     color: var(--gray);
-    min-width: var(--spacing-lg);
     font-weight: 400;
+    padding: var(--spacing-2xs);
+    border-bottom: 1px solid var(--glass-border);
+    background: transparent;
 }
 
-.traffic-range-group input[type="number"] {
-    width: 44px;
-    padding: var(--spacing-2xs) var(--spacing-xs);
-    font-size: var(--font-size-caption);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm);
-    font-family: var(--font-family);
-    text-align: center;
-    background: var(--white-a05);
-    color: var(--white);
-    -moz-appearance: textfield;
-}
-
-.traffic-range-group input[type="number"]::-webkit-outer-spin-button,
-.traffic-range-group input[type="number"]::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.traffic-range-group input[type="number"]:focus {
-    outline: none;
-    border-color: var(--accent);
-}
-
-.traffic-points-group {
+/* Объединённая ячейка «Параметр» — grid-row span 2, sticky вместе с шапкой */
+.ts-head-param {
+    grid-column: 1;
+    grid-row: 1 / span 2;
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
-    margin: 0;
-    padding: 0;
+    justify-content: flex-start;
     padding-left: var(--spacing-sm);
-    border-left: 1px solid var(--glass-border);
-    margin-left: var(--spacing-2xs);
-}
-
-.traffic-points-group span {
     font-size: var(--font-size-xs);
     color: var(--gray);
     font-weight: 400;
+    background: transparent;
+    border-bottom: 1px solid var(--glass-border);
 }
 
-.traffic-points-group input[type="number"] {
-    width: 40px;
+/* Цветные вертикальные границы групп уровней — шапка + первая ячейка группы в теле */
+.ts-head-group.good,
+.ts-cell.ts-group-start.lvl-good {
+    border-left: 2px solid var(--status-green);
+}
+
+.ts-head-group.normal,
+.ts-cell.ts-group-start.lvl-normal {
+    border-left: 2px solid var(--status-blue);
+}
+
+.ts-head-group.bad,
+.ts-cell.ts-group-start.lvl-bad {
+    border-left: 2px solid var(--status-yellow);
+}
+
+.ts-head-group.terrible,
+.ts-cell.ts-group-start.lvl-terrible {
+    border-left: 2px solid var(--status-red);
+}
+
+/* Закрыть правый край последней группы (terrible) в шапке */
+.ts-head-group.terrible {
+    border-right: 2px solid var(--status-red);
+}
+
+.ts-row {
+    display: contents;
+}
+
+.ts-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-2xs);
+    border-bottom: 1px solid var(--glass-border);
+    border-right: 1px solid var(--glass-border);
+}
+
+.ts-label {
+    justify-content: flex-start;
+    font-weight: 500;
+    color: var(--white);
+    font-size: var(--font-size-sm);
+    padding-left: var(--spacing-sm);
+}
+
+.ts-cell input[type="number"],
+.ts-cell input[type="text"] {
+    width: 100%;
+    max-width: 56px;
+    text-align: center;
     padding: var(--spacing-2xs) var(--spacing-xs);
     font-size: var(--font-size-caption);
-    border: 1px solid var(--accent);
+    font-family: var(--font-family);
+    border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
-    font-weight: 600;
-    text-align: center;
-    background: var(--white-a12);
-    color: var(--accent);
+    background: var(--white-a05);
+    color: var(--white);
     -moz-appearance: textfield;
 }
 
-.traffic-points-group input[type="number"]::-webkit-outer-spin-button,
-.traffic-points-group input[type="number"]::-webkit-inner-spin-button {
+.ts-cell input::-webkit-outer-spin-button,
+.ts-cell input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
 
-.traffic-points-group input[type="number"]:focus {
-    outline: none;
-    background: var(--accent-bg-hover);
-}
-
-.traffic-level-card .form-group {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2xs);
-    margin: 0;
-    padding: 0;
-}
-
-.traffic-level-card .form-group span {
-    font-size: var(--font-size-xs);
-    color: var(--gray);
-    margin: 0;
-}
-
-.traffic-level-card .form-group input[type="text"] {
-    width: 60px;
-    padding: var(--spacing-2xs) var(--spacing-sm);
-    font-size: var(--font-size-sm);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm);
-    font-family: var(--font-family);
-    background: var(--white-a05);
-    color: var(--white);
-}
-
-.traffic-level-card .form-group input[type="text"]:focus {
+.ts-cell input:focus {
     outline: none;
     border-color: var(--accent);
 }
 
-/* Traffic multiplier settings */
-.traffic-multiplier-settings {
-    padding: 0;
-}
-
-.traffic-multiplier-card {
-    background: rgba(25, 25, 25, 0.8); /* one-off: dark overlay not in token map (≠ --glass-bg-overlay 0.98) */
-    border-left: 3px solid var(--accent);
-    border-radius: var(--radius-md);
-    padding: var(--spacing-md) var(--spacing-lg);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-lg);
-}
-
-.traffic-multiplier-info {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md-sm);
-}
-
-.traffic-multiplier-info .multiplier-label {
-    font-weight: 500;
-    color: var(--white);
-    font-size: var(--font-size-caption);
-}
-
-.traffic-multiplier-info input {
-    width: 56px;
-    padding: var(--spacing-2xs) var(--spacing-sm);
-    border: 1px solid var(--accent);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-caption);
-    font-weight: 600;
-    text-align: center;
-    font-family: var(--font-family);
-    background: var(--white-a12);
-    color: var(--accent);
-    -moz-appearance: textfield;
-}
-
-.traffic-multiplier-info input::-webkit-outer-spin-button,
-.traffic-multiplier-info input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.traffic-multiplier-info input:focus {
-    outline: none;
-    background: var(--accent-bg-hover);
+.ts-multiplier-cell {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+    gap: var(--spacing-md);
 }
 
 .multiplier-example {
     font-size: var(--font-size-sm);
     color: var(--gray);
     margin: 0;
+}
+
+/* Step 8 header overlap fix (scoped — общий .analytics-step override строки 172-177 не тронут) */
+#step8 .step-header-nav .nav-left,
+#step8 .step-header-nav .nav-right {
+    flex: 0 0 auto;
+}
+
+#step8 .step-header-nav h2 {
+    min-width: 0;
 }
 
 /* Traffic results table */
@@ -1526,13 +1258,34 @@
 }
 
 .traffic-results-table th.score-bad {
-    background-color: var(--white-a15);
+    background-color: rgba(253, 190, 47, 0.18); /* one-off: status-yellow 0.18 tint (консистентно с шагом 8) */
     color: var(--status-yellow);
 }
 
 .traffic-results-table th.score-terrible {
     background-color: rgba(255, 107, 107, 0.2); /* one-off: status-red 0.2 tint (between --status-red-tint 0.15 and --status-red-tint-strong 0.3) */
     color: var(--status-red);
+}
+
+/* Цветные левые границы score-колонок (шапка + тело) — консистентно с шагом 8 */
+.traffic-results-table th.score-good,
+.traffic-results-table td.score-good {
+    border-left: 2px solid var(--status-green);
+}
+
+.traffic-results-table th.score-normal,
+.traffic-results-table td.score-normal {
+    border-left: 2px solid var(--status-blue);
+}
+
+.traffic-results-table th.score-bad,
+.traffic-results-table td.score-bad {
+    border-left: 2px solid var(--status-yellow);
+}
+
+.traffic-results-table th.score-terrible,
+.traffic-results-table td.score-terrible {
+    border-left: 2px solid var(--status-red);
 }
 
 .traffic-results-table th.score-total {
@@ -1542,7 +1295,7 @@
 }
 
 .traffic-results-table th.traffic-percent-header {
-    background-color: var(--white-a20);
+    background-color: var(--accent-bg);
     color: var(--accent);
     font-weight: 700;
 }
@@ -1560,7 +1313,7 @@
 }
 
 .traffic-results-table .traffic-percent {
-    background-color: var(--glass-border);
+    background-color: transparent;
     color: var(--accent);
     font-weight: 700;
     text-align: center;
@@ -1568,7 +1321,7 @@
 
 /* Method header row */
 .method-header-row {
-    background: rgba(40, 40, 40, 0.8) !important; /* one-off: mid-dark overlay not in token map */
+    background: transparent !important; /* прозрачный групповой разделитель — accent-текст + border-bottom */
 }
 
 .method-header-row td {
@@ -1686,7 +1439,7 @@
 }
 
 .traffic-help-content {
-    background: rgba(25, 25, 25, 0.9); /* one-off: near-black overlay (≠ --glass-bg-overlay 0.98) */
+    background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
     padding: var(--spacing-lg) 18px; /* one-off: 18px side padding (×3 in module, specific nav-btn sizing) */
@@ -1755,7 +1508,56 @@
 #step6 .section-body {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Урна-меню сброса (#step4/#step6): карточка вниз с тенью/скруглением.
+   Scoped — shared dropdown.css не тронут. */
+
+/* Скрыть shared ::after-стрелку у урны (фидбэк «убери стрелочку») */
+#step4 .worktime-form-header .dropdown-trigger::after,
+#step6 .violations-form-header .dropdown-trigger::after {
+    content: none;
+}
+
+/* Активное состояние урны при открытом меню: rounded-square + subtle highlight (как .btn-icon:hover) */
+#step4 .worktime-form-header .dropdown-wrap:has(.dropdown-menu:not(.hidden)) .dropdown-trigger,
+#step6 .violations-form-header .dropdown-wrap:has(.dropdown-menu:not(.hidden)) .dropdown-trigger {
+    border-radius: var(--radius-md);
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border);
+}
+
+/* Меню: аккуратная карточка ВНИЗ (top перебивает shared --up bottom) */
+#resetWorkTimeMenu,
+#resetViolationsMenu {
+    left: auto;
+    right: 0;
+    min-width: 220px;
+    top: calc(100% + 6px);
+    border: 1px solid var(--glass-border-hover);
+    border-top: 1px solid var(--glass-border-hover);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+}
+
+#resetWorkTimeMenu .dropdown-item,
+#resetViolationsMenu .dropdown-item {
+    white-space: nowrap;
+}
+
+/* Hover-фон пунктов меню */
+#resetWorkTimeMenu .dropdown-item:hover,
+#resetViolationsMenu .dropdown-item:hover {
+    background: var(--glass-bg-hover);
+}
+
+/* Hairline-разделитель между пунктами */
+#resetWorkTimeMenu .dropdown-item:first-child,
+#resetViolationsMenu .dropdown-item:first-child {
+    border-bottom: 1px solid var(--glass-border);
 }
 
 #step4 .step-hint,

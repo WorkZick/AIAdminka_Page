@@ -76,192 +76,82 @@ const TrafficCalculator = {
         const container = document.getElementById('trafficSettingsForm');
         if (!container) return;
 
-        // Добавляем легенду
-        const legend = `
-            <div class="traffic-legend">
-                <span class="traffic-legend-title">Уровни:</span>
-                <div class="traffic-legend-item"><span class="traffic-legend-dot good"></span>Хороший</div>
-                <div class="traffic-legend-item"><span class="traffic-legend-dot normal"></span>Нормальный</div>
-                <div class="traffic-legend-item"><span class="traffic-legend-dot bad"></span>Плохой</div>
-                <div class="traffic-legend-item"><span class="traffic-legend-dot terrible"></span>Ужасный</div>
-            </div>
+        // Генерация ячеек уровня для number/percent параметра
+        const levelCells = (param, level, settings) => `
+            <div class="ts-cell ts-group-start lvl-${level}"><input type="number" value="${settings[level].min}" data-param="${param.key}" data-level="${level}" data-field="min"></div>
+            <div class="ts-cell"><input type="number" value="${settings[level].max}" data-param="${param.key}" data-level="${level}" data-field="max"></div>
+            <div class="ts-cell"><input type="number" value="${settings[level].points}" data-param="${param.key}" data-level="${level}" data-field="points"></div>
         `;
 
-        container.innerHTML = legend + TrafficState.trafficParams.map(param => {
+        // Генерация ячеек уровня для text параметра
+        const levelCellsText = (param, level, settings) => `
+            <div class="ts-cell ts-group-start lvl-${level}"><input type="text" value="${Utils.escapeHtml(settings[level].value)}" data-param="${param.key}" data-level="${level}" data-field="value"></div>
+            <div class="ts-cell"><input type="number" value="${settings[level].points}" data-param="${param.key}" data-level="${level}" data-field="points"></div>
+            <div class="ts-cell"></div>
+        `;
+
+        // Шапка таблицы — два ряда ячеек
+        const tableHead = `
+            <div class="ts-cell ts-head-param">Параметр</div>
+            <div class="ts-cell ts-head-group good">Хороший</div>
+            <div class="ts-cell ts-head-group normal">Нормальный</div>
+            <div class="ts-cell ts-head-group bad">Плохой</div>
+            <div class="ts-cell ts-head-group terrible">Ужасный</div>
+            <div class="ts-cell ts-head-sub">От</div>
+            <div class="ts-cell ts-head-sub">До</div>
+            <div class="ts-cell ts-head-sub">Баллы</div>
+            <div class="ts-cell ts-head-sub">От</div>
+            <div class="ts-cell ts-head-sub">До</div>
+            <div class="ts-cell ts-head-sub">Баллы</div>
+            <div class="ts-cell ts-head-sub">От</div>
+            <div class="ts-cell ts-head-sub">До</div>
+            <div class="ts-cell ts-head-sub">Баллы</div>
+            <div class="ts-cell ts-head-sub">От</div>
+            <div class="ts-cell ts-head-sub">До</div>
+            <div class="ts-cell ts-head-sub">Баллы</div>
+        `;
+
+        // Тело таблицы — строки параметров
+        const tableBody = TrafficState.trafficParams.map(param => {
             const settings = TrafficState.trafficSettings[param.key];
 
-            if (param.type === 'text') {
-                // Для текстовых полей
+            if (param.type === 'multiplier') {
+                // Ряд множителя: метка + одна широкая ячейка
+                const ppi = settings.pointsPerItem || 5;
                 return `
-                    <div class="traffic-param-section">
-                        <div class="traffic-param-header">
-                            <img src="../shared/icons/filter.svg" alt="">
-                            ${TrafficRenderer.escapeHtml(param.name)}
-                        </div>
-                        <div class="traffic-param-grid">
-                            <div class="traffic-level-card good">
-                                <div class="traffic-level-title">Хор.</div>
-                                <div class="form-group">
-                                    <span>Значение</span>
-                                    <input type="text" value="${TrafficRenderer.escapeHtml(settings.good.value)}"
-                                           data-param="${param.key}" data-level="good" data-field="value">
-                                </div>
-                                <div class="traffic-points-group">
-                                    <span>Баллы:</span>
-                                    <input type="number" value="${settings.good.points}"
-                                           data-param="${param.key}" data-level="good" data-field="points">
-                                </div>
-                            </div>
-                            <div class="traffic-level-card normal">
-                                <div class="traffic-level-title">Норм.</div>
-                                <div class="form-group">
-                                    <span>Значение</span>
-                                    <input type="text" value="${TrafficRenderer.escapeHtml(settings.normal.value)}"
-                                           data-param="${param.key}" data-level="normal" data-field="value">
-                                </div>
-                                <div class="traffic-points-group">
-                                    <span>Баллы:</span>
-                                    <input type="number" value="${settings.normal.points}"
-                                           data-param="${param.key}" data-level="normal" data-field="points">
-                                </div>
-                            </div>
-                            <div class="traffic-level-card bad">
-                                <div class="traffic-level-title">Плох.</div>
-                                <div class="form-group">
-                                    <span>Значение</span>
-                                    <input type="text" value="${TrafficRenderer.escapeHtml(settings.bad.value)}"
-                                           data-param="${param.key}" data-level="bad" data-field="value">
-                                </div>
-                                <div class="traffic-points-group">
-                                    <span>Баллы:</span>
-                                    <input type="number" value="${settings.bad.points}"
-                                           data-param="${param.key}" data-level="bad" data-field="points">
-                                </div>
-                            </div>
-                            <div class="traffic-level-card terrible">
-                                <div class="traffic-level-title">Ужас.</div>
-                                <div class="form-group">
-                                    <span>Значение</span>
-                                    <input type="text" value="${TrafficRenderer.escapeHtml(settings.terrible.value)}"
-                                           data-param="${param.key}" data-level="terrible" data-field="value">
-                                </div>
-                                <div class="traffic-points-group">
-                                    <span>Баллы:</span>
-                                    <input type="number" value="${settings.terrible.points}"
-                                           data-param="${param.key}" data-level="terrible" data-field="points">
-                                </div>
-                            </div>
+                    <div class="ts-row">
+                        <div class="ts-cell ts-label">${Utils.escapeHtml(param.name)}</div>
+                        <div class="ts-cell ts-multiplier-cell">
+                            <input type="number" value="${ppi}" min="0" data-param="${param.key}" data-field="pointsPerItem" data-multiplier="true">
+                            <span class="multiplier-example">Пример: 3 нарушения × <span id="${param.key}Multiplier">${ppi}</span> = <span id="${param.key}Example">+${ppi * 3}</span> штрафных баллов</span>
                         </div>
                     </div>
                 `;
-            } else if (param.type === 'multiplier') {
-                // Для множителя (баллы за каждое нарушение)
+            } else if (param.type === 'text') {
                 return `
-                    <div class="traffic-param-section">
-                        <div class="traffic-param-header">
-                            <img src="../shared/icons/cross.svg" alt="">
-                            ${TrafficRenderer.escapeHtml(param.name)}
-                        </div>
-                        <div class="traffic-multiplier-settings">
-                            <div class="traffic-multiplier-card">
-                                <div class="traffic-multiplier-info">
-                                    <span class="multiplier-label">Штрафные баллы за каждое нарушение:</span>
-                                    <input type="number" value="${settings.pointsPerItem || 5}" min="0"
-                                           data-param="${param.key}" data-field="pointsPerItem" data-multiplier="true">
-                                </div>
-                                <div class="multiplier-example">
-                                    Пример: 3 нарушения × <span id="${param.key}Multiplier">${settings.pointsPerItem || 5}</span> = <span id="${param.key}Example">+${(settings.pointsPerItem || 5) * 3}</span> штрафных баллов
-                                </div>
-                            </div>
-                        </div>
+                    <div class="ts-row">
+                        <div class="ts-cell ts-label">${Utils.escapeHtml(param.name)}</div>
+                        ${levelCellsText(param, 'good', settings)}
+                        ${levelCellsText(param, 'normal', settings)}
+                        ${levelCellsText(param, 'bad', settings)}
+                        ${levelCellsText(param, 'terrible', settings)}
                     </div>
                 `;
             } else {
-                // Для числовых и процентных полей
+                // number / percent
                 return `
-                    <div class="traffic-param-section">
-                        <div class="traffic-param-header">
-                            <img src="../shared/icons/filter.svg" alt="">
-                            ${TrafficRenderer.escapeHtml(param.name)}
-                        </div>
-                        <div class="traffic-param-grid">
-                            <div class="traffic-level-card good">
-                                <div class="traffic-level-title">Хор.</div>
-                                <div class="traffic-range-group">
-                                    <span>От:</span>
-                                    <input type="number" value="${settings.good.min}"
-                                           data-param="${param.key}" data-level="good" data-field="min">
-                                </div>
-                                <div class="traffic-range-group">
-                                    <span>До:</span>
-                                    <input type="number" value="${settings.good.max}"
-                                           data-param="${param.key}" data-level="good" data-field="max">
-                                </div>
-                                <div class="traffic-points-group">
-                                    <span>Баллы:</span>
-                                    <input type="number" value="${settings.good.points}"
-                                           data-param="${param.key}" data-level="good" data-field="points">
-                                </div>
-                            </div>
-                            <div class="traffic-level-card normal">
-                                <div class="traffic-level-title">Норм.</div>
-                                <div class="traffic-range-group">
-                                    <span>От:</span>
-                                    <input type="number" value="${settings.normal.min}"
-                                           data-param="${param.key}" data-level="normal" data-field="min">
-                                </div>
-                                <div class="traffic-range-group">
-                                    <span>До:</span>
-                                    <input type="number" value="${settings.normal.max}"
-                                           data-param="${param.key}" data-level="normal" data-field="max">
-                                </div>
-                                <div class="traffic-points-group">
-                                    <span>Баллы:</span>
-                                    <input type="number" value="${settings.normal.points}"
-                                           data-param="${param.key}" data-level="normal" data-field="points">
-                                </div>
-                            </div>
-                            <div class="traffic-level-card bad">
-                                <div class="traffic-level-title">Плох.</div>
-                                <div class="traffic-range-group">
-                                    <span>От:</span>
-                                    <input type="number" value="${settings.bad.min}"
-                                           data-param="${param.key}" data-level="bad" data-field="min">
-                                </div>
-                                <div class="traffic-range-group">
-                                    <span>До:</span>
-                                    <input type="number" value="${settings.bad.max}"
-                                           data-param="${param.key}" data-level="bad" data-field="max">
-                                </div>
-                                <div class="traffic-points-group">
-                                    <span>Баллы:</span>
-                                    <input type="number" value="${settings.bad.points}"
-                                           data-param="${param.key}" data-level="bad" data-field="points">
-                                </div>
-                            </div>
-                            <div class="traffic-level-card terrible">
-                                <div class="traffic-level-title">Ужас.</div>
-                                <div class="traffic-range-group">
-                                    <span>От:</span>
-                                    <input type="number" value="${settings.terrible.min}"
-                                           data-param="${param.key}" data-level="terrible" data-field="min">
-                                </div>
-                                <div class="traffic-range-group">
-                                    <span>До:</span>
-                                    <input type="number" value="${settings.terrible.max}"
-                                           data-param="${param.key}" data-level="terrible" data-field="max">
-                                </div>
-                                <div class="traffic-points-group">
-                                    <span>Баллы:</span>
-                                    <input type="number" value="${settings.terrible.points}"
-                                           data-param="${param.key}" data-level="terrible" data-field="points">
-                                </div>
-                            </div>
-                        </div>
+                    <div class="ts-row">
+                        <div class="ts-cell ts-label">${Utils.escapeHtml(param.name)}</div>
+                        ${levelCells(param, 'good', settings)}
+                        ${levelCells(param, 'normal', settings)}
+                        ${levelCells(param, 'bad', settings)}
+                        ${levelCells(param, 'terrible', settings)}
                     </div>
                 `;
             }
         }).join('');
+
+        container.innerHTML = `<div class="ts-table">${tableHead}${tableBody}</div>`;
 
         // Event delegation для всех настроек трафика (guard от повторной регистрации)
         if (container._hasChangeListener) return;

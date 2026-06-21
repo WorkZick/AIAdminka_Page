@@ -22,6 +22,8 @@ async function goToTeamPage(page) {
         if (reqId !== TeamState._currentRequestId) return; // stale discard
         // result: { employees, totalCount, page, pageSize }
         TeamState.data = result.employees || [];
+        TeamState._rebuildSearchableText();
+        TeamState._invalidateFiltered();
         TeamState.totalCount = result.totalCount || 0;
         TeamState.currentPage = result.page || page;
         TeamRenderer.render();
@@ -40,6 +42,8 @@ async function loadTeamDataWithPagination() {
         // Large team — server pagination mode
         TeamState.serverPaginationEnabled = true;
         TeamState.data = firstPage.employees || [];
+        TeamState._rebuildSearchableText();
+        TeamState._invalidateFiltered();
         TeamState.totalCount = firstPage.totalCount;
         TeamState.currentPage = 1;
         TeamState.pageSize = 20;
@@ -50,6 +54,8 @@ async function loadTeamDataWithPagination() {
         TeamState.serverPaginationEnabled = false;
         const allData = Array.isArray(firstPage) ? firstPage : (firstPage.employees || []);
         TeamState.data = allData;
+        TeamState._rebuildSearchableText();
+        TeamState._invalidateFiltered();
         TeamState.totalCount = allData.length;
         TeamRenderer.render();
         // Hide pagination container

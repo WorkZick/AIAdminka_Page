@@ -206,6 +206,13 @@ const PageLifecycle = {
             this._cleanupFns.forEach(fn => {
                 try { fn(); } catch (e) { /* silent */ }
             });
+            // Обнуляем массив чтобы не удерживать замыкания
+            this._cleanupFns = [];
+
+            // Отключаем DOM-observer ролевого разграничения
+            if (typeof RoleGuard !== 'undefined' && RoleGuard.disconnectDOMObserver) {
+                RoleGuard.disconnectDOMObserver();
+            }
 
             // Очистка shared-модулей
             if (typeof SyncManager !== 'undefined' && SyncManager.destroy) {

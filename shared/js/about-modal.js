@@ -46,15 +46,19 @@ const AboutModal = {
             });
         }
 
-        // Close by Escape key
-        document.addEventListener('keydown', (e) => {
+        // Close by Escape key (снимаем старый обработчик перед добавлением нового)
+        if (this._escHandler) {
+            document.removeEventListener('keydown', this._escHandler);
+        }
+        this._escHandler = (e) => {
             if (e.key === 'Escape') {
                 const modal = document.getElementById('aboutModal');
                 if (modal && modal.classList.contains('active')) {
                     this.close();
                 }
             }
-        });
+        };
+        document.addEventListener('keydown', this._escHandler);
 
         // Version info click handler
         const versionInfo = document.querySelector('.version-info');

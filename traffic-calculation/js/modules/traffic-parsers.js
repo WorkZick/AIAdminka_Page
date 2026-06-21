@@ -179,6 +179,9 @@ const TrafficParsers = {
         // Проверка: есть ли данные в файле?
         if (!excelData || excelData.length < 2) return;
 
+        // O(1) lookup: используем Set если построен, иначе fallback
+        const idSet = TrafficState.ourPartnerIdSet || new Set(TrafficState.ourPartnerIds);
+
         // Шаг 1: Находим индексы нужных колонок
         const headerRow = excelData[0]; // Первая строка - заголовки
 
@@ -233,7 +236,7 @@ const TrafficParsers = {
             for (let j = 0; j < foundNumbers.length; j++) {
                 const numberId = foundNumbers[j];
                 // Проверяем: есть ли этот ID в нашей системе?
-                if (TrafficState.ourPartnerIds.includes(numberId)) {
+                if (idSet.has(numberId)) {
                     if (!counters[numberId]) {
                         counters[numberId] = 0;
                     }
@@ -260,6 +263,9 @@ const TrafficParsers = {
     parseQualityControlData(excelData, qualityData) {
         // Проверка: есть ли данные в файле?
         if (!excelData || excelData.length < 2) return;
+
+        // O(1) lookup: используем Set если построен, иначе fallback
+        const idSet = TrafficState.ourPartnerIdSet || new Set(TrafficState.ourPartnerIds);
 
         // Шаг 1: Находим индексы всех нужных колонок по точным названиям
         const headerRow = excelData[0];
@@ -313,7 +319,7 @@ const TrafficParsers = {
             const subagentId = subagentIdValue.toString().trim();
 
             // Шаг 3: Проверяем - есть ли этот ID в нашей системе?
-            if (!TrafficState.ourPartnerIds.includes(subagentId)) continue;
+            if (!idSet.has(subagentId)) continue;
 
             // Шаг 4: Извлекаем данные из всех найденных колонок
             const data = {

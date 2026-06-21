@@ -147,7 +147,6 @@ const TeamRenderer = {
      * (signal-driven; Lit реактивно перерисовывает rows через _employeesSignal)
      */
     render() {
-        TeamState._invalidateFiltered();
         const emptyState = document.getElementById('emptyState');
         const loadingState = document.getElementById('loadingState');
         const table = document.getElementById('employeesTable');
@@ -180,8 +179,18 @@ const TeamRenderer = {
 
         let pagedData;
         if (TeamState.serverPaginationEnabled) {
-            // Server pagination: data is already page-scoped (preserved per Phase 33 PERF-02 — pageSize: 20)
-            pagedData = TeamState.data;
+            // Если data длиннее pageSize — сервер НЕ нарезал страницу (batch-путь),
+            // делаем client-side slice окна текущей страницы (fallback, эталон — onboarding).
+            // Если data ≤ pageSize — сервер уже вернул страницу, slice 20→20 безвреден.
+            const all = TeamState.data;
+            const pageSize = TeamState.pageSize;
+            if (all.length > pageSize) {
+                const page = Math.max(1, TeamState.currentPage || 1);
+                const start = (page - 1) * pageSize;
+                pagedData = all.slice(start, start + pageSize);
+            } else {
+                pagedData = all;
+            }
         } else {
             // Client pagination: clamp page and slice
             const totalPages = TeamState.getTotalPages();
@@ -329,15 +338,20 @@ const TeamRenderer = {
         if (!container) return;
 
         if (TeamState.serverPaginationEnabled) {
-            // Server pagination — use PaginationHelper
-            if (TeamState.totalCount <= TeamState.pageSize) {
+            // Server pagination — use PaginationHelper.
+            // При client-side нарезке (сервер вернул весь массив) число страниц считаем
+            // по всему набору data.length, иначе — по серверному totalCount.
+            const effectiveTotal = TeamState.data.length > TeamState.pageSize
+                ? TeamState.data.length
+                : TeamState.totalCount;
+            if (effectiveTotal <= TeamState.pageSize) {
                 container.innerHTML = '';
                 return;
             }
             PaginationHelper.render(container, {
                 page: TeamState.currentPage,
                 pageSize: TeamState.pageSize,
-                totalCount: TeamState.totalCount,
+                totalCount: effectiveTotal,
                 onPageChange: (p) => TeamRenderer.goToPage(p)
             });
             return;

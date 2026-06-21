@@ -37,10 +37,9 @@ const SyncManager = {
     trackUserActivity() {
         if (this._activityHandler) return; // Guard от повторных вызовов
 
-        let timeout;
         this._activityHandler = () => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => {
+            clearTimeout(this._activityTimeout);
+            this._activityTimeout = setTimeout(() => {
                 this.lastUserActivity = Date.now();
             }, 100);
         };
@@ -58,6 +57,10 @@ const SyncManager = {
             });
             this._activityHandler = null;
         }
+        clearTimeout(this._reloadTimer);
+        this._reloadTimer = null;
+        clearTimeout(this._activityTimeout);
+        this._activityTimeout = null;
         if (this.port) {
             this.port.close();
             this.port = null;
@@ -95,7 +98,8 @@ const SyncManager = {
     reloadIfIdle() {
         // Проверяем несохранённые изменения
         if (this.hasUnsavedChanges()) {
-            setTimeout(() => this.reloadIfIdle(), 10000);
+            clearTimeout(this._reloadTimer);
+            this._reloadTimer = setTimeout(() => this.reloadIfIdle(), 10000);
             return;
         }
 
@@ -103,7 +107,8 @@ const SyncManager = {
             window.location.reload();
         } else {
             // Пробуем снова через 3 секунды
-            setTimeout(() => this.reloadIfIdle(), 3000);
+            clearTimeout(this._reloadTimer);
+            this._reloadTimer = setTimeout(() => this.reloadIfIdle(), 3000);
         }
     },
 

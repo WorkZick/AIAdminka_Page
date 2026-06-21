@@ -231,11 +231,13 @@ const adminApp = {
         // Delegate for all click events
         this._clickHandler = (e) => {
             // Close open dropdowns when clicking outside
-            document.querySelectorAll('.dropdown-menu:not(.hidden)').forEach(menu => {
-                if (!e.target.closest('.dropdown-wrap') || e.target.closest('.dropdown-wrap') !== menu.closest('.dropdown-wrap')) {
-                    menu.classList.add('hidden');
-                }
-            });
+            if (document.querySelector('.dropdown-menu:not(.hidden)')) {
+                document.querySelectorAll('.dropdown-menu:not(.hidden)').forEach(menu => {
+                    if (!e.target.closest('.dropdown-wrap') || e.target.closest('.dropdown-wrap') !== menu.closest('.dropdown-wrap')) {
+                        menu.classList.add('hidden');
+                    }
+                });
+            }
 
             const target = e.target.closest('[data-action]');
             if (!target) return;

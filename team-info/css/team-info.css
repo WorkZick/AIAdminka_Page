@@ -139,7 +139,6 @@
     cursor: pointer;
     transition: background var(--transition-fast);
     contain: layout style paint;
-    will-change: background;
 }
 
 .employees-table tbody tr:hover {

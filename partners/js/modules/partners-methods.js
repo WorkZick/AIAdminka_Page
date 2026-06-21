@@ -284,6 +284,7 @@ const PartnersMethods = {
 
             // Refresh partners cache
             PartnersState.cachedPartners = await CloudStorage.getPartners(false);
+            PartnersColumns.invalidateColumnsCache();
             PartnersForms.syncPartnersToLocalStorage();
 
             // If renamed method was selected, update selection

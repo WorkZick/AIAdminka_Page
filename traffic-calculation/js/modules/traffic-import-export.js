@@ -44,6 +44,9 @@ const TrafficImportExport = {
 
             const reader = new FileReader();
             reader.onload = async (event) => {
+                // Освобождаем ссылку FileReader после срабатывания
+                reader.onload = null;
+                reader.onerror = null;
                 try {
                     const jsonData = JSON.parse(event.target.result);
 
@@ -84,6 +87,8 @@ const TrafficImportExport = {
             };
 
             reader.onerror = () => {
+                reader.onload = null;
+                reader.onerror = null;
                 Toast.error('Ошибка при чтении файла');
             };
 

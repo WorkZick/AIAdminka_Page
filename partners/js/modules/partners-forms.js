@@ -312,6 +312,7 @@ const PartnersForms = {
 
         PartnersState.editingPartnerId = null;
         PartnersForms.syncPartnersToLocalStorage();
+        PartnersColumns.invalidateColumnsCache();
         PartnersColumns.renderColumnsMenu();
         PartnersRenderer.render();
         PartnersNavigation.showPartnerCard(PartnersState.selectedPartnerId);
@@ -324,6 +325,7 @@ const PartnersForms = {
         const onRollback = (error) => {
             PartnersState.selectedPartnerId = isEditing ? tempId : null;
             PartnersForms.syncPartnersToLocalStorage();
+            PartnersColumns.invalidateColumnsCache();
             PartnersColumns.renderColumnsMenu();
             PartnersRenderer.render();
             if (PartnersState.selectedPartnerId) {
@@ -523,6 +525,7 @@ const PartnersForms = {
         if (PartnersState._optimistic && PartnersState._optimistic.hasPending && PartnersState._optimistic.hasPending()) return;
 
         PartnersState.cachedPartners = result.partners || [];
+        PartnersColumns.invalidateColumnsCache();
         PartnersState.totalCount = result.totalCount || 0;
         PartnersState.currentPage = result.page || 1;
         PartnersState.cachedMethods = methods || [];
@@ -550,6 +553,7 @@ const PartnersForms = {
             // Stale response discard
             if (reqId !== PartnersState._currentRequestId) return;
             PartnersState.cachedPartners = result.partners || [];
+            PartnersColumns.invalidateColumnsCache();
             PartnersState.totalCount = result.totalCount || 0;
             PartnersState.currentPage = result.page || page;
             PartnersRenderer.render();

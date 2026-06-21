@@ -129,6 +129,8 @@ const TeamImportExport = {
         if (await ConfirmModal.show('Заменить всех сотрудников?', { description: 'Текущие данные будут перезаписаны', danger: true })) {
             try {
                 TeamState.data = await storage.importFromFile(file);
+                TeamState._rebuildSearchableText();
+                TeamState._invalidateFiltered();
                 await storage.saveData(TeamState.data);
                 TeamRenderer.render();
                 TeamRenderer.updateStats();

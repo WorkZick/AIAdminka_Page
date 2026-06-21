@@ -172,6 +172,7 @@ const PartnersNavigation = {
                 PartnersState.cachedPartners[index].status = status;
             }
 
+            PartnersColumns.invalidateColumnsCache();
             this._updateStatusBadge('cardStatusText', status);
             this._closeDropdown('cardStatusDropdown');
             PartnersRenderer.render();

@@ -40,6 +40,7 @@ const _MODULE_MAP = {
     checkManualDataCompletionStep6: TrafficManualData,
     resetViolationsData: TrafficManualData,
     resetAllViolationsData: TrafficManualData,
+    toggleResetMenu: TrafficManualData,
     incrementManualValue: TrafficManualData,
     decrementManualValue: TrafficManualData,
 
@@ -62,6 +63,7 @@ const _MODULE_MAP = {
     // Renderer
     renderAnalytics: TrafficRenderer,
     updateSelectedPartnersView: TrafficRenderer,
+    toggleSelectMenu: TrafficRenderer,
     selectAll: TrafficRenderer,
     clearSelection: TrafficRenderer,
     showMethodSelection: TrafficRenderer,
@@ -85,6 +87,7 @@ const _MODULE_MAP = {
     saveEdit: TrafficRenderer,
     closeEditModal: TrafficRenderer,
     escapeHtml: TrafficRenderer,
+    removeSelectedPartner: TrafficRenderer,
 
     // Import/Export
     exportTrafficSettings: TrafficImportExport,
@@ -125,6 +128,20 @@ PageLifecycle.init({
 
 // Event delegation для всех data-action="traffic-*" атрибутов
 document.addEventListener('click', function(e) {
+    const selMenu = document.getElementById('selectPartnersMenu');
+    if (selMenu && !selMenu.classList.contains('hidden') && !e.target.closest('.dropdown-wrap')) {
+        selMenu.classList.add('hidden');
+    }
+
+    // Закрытие reset-меню при клике вне .dropdown-wrap
+    const resetMenus = ['resetWorkTimeMenu', 'resetViolationsMenu'];
+    if (!e.target.closest('.dropdown-wrap')) {
+        resetMenus.forEach(function(id) {
+            const m = document.getElementById(id);
+            if (m) m.classList.add('hidden');
+        });
+    }
+
     const target = e.target.closest('[data-action^="traffic-"]');
     if (!target) return;
 
@@ -142,6 +159,13 @@ document.addEventListener('click', function(e) {
 
     if (!_MODULE_MAP[action]) return;
 
+    // toggleResetMenu с data-step
+    if (action === 'toggleResetMenu') {
+        const step = parseInt(target.dataset.step, 10);
+        _callAction(action, isNaN(step) ? 4 : step);
+        return;
+    }
+
     // Действия с data-step
     if (action === 'navigateToStep' || action === 'goToStep') {
         const step = parseInt(target.dataset.step, 10);
@@ -153,6 +177,19 @@ document.addEventListener('click', function(e) {
     if (action === 'incrementManualValue' || action === 'decrementManualValue') {
         const fieldId = target.dataset.field;
         if (fieldId) _callAction(action, fieldId);
+        return;
+    }
+
+    // removeSelectedPartner с data-partner-id
+    if (action === 'removeSelectedPartner') {
+        const pid = target.dataset.partnerId;
+        if (pid) _callAction(action, pid);
+        return;
+    }
+
+    // loadPartnerManualData(Step6) — кастомный список субагентов: передаём id + кликнутый элемент
+    if (action === 'loadPartnerManualData' || action === 'loadPartnerManualDataStep6') {
+        _callAction(action, target.dataset.value, target);
         return;
     }
 

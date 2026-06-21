@@ -114,6 +114,18 @@
     color: var(--accent);
 }
 
+.status-badge.status-open,
+.status-open {
+    background: var(--status-green-tint, rgba(81, 207, 102, 0.2));
+    color: var(--status-green);
+}
+
+.status-badge.status-closed,
+.status-closed {
+    background: rgba(107, 107, 107, 0.2);
+    color: var(--gray);
+}
+
 /* Status dot */
 .status-badge::before {
     content: '';

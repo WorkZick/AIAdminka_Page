@@ -4,6 +4,63 @@ const TrafficUpload = {
     _MAX_FILES: 20,
     _ALLOWED_EXTENSIONS: ['.xlsx', '.xls'],
 
+    // Показать inline-индикатор ПОСЛЕ зоны (зона не трогается — инпут остаётся в DOM)
+    _showInlineLoader(stepKey, current, total) {
+        const els = this._STEP_ELEMENTS[stepKey];
+        const inputEl = document.getElementById(els.zoneInput);
+        if (!inputEl) return;
+        const zone = inputEl.closest('.upload-zone');
+        if (!zone) return;
+        // Удалить предыдущий лоадер если есть (повторный вызов)
+        document.getElementById(`loader_${stepKey}`)?.remove();
+        const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+        const loader = document.createElement('div');
+        loader.id = `loader_${stepKey}`;
+        loader.className = 'inline-loader';
+        loader.innerHTML = `
+            <div class="inline-loader-content">
+                <div class="inline-loader-header">
+                    <div class="spinner spinner--sm"></div>
+                    <span class="inline-loader-text">Загрузка ${current} из ${total}</span>
+                </div>
+                <div class="inline-loader-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" data-percent="${percent}"></div>
+                    </div>
+                    <span class="progress-percent">${percent}%</span>
+                </div>
+                <div class="inline-loader-filename"></div>
+            </div>`;
+        zone.parentNode.insertBefore(loader, zone.nextSibling);
+        loader.querySelector('.progress-fill').style.setProperty('--progress-width', `${percent}%`);
+    },
+
+    // Обновить прогресс inline-индикатора
+    _updateInlineLoader(stepKey, current, total, fileName) {
+        const loader = document.getElementById(`loader_${stepKey}`);
+        if (!loader) return;
+        const percent = Math.round((current / total) * 100);
+        const text = loader.querySelector('.inline-loader-text');
+        const fill = loader.querySelector('.progress-fill');
+        const percentText = loader.querySelector('.progress-percent');
+        const fileNameEl = loader.querySelector('.inline-loader-filename');
+        if (text) text.textContent = `Загрузка ${current} из ${total}`;
+        if (fill) fill.style.setProperty('--progress-width', `${percent}%`);
+        if (percentText) percentText.textContent = `${percent}%`;
+        if (fileNameEl) fileNameEl.textContent = fileName;
+    },
+
+    // Удалить inline-индикатор
+    _hideInlineLoader(stepKey) {
+        document.getElementById(`loader_${stepKey}`)?.remove();
+    },
+
+    _STEP_ELEMENTS: {
+        deposits: { zoneInput: 'depositsFileInput', status: 'depositsStatus', info: 'depositsInfo' },
+        quality:  { zoneInput: 'qualityFileInput',  status: 'qualityStatus',  info: 'qualityInfo' },
+        percent:  { zoneInput: 'percentFileInput',  status: 'percentStatus',  info: 'percentInfo' }
+    },
+
     _validateFile(file) {
         const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
         if (!this._ALLOWED_EXTENSIONS.includes(ext)) {
@@ -15,6 +72,21 @@ const TrafficUpload = {
         return null;
     },
 
+    // Inline-рендер успешной загрузки в зоне (как excel-reports)
+    _renderZoneSuccess(stepKey, fileCount) {
+        const els = this._STEP_ELEMENTS[stepKey];
+        const zone = document.getElementById(els.zoneInput).closest('.upload-zone');
+        if (zone) {
+            zone.classList.add('has-file');
+            const textEl = zone.querySelector('.upload-zone-text');
+            const hintEl = zone.querySelector('.upload-zone-hint');
+            if (textEl) textEl.textContent = '✓ Загружено';
+            if (hintEl) hintEl.style.display = 'none';
+        }
+        const infoEl = document.getElementById(els.info);
+        if (infoEl) infoEl.textContent = `${fileCount} файл(ов) обработано`;
+    },
+
     // Отображение результата загрузки
     _showUploadResult(statusDiv, errors, totalCount, stepKey, btnId) {
         const successCount = totalCount - errors.length;
@@ -22,12 +94,14 @@ const TrafficUpload = {
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = `Ошибки: ${errors.join('; ')}`;
         } else if (errors.length > 0) {
-            statusDiv.className = 'upload-status warning';
+            statusDiv.className = 'upload-status error';
             statusDiv.textContent = `Обработано ${successCount} из ${totalCount}. Ошибки: ${errors.join('; ')}`;
+            this._renderZoneSuccess(stepKey, successCount);
             this._markStepComplete(stepKey, btnId);
         } else {
-            statusDiv.className = 'upload-status success';
-            statusDiv.textContent = `Успешно обработано ${totalCount} файл(ов). Данные обновлены.`;
+            statusDiv.textContent = '';
+            statusDiv.className = 'upload-status';
+            this._renderZoneSuccess(stepKey, totalCount);
             this._markStepComplete(stepKey, btnId);
         }
     },
@@ -49,8 +123,9 @@ const TrafficUpload = {
 
         const statusDiv = document.getElementById('depositsStatus');
         if (!this._checkFileCount(files, statusDiv)) return;
-        statusDiv.className = 'upload-status info';
-        statusDiv.textContent = `Обработка файлов (0/${files.length})...`;
+        statusDiv.textContent = '';
+        statusDiv.className = 'upload-status';
+        this._showInlineLoader('deposits', 0, files.length);
 
         try {
             const allPartners = storage.getPartners();
@@ -59,7 +134,7 @@ const TrafficUpload = {
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                statusDiv.textContent = `Обработка файлов (${i + 1}/${files.length}): ${file.name}`;
+                this._updateInlineLoader('deposits', i + 1, files.length, file.name);
 
                 const validationError = this._validateFile(file);
                 if (validationError) {
@@ -87,10 +162,12 @@ const TrafficUpload = {
             });
 
             storage.savePartners(allPartners);
+            this._hideInlineLoader('deposits');
             this._showUploadResult(statusDiv, errors, files.length, 'deposits', 'step2NextBtn');
             event.target.value = '';
 
         } catch (error) {
+            this._hideInlineLoader('deposits');
             ErrorHandler.handle(error, { module: 'traffic-calculation', action: 'handleDepositsUpload' });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
@@ -104,18 +181,20 @@ const TrafficUpload = {
 
         const statusDiv = document.getElementById('qualityStatus');
         if (!this._checkFileCount(files, statusDiv)) return;
-        statusDiv.className = 'upload-status info';
-        statusDiv.textContent = `Обработка файлов (0/${files.length})...`;
+        statusDiv.textContent = '';
+        statusDiv.className = 'upload-status';
+        this._showInlineLoader('quality', 0, files.length);
 
         try {
             const allPartners = storage.getPartners();
             TrafficState.ourPartnerIds = allPartners.map(p => String(p.subagentId));
+            TrafficState.ourPartnerIdSet = new Set(TrafficState.ourPartnerIds);
             const qualityData = Object.create(null);
             const errors = [];
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                statusDiv.textContent = `Обработка файлов (${i + 1}/${files.length}): ${file.name}`;
+                this._updateInlineLoader('quality', i + 1, files.length, file.name);
 
                 const validationError = this._validateFile(file);
                 if (validationError) {
@@ -147,10 +226,12 @@ const TrafficUpload = {
             });
 
             storage.savePartners(allPartners);
+            this._hideInlineLoader('quality');
             this._showUploadResult(statusDiv, errors, files.length, 'quality', 'step3NextBtn');
             event.target.value = '';
 
         } catch (error) {
+            this._hideInlineLoader('quality');
             ErrorHandler.handle(error, { module: 'traffic-calculation', action: 'handleQualityUpload' });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
@@ -164,18 +245,20 @@ const TrafficUpload = {
 
         const statusDiv = document.getElementById('percentStatus');
         if (!this._checkFileCount(files, statusDiv)) return;
-        statusDiv.className = 'upload-status info';
-        statusDiv.textContent = `Обработка файлов (0/${files.length})...`;
+        statusDiv.textContent = '';
+        statusDiv.className = 'upload-status';
+        this._showInlineLoader('percent', 0, files.length);
 
         try {
             const allPartners = storage.getPartners();
             TrafficState.ourPartnerIds = allPartners.map(p => String(p.subagentId));
+            TrafficState.ourPartnerIdSet = new Set(TrafficState.ourPartnerIds);
             const autoDisableCounters = Object.create(null);
             const errors = [];
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                statusDiv.textContent = `Обработка файлов (${i + 1}/${files.length}): ${file.name}`;
+                this._updateInlineLoader('percent', i + 1, files.length, file.name);
 
                 const validationError = this._validateFile(file);
                 if (validationError) {
@@ -199,10 +282,12 @@ const TrafficUpload = {
                 partner.autoDisableCount = autoDisableCounters[String(partner.subagentId)] || 0;
             });
             storage.savePartners(allPartners);
+            this._hideInlineLoader('percent');
             this._showUploadResult(statusDiv, errors, files.length, 'percent', 'step5NextBtn');
             event.target.value = '';
 
         } catch (error) {
+            this._hideInlineLoader('percent');
             ErrorHandler.handle(error, { module: 'traffic-calculation', action: 'handlePercentUpload' });
             statusDiv.className = 'upload-status error';
             statusDiv.textContent = 'Ошибка при обработке файлов: ' + error.message;
@@ -226,7 +311,19 @@ const TrafficUpload = {
         const statusDiv = document.getElementById(statusId);
         statusDiv.textContent = '';
         statusDiv.className = 'upload-status';
-        document.getElementById(fileInputId).value = '';
+        const input = document.getElementById(fileInputId);
+        input.value = '';
+        const zone = input.closest('.upload-zone');
+        if (zone) {
+            zone.classList.remove('has-file');
+            const textEl = zone.querySelector('.upload-zone-text');
+            const hintEl = zone.querySelector('.upload-zone-hint');
+            if (textEl) textEl.textContent = 'Выберите файл(ы) или перетащите сюда';
+            if (hintEl) { hintEl.textContent = 'Поддерживаются .xlsx и .xls'; hintEl.style.display = ''; }
+        }
+        const infoId = statusId.replace('Status', 'Info');
+        const infoEl = document.getElementById(infoId);
+        if (infoEl) infoEl.textContent = '';
         document.getElementById(btnId).disabled = true;
     },
 

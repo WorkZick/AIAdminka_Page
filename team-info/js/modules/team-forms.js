@@ -142,9 +142,10 @@ const TeamForms = {
         const employee = TeamState.data.find(e => e.id === TeamState.currentEmployeeId);
         if (employee && await ConfirmModal.show('Удалить "' + employee.fullName + '"?', { danger: true })) {
             const employeeId = TeamState.currentEmployeeId;
-            const snapshot = structuredClone(TeamState.data);
             const deleteIdx = TeamState.data.findIndex(e => e.id === employeeId);
             const deletedEmployee = TeamState.data[deleteIdx];
+            // Shallow-снимок ДО splice — удаляемый элемент на своей позиции; rollback вернёт его
+            const snapshot = TeamState.data.slice();
 
             // Optimistic: splice to preserve array reference (Phase 8 pattern)
             if (deleteIdx !== -1) TeamState.data.splice(deleteIdx, 1);
@@ -202,9 +203,10 @@ const TeamForms = {
         const employee = TeamState.data.find(e => e.id === TeamState.currentEmployeeId);
         if (employee && await ConfirmModal.show('Удалить "' + employee.fullName + '"?', { danger: true })) {
             const employeeId = TeamState.currentEmployeeId;
-            const snapshot = structuredClone(TeamState.data);
             const deleteIdx = TeamState.data.findIndex(e => e.id === employeeId);
             const deletedEmployee = TeamState.data[deleteIdx];
+            // Shallow-снимок ДО splice — удаляемый элемент на своей позиции; rollback вернёт его
+            const snapshot = TeamState.data.slice();
 
             // Optimistic: splice to preserve array reference
             if (deleteIdx !== -1) TeamState.data.splice(deleteIdx, 1);
@@ -275,12 +277,14 @@ const TeamForms = {
     async changeStatus(newStatus) {
         if (!TeamState.currentEmployeeId) return;
 
-        const employee = TeamState.data.find(e => e.id === TeamState.currentEmployeeId);
+        const index = TeamState.data.findIndex(e => e.id === TeamState.currentEmployeeId);
+        const employee = index === -1 ? null : TeamState.data[index];
         if (!employee) return;
 
-        const snapshot = structuredClone(TeamState.data);
-        const index = TeamState.data.findIndex(e => e.id === TeamState.currentEmployeeId);
         const oldStatus = employee.status;
+        // Shallow-снимок ДО мутации: на позиции index — shallow-копия дореформенного элемента
+        const snapshot = TeamState.data.slice();
+        snapshot[index] = { ...employee };
 
         // Скрыть dropdown
         const dropdown = document.getElementById('cardStatusDropdown');
@@ -290,6 +294,7 @@ const TeamForms = {
         employee.status = newStatus;
         employee.updatedAt = new Date().toISOString();
         employee._pending = true;
+        TeamState._computeSearchableText(employee);
         TeamState._invalidateFiltered();
 
         // Update UI immediately
@@ -370,8 +375,10 @@ const TeamForms = {
 
         // Сохранить ссылку для очистки
         TeamState.eventHandlers.textareaAutoResize = () => {
-            textarea.style.height = 'auto';
-            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+            requestAnimationFrame(() => {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+            });
         };
 
         textarea.addEventListener('input', TeamState.eventHandlers.textareaAutoResize);
@@ -451,8 +458,10 @@ const TeamForms = {
      */
     attachAutoResizeListeners() {
         const autoResize = (textarea) => {
-            textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
+            requestAnimationFrame(() => {
+                textarea.style.height = 'auto';
+                textarea.style.height = textarea.scrollHeight + 'px';
+            });
         };
 
         const fullNameField = document.getElementById('formFullName');
@@ -796,19 +805,22 @@ const TeamForms = {
      * @private
      */
     async _updateEmployee(employeeData) {
-        const employee = TeamState.data.find(e => e.id === TeamState.currentEmployeeId);
+        const employeeId = TeamState.currentEmployeeId;
+        const index = TeamState.data.findIndex(e => e.id === employeeId);
+        const employee = index === -1 ? null : TeamState.data[index];
         if (!employee) return;
 
         const oldPosition = employee.position;
-        const employeeId = TeamState.currentEmployeeId;
-        const snapshot = structuredClone(TeamState.data);
-        const index = TeamState.data.findIndex(e => e.id === employeeId);
+        // Shallow-снимок ДО мутации: на позиции index — shallow-копия дореформенного элемента
+        const snapshot = TeamState.data.slice();
+        snapshot[index] = { ...employee };
 
         // Optimistic: update in-place
         Object.assign(employee, employeeData);
         employee.id = employeeId;
         employee.updatedAt = new Date().toISOString();
         employee._pending = true;
+        TeamState._computeSearchableText(employee);
         TeamState._invalidateFiltered();
 
         // Close form and show card immediately
@@ -866,8 +878,10 @@ const TeamForms = {
         const tempId = 'emp-' + Date.now();
         employeeData.id = tempId;
         employeeData._pending = true;
+        TeamState._computeSearchableText(employeeData);
 
-        const snapshot = structuredClone(TeamState.data);
+        // Shallow-снимок ДО unshift — без нового элемента; rollback уберёт его
+        const snapshot = TeamState.data.slice();
 
         // Optimistic: add to beginning
         TeamState.data.unshift(employeeData);
@@ -897,7 +911,8 @@ const TeamForms = {
             });
         };
 
-        const itemIndex = TeamState.data.findIndex(e => e.id === tempId);
+        // После unshift новый элемент всегда на позиции 0
+        const itemIndex = 0;
         const opId = TeamState._optimistic.apply({
             stateRef: TeamState.data,
             index: -1,

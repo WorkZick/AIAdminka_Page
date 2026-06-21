@@ -459,6 +459,24 @@ const DatePicker = (() => {
             if (isoValue) this._parseExisting();
             else this.displayInput.value = '';
         }
+
+        /** Освободить ресурсы инстанса (вызвать при удалении элемента со страницы) */
+        destroy() {
+            // Закрыть попап если активен этот инстанс
+            if (activeInstance === this) _close();
+
+            // Снять слушатели с displayInput и icon — сохранены через _build closure
+            // wrap.replaceWith(hiddenInput) возвращает input в DOM и убирает wrap
+            if (this.wrapEl && this.wrapEl.parentNode) {
+                this.wrapEl.parentNode.insertBefore(this.hiddenInput, this.wrapEl);
+                this.wrapEl.parentNode.removeChild(this.wrapEl);
+            }
+
+            this.hiddenInput.el = undefined;
+            if (this.hiddenInput._datepicker === this) {
+                this.hiddenInput._datepicker = null;
+            }
+        }
     }
 
     // ── Public API ──

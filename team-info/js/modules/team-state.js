@@ -100,6 +100,31 @@ const TeamState = {
             this.sortField = field;
             this.sortDirection = 'asc';
         }
+        this._invalidateFiltered();
+    },
+
+    /**
+     * Предвычисляет поисковую строку для одного сотрудника и сохраняет в emp._searchableText.
+     * Точно те же поля и порядок, что использовались в getFilteredData().
+     */
+    _computeSearchableText(emp) {
+        emp._searchableText = [
+            emp.fullName, emp.position, emp.status,
+            emp.crmLogin, emp.reddyId,
+            emp.predefinedFields?.['Reddy'],
+            emp.corpTelegram, emp.personalTelegram,
+            emp.corpEmail, emp.personalEmail
+        ].filter(Boolean).join(' ').toLowerCase();
+    },
+
+    /**
+     * Пересчитывает _searchableText для всех сотрудников в this.data.
+     * Вызывается при полной загрузке/замене данных.
+     */
+    _rebuildSearchableText() {
+        for (const emp of this.data) {
+            TeamState._computeSearchableText(emp);
+        }
     },
 
     // Server pagination state
@@ -127,13 +152,9 @@ const TeamState = {
         if (this.searchQuery) {
             const q = this.searchQuery.toLowerCase();
             data = data.filter(emp => {
-                const searchable = [
-                    emp.fullName, emp.position, emp.status,
-                    emp.crmLogin, emp.reddyId,
-                    emp.predefinedFields?.['Reddy'],
-                    emp.corpTelegram, emp.personalTelegram,
-                    emp.corpEmail, emp.personalEmail
-                ].filter(Boolean).join(' ').toLowerCase();
+                // Используем предвычисленный текст; если по какой-то причине отсутствует —
+                // вычисляем на месте (защита от элементов, добавленных без пересчёта)
+                const searchable = emp._searchableText ?? (TeamState._computeSearchableText(emp), emp._searchableText);
                 return searchable.includes(q);
             });
         }
@@ -173,6 +194,7 @@ const TeamState = {
         TeamState._filterTimer = setTimeout(() => {
             TeamState.searchQuery = document.getElementById('searchInput').value;
             TeamState.currentPage = 1;
+            TeamState._invalidateFiltered();
             TeamRenderer.render();
         }, 150);
     }

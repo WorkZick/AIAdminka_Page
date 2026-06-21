@@ -15,7 +15,7 @@ const TrafficManualData = {
         if (!select) return;
 
         if (TrafficState.allPartnersListForStep5.length === 0) {
-            select.innerHTML = '<option value="">Выберите на шаге 1</option>';
+            select.innerHTML = '<div class="subagent-empty">Выберите на шаге 1</div>';
             return;
         }
 
@@ -26,13 +26,18 @@ const TrafficManualData = {
             : TrafficState.allPartnersListForStep5;
 
         if (filtered.length === 0) {
-            select.innerHTML = '<option value="">Ничего не найдено</option>';
+            select.innerHTML = '<div class="subagent-empty">Ничего не найдено</div>';
             return;
         }
 
         select.innerHTML = filtered.map(partner =>
-            `<option value="${partner.id}">${TrafficRenderer.escapeHtml(partner.subagent)} (${TrafficRenderer.escapeHtml(partner.method)})</option>`
+            `<div class="subagent-item" data-value="${partner.id}" data-action="traffic-loadPartnerManualData" role="option">${Utils.escapeHtml(partner.subagent)} (${Utils.escapeHtml(partner.method)})</div>`
         ).join('');
+
+        if (TrafficState.currentSelectedPartnerId) {
+            const active = select.querySelector(`.subagent-item[data-value="${TrafficState.currentSelectedPartnerId}"]`);
+            if (active) active.classList.add('active');
+        }
     },
 
     // Фильтрация списка партнеров при вводе
@@ -45,9 +50,8 @@ const TrafficManualData = {
     },
 
     // Загрузка ручных данных для выбранного партнера (шаг 4 - только % времени работы)
-    loadPartnerManualData() {
-        const select = document.getElementById('partnerSelectList');
-        if (!select || !select.value) {
+    loadPartnerManualData(partnerId, itemEl) {
+        if (!partnerId) {
             document.getElementById('manualDataForm').classList.add('hidden');
             return;
         }
@@ -57,8 +61,15 @@ const TrafficManualData = {
             TrafficManualData.saveCurrentManualData();
         }
 
-        const partnerId = select.value;
         TrafficState.currentSelectedPartnerId = partnerId;
+
+        // Управляем классом .active в списке
+        const listEl = document.getElementById('partnerSelectList');
+        if (listEl) {
+            listEl.querySelectorAll('.subagent-item').forEach(el => el.classList.remove('active'));
+            const target = itemEl || listEl.querySelector(`.subagent-item[data-value="${partnerId}"]`);
+            if (target) target.classList.add('active');
+        }
 
         // Получаем актуальные данные из storage
         const allPartners = storage.getPartners();
@@ -72,7 +83,6 @@ const TrafficManualData = {
         // Загружаем сохраненные значения только для процентов времени работы
         document.getElementById('depositWorkTimePercent').value = partner.depositWorkTimePercent || 0;
         document.getElementById('withdrawalWorkTimePercent').value = partner.withdrawalWorkTimePercent || 0;
-
     },
 
     // Сохранение текущих ручных данных (шаг 4 - только % времени работы)
@@ -186,7 +196,7 @@ const TrafficManualData = {
         if (!select) return;
 
         if (TrafficState.allPartnersListForStep6.length === 0) {
-            select.innerHTML = '<option value="">Выберите на шаге 1</option>';
+            select.innerHTML = '<div class="subagent-empty">Выберите на шаге 1</div>';
             return;
         }
 
@@ -197,13 +207,18 @@ const TrafficManualData = {
             : TrafficState.allPartnersListForStep6;
 
         if (filtered.length === 0) {
-            select.innerHTML = '<option value="">Ничего не найдено</option>';
+            select.innerHTML = '<div class="subagent-empty">Ничего не найдено</div>';
             return;
         }
 
         select.innerHTML = filtered.map(partner =>
-            `<option value="${partner.id}">${TrafficRenderer.escapeHtml(partner.subagent)} (${TrafficRenderer.escapeHtml(partner.method)})</option>`
+            `<div class="subagent-item" data-value="${partner.id}" data-action="traffic-loadPartnerManualDataStep6" role="option">${Utils.escapeHtml(partner.subagent)} (${Utils.escapeHtml(partner.method)})</div>`
         ).join('');
+
+        if (TrafficState.currentSelectedPartnerId6) {
+            const active = select.querySelector(`.subagent-item[data-value="${TrafficState.currentSelectedPartnerId6}"]`);
+            if (active) active.classList.add('active');
+        }
     },
 
     // Фильтрация списка партнеров при вводе (шаг 6)
@@ -216,9 +231,8 @@ const TrafficManualData = {
     },
 
     // Загрузка данных по нарушениям для выбранного партнера (шаг 6)
-    loadPartnerManualDataStep6() {
-        const select = document.getElementById('partnerSelectList6');
-        if (!select || !select.value) {
+    loadPartnerManualDataStep6(partnerId, itemEl) {
+        if (!partnerId) {
             document.getElementById('manualDataForm6').classList.add('hidden');
             return;
         }
@@ -228,8 +242,15 @@ const TrafficManualData = {
             TrafficManualData.saveCurrentManualDataStep6();
         }
 
-        const partnerId = select.value;
         TrafficState.currentSelectedPartnerId6 = partnerId;
+
+        // Управляем классом .active в списке
+        const listEl = document.getElementById('partnerSelectList6');
+        if (listEl) {
+            listEl.querySelectorAll('.subagent-item').forEach(el => el.classList.remove('active'));
+            const target = itemEl || listEl.querySelector(`.subagent-item[data-value="${partnerId}"]`);
+            if (target) target.classList.add('active');
+        }
 
         // Получаем актуальные данные из storage
         const allPartners = storage.getPartners();
@@ -249,7 +270,6 @@ const TrafficManualData = {
         document.getElementById('wrongAmountApproval').value = partner.wrongAmountApproval || 0;
         document.getElementById('otherViolations').value = partner.otherViolations || 0;
         document.getElementById('otherViolationsDescription').value = partner.otherViolationsDescription || '';
-
     },
 
     // Сохранение данных по нарушениям (шаг 6)
@@ -375,6 +395,16 @@ const TrafficManualData = {
         TrafficManualData.checkManualDataCompletionStep6();
 
         Toast.success(`Данные по нарушениям сброшены для ${selectedPartnersData.length} субагентов`);
+    },
+
+    // Переключение меню сброса (урна) на шагах 4/6
+    toggleResetMenu(step) {
+        const menuId = step === 6 ? 'resetViolationsMenu' : 'resetWorkTimeMenu';
+        const otherId = step === 6 ? 'resetWorkTimeMenu' : 'resetViolationsMenu';
+        const menu = document.getElementById(menuId);
+        const other = document.getElementById(otherId);
+        if (other) other.classList.add('hidden');
+        if (menu) menu.classList.toggle('hidden');
     },
 
     // Увеличение значения

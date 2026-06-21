@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="../shared/css/_layers.css">
     <link rel="stylesheet" href="../shared/css/design-system.css">
     <link rel="stylesheet" href="css/traffic-calculation.css">
+    <!-- Quick 260621-2lz: step-header-nav shared-компонент (@layer module, унификация с excel-reports) -->
+    <link rel="stylesheet" href="../shared/css/components/step-header-nav.css">
     <!-- Phase 24 CSS-02: utilities (highest priority @layer utility, loaded LAST per cascade order) -->
     <link rel="stylesheet" href="../shared/css/utilities.css">
     <!-- Phase 27-05 HTML-04: xlsx CDN унифицирован на cdn.sheetjs.com v0.19.3 (с 0.18.5 cdnjs) -->
@@ -99,36 +101,33 @@
                     <!-- Step 1: Выбор партнеров -->
                     <div id="step1" class="analytics-step active">
                         <div class="main-section flex-1-column">
-                            <div class="section-header">
-                                <div class="section-title">Выбор партнеров для анализа</div>
-                                <div class="section-actions">
-                                    <button class="btn btn-danger btn-sm" data-action="traffic-confirmResetAnalytics" title="Сбросить все данные аналитики">
-                                        Сбросить всё
+                            <div class="step-header-nav">
+                                <div class="nav-left">
+                                    <!-- Toolbar выбора партнёров (в шапке; скрыт до загрузки данных) -->
+                                    <div id="selectionToolbar" class="selection-toolbar hidden">
+                                        <div class="toolbar-group">
+                                            <div class="dropdown-wrap">
+                                                <button class="btn btn--ghost btn-sm dropdown-trigger" data-action="traffic-toggleSelectMenu" title="Выбрать партнёров">Выбрать партнёров</button>
+                                                <div class="dropdown-menu hidden" id="selectPartnersMenu">
+                                                    <div class="dropdown-item" data-action="traffic-selectAll" title="Выбрать всех партнёров">Всех</div>
+                                                    <div class="dropdown-item" data-action="traffic-showMethodSelection" title="Выбрать по методу работы">По методу</div>
+                                                    <div class="dropdown-item" data-action="traffic-showManualSelection" title="Выбрать вручную">Вручную</div>
+                                                </div>
+                                            </div>
+                                            <button class="btn-icon" data-action="traffic-confirmResetAnalytics" title="Сбросить все данные аналитики">
+                                                <img src="../shared/icons/trash-2.svg" alt="Сбросить всё">
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <h2>Выбор партнеров для анализа</h2>
+                                <div class="nav-right">
+                                    <button id="step1NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="2" disabled>
+                                        Далее
                                     </button>
                                 </div>
                             </div>
                             <div class="section-body flex-1-column">
-
-                                <!-- Toolbar с кнопками выбора (скрыт до загрузки данных) -->
-                                <div id="selectionToolbar" class="selection-toolbar hidden">
-                                    <div class="toolbar-group">
-                                        <span class="toolbar-label">Выбрать:</span>
-                                        <button class="btn btn-sm btn-secondary" data-action="traffic-selectAll" title="Выбрать всех партнёров">
-                                            Всех
-                                        </button>
-                                        <button class="btn btn-sm btn-secondary" data-action="traffic-showMethodSelection" title="Выбрать по методу работы">
-                                            По методу
-                                        </button>
-                                        <button class="btn btn-sm btn-secondary" data-action="traffic-showManualSelection" title="Выбрать вручную">
-                                            Вручную
-                                        </button>
-                                    </div>
-                                    <div class="toolbar-group">
-                                        <button class="btn btn-sm" data-action="traffic-clearSelection" title="Очистить выбор">
-                                            Очистить
-                                        </button>
-                                    </div>
-                                </div>
 
                                 <!-- Подсказка: нет партнёров -->
                                 <div id="noPartnersHint" class="no-partners-hint hidden">
@@ -141,68 +140,42 @@
                                     </a>
                                 </div>
 
-                                <!-- Панель выбора по методу -->
-                                <div id="methodSelectionPanel" class="selection-panel-modern hidden">
-                                    <div class="panel-header">
-                                        <h3>Выберите методы</h3>
-                                        <button class="btn btn--ghost panel-close" data-action="traffic-hideAllPanels">
-                                            <img src="../shared/icons/cross.svg" alt="Закрыть">
-                                        </button>
-                                    </div>
+                                <!-- Модалка выбора по методу (shared app-modal) -->
+                                <app-modal id="methodSelectionModal" title="Выберите методы" size="md">
                                     <div id="methodCheckboxes" class="checkbox-grid"></div>
-                                    <div class="panel-actions">
+                                    <div slot="footer">
                                         <button class="btn btn-secondary" data-action="traffic-hideAllPanels">Отмена</button>
                                         <button class="btn btn-primary" data-action="traffic-applyMethodSelection">Применить</button>
                                     </div>
-                                </div>
+                                </app-modal>
 
-                                <!-- Панель ручного выбора -->
-                                <div id="manualSelectionPanel" class="selection-panel-modern hidden">
-                                    <div class="panel-header">
-                                        <h3>Выберите партнеров</h3>
-                                        <button class="btn btn--ghost panel-close" data-action="traffic-hideAllPanels">
-                                            <img src="../shared/icons/cross.svg" alt="Закрыть">
-                                        </button>
-                                    </div>
+                                <!-- Модалка ручного выбора партнёров (shared app-modal) -->
+                                <app-modal id="manualSelectionModal" title="Выберите партнёров" size="md">
                                     <div id="partnerCheckboxes" class="checkbox-grid"></div>
-                                    <div class="panel-actions">
+                                    <div slot="footer">
                                         <button class="btn btn-secondary" data-action="traffic-hideAllPanels">Отмена</button>
                                         <button class="btn btn-primary" data-action="traffic-applyManualSelection">Применить</button>
                                     </div>
-                                </div>
+                                </app-modal>
 
                                 <!-- Таблица выбранных партнёров (скрыта до загрузки данных) -->
                                 <div class="partners-preview hidden">
-                                    <div class="preview-header">
-                                        <span class="preview-title">Выбранные партнёры</span>
-                                        <span class="partner-count-badge" id="selectedCount">0</span>
-                                    </div>
-                                    <div class="tc-table-container flex-1">
-                                        <table class="data-table">
+                                    <div class="table-container">
+                                        <table class="table table-hover">
                                             <thead>
                                                 <tr>
                                                     <th>Метод</th>
                                                     <th>Субагент</th>
                                                     <th>Субагент ID</th>
                                                     <th>Статус</th>
+                                                    <th></th>
                                                 </tr>
                                             </thead>
-                                            <tbody id="selectedPartnersTableBody">
-                                                <tr>
-                                                    <td colspan="4" class="empty-state">Партнеры не выбраны</td>
-                                                </tr>
-                                            </tbody>
+                                            <tbody id="selectedPartnersTableBody"></tbody>
                                         </table>
                                     </div>
                                 </div>
 
-                            </div>
-                            <!-- Навигация (вне section-body для постоянной видимости) -->
-                            <div class="step-navigation-modern">
-                                <div></div>
-                                <button id="step1NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="2" disabled>
-                                    Далее
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -210,12 +183,13 @@
                     <!-- Step 2: Пополнения и выводы -->
                     <div id="step2" class="analytics-step">
                         <div class="main-section flex-1">
-                            <div class="section-header">
-                                <div class="section-title">Пополнения и выводы</div>
-                                <div class="section-actions">
-                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetDepositsData" title="Сбросить данные пополнений и выводов">
-                                        Сбросить
-                                    </button>
+                            <div class="step-header-nav">
+                                <div class="nav-left">
+                                    <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="1">Назад</button>
+                                </div>
+                                <h2>Пополнения и выводы</h2>
+                                <div class="nav-right">
+                                    <button id="step2NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="3" disabled>Далее</button>
                                 </div>
                             </div>
                             <div class="section-body">
@@ -225,17 +199,13 @@
                                 </div>
 
                                 <div class="upload-zone" data-action="traffic-fileZoneClick" data-file-input-id="depositsFileInput">
-                                    <img src="../shared/icons/import.svg" class="upload-zone-icon" alt="">
-                                    <div class="upload-zone-text">Перетащите файлы сюда</div>
-                                    <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
-                                    <input type="file" id="depositsFileInput" accept=".xlsx" multiple class="hidden">
+                                    <div class="upload-zone-icon"><img src="../shared/icons/upload.svg" width="48" height="48" alt="Загрузить"></div>
+                                    <div class="upload-zone-text"><strong>Выберите файл(ы)</strong> или перетащите сюда</div>
+                                    <div class="upload-zone-hint">Поддерживаются .xlsx и .xls</div>
+                                    <input type="file" id="depositsFileInput" accept=".xlsx,.xls" multiple class="hidden">
                                 </div>
                                 <div id="depositsStatus" class="upload-status"></div>
-                            </div>
-                            <!-- Навигация (вне section-body для постоянной видимости) -->
-                            <div class="step-navigation-modern">
-                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="1">Назад</button>
-                                <button id="step2NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="3" disabled>Далее</button>
+                                <div id="depositsInfo" class="file-info-compact"></div>
                             </div>
                         </div>
                     </div>
@@ -243,11 +213,16 @@
                     <!-- Step 3: Контроль качества -->
                     <div id="step3" class="analytics-step">
                         <div class="main-section flex-1">
-                            <div class="section-header">
-                                <div class="section-title">Контроль качества</div>
-                                <div class="section-actions">
-                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetQualityData" title="Сбросить данные контроля качества">
-                                        Сбросить
+                            <div class="step-header-nav">
+                                <div class="nav-left">
+                                    <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="2">
+                                        Назад
+                                    </button>
+                                </div>
+                                <h2>Контроль качества</h2>
+                                <div class="nav-right">
+                                    <button id="step3NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="4" disabled>
+                                        Далее
                                     </button>
                                 </div>
                             </div>
@@ -258,21 +233,13 @@
                                 </div>
 
                                 <div class="upload-zone" data-action="traffic-fileZoneClick" data-file-input-id="qualityFileInput">
-                                    <img src="../shared/icons/import.svg" class="upload-zone-icon" alt="">
-                                    <div class="upload-zone-text">Перетащите файлы сюда</div>
-                                    <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
-                                    <input type="file" id="qualityFileInput" accept=".xlsx" multiple class="hidden">
+                                    <div class="upload-zone-icon"><img src="../shared/icons/upload.svg" width="48" height="48" alt="Загрузить"></div>
+                                    <div class="upload-zone-text"><strong>Выберите файл(ы)</strong> или перетащите сюда</div>
+                                    <div class="upload-zone-hint">Поддерживаются .xlsx и .xls</div>
+                                    <input type="file" id="qualityFileInput" accept=".xlsx,.xls" multiple class="hidden">
                                 </div>
                                 <div id="qualityStatus" class="upload-status"></div>
-                            </div>
-                            <!-- Навигация (вне section-body для постоянной видимости) -->
-                            <div class="step-navigation-modern">
-                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="2">
-                                    Назад
-                                </button>
-                                <button id="step3NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="4" disabled>
-                                    Далее
-                                </button>
+                                <div id="qualityInfo" class="file-info-compact"></div>
                             </div>
                         </div>
                     </div>
@@ -280,11 +247,16 @@
                     <!-- Step 4: % Времени работы -->
                     <div id="step4" class="analytics-step">
                         <div class="main-section flex-1">
-                            <div class="section-header">
-                                <div class="section-title">% Времени работы</div>
-                                <div class="section-actions">
-                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetAllWorkTimeData" title="Сбросить все данные по времени работы">
-                                        Сбросить
+                            <div class="step-header-nav">
+                                <div class="nav-left">
+                                    <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="3">
+                                        Назад
+                                    </button>
+                                </div>
+                                <h2>% Времени работы</h2>
+                                <div class="nav-right">
+                                    <button id="step4NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="5" disabled>
+                                        Далее
                                     </button>
                                 </div>
                             </div>
@@ -298,14 +270,11 @@
                                     <!-- Левая колонка: выбор субагента -->
                                     <div class="worktime-selector">
                                         <div class="form-group">
-                                            <label for="partnerSearchInput">Поиск</label>
                                             <input type="text" class="form-input" id="partnerSearchInput" placeholder="Поиск..." data-action="traffic-filterPartnersList">
                                         </div>
                                         <div class="form-group">
-                                            <label for="partnerSelectList">Субагент</label>
-                                            <select class="form-select" id="partnerSelectList" size="8" data-action="traffic-loadPartnerManualData">
-                                                <option value="">Выберите на шаге 1</option>
-                                            </select>
+                                            <label>Субагент</label>
+                                            <div class="subagent-list" id="partnerSelectList" role="listbox"></div>
                                         </div>
                                     </div>
 
@@ -314,9 +283,15 @@
                                         <div id="manualDataForm" class="hidden">
                                             <div class="worktime-form-header">
                                                 <h3 class="worktime-form-title">% Времени: <span id="selectedPartnerName"></span></h3>
-                                                <button class="btn btn-danger btn-sm" data-action="traffic-resetWorkTimeData" title="Сбросить">
-                                                    Сбросить
-                                                </button>
+                                                <div class="dropdown-wrap">
+                                                    <button class="btn-icon dropdown-trigger" data-action="traffic-toggleResetMenu" data-step="4" title="Сбросить">
+                                                        <img src="../shared/icons/trash-2.svg" alt="Сбросить">
+                                                    </button>
+                                                    <div class="dropdown-menu hidden" id="resetWorkTimeMenu">
+                                                        <div class="dropdown-item" data-action="traffic-resetWorkTimeData">Сбросить у этого субагента</div>
+                                                        <div class="dropdown-item" data-action="traffic-resetAllWorkTimeData">Сбросить у всех</div>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div class="worktime-grid">
@@ -339,26 +314,22 @@
                                     </div>
                                 </div>
                             </div>
-                            <!-- Навигация (вне section-body для постоянной видимости) -->
-                            <div class="step-navigation-modern">
-                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="3">
-                                    Назад
-                                </button>
-                                <button id="step4NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="5" disabled>
-                                    Далее
-                                </button>
-                            </div>
                         </div>
                     </div>
 
                     <!-- Step 5: Автоотключения -->
                     <div id="step5" class="analytics-step">
                         <div class="main-section flex-1">
-                            <div class="section-header">
-                                <div class="section-title">Автоотключения</div>
-                                <div class="section-actions">
-                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetPercentData" title="Сбросить данные автоотключений">
-                                        Сбросить
+                            <div class="step-header-nav">
+                                <div class="nav-left">
+                                    <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="4">
+                                        Назад
+                                    </button>
+                                </div>
+                                <h2>Автоотключения</h2>
+                                <div class="nav-right">
+                                    <button id="step5NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="6" disabled>
+                                        Далее
                                     </button>
                                 </div>
                             </div>
@@ -369,21 +340,13 @@
                                 </div>
 
                                 <div class="upload-zone" data-action="traffic-fileZoneClick" data-file-input-id="percentFileInput">
-                                    <img src="../shared/icons/import.svg" class="upload-zone-icon" alt="">
-                                    <div class="upload-zone-text">Перетащите файлы сюда</div>
-                                    <div class="upload-zone-hint">или нажмите для выбора (.xlsx)</div>
-                                    <input type="file" id="percentFileInput" accept=".xlsx" multiple class="hidden">
+                                    <div class="upload-zone-icon"><img src="../shared/icons/upload.svg" width="48" height="48" alt="Загрузить"></div>
+                                    <div class="upload-zone-text"><strong>Выберите файл(ы)</strong> или перетащите сюда</div>
+                                    <div class="upload-zone-hint">Поддерживаются .xlsx и .xls</div>
+                                    <input type="file" id="percentFileInput" accept=".xlsx,.xls" multiple class="hidden">
                                 </div>
                                 <div id="percentStatus" class="upload-status"></div>
-                            </div>
-                            <!-- Навигация (вне section-body для постоянной видимости) -->
-                            <div class="step-navigation-modern">
-                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="4">
-                                    Назад
-                                </button>
-                                <button id="step5NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="6" disabled>
-                                    Далее
-                                </button>
+                                <div id="percentInfo" class="file-info-compact"></div>
                             </div>
                         </div>
                     </div>
@@ -391,11 +354,16 @@
                     <!-- Step 6: Нарушения -->
                     <div id="step6" class="analytics-step">
                         <div class="main-section flex-1">
-                            <div class="section-header">
-                                <div class="section-title">Нарушения</div>
-                                <div class="section-actions">
-                                    <button class="btn btn-danger btn-sm" data-action="traffic-resetAllViolationsData" title="Сбросить все данные по нарушениям">
-                                        Сбросить
+                            <div class="step-header-nav">
+                                <div class="nav-left">
+                                    <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="5">
+                                        Назад
+                                    </button>
+                                </div>
+                                <h2>Нарушения</h2>
+                                <div class="nav-right">
+                                    <button id="step6NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="7">
+                                        Далее
                                     </button>
                                 </div>
                             </div>
@@ -409,14 +377,11 @@
                                     <!-- Левая колонка: выбор субагента -->
                                     <div class="violations-selector">
                                         <div class="form-group">
-                                            <label for="partnerSearchInput6">Поиск</label>
                                             <input type="text" class="form-input" id="partnerSearchInput6" placeholder="Поиск..." data-action="traffic-filterPartnersListStep6">
                                         </div>
                                         <div class="form-group">
-                                            <label for="partnerSelectList6">Субагент</label>
-                                            <select class="form-select" id="partnerSelectList6" size="8" data-action="traffic-loadPartnerManualDataStep6">
-                                                <option value="">Выберите на шаге 1</option>
-                                            </select>
+                                            <label>Субагент</label>
+                                            <div class="subagent-list" id="partnerSelectList6" role="listbox"></div>
                                         </div>
                                     </div>
 
@@ -425,9 +390,15 @@
                                         <div id="manualDataForm6" class="hidden">
                                             <div class="violations-form-header">
                                                 <h3 class="violations-form-title">Нарушения: <span id="selectedPartnerName6"></span></h3>
-                                                <button class="btn btn-danger btn-sm" data-action="traffic-resetViolationsData" title="Сбросить">
-                                                    Сбросить
-                                                </button>
+                                                <div class="dropdown-wrap">
+                                                    <button class="btn-icon dropdown-trigger" data-action="traffic-toggleResetMenu" data-step="6" title="Сбросить">
+                                                        <img src="../shared/icons/trash-2.svg" alt="Сбросить">
+                                                    </button>
+                                                    <div class="dropdown-menu hidden" id="resetViolationsMenu">
+                                                        <div class="dropdown-item" data-action="traffic-resetViolationsData">Сбросить у этого субагента</div>
+                                                        <div class="dropdown-item" data-action="traffic-resetAllViolationsData">Сбросить у всех</div>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div class="violations-grid">
@@ -524,27 +495,24 @@
                                     </div>
                                 </div>
                             </div>
-                            <!-- Навигация (вне section-body для постоянной видимости) -->
-                            <div class="step-navigation-modern">
-                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="5">
-                                    Назад
-                                </button>
-                                <button id="step6NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="7">
-                                    Далее
-                                </button>
-                            </div>
                         </div>
                     </div>
 
                 <!-- Step 7: Отчёт -->
                 <div id="step7" class="analytics-step">
-                    <div class="main-section">
-                        <div class="section-header">
-                            <div class="section-title">Детальный отчёт</div>
-                            <div class="section-actions">
+                    <div class="main-section flex-1-column">
+                        <div class="step-header-nav">
+                            <div class="nav-left">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="6">Назад</button>
+                            </div>
+                            <h2>Детальный отчёт</h2>
+                            <div class="nav-right">
                                 <button class="btn btn-primary btn-sm" data-action="traffic-exportReportToExcel">Экспорт в Excel</button>
+                                <button id="step7NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="8">Далее</button>
                             </div>
                         </div>
+
+                        <div class="section-body flex-1-column">
 
                         <div id="reportNotGenerated" class="report-placeholder">
                             <div class="report-placeholder-content">
@@ -554,9 +522,9 @@
                             </div>
                         </div>
 
-                        <div id="reportGenerated" class="step7-table-wrapper hidden">
-                            <div class="step7-table-scroll">
-                                <table class="data-table">
+                        <div id="reportGenerated" class="partners-preview hidden">
+                            <div class="table-container">
+                                <table class="table table-hover">
                                     <thead>
                                         <tr>
                                             <th>Метод</th>
@@ -589,22 +557,24 @@
                             </div>
                         </div>
 
-                        <div class="step-navigation-modern">
-                            <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="6">Назад</button>
-                            <button id="step7NextBtn" class="btn btn-primary" data-action="traffic-goToStep" data-step="8">Далее</button>
                         </div>
+
                     </div>
                 </div>
 
                 <!-- Step 8: Настройки расчёта -->
                 <div id="step8" class="analytics-step">
                     <div class="main-section flex-1-column">
-                        <div class="section-header">
-                            <div class="section-title">Настройки расчёта % трафика</div>
-                            <div class="section-actions">
+                        <div class="step-header-nav">
+                            <div class="nav-left">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="7">Назад</button>
+                            </div>
+                            <h2>Настройки расчёта % трафика</h2>
+                            <div class="nav-right">
                                 <button class="btn btn-primary btn-sm" data-action="traffic-toggleHelp">Справка</button>
                                 <button class="btn btn-primary btn-sm" data-action="traffic-exportTrafficSettings">Экспорт</button>
                                 <button class="btn btn-primary btn-sm" data-action="traffic-importTrafficSettings">Импорт</button>
+                                <button id="step8NextBtn" class="btn btn-primary" data-action="traffic-calculateAndShowResults">Рассчитать</button>
                             </div>
                         </div>
                         <div class="section-body flex-1-overflow">
@@ -628,20 +598,20 @@
 
                             <div id="trafficSettingsForm" class="traffic-settings-form"></div>
                         </div>
-                        <div class="step-navigation-modern">
-                            <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="7">Назад</button>
-                            <button id="step8NextBtn" class="btn btn-primary" data-action="traffic-calculateAndShowResults">Рассчитать</button>
-                        </div>
                     </div>
                 </div>
 
                 <!-- Step 9: Результаты расчёта -->
                 <div id="step9" class="analytics-step">
                     <div class="main-section flex-1-column">
-                        <div class="section-header">
-                            <div class="section-title">Результаты расчёта % трафика</div>
-                            <div class="section-actions">
+                        <div class="step-header-nav">
+                            <div class="nav-left">
+                                <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="8">Назад</button>
+                            </div>
+                            <h2>Результаты расчёта % трафика</h2>
+                            <div class="nav-right">
                                 <button class="btn btn-primary btn-sm" data-action="traffic-exportTrafficResults">Экспорт в Excel</button>
+                                <button class="btn btn-primary" data-action="traffic-confirmResetAnalytics">Начать заново</button>
                             </div>
                         </div>
                         <div class="section-body flex-1-column">
@@ -653,9 +623,9 @@
                                 </div>
                             </div>
 
-                            <div id="resultsCalculated" class="report-generated hidden">
-                                <div class="tc-table-container flex-1">
-                                    <table class="data-table traffic-results-table">
+                            <div id="resultsCalculated" class="partners-preview hidden">
+                                <div class="table-container">
+                                    <table class="table table-hover traffic-results-table">
                                         <thead>
                                             <tr>
                                                 <th>Метод</th>
@@ -674,12 +644,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="step-navigation-modern">
-                            <button class="btn btn-secondary" data-action="traffic-goToStep" data-step="8">Назад</button>
-                            <button class="btn btn-primary" data-action="traffic-confirmResetAnalytics">Начать заново</button>
-                        </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
